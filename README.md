@@ -1,4 +1,11 @@
-# TinyLlama.cpp - Cross-Format LLM Inference Engine
+# ember.cpp — Cross-Format LLM Inference Engine
+
+*Formerly `tinyllama.cpp` — renamed 2026-08-01 (GitHub redirects the old
+URL). ember.cpp is the inference half of the paperkiln family: what
+stays glowing after [paperkiln](https://github.com/JohnnyTeutonic/paperkiln)
+(training studio, formerly microtorch) and
+[coalfire.cpp](https://github.com/JohnnyTeutonic/coalfire.cpp) (the
+original C++ trainer) have done their work. Binary names are unchanged.*
 
 This codebase supports inference for Llama 2/3 architecture models using both GGUF and Safetensors formats, and additionally contains Python bindings.
 
