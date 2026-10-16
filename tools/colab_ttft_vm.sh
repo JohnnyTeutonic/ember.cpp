@@ -33,6 +33,17 @@ if [ "$MODE" = resume ]; then
     [ -f "$TODO" ] || fail "resume mode needs $TODO"
     NSYS=$(grep -qx nsys "$TODO" && echo 1 || echo 0)
 fi
+# Kernel variant under test (ttft_supervise.py --variant): its name and the
+# server environment that selects it. Absent = the baseline.
+KERNEL_VARIANT=baseline; VARIANT_ENV=""
+if [ -f /content/ttft_variant.txt ]; then
+    KERNEL_VARIANT=$(sed -n 1p /content/ttft_variant.txt)
+    VARIANT_ENV=$(sed -n 2p /content/ttft_variant.txt)
+fi
+ENV_ARGS=""; for kv in $VARIANT_ENV; do ENV_ARGS="$ENV_ARGS --env $kv"; done
+OVERRIDES=$(sed -n 3p /content/ttft_variant.txt 2>/dev/null)
+[ -n "$OVERRIDES" ] || OVERRIDES="2048:2:5 4096:1:3"
+[ "$OVERRIDES" = none ] && OVERRIDES=""
 fail() { echo "FAILED: $*"; echo "$*" > /content/TTFT_FAILED; exit 1; }
 
 echo "=== ttft vm $(date -u) mode=$MODE ember=$EMBER_COMMIT paperkiln=$PK_COMMIT ==="
@@ -86,7 +97,24 @@ if [ "$MODE" = resume ]; then
     $PARITY --model timing.gguf --ref gpu_fp32 --test gpu_bf16 --lengths 128 \
         --max-rel-diff 5e-2 --min-cosine 0.999 --out "$OUT/parity/timing_gpu_fp32_vs_bf16.jsonl" \
         || fail "parity gate failed (timing gpu_fp32 vs default)"
-    echo "parity_ok=1 (quick gate)" | tee "$OUT/parity/RESULT"
+    if [ "$KERNEL_VARIANT" = flash_v1 ]; then
+        # The variant must compute what the baseline kernel computes.
+        $PARITY --model timing.gguf --ref gpu_fp32 --test gpu_fp32_flash --lengths 128 \
+            --max-rel-diff 1e-3 --min-cosine 0.99999 --out "$OUT/parity/timing_baseline_vs_flash_128.jsonl" \
+            || fail "parity gate failed (baseline kernel vs flash_v1)"
+        if grep -qx parity_variant "$TODO"; then
+            # One-time full gate, banked once: every length class incl. 4096.
+            $PARITY --model timing.gguf --ref gpu_fp32 --test gpu_fp32_flash --lengths 128 1024 4096 \
+                --max-rel-diff 1e-3 --min-cosine 0.99999 \
+                --out "$OUT/parity/timing_baseline_vs_flash_full.jsonl" \
+                || fail "parity gate failed (baseline kernel vs flash_v1, full)"
+            $PARITY --model story3k.gguf --ref gpu_fp32 --test gpu_fp32_flash --lengths 128 \
+                --max-rel-diff 1e-3 --min-cosine 0.99999 \
+                --out "$OUT/parity/story3k_baseline_vs_flash.jsonl" \
+                || fail "parity gate failed (story3k baseline kernel vs flash_v1)"
+        fi
+    fi
+    echo "parity_ok=1 (quick gate, variant $KERNEL_VARIANT)" | tee "$OUT/parity/RESULT"
 else
 $PARITY --model story3k.gguf --ref cpu --test gpu_fp32 --lengths 128 \
     --max-rel-diff 1e-3 --min-cosine 0.99999 --out "$OUT/parity/story3k_cpu_vs_gpu_fp32.jsonl" || parity_ok=0
@@ -119,16 +147,18 @@ elif [ "$MODE" = resume ]; then
     # cell (~11 min) still fits inside a short VM life.
     STORY_CELLS=$(awk '$1=="story3k"{print $2}' "$TODO" | tr '\n' ' ')
     TIMING_CELLS=$(awk '$1=="timing"{print $2}' "$TODO" | tr '\n' ' ')
-    echo "todo: story3k [$STORY_CELLS] timing [$TIMING_CELLS] nsys=$NSYS"
+    echo "todo: story3k [$STORY_CELLS] timing [$TIMING_CELLS] nsys=$NSYS variant=$KERNEL_VARIANT"
     if [ -n "${STORY_CELLS// /}" ]; then
         $BENCH --model story3k.gguf --model-label "story3k (paperkiln, d128 L2 ctx256)" \
             --lengths 128 --cells $STORY_CELLS --warmup "$WARMUP" --reps "$REPS" \
+            --kernel-variant "$KERNEL_VARIANT" $ENV_ARGS \
             --out-dir "$OUT/story3k" || fail "bench story3k"
     fi
     if [ -n "${TIMING_CELLS// /}" ]; then
         $BENCH --model timing.gguf --model-label "timing (paperkiln random, TinyLlama-1.1B shape, GQA 32/4)" \
             --lengths $TIMING_LENGTHS --cells $TIMING_CELLS --warmup "$WARMUP" --reps "$REPS" \
-            --override 2048:2:5 4096:1:3 --out-dir "$OUT/timing" || fail "bench timing"
+            --override $OVERRIDES --kernel-variant "$KERNEL_VARIANT" $ENV_ARGS \
+            --out-dir "$OUT/timing" || fail "bench timing"
     fi
 else
     fail "unknown mode $MODE"
@@ -155,6 +185,7 @@ else
     for L in $NSYS_LENGTHS; do
         D="$OUT/nsys_timing_$L"
         $BENCH --model timing.gguf --lengths "$L" --runs 1 --warmup 1 --reps 3 --out-dir "$D" \
+            --kernel-variant "$KERNEL_VARIANT" $ENV_ARGS \
             --wrapper "$NSYS profile -t cuda,nvtx -s none --cpuctxsw=none --force-overwrite=true -o {run_dir}/prof" \
             || { echo "nsys bench $L failed"; continue; }
         for R in nvtx_gpu_proj_sum nvtx_kern_sum cuda_gpu_kern_sum nvtx_sum; do
