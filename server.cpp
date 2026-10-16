@@ -40,6 +40,7 @@
 #endif
 
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <memory>
 #include <nlohmann/json.hpp>  
@@ -102,6 +103,8 @@ int main(int argc, char** argv) {
 
   svr.Post("/chat", [&session](const httplib::Request& req,
                                httplib::Response& res) {
+        // TTFT clock starts here: the earliest point the server owns the request.
+        const auto t_request = std::chrono::steady_clock::now();
         Logger::info("Received request for /chat");
     res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -219,7 +222,28 @@ int main(int argc, char** argv) {
 
           json res_json;
           res_json["reply"] = reply;
-          
+
+          // TTFT receipt (docs/TTFT.md). request_to_first_token_ms adds the
+          // server's own parsing/templating before generate() to ttft_ms.
+          const tinyllama::TtftBreakdown& tb = session->last_ttft();
+          auto ms = [](auto a, auto b) {
+            return std::chrono::duration<double, std::milli>(b - a).count();
+          };
+          res_json["ttft"] = {
+              {"first_token", tb.first_token},
+              {"request_to_first_token_ms",
+               tb.first_token ? ms(t_request, tb.t_first_token) : -1.0},
+              {"server_pre_generate_ms", ms(t_request, tb.t_entry)},
+              {"ttft_ms", tb.ttft_ms},
+              {"num_prompt_tokens", tb.num_prompt_tokens},
+              {"batch_prefill", tb.batch_prefill},
+              {"tokenize_ms", tb.tokenize_ms},
+              {"kv_reset_ms", tb.kv_reset_ms},
+              {"embed_ms", tb.embed_ms},
+              {"prefill_wall_ms", tb.prefill_wall_ms},
+              {"prefill_gpu_span_ms", tb.prefill_gpu_span_ms},
+              {"sample_ms", tb.sample_ms}};
+
           res.set_content(res_json.dump(), "application/json");
           Logger::info("Response sent successfully.");
 

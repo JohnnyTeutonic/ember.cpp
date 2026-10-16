@@ -19,6 +19,9 @@
 #include <string>
 #include <vector>
 #include <iomanip>
+#ifdef HAS_CUDA
+#include <nvtx3/nvToolsExt.h>  // header-only; names the prefill range for nsys (docs/TTFT.md)
+#endif
 #include <sstream>
 
 #include "logger.h"
@@ -481,6 +484,14 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
                                      bool apply_q_a_format_cli_hint) { // Renamed for clarity
   auto t_start = std::chrono::high_resolution_clock::now(); // Start timing
 
+  // TTFT instrumentation (docs/TTFT.md): each phase up to the first token.
+  using ttft_clock = std::chrono::steady_clock;
+  auto ms_between = [](ttft_clock::time_point a, ttft_clock::time_point b) {
+    return std::chrono::duration<double, std::milli>(b - a).count();
+  };
+  last_ttft_ = TtftBreakdown{};
+  last_ttft_.t_entry = ttft_clock::now();
+
   generated_text_for_api_return_.clear(); // Clear for new generation
   generated_stream_.str("");             // Clear for new generation
   generated_stream_.clear();          // Clear error flags
@@ -581,6 +592,8 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
 
   int num_prompt_tokens = tokens.size();
   Logger::info("[Generate API] Number of prompt tokens: " + std::to_string(num_prompt_tokens));
+  last_ttft_.num_prompt_tokens = num_prompt_tokens;
+  last_ttft_.tokenize_ms = ms_between(last_ttft_.t_entry, ttft_clock::now());
 
   int total_steps = num_prompt_tokens + steps -1; // Max total tokens including prompt
   int generated_count = 0;
@@ -589,8 +602,10 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   std::vector<float> logits; // Declare logits here, to be populated by prefill or loop
   std::vector<int> generated_token_ids; // Track generated tokens separately
   
+  auto t_kv_reset = ttft_clock::now();
   kv_cache_.clear_data(); // Clear K/V vector data for all layers
   kv_cache_.seq_len = 0;  // Reset KVCache logical sequence length for new sequence
+  last_ttft_.kv_reset_ms = ms_between(t_kv_reset, ttft_clock::now());
 
   std::vector<float> current_data_host; // To hold embedding or output of CPU layers
   int start_pos_for_loop = 0;
@@ -604,7 +619,9 @@ if (prefill_enabled) {
       Logger::info("[Generate API] Prefill enabled. num_prompt_tokens: " + std::to_string(num_prompt_tokens) + 
                    ", num_cpu_offload_layers: " + std::to_string(config_.num_cpu_offload_layers) +
                    ", total_hidden_layers: " + std::to_string(config_.num_hidden_layers));
-      
+      last_ttft_.batch_prefill = true;
+      auto t_embed = ttft_clock::now();
+
       std::vector<float> batch_initial_embeddings(num_prompt_tokens * config_.hidden_size);
       for (int i = 0; i < num_prompt_tokens; ++i) {
           std::vector<float> token_embedding = model_->lookup_embedding(tokens[i]);
@@ -614,6 +631,8 @@ if (prefill_enabled) {
           }
           std::copy(token_embedding.begin(), token_embedding.end(), batch_initial_embeddings.begin() + i * config_.hidden_size);
       }
+      auto t_prefill = ttft_clock::now();
+      last_ttft_.embed_ms = ms_between(t_embed, t_prefill);
 
       // If there are CPU layers to process for prefill
       std::vector<float> cpu_processed_embeddings;
@@ -660,7 +679,21 @@ if (prefill_enabled) {
           gpuErrchk(cudaMemcpy(d_temp_batch_embeddings, cpu_processed_embeddings.data(), 
                                batch_embeddings_size_bytes, cudaMemcpyHostToDevice));
 
+          // Events on the default stream (the forward runs on stream 0).
+          cudaEvent_t ev_fwd_start, ev_fwd_end;
+          gpuErrchk(cudaEventCreate(&ev_fwd_start));
+          gpuErrchk(cudaEventCreate(&ev_fwd_end));
+          gpuErrchk(cudaEventRecord(ev_fwd_start, 0));
+          nvtxRangePushA("ttft_prefill_forward");
           logits = model_->forward_device_batch_prefill(d_temp_batch_embeddings, num_prompt_tokens, start_pos_for_loop, &kv_cache_, 0);
+          nvtxRangePop();
+          gpuErrchk(cudaEventRecord(ev_fwd_end, 0));
+          gpuErrchk(cudaEventSynchronize(ev_fwd_end));
+          float fwd_span_ms = 0.0f;
+          gpuErrchk(cudaEventElapsedTime(&fwd_span_ms, ev_fwd_start, ev_fwd_end));
+          last_ttft_.prefill_gpu_span_ms = fwd_span_ms;
+          gpuErrchk(cudaEventDestroy(ev_fwd_start));
+          gpuErrchk(cudaEventDestroy(ev_fwd_end));
 
           if (d_temp_batch_embeddings) {
               gpuErrchk(cudaFree(d_temp_batch_embeddings));
@@ -675,16 +708,22 @@ if (prefill_enabled) {
           Logger::error("Prefill: Logits are empty after prefill processing.");
           return ""; // Critical error
       }
+      auto t_sample = ttft_clock::now();
+      last_ttft_.prefill_wall_ms = ms_between(t_prefill, t_sample);
       apply_repetition_penalty(logits, generated_token_ids, repetition_penalty_);
       debug_dump_topk(logits);
       next_token_id = sample_top_k_top_p_temperature(logits, temperature, top_k, top_p, rng_);
       generated_token_ids.push_back(next_token_id); // Track generated token
       generated_count++;
-      
+
       // Stream the first generated token from prefill
       generated_stream_ << tokenizer_->decode({next_token_id}, false);
       generated_text_for_api_return_ += tokenizer_->decode({next_token_id}, false);
-      
+      last_ttft_.t_first_token = ttft_clock::now();
+      last_ttft_.first_token = true;
+      last_ttft_.sample_ms = ms_between(t_sample, last_ttft_.t_first_token);
+      last_ttft_.ttft_ms = ms_between(last_ttft_.t_entry, last_ttft_.t_first_token);
+
       start_pos_for_loop = num_prompt_tokens; // Next token will be at num_prompt_tokens
       kv_cache_.seq_len = num_prompt_tokens; // KVCache is now filled up to num_prompt_tokens
 
@@ -785,7 +824,11 @@ if (prefill_enabled) {
         // Stream the first generated token
         generated_stream_ << tokenizer_->decode({next_token_id}, false);
         generated_text_for_api_return_ += tokenizer_->decode({next_token_id}, false);
-        
+        // Token-by-token path: only the total is recorded (batch_prefill=false).
+        last_ttft_.t_first_token = ttft_clock::now();
+        last_ttft_.first_token = true;
+        last_ttft_.ttft_ms = ms_between(last_ttft_.t_entry, last_ttft_.t_first_token);
+
         Logger::info("[Generate API] First token sampled from prompt: " + std::to_string(next_token_id) + 
                      ", Decoded: \"" + tokenizer_->decode({next_token_id}, false) + "\"");
       }

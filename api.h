@@ -1,6 +1,7 @@
 #ifndef TINYLLAMA_API_H
 #define TINYLLAMA_API_H
 
+#include <chrono>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -14,6 +15,35 @@
 struct KVCache;
 
 namespace tinyllama {
+
+/**
+ * @brief Where the time went between generate() being called and its first
+ * output token being emitted (docs/TTFT.md).
+ *
+ * Every *_ms field is host wall-clock (steady_clock) except
+ * prefill_gpu_span_ms, which is the CUDA-event span of the batched prefill
+ * forward on the default stream. The span runs from the first to the last
+ * GPU op of the forward, so it INCLUDES any time the GPU sat idle waiting on
+ * the host (logging, synchronising copies) inside the forward; it is not the
+ * sum of kernel durations. Kernel busy time comes from a separate nsys pass.
+ * The phases tile the TTFT window with nothing left over except negligible
+ * glue, so ttft_ms ~= sum of the phase fields.
+ */
+struct TtftBreakdown {
+  std::chrono::steady_clock::time_point t_entry;        // generate() entered
+  std::chrono::steady_clock::time_point t_first_token;  // first token emitted
+  int num_prompt_tokens = 0;
+  bool first_token = false;        // false: generate() bailed out before emitting one
+  bool batch_prefill = false;     // false: token-by-token path (short prompts / CPU)
+  double tokenize_ms = 0.0;        // template + encode
+  double kv_reset_ms = 0.0;        // kv_cache_.clear_data()
+  double embed_ms = 0.0;           // host embedding lookup for the whole prompt
+  double prefill_wall_ms = 0.0;    // embeddings -> last-token logits on host: CPU-offload
+                                   // layers, device alloc + upload, GPU forward, free
+  double prefill_gpu_span_ms = -1.0;  // CUDA-event span of that call; -1 = not measured
+  double sample_ms = 0.0;          // repetition penalty + sampling + first-token decode
+  double ttft_ms = 0.0;            // t_entry -> t_first_token
+};
 
 /**
  * @brief Represents an active TinyLlama session holding the loaded model and
@@ -112,6 +142,9 @@ class TinyLlamaSession {
   void set_repetition_penalty(float p) { repetition_penalty_ = p; }
   float get_repetition_penalty() const { return repetition_penalty_; }
 
+  // Timing of the most recent generate() call up to its first token.
+  const TtftBreakdown& last_ttft() const { return last_ttft_; }
+
  private:
   TinyLlamaSession(const TinyLlamaSession&) = delete;
   TinyLlamaSession& operator=(const TinyLlamaSession&) = delete;
@@ -137,7 +170,8 @@ class TinyLlamaSession {
   bool use_batch_generation_; // Enable batch generation
   std::stringstream generated_stream_; // Added for streaming output
   std::string generated_text_for_api_return_; // Added to accumulate full response
-  
+  TtftBreakdown last_ttft_;            // see last_ttft()
+
   // Batch processing support
   int max_batch_size_ = 1;  // Maximum number of sequences for batch processing
 };
