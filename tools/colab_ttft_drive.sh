@@ -22,6 +22,14 @@ EMBER=$ROOT/tinyllama.cpp; PK=$ROOT/microtorch
 STAGE=~/ttft_stage/$S; OUT=/mnt/c/ml_artifacts/ttft/$S
 log() { echo "$(date +%H:%M:%S) $*"; }
 
+# Every CLI call carries a SHELL timeout: `colab exec --timeout` does not
+# bound a hung exec (probe 2, 16 Oct 2026: the launch exec hung for 60 min,
+# the session key expired, the CLI pruned the session and orphaned the VM).
+# Exec is used only to launch and to package; progress is read by
+# DOWNLOADING the VM log and marker files, a channel that kept working
+# while exec was dead.
+c() { local t=$1; shift; timeout "$t" $COL "$@"; }
+
 # ---- refuse to measure code that is not a commit
 for repo in "$EMBER" "$PK"; do
     if [ "$repo" = "$EMBER" ]; then paths=(.); else paths=(CMakeLists.txt include src third_party tools); fi
@@ -36,7 +44,7 @@ EC=$(git -C "$EMBER" rev-parse --short=12 HEAD); PC=$(git -C "$PK" rev-parse --s
 [ -e "$OUT" ] && { log "$OUT exists: results are immutable, pick a new session name"; exit 2; }
 
 # ---- preflight (AGENTS.md section 2)
-sessions=$($COL sessions 2>&1)
+sessions=$(c 180 sessions 2>&1)
 echo "$sessions" | grep -q "\[$S\]" && { log "session $S already exists: someone owns it"; exit 2; }
 echo "$sessions" | grep -q "\[?\]" && { log "orphan [?] sessions present: resolve them first"; echo "$sessions"; exit 2; }
 
@@ -49,56 +57,75 @@ unzip -jo /mnt/c/ml_artifacts/paperkiln_story3k.zip paperkiln_story3k/story3k.gg
 cp "$EMBER/tools/colab_ttft_vm.sh" "$STAGE/"
 log "ember $EC, paperkiln $PC; staged $(du -sh "$STAGE" | cut -f1)"
 
-stop_session() { log "stopping $S"; $COL stop -s "$S" > /dev/null 2>&1; }
+stop_session() { log "stopping $S"; c 120 stop -s "$S" > /dev/null 2>&1; }
 trap stop_session EXIT
 
-# ---- session
+# ---- session (the deadline counts from here, not from launch)
+start=$(date +%s); last_refresh=$start
+past_deadline() { [ $(( $(date +%s) - start )) -ge $((MAXMIN * 60)) ]; }
+# The key `colab new` stores expires after ~1 h; refresh well inside it, at
+# every step, not only while polling (colab_transfer_runner.py refresh_key).
+maybe_refresh() {
+    if [ $(( $(date +%s) - last_refresh )) -ge 900 ] && [ -x "$COLAB_PY" ]; then
+        timeout 180 "$COLAB_PY" "$PK/tools/colab_adopt.py" --refresh > /dev/null 2>&1 \
+            && last_refresh=$(date +%s)
+    fi
+}
 log "new L4 session $S"
-out=$(timeout 600 $COL new -s "$S" --gpu L4 2>&1)
+out=$(c 600 new -s "$S" --gpu L4 2>&1)
 echo "$out" | grep -q READY || { log "session not ready: ${out: -300}"; exit 1; }
 for f in ember.tgz paperkiln.tgz story3k.gguf colab_ttft_vm.sh; do
-    timeout 900 $COL upload -s "$S" "$STAGE/$f" "/content/$f" > /dev/null 2>&1 || { log "upload $f failed"; exit 1; }
+    c 900 upload -s "$S" "$STAGE/$f" "/content/$f" > /dev/null 2>&1 || { log "upload $f failed"; exit 1; }
 done
 log "uploaded"
 
 # ---- launch detached (Popen, every fd on /dev/null, own session: see
-#      colab_transfer_runner.py on why exec must not hold the job's pipes)
+#      colab_transfer_runner.py on why exec must not hold the job's pipes).
+#      Confirmed by the VM log appearing, and retried: the exec reply itself
+#      is not trustworthy. The launcher is idempotent (no second job once
+#      the log exists).
 cat > "$STAGE/launch.py" <<EOF
-import subprocess, time
-cmd = "cd /content && $VM_ENV bash colab_ttft_vm.sh $MODE $EC $PC"
-subprocess.Popen(cmd, shell=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                 stderr=subprocess.DEVNULL, close_fds=True, start_new_session=True)
-time.sleep(5)
-r = subprocess.run("pgrep -f colab_ttft_vm.sh", shell=True, capture_output=True, text=True)
-print("TTFT_LAUNCHED" if r.stdout.strip() else "TTFT_NOT_RUNNING")
-EOF
-cat > "$STAGE/status.py" <<'EOF'
 import os, subprocess
-state = ("DONE" if os.path.exists("/content/TTFT_DONE") else
-         "FAILED" if os.path.exists("/content/TTFT_FAILED") else "RUNNING")
-tail = subprocess.run("tail -n 4 /content/ttft_vm.log", shell=True, capture_output=True, text=True).stdout
-print("TTFT_STATE=" + state); print(tail)
+if not os.path.exists("/content/ttft_vm.log"):
+    subprocess.Popen("cd /content && $VM_ENV bash colab_ttft_vm.sh $MODE $EC $PC", shell=True,
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, close_fds=True, start_new_session=True)
+print("TTFT_LAUNCH_SENT")
 EOF
-$COL exec -s "$S" -f "$STAGE/launch.py" --timeout 120 2>&1 | grep -q TTFT_LAUNCHED || { log "launch failed"; exit 1; }
-log "launched mode=$MODE $VM_ENV; deadline ${MAXMIN} min"
+launched=0
+for attempt in 1 2 3; do
+    maybe_refresh
+    c 180 exec -s "$S" -f "$STAGE/launch.py" --timeout 120 > /dev/null 2>&1
+    sleep 20
+    if c 300 download -s "$S" /content/ttft_vm.log "$STAGE/vm.log" > /dev/null 2>&1; then
+        launched=1; break
+    fi
+    log "launch attempt $attempt not confirmed"
+done
+[ $launched = 1 ] || { log "launch failed after 3 attempts"; exit 1; }
+log "launched mode=$MODE $VM_ENV; deadline ${MAXMIN} min from session start"
 
-# ---- poll
-start=$(date +%s); last_refresh=$start; state=RUNNING
+# ---- poll by download
+state=RUNNING
 while :; do
     sleep 90
-    now=$(date +%s)
-    if [ $((now - last_refresh)) -ge 900 ] && [ -x "$COLAB_PY" ]; then
-        "$COLAB_PY" "$PK/tools/colab_adopt.py" --refresh > /dev/null 2>&1 && last_refresh=$now
+    maybe_refresh
+    if c 300 download -s "$S" /content/TTFT_DONE "$STAGE/TTFT_DONE" > /dev/null 2>&1; then
+        state=DONE
+    elif c 300 download -s "$S" /content/TTFT_FAILED "$STAGE/TTFT_FAILED" > /dev/null 2>&1; then
+        state=FAILED
     fi
-    st=$(timeout 600 $COL exec -s "$S" -f "$STAGE/status.py" --timeout 300 2>&1)
-    state=$(echo "$st" | sed -n 's/.*TTFT_STATE=\([A-Z]*\).*/\1/p' | tail -1)
-    log "state=${state:-unknown} $(echo "$st" | grep -v '^\[colab\]\|TTFT_STATE\|^\s*$' | tail -2 | tr '\n' ' ')"
-    [ "$state" = DONE ] || [ "$state" = FAILED ] && break
-    [ $((now - start)) -ge $((MAXMIN * 60)) ] && { log "deadline reached"; state=DEADLINE; break; }
+    if c 300 download -s "$S" /content/ttft_vm.log "$STAGE/vm.log" > /dev/null 2>&1; then
+        log "state=$state $(grep -v '^[[:space:]]*$' "$STAGE/vm.log" | tail -2 | tr '\n' ' ')"
+    else
+        log "state=$state (log download failed)"
+    fi
+    if [ "$state" = DONE ] || [ "$state" = FAILED ]; then break; fi
+    if past_deadline; then log "deadline reached"; state=DEADLINE; break; fi
 done
 
 # ---- bring everything home, then the trap stops the session
-timeout 900 $COL download -s "$S" /content/ttft_vm.log "$OUT/ttft_vm.log" > /dev/null 2>&1
+c 900 download -s "$S" /content/ttft_vm.log "$OUT/ttft_vm.log" > /dev/null 2>&1
 if [ "$state" != DONE ]; then
     # Partial results are still results: package whatever exists.
     cat > "$STAGE/partial.py" <<'EOF'
@@ -108,9 +135,15 @@ subprocess.run("pkill -f colab_ttft_vm.sh; pkill -f ttft_bench.py; pkill -f ttft
 shutil.make_archive("/content/ttft_out", "zip", "/content/out")
 print("PARTIAL_PACKED")
 EOF
-    $COL exec -s "$S" -f "$STAGE/partial.py" --timeout 300 > /dev/null 2>&1
+    maybe_refresh
+    c 400 exec -s "$S" -f "$STAGE/partial.py" --timeout 300 > /dev/null 2>&1
+    sleep 10
 fi
-timeout 1800 $COL download -s "$S" /content/ttft_out.zip "$OUT/ttft_out.zip" > /dev/null 2>&1 \
-    && (cd "$OUT" && unzip -oq ttft_out.zip) && log "results ($state) in $OUT" \
-    || log "no results downloaded ($state); log at $OUT/ttft_vm.log"
+maybe_refresh
+if c 1800 download -s "$S" /content/ttft_out.zip "$OUT/ttft_out.zip" > /dev/null 2>&1 \
+        && (cd "$OUT" && unzip -oq ttft_out.zip); then
+    log "results ($state) in $OUT"
+else
+    log "no results downloaded ($state); log at $OUT/ttft_vm.log"
+fi
 echo "$state" > "$OUT/DRIVER_STATE"
