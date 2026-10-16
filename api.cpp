@@ -599,6 +599,20 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   Logger::info("[Generate API] Number of prompt tokens: " + std::to_string(num_prompt_tokens));
   last_ttft_.num_prompt_tokens = num_prompt_tokens;
   last_ttft_.tokenize_ms = ms_between(last_ttft_.t_entry, ttft_clock::now());
+  {
+    // Prefix-cache opportunity against what the previous request cached.
+    size_t lcp = 0;
+    while (lcp < kv_token_history_.size() && lcp < tokens.size() &&
+           kv_token_history_[lcp] == tokens[lcp]) {
+      ++lcp;
+    }
+    last_ttft_.prefix_prev_cached_tokens = static_cast<int>(kv_token_history_.size());
+    last_ttft_.prefix_reusable_tokens =
+        static_cast<int>(std::min(lcp, tokens.size() - 1));
+    last_ttft_.prefix_hit_rate =
+        static_cast<double>(last_ttft_.prefix_reusable_tokens) / num_prompt_tokens;
+    kv_token_history_.clear();  // refilled only if this request completes
+  }
 
   int total_steps = num_prompt_tokens + steps -1; // Max total tokens including prompt
   int generated_count = 0;
@@ -869,6 +883,14 @@ if (prefill_enabled) {
 
   std::string result = tokenizer_->decode(generated_token_ids, true);
   Logger::info("Generated response: " + result);
+
+  // What the KV cache now holds: the prompt plus every generated token that
+  // was fed back through the model (all but the last one sampled).
+  kv_token_history_ = tokens;
+  if (!generated_token_ids.empty()) {
+    kv_token_history_.insert(kv_token_history_.end(), generated_token_ids.begin(),
+                             generated_token_ids.end() - 1);
+  }
 
   auto t_end = std::chrono::high_resolution_clock::now(); // End timing
   double time_taken_ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();

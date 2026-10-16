@@ -246,7 +246,10 @@ int main(int argc, char** argv) {
               {"embed_ms", tb.embed_ms},
               {"prefill_wall_ms", tb.prefill_wall_ms},
               {"prefill_gpu_span_ms", tb.prefill_gpu_span_ms},
-              {"sample_ms", tb.sample_ms}};
+              {"sample_ms", tb.sample_ms},
+              {"prefix_prev_cached_tokens", tb.prefix_prev_cached_tokens},
+              {"prefix_reusable_tokens", tb.prefix_reusable_tokens},
+              {"prefix_hit_rate", tb.prefix_hit_rate}};
 
           res.set_content(res_json.dump(), "application/json");
           Logger::info("Response sent successfully.");

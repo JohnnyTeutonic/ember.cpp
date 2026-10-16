@@ -43,6 +43,15 @@ struct TtftBreakdown {
   double prefill_gpu_span_ms = -1.0;  // CUDA-event span of that call; -1 = not measured
   double sample_ms = 0.0;          // repetition penalty + sampling + first-token decode
   double ttft_ms = 0.0;            // t_entry -> t_first_token
+
+  // Prefix-cache opportunity (logged only; the KV cache is still cleared).
+  // The previous request left prompt + generated[:-1] in the KV cache; the
+  // reusable prefix is its longest common prefix with this prompt, capped at
+  // num_prompt_tokens - 1 because the last prompt token must be computed to
+  // produce logits. hit rate = reusable / num_prompt_tokens.
+  int prefix_prev_cached_tokens = 0;
+  int prefix_reusable_tokens = 0;
+  double prefix_hit_rate = 0.0;
 };
 
 /**
@@ -171,6 +180,7 @@ class TinyLlamaSession {
   std::stringstream generated_stream_; // Added for streaming output
   std::string generated_text_for_api_return_; // Added to accumulate full response
   TtftBreakdown last_ttft_;            // see last_ttft()
+  std::vector<int> kv_token_history_;  // token ids the previous generate() left in the KV cache
 
   // Batch processing support
   int max_batch_size_ = 1;  // Maximum number of sequences for batch processing
