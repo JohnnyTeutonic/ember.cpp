@@ -189,6 +189,12 @@ def main():
                     help="lengths measured with --long-warmup/--long-reps instead")
     ap.add_argument("--long-warmup", type=int, default=2)
     ap.add_argument("--long-reps", type=int, default=5)
+    ap.add_argument("--override", nargs="*", default=[], metavar="LEN:WARMUP:REPS",
+                    help="per-length request counts (seconds-scale lengths); "
+                         "rows carry protocol_deviation")
+    ap.add_argument("--cells", nargs="*", default=None, metavar="RUN:LEN",
+                    help="run only these (run, length) cells, e.g. what a reclaimed "
+                         "VM left unfinished; overrides --runs/--first-run")
     ap.add_argument("--kernel-variant", default="baseline")
     ap.add_argument("--chunk-size", type=int, default=None)
     ap.add_argument("--prefix-cache", action="store_true")
@@ -224,9 +230,26 @@ def main():
         rng = random.Random(f"{args.seed}:{length}:{phase}")
         return [make_prompt(words, n_words, rng) for _ in range(count)]
 
+    # Per-length request counts: --override, plus the older --long-* form.
+    counts = {n: (args.long_warmup, args.long_reps) for n in args.long_lengths}
+    for spec in args.override:
+        n, w, r = (int(x) for x in spec.split(":"))
+        counts[n] = (w, r)
+
+    # Which lengths each run measures. A cell list keeps the run's seeded
+    # order over the FULL --lengths set and drops the cells not asked for, so
+    # a resumed run measures its remaining cells in the order it would have.
+    if args.cells is not None:
+        plan = {}
+        for spec in args.cells:
+            r, n = (int(x) for x in spec.split(":"))
+            plan.setdefault(r, set()).add(n)
+    else:
+        plan = {r: set(args.lengths)
+                for r in range(args.first_run, args.first_run + args.runs)}
+
     with open(raw_path, "w") as raw, open(sum_path, "w") as summ:
-        last_run = args.first_run + args.runs - 1
-        for run in range(args.first_run, last_run + 1):
+        for run in sorted(plan):
             run_dir = os.path.join(args.out_dir, f"run{run}")
             os.makedirs(run_dir, exist_ok=True)
             port = free_port()
@@ -234,17 +257,16 @@ def main():
             proc, log = start_server(args, run_dir, port)
             order = list(args.lengths)
             random.Random(f"order:{args.seed}:{run}").shuffle(order)
-            print(f"run {run} (of {args.first_run}..{last_run}): lengths in order {order}",
-                  flush=True)
+            order = [n for n in order if n in plan[run]]
+            print(f"run {run} (of {sorted(plan)}): lengths in order {order}", flush=True)
             try:
                 for length in order:
                     # Calibrate words -> tokens once (BOS etc.), then hold it exact.
                     probe = prompt_set(length, "calibrate", 1, length)[0]
                     _, pay = post(port, probe, args.request_timeout)
                     n_words = length - (pay["ttft"]["num_prompt_tokens"] - length)
-                    long = length in args.long_lengths
-                    warmup = args.long_warmup if long else args.warmup
-                    reps = args.long_reps if long else args.reps
+                    long = length in counts
+                    warmup, reps = counts.get(length, (args.warmup, args.reps))
                     rows = {"warmup": prompt_set(length, "warmup", warmup, n_words),
                             "measure": prompt_set(length, "measure", reps, n_words)}
                     measured = []
