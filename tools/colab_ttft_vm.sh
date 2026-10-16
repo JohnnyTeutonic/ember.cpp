@@ -24,8 +24,15 @@ LONG_LENGTHS=${LONG_LENGTHS:-""}; LONG_WARMUP=${LONG_WARMUP:-2}; LONG_REPS=${LON
 # GPU legs of the timing-model parity check; NSYS=0 skips the kernel pass.
 PARITY_LENGTHS=${PARITY_LENGTHS:-"128 512 1024 2048 4096"}
 NSYS=${NSYS:-1}; NSYS_LENGTHS=${NSYS_LENGTHS:-"128 1024"}
-STAMP=$(date -u +%Y-%m-%d)
+STAMP=$(date -u +%Y-%m-%d_%H%M%S)   # time too: a resumed lane gets one dir per launch
 OUT=/content/out/ttft_${STAMP}_${MODE}
+# resume mode (tools/ttft_supervise.py): /content/ttft_todo.txt lists what is
+# not yet banked, one "story3k RUN:LEN", "timing RUN:LEN" or "nsys" per line.
+TODO=/content/ttft_todo.txt
+if [ "$MODE" = resume ]; then
+    [ -f "$TODO" ] || fail "resume mode needs $TODO"
+    NSYS=$(grep -qx nsys "$TODO" && echo 1 || echo 0)
+fi
 fail() { echo "FAILED: $*"; echo "$*" > /content/TTFT_FAILED; exit 1; }
 
 echo "=== ttft vm $(date -u) mode=$MODE ember=$EMBER_COMMIT paperkiln=$PK_COMMIT ==="
@@ -69,6 +76,18 @@ echo "--- parity $(date -u +%T)"
 PARITY="python3 /content/src/ember/tools/ttft_parity.py --server $SERVER --prompts 2"
 mkdir -p "$OUT/parity"
 parity_ok=1
+if [ "$MODE" = resume ]; then
+    # Short-lived VMs (~22 min, Oct 2026): a quick gate on every VM, one leg
+    # per path. The full matrix (timing CPU leg, 4096) already passed on five
+    # VMs at this engine code.
+    $PARITY --model story3k.gguf --ref cpu --test gpu_fp32 --lengths 128 \
+        --max-rel-diff 1e-3 --min-cosine 0.99999 --out "$OUT/parity/story3k_cpu_vs_gpu_fp32.jsonl" \
+        || fail "parity gate failed (story3k cpu vs gpu_fp32)"
+    $PARITY --model timing.gguf --ref gpu_fp32 --test gpu_bf16 --lengths 128 \
+        --max-rel-diff 5e-2 --min-cosine 0.999 --out "$OUT/parity/timing_gpu_fp32_vs_bf16.jsonl" \
+        || fail "parity gate failed (timing gpu_fp32 vs default)"
+    echo "parity_ok=1 (quick gate)" | tee "$OUT/parity/RESULT"
+else
 $PARITY --model story3k.gguf --ref cpu --test gpu_fp32 --lengths 128 \
     --max-rel-diff 1e-3 --min-cosine 0.99999 --out "$OUT/parity/story3k_cpu_vs_gpu_fp32.jsonl" || parity_ok=0
 $PARITY --model story3k.gguf --ref gpu_fp32 --test gpu_bf16 --lengths 128 \
@@ -79,6 +98,7 @@ $PARITY --model timing.gguf --ref gpu_fp32 --test gpu_bf16 --lengths $PARITY_LEN
     --max-rel-diff 5e-2 --min-cosine 0.999 --out "$OUT/parity/timing_gpu_fp32_vs_bf16.jsonl" || parity_ok=0
 echo "parity_ok=$parity_ok" | tee "$OUT/parity/RESULT"
 [ "$MODE" = full ] && [ $parity_ok = 0 ] && fail "parity gate failed: no baseline of a wrong path"
+fi
 
 if [ "$MODE" = probe ]; then
     $BENCH --model story3k.gguf --model-label "story3k (paperkiln, d128 L2 ctx256)" \
@@ -93,6 +113,23 @@ elif [ "$MODE" = full ]; then
         --lengths $TIMING_LENGTHS --runs "$RUNS" --first-run "$FIRST_RUN" --warmup "$WARMUP" \
         --reps "$REPS" --long-lengths $LONG_LENGTHS --long-warmup "$LONG_WARMUP" \
         --long-reps "$LONG_REPS" --out-dir "$OUT/timing" || fail "bench timing"
+elif [ "$MODE" = resume ]; then
+    # Story first (seconds), then timing cells. Seconds-scale lengths use
+    # reduced counts (docs/TTFT.md): 2048 at 2+5, 4096 at 1+3, so the longest
+    # cell (~11 min) still fits inside a short VM life.
+    STORY_CELLS=$(awk '$1=="story3k"{print $2}' "$TODO" | tr '\n' ' ')
+    TIMING_CELLS=$(awk '$1=="timing"{print $2}' "$TODO" | tr '\n' ' ')
+    echo "todo: story3k [$STORY_CELLS] timing [$TIMING_CELLS] nsys=$NSYS"
+    if [ -n "${STORY_CELLS// /}" ]; then
+        $BENCH --model story3k.gguf --model-label "story3k (paperkiln, d128 L2 ctx256)" \
+            --lengths 128 --cells $STORY_CELLS --warmup "$WARMUP" --reps "$REPS" \
+            --out-dir "$OUT/story3k" || fail "bench story3k"
+    fi
+    if [ -n "${TIMING_CELLS// /}" ]; then
+        $BENCH --model timing.gguf --model-label "timing (paperkiln random, TinyLlama-1.1B shape, GQA 32/4)" \
+            --lengths $TIMING_LENGTHS --cells $TIMING_CELLS --warmup "$WARMUP" --reps "$REPS" \
+            --override 2048:2:5 4096:1:3 --out-dir "$OUT/timing" || fail "bench timing"
+    fi
 else
     fail "unknown mode $MODE"
 fi
