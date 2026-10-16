@@ -30,6 +30,8 @@ import argparse
 import json
 import os
 import random
+import shlex
+import signal
 import socket
 import struct
 import subprocess
@@ -132,9 +134,10 @@ def post(port, prompt, timeout):
 def start_server(args, run_dir, port):
     # cwd = run_dir: ember's Logger writes debugging.log into the cwd.
     log = open(os.path.join(run_dir, "server.log"), "w")
-    proc = subprocess.Popen([os.path.abspath(args.server), os.path.abspath(args.model),
-                             str(port), "127.0.0.1", "/nonexistent_www"],
-                            cwd=run_dir, stdout=log, stderr=subprocess.STDOUT)
+    cmd = shlex.split(args.wrapper.replace("{run_dir}", run_dir)) if args.wrapper else []
+    cmd += [os.path.abspath(args.server), os.path.abspath(args.model),
+            str(port), "127.0.0.1", "/nonexistent_www"]
+    proc = subprocess.Popen(cmd, cwd=run_dir, stdout=log, stderr=subprocess.STDOUT)
     deadline = time.time() + args.load_timeout
     while time.time() < deadline:
         if proc.poll() is not None:
@@ -184,6 +187,9 @@ def main():
     ap.add_argument("--prefix-cache", action="store_true")
     ap.add_argument("--commit", default="unknown")
     ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--wrapper", default="",
+                    help="command prefix for the server, e.g. an nsys profile line; "
+                         "{run_dir} expands to the run directory")
     ap.add_argument("--load-timeout", type=float, default=900)
     ap.add_argument("--request-timeout", type=float, default=900)
     args = ap.parse_args()
@@ -267,9 +273,14 @@ def main():
                           f"p90 {summary['ttft_ms']['p90']:.2f}  p99 {summary['ttft_ms']['p99']:.2f}",
                           flush=True)
             finally:
-                proc.terminate()
+                # A profiler wrapper (nsys) finalises its report on SIGINT and
+                # can take minutes doing it; a bare server just stops.
+                if args.wrapper:
+                    proc.send_signal(signal.SIGINT)
+                else:
+                    proc.terminate()
                 try:
-                    proc.wait(timeout=30)
+                    proc.wait(timeout=600 if args.wrapper else 30)
                 except subprocess.TimeoutExpired:
                     proc.kill()
                 log.close()
