@@ -1,6 +1,8 @@
 #include "model.h"
 #include "logger.h"
 
+#include <algorithm>
+
 #ifdef HAS_CUDA
 #include <cuda_runtime.h>
 #include "cuda_kernels.h"
@@ -15,19 +17,21 @@ void TinyLlamaModel::allocate_persistent_batch_buffers() {
     int is = config_.intermediate_size;
     int n_kv_heads = config_.num_key_value_heads;
     int head_dim = hs / config_.num_attention_heads;
+    if (persistent_batch_capacity_ < MAX_BATCH_TOKENS) persistent_batch_capacity_ = MAX_BATCH_TOKENS;
+    const size_t cap = static_cast<size_t>(persistent_batch_capacity_);
     
-    size_t input_size = MAX_BATCH_TOKENS * hs * sizeof(float);
-    size_t norm_size = MAX_BATCH_TOKENS * hs * sizeof(float);
-    size_t residual_size = MAX_BATCH_TOKENS * hs * 2 * sizeof(float);
-    size_t q_size = MAX_BATCH_TOKENS * hs * sizeof(float);
-    size_t k_size = MAX_BATCH_TOKENS * n_kv_heads * head_dim * sizeof(float);
-    size_t v_size = MAX_BATCH_TOKENS * n_kv_heads * head_dim * sizeof(float);
-    size_t attn_out_size = MAX_BATCH_TOKENS * hs * sizeof(float);
-    size_t attn_proj_size = MAX_BATCH_TOKENS * hs * sizeof(float);
-    size_t gate_size = MAX_BATCH_TOKENS * is * sizeof(float);
-    size_t up_size = MAX_BATCH_TOKENS * is * sizeof(float);
-    size_t swiglu_size = MAX_BATCH_TOKENS * is * sizeof(float);
-    size_t mlp_down_size = MAX_BATCH_TOKENS * hs * sizeof(float);
+    size_t input_size = cap * hs * sizeof(float);
+    size_t norm_size = cap * hs * sizeof(float);
+    size_t residual_size = cap * hs * 2 * sizeof(float);
+    size_t q_size = cap * hs * sizeof(float);
+    size_t k_size = cap * n_kv_heads * head_dim * sizeof(float);
+    size_t v_size = cap * n_kv_heads * head_dim * sizeof(float);
+    size_t attn_out_size = cap * hs * sizeof(float);
+    size_t attn_proj_size = cap * hs * sizeof(float);
+    size_t gate_size = cap * is * sizeof(float);
+    size_t up_size = cap * is * sizeof(float);
+    size_t swiglu_size = cap * is * sizeof(float);
+    size_t mlp_down_size = cap * hs * sizeof(float);
     
     size_t total_size = input_size + norm_size + residual_size + q_size + k_size + v_size +
                        attn_out_size + attn_proj_size + gate_size + up_size + swiglu_size + mlp_down_size;
@@ -83,16 +87,21 @@ void TinyLlamaModel::free_persistent_batch_buffers() {
 }
 
 void TinyLlamaModel::resize_persistent_batch_buffers_if_needed(int required_batch_size) {
-    if (required_batch_size <= MAX_BATCH_TOKENS) {
-        if (d_persistent_batch_input_ == nullptr) {
-            allocate_persistent_batch_buffers();
-        }
+    if (d_persistent_batch_input_ != nullptr && required_batch_size <= persistent_batch_capacity_) {
         return;
     }
-    
-    Logger::warning("[GPU_OPT] Required batch size " + std::to_string(required_batch_size) + 
-                   " exceeds MAX_BATCH_TOKENS " + std::to_string(MAX_BATCH_TOKENS) + 
-                   ". This will cause memory reallocation per forward pass.");
+    // Grow to fit. This used to only warn above MAX_BATCH_TOKENS and keep
+    // the 2048-token buffers, so a longer prefill wrote past them (a CUDA
+    // invalid-argument error at 4096 tokens; docs/TTFT.md). One
+    // reallocation on the first long prompt, none after.
+    if (d_persistent_batch_input_ != nullptr) {
+        Logger::info("[GPU_OPT] Growing persistent batch buffers from " +
+                     std::to_string(persistent_batch_capacity_) + " to " +
+                     std::to_string(required_batch_size) + " tokens");
+        free_persistent_batch_buffers();
+    }
+    persistent_batch_capacity_ = std::max(MAX_BATCH_TOKENS, required_batch_size);
+    allocate_persistent_batch_buffers();
 }
 
 #endif // HAS_CUDA 
