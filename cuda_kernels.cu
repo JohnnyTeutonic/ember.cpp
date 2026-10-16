@@ -50,6 +50,8 @@ inline float bf16_to_float32_host(uint16_t bf16) {
 #include <cmath>
 #include <iostream>
 #include <cfloat>
+#include <cstdlib>
+#include <string>
 
 // Place these at the top of the file before any kernel uses them
 __device__ float atomicMaxFloat(float* address, float val) {
@@ -2052,6 +2054,165 @@ void rmsnorm_batch_cuda(float* d_out, float* d_in, const float* d_weight,
 }
 
 // Host wrapper for Batched Attention Prefill
+// ---------------------------------------------------------------------------
+// Prefill attention, tiled with online softmax (kernel_variant "flash_v1";
+// docs/TTFT.md). Selected by EMBER_PREFILL_ATTN=flash; the default stays the
+// baseline kernel above until this variant passes parity and its TTFT has
+// been measured under the same protocol.
+//
+// What it computes: exactly the baseline's causal attention. Query token t
+// (absolute position start + t) attends to cache positions 0..start + t, with
+// K/V read from the cache the batch was just written into.
+//
+// Assumptions: head_dim is a multiple of 32 and at most 128 (each lane of a
+// warp owns head_dim / 32 output dimensions); num_q_heads % num_kv_heads == 0.
+// The wrapper falls back to the baseline kernel otherwise.
+//
+// Shape: one block per (tile of FA_BM = 32 queries, query head), 4 warps,
+// each warp owning FA_BM / 4 = 8 query rows. K/V move through shared memory
+// in tiles of FA_BN = 32 positions. K rows are padded by one float, so lane j
+// reading K[j][d] hits a different bank per lane. Per row and tile, lane j
+// scores key j; a warp max and sum update the row's running max m and
+// normaliser l (online softmax), the accumulator is rescaled by
+// exp(m_old - m_new), and P V is added with p_j broadcast by shuffle. Tiles
+// that lie entirely beyond a block's last query are never loaded (causal
+// skip), which is half the work of the baseline's full scan.
+//
+// Trade-offs: FP32 throughout (no tensor cores), so it is limited by FP32
+// FMA throughput rather than memory once tiles are resident. Q is read from
+// global memory through the read-only cache (each lane reads the same q
+// element: a broadcast) rather than staged in shared memory, which keeps the
+// shared footprint under the 48 KB static limit at head_dim 128. Query heads
+// sharing a KV head re-load the same K/V tiles (GQA handled by indexing, as in
+// the baseline); sharing tiles across a GQA group is the next variant. Tile
+// sizes are fixed here; tuning them per GPU is its own experiment.
+// Accumulation is FP32 with expf; the baseline accumulates its dot products
+// in FP64, so agreement is to FP32 rounding, not bit-exact.
+// ---------------------------------------------------------------------------
+constexpr int FA_BM = 32;      // queries per block
+constexpr int FA_BN = 32;      // keys per K/V tile (= warp size: lane j scores key j)
+constexpr int FA_WARPS = 4;
+constexpr int FA_ROWS = FA_BM / FA_WARPS;
+
+template <int DPL>  // output dims per lane = head_dim / 32
+__global__ void attention_prefill_flash_kernel(
+    float* __restrict__ out,            // [B, H_q, D]
+    const float* __restrict__ q,        // [B, H_q, D]
+    const float* __restrict__ k_cache,  // [S_max, H_kv, D]
+    const float* __restrict__ v_cache,  // [S_max, H_kv, D]
+    int num_tokens, int num_q_heads, int num_kv_heads, int start_pos, float scale) {
+    constexpr int D = DPL * 32;
+    __shared__ float sK[FA_BN][D + 1];
+    __shared__ float sV[FA_BN][D];
+
+    const int lane = threadIdx.x & 31;
+    const int warp = threadIdx.x >> 5;
+    const int q_head = blockIdx.y;
+    const int kv_head = q_head / (num_q_heads / num_kv_heads);
+    const int tile_first = blockIdx.x * FA_BM;
+    const int tile_last = min(tile_first + FA_BM, num_tokens) - 1;  // last query in this block
+    const int kv_end = start_pos + tile_last + 1;                    // keys this block can need
+    const size_t kv_stride = (size_t)num_kv_heads * D;
+
+    float m[FA_ROWS], l[FA_ROWS], acc[FA_ROWS][DPL];
+#pragma unroll
+    for (int i = 0; i < FA_ROWS; ++i) {
+        m[i] = -FLT_MAX;
+        l[i] = 0.0f;
+#pragma unroll
+        for (int k = 0; k < DPL; ++k) acc[i][k] = 0.0f;
+    }
+
+    for (int kv0 = 0; kv0 < kv_end; kv0 += FA_BN) {
+        // Cooperative tile load; positions past kv_end are zero-filled and
+        // masked below.
+        for (int idx = threadIdx.x; idx < FA_BN * D; idx += blockDim.x) {
+            const int j = idx / D, d = idx % D;
+            const int pos = kv0 + j;
+            const bool in = pos < kv_end;
+            const size_t off = (size_t)pos * kv_stride + (size_t)kv_head * D + d;
+            sK[j][d] = in ? k_cache[off] : 0.0f;
+            sV[j][d] = in ? v_cache[off] : 0.0f;
+        }
+        __syncthreads();
+
+#pragma unroll
+        for (int i = 0; i < FA_ROWS; ++i) {
+            const int t = tile_first + warp * FA_ROWS + i;
+            if (t >= num_tokens) continue;               // warp-uniform
+            const int q_pos = start_pos + t;
+            if (kv0 > q_pos) continue;                   // whole tile is in this row's future
+            const int key = kv0 + lane;
+            const float* q_row = q + ((size_t)t * num_q_heads + q_head) * D;
+            float s = -FLT_MAX;
+            if (key <= q_pos) {
+                float dot = 0.0f;
+#pragma unroll 8
+                for (int d = 0; d < D; ++d) dot += __ldg(q_row + d) * sK[lane][d];
+                s = dot * scale;
+            }
+            float tile_max = s;
+#pragma unroll
+            for (int o = 16; o > 0; o >>= 1) tile_max = fmaxf(tile_max, __shfl_xor_sync(0xffffffff, tile_max, o));
+            const float m_new = fmaxf(m[i], tile_max);
+            const float p = (key <= q_pos) ? expf(s - m_new) : 0.0f;
+            const float corr = expf(m[i] - m_new);       // 0 on the first visited tile
+            float p_sum = p;
+#pragma unroll
+            for (int o = 16; o > 0; o >>= 1) p_sum += __shfl_xor_sync(0xffffffff, p_sum, o);
+            l[i] = l[i] * corr + p_sum;
+#pragma unroll
+            for (int k = 0; k < DPL; ++k) acc[i][k] *= corr;
+#pragma unroll 4
+            for (int jj = 0; jj < FA_BN; ++jj) {
+                const float pj = __shfl_sync(0xffffffff, p, jj);
+#pragma unroll
+                for (int k = 0; k < DPL; ++k) acc[i][k] += pj * sV[jj][lane + 32 * k];
+            }
+            m[i] = m_new;
+        }
+        __syncthreads();
+    }
+
+#pragma unroll
+    for (int i = 0; i < FA_ROWS; ++i) {
+        const int t = tile_first + warp * FA_ROWS + i;
+        if (t >= num_tokens) continue;
+        float* o_row = out + ((size_t)t * num_q_heads + q_head) * D;
+        const float inv_l = 1.0f / l[i];                 // l >= 1: key 0 is always visible
+#pragma unroll
+        for (int k = 0; k < DPL; ++k) o_row[lane + 32 * k] = acc[i][k] * inv_l;
+    }
+}
+
+// Read once: which prefill attention kernel to launch (docs/TTFT.md).
+static bool use_flash_prefill_attention() {
+    static const bool on = [] {
+        const char* v = std::getenv("EMBER_PREFILL_ATTN");
+        return v != nullptr && std::string(v) == "flash";
+    }();
+    return on;
+}
+
+// Launch the tiled kernel if its assumptions hold; false means "use the
+// baseline kernel instead".
+static bool launch_flash_prefill_attention(float* out, const float* q, const float* k_cache,
+                                           const float* v_cache, int num_tokens, int num_q_heads,
+                                           int num_kv_heads, int head_dim, int start_pos,
+                                           float scale, cudaStream_t stream) {
+    if (head_dim % 32 != 0 || head_dim > 128 || num_q_heads % num_kv_heads != 0) return false;
+    dim3 grid((num_tokens + FA_BM - 1) / FA_BM, num_q_heads);
+    dim3 block(FA_WARPS * 32);
+    switch (head_dim / 32) {
+        case 1: attention_prefill_flash_kernel<1><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale); break;
+        case 2: attention_prefill_flash_kernel<2><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale); break;
+        case 3: attention_prefill_flash_kernel<3><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale); break;
+        case 4: attention_prefill_flash_kernel<4><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale); break;
+        default: return false;
+    }
+    return true;
+}
+
 void attention_batch_prefill_cuda(
     const float* d_q_batch_strided,   // Input Q: [B, H_q, D_h]
     const float* d_k_batch_strided,   // Input K for current batch (NEW)
@@ -2146,6 +2307,16 @@ void attention_batch_prefill_cuda(
         Logger::warning("[ATTN_BATCH_PREFILL_CUDA_WARN] Requested shared memory (" + std::to_string(shared_mem_bytes) + " bytes) might be large.");
     }
 
+    // Only the launch differs between kernel variants: the debug copies and
+    // the device sync around it stay identical, so a TTFT change is the
+    // kernel's alone.
+    if (use_flash_prefill_attention() &&
+        launch_flash_prefill_attention(d_output_batch_strided, d_q_batch_strided,
+                                       d_kv_cache_k_base, d_kv_cache_v_base, num_tokens_in_batch,
+                                       num_q_heads, num_kv_heads, head_dim, start_pos_in_kv_cache,
+                                       scale, stream)) {
+        // launched
+    } else
     attention_batch_prefill_cuda_kernel<<<grid_dim, block_dim, shared_mem_bytes, stream>>>(
         d_output_batch_strided,
         d_q_batch_strided,

@@ -35,6 +35,10 @@ CONFIGS = {
     "cpu": (0, []),
     "gpu_fp32": (-1, ["EMBER_DISABLE_BF16=1"]),
     "gpu_bf16": (-1, []),
+    # Kernel variants: the reference for each is the same config on the
+    # baseline kernel (gpu_fp32 for gpu_fp32_flash, gpu_bf16 for gpu_flash).
+    "gpu_fp32_flash": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash"]),
+    "gpu_flash": (-1, ["EMBER_PREFILL_ATTN=flash"]),
 }
 
 
