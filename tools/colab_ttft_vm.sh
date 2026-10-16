@@ -53,6 +53,27 @@ sha256sum story3k.gguf timing.gguf > "$OUT/models.sha256"
 BENCH="python3 /content/src/ember/tools/ttft_bench.py --server $SERVER --commit $EMBER_COMMIT"
 echo "paperkiln_commit=$PK_COMMIT ember_commit=$EMBER_COMMIT" > "$OUT/commits.txt"
 
+# Numerical gate before any timing: the GPU path must compute what the CPU
+# path computes (FP32, tight), and the shipped BF16 path must stay close to
+# FP32 (loose). Gates are fixed here, before the numbers are seen. The CPU
+# leg of the timing model is slow (~70 s per 128-token request), so it runs
+# at 128 only; GPU legs cover every length. A failure ends a full run (no
+# baseline of a wrong path); a probe records it and carries on.
+echo "--- parity $(date -u +%T)"
+PARITY="python3 /content/src/ember/tools/ttft_parity.py --server $SERVER --prompts 2"
+mkdir -p "$OUT/parity"
+parity_ok=1
+$PARITY --model story3k.gguf --ref cpu --test gpu_fp32 --lengths 128 \
+    --max-rel-diff 1e-3 --min-cosine 0.99999 --out "$OUT/parity/story3k_cpu_vs_gpu_fp32.jsonl" || parity_ok=0
+$PARITY --model story3k.gguf --ref gpu_fp32 --test gpu_bf16 --lengths 128 \
+    --max-rel-diff 5e-2 --min-cosine 0.999 --out "$OUT/parity/story3k_gpu_fp32_vs_bf16.jsonl" || parity_ok=0
+$PARITY --model timing.gguf --ref cpu --test gpu_fp32 --lengths 128 \
+    --max-rel-diff 1e-3 --min-cosine 0.99999 --out "$OUT/parity/timing_cpu_vs_gpu_fp32.jsonl" || parity_ok=0
+$PARITY --model timing.gguf --ref gpu_fp32 --test gpu_bf16 --lengths $TIMING_LENGTHS \
+    --max-rel-diff 5e-2 --min-cosine 0.999 --out "$OUT/parity/timing_gpu_fp32_vs_bf16.jsonl" || parity_ok=0
+echo "parity_ok=$parity_ok" | tee "$OUT/parity/RESULT"
+[ "$MODE" = full ] && [ $parity_ok = 0 ] && fail "parity gate failed: no baseline of a wrong path"
+
 if [ "$MODE" = probe ]; then
     $BENCH --model story3k.gguf --model-label "story3k (paperkiln, d128 L2 ctx256)" \
         --lengths 128 --runs 1 --warmup 1 --reps 3 --out-dir "$OUT/story3k" || fail "bench story3k"
@@ -99,6 +120,8 @@ echo "--- package $(date -u +%T)"
 find "$OUT" -name '*.nsys-rep' -size +50M -delete
 find "$OUT" -name debugging.log -size +20M -exec sh -c 'tail -c 2000000 "$1" > "$1.tail" && rm "$1"' _ {} \;
 cp /content/build_ember/make.log "$OUT/ember_make.log" 2>/dev/null
-( cd /content/out && zip -qr /content/ttft_out_new.zip . ) && mv -f /content/ttft_out_new.zip /content/ttft_out.zip
+# Python's zipfile: the Colab image has no zip binary.
+python3 -c "import shutil; shutil.make_archive('/content/ttft_out_new', 'zip', '/content/out')" \
+    && mv -f /content/ttft_out_new.zip /content/ttft_out.zip || fail "packaging"
 touch /content/TTFT_DONE
 echo "=== done $(date -u) ==="

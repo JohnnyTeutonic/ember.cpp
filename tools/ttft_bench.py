@@ -136,8 +136,9 @@ def start_server(args, run_dir, port):
     log = open(os.path.join(run_dir, "server.log"), "w")
     cmd = shlex.split(args.wrapper.replace("{run_dir}", run_dir)) if args.wrapper else []
     cmd += [os.path.abspath(args.server), os.path.abspath(args.model),
-            str(port), "127.0.0.1", "/nonexistent_www"]
-    proc = subprocess.Popen(cmd, cwd=run_dir, stdout=log, stderr=subprocess.STDOUT)
+            str(port), "127.0.0.1", "/nonexistent_www", str(args.gpu_layers)]
+    env = dict(os.environ, **dict(kv.split("=", 1) for kv in args.env))
+    proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=log, stderr=subprocess.STDOUT)
     deadline = time.time() + args.load_timeout
     while time.time() < deadline:
         if proc.poll() is not None:
@@ -187,6 +188,10 @@ def main():
     ap.add_argument("--prefix-cache", action="store_true")
     ap.add_argument("--commit", default="unknown")
     ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--gpu-layers", type=int, default=-1,
+                    help="server n_gpu_layers: -1 all (default), 0 CPU only")
+    ap.add_argument("--env", action="append", default=[],
+                    help="KEY=VALUE for the server environment, e.g. EMBER_DISABLE_BF16=1")
     ap.add_argument("--wrapper", default="",
                     help="command prefix for the server, e.g. an nsys profile line; "
                          "{run_dir} expands to the run directory")
@@ -204,7 +209,8 @@ def main():
     words = prompt_words(read_gguf_tokens(args.model))
     model_label = args.model_label or os.path.basename(args.model)
     config = {"kernel_variant": args.kernel_variant, "chunk_size": args.chunk_size,
-              "prefix_cache": args.prefix_cache}
+              "prefix_cache": args.prefix_cache, "gpu_layers": args.gpu_layers,
+              "env": sorted(args.env)}
 
     # Fixed prompt sets: identical for every run and config. Separate RNG
     # streams per (length, phase) so changing --reps never shifts warmups.
@@ -238,6 +244,11 @@ def main():
                             if not tt["first_token"]:
                                 raise RuntimeError(f"length {length}: no first token emitted "
                                                    f"(engine error; see {run_dir}/debugging.log)")
+                            # A GPU request that silently ran on the CPU is the
+                            # failure that voided the first probe: refuse it.
+                            if args.gpu_layers != 0 and tt["prefill_gpu_span_ms"] <= 0:
+                                raise RuntimeError(f"length {length}: GPU layers requested but "
+                                                   "the prefill did not run on the GPU")
                             if tt["num_prompt_tokens"] != length:
                                 raise RuntimeError(f"length {length}: prompt became "
                                                    f"{tt['num_prompt_tokens']} tokens")

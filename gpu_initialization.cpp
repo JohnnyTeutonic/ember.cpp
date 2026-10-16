@@ -9,6 +9,7 @@
 #include "cuda_kernels.h"
 #endif
 #include <algorithm>
+#include <cstdlib>
 #include <cmath>
 #include <cstring>
 
@@ -105,7 +106,11 @@ void TinyLlamaModel::initialize_gpu_and_rope() {
     bool has_bf16_tensor_core_hw = ((props.major == 7 && props.minor == 5) || props.major >= 8);
     bool dimensions_ok_for_tensor_cores = (config_.hidden_size % 8 == 0) && (config_.vocab_size % 4 == 0);
 
-    if (has_bf16_tensor_core_hw) {
+    // EMBER_DISABLE_BF16=1 keeps every GEMM in FP32: the reference the
+    // tools/ttft_parity.py check holds the BF16 path and kernel variants to.
+    if (std::getenv("EMBER_DISABLE_BF16") != nullptr) {
+        Logger::info("EMBER_DISABLE_BF16 set: BF16 Tensor Core path disabled, all GEMMs FP32.");
+    } else if (has_bf16_tensor_core_hw) {
         if (dimensions_ok_for_tensor_cores) {
             Logger::info("GPU " + std::string(props.name) + " (CC " + std::to_string(props.major) + "." + std::to_string(props.minor) + ") supports BF16 Tensor Cores AND model dimensions (hs: " + std::to_string(config_.hidden_size) + ", vs: " + std::to_string(config_.vocab_size) + ") are compatible. Enabling Tensor Core path for matvec_bf16_f32.");
             this->use_bf16_tensor_cores_ = true;

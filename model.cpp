@@ -2179,37 +2179,42 @@ void TinyLlamaModel::smart_gemm_batch_cuda(bool transa_user, bool transb_user,
             bf16_weight_ptr = w_down_bf16_dev_;
         } else {
             // Map layer-specific pointers by calculating offset from base pointer
+            // offset_bytes is measured in the F32 buffer; the BF16 buffer
+            // holds the same element count, so the element offset is
+            // offset_bytes / sizeof(float). (Dividing by sizeof(uint16_t)
+            // doubled it: layer l read layer 2l, and past the buffer end
+            // for l >= num_layers / 2. Found by the TTFT parity check.)
             size_t offset_bytes = 0;
             bool found = false;
             
             // Check if it's a layer-specific pointer within the concatenated weights
             if (B_f32_user >= w_q_f32_dev_ && B_f32_user < (w_q_f32_dev_ + config_.num_hidden_layers * config_.hidden_size * config_.hidden_size)) {
                 offset_bytes = (B_f32_user - w_q_f32_dev_) * sizeof(float);
-                bf16_weight_ptr = w_q_bf16_dev_ + (offset_bytes / sizeof(uint16_t));
+                bf16_weight_ptr = w_q_bf16_dev_ + (offset_bytes / sizeof(float));
                 found = true;
             } else if (B_f32_user >= w_k_f32_dev_ && w_k_f32_dev_ && B_f32_user < (w_k_f32_dev_ + config_.num_hidden_layers * config_.hidden_size * config_.num_key_value_heads * (config_.hidden_size / config_.num_attention_heads))) {
                 offset_bytes = (B_f32_user - w_k_f32_dev_) * sizeof(float);
-                bf16_weight_ptr = w_k_bf16_dev_ + (offset_bytes / sizeof(uint16_t));
+                bf16_weight_ptr = w_k_bf16_dev_ + (offset_bytes / sizeof(float));
                 found = true;
             } else if (B_f32_user >= w_v_f32_dev_ && w_v_f32_dev_ && B_f32_user < (w_v_f32_dev_ + config_.num_hidden_layers * config_.hidden_size * config_.num_key_value_heads * (config_.hidden_size / config_.num_attention_heads))) {
                 offset_bytes = (B_f32_user - w_v_f32_dev_) * sizeof(float);
-                bf16_weight_ptr = w_v_bf16_dev_ + (offset_bytes / sizeof(uint16_t));
+                bf16_weight_ptr = w_v_bf16_dev_ + (offset_bytes / sizeof(float));
                 found = true;
             } else if (B_f32_user >= w_o_f32_dev_ && w_o_f32_dev_ && B_f32_user < (w_o_f32_dev_ + config_.num_hidden_layers * config_.hidden_size * config_.hidden_size)) {
                 offset_bytes = (B_f32_user - w_o_f32_dev_) * sizeof(float);
-                bf16_weight_ptr = w_o_bf16_dev_ + (offset_bytes / sizeof(uint16_t));
+                bf16_weight_ptr = w_o_bf16_dev_ + (offset_bytes / sizeof(float));
                 found = true;
             } else if (B_f32_user >= w_gate_f32_dev_ && w_gate_f32_dev_ && B_f32_user < (w_gate_f32_dev_ + config_.num_hidden_layers * config_.hidden_size * config_.intermediate_size)) {
                 offset_bytes = (B_f32_user - w_gate_f32_dev_) * sizeof(float);
-                bf16_weight_ptr = w_gate_bf16_dev_ + (offset_bytes / sizeof(uint16_t));
+                bf16_weight_ptr = w_gate_bf16_dev_ + (offset_bytes / sizeof(float));
                 found = true;
             } else if (B_f32_user >= w_up_f32_dev_ && w_up_f32_dev_ && B_f32_user < (w_up_f32_dev_ + config_.num_hidden_layers * config_.hidden_size * config_.intermediate_size)) {
                 offset_bytes = (B_f32_user - w_up_f32_dev_) * sizeof(float);
-                bf16_weight_ptr = w_up_bf16_dev_ + (offset_bytes / sizeof(uint16_t));
+                bf16_weight_ptr = w_up_bf16_dev_ + (offset_bytes / sizeof(float));
                 found = true;
             } else if (B_f32_user >= w_down_f32_dev_ && w_down_f32_dev_ && B_f32_user < (w_down_f32_dev_ + config_.num_hidden_layers * config_.intermediate_size * config_.hidden_size)) {
                 offset_bytes = (B_f32_user - w_down_f32_dev_) * sizeof(float);
-                bf16_weight_ptr = w_down_bf16_dev_ + (offset_bytes / sizeof(uint16_t));
+                bf16_weight_ptr = w_down_bf16_dev_ + (offset_bytes / sizeof(float));
                 found = true;
             }
             
