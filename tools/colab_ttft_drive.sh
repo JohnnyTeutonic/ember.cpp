@@ -120,6 +120,22 @@ while :; do
     else
         log "state=$state (log download failed)"
     fi
+    # Relay: the bench flushes raw/summary after every completed cell, so
+    # copying them home each poll keeps finished cells if the VM is
+    # reclaimed (16-17 Oct 2026: two of three L4s vanished mid-baseline).
+    # Files are replaced only by a successful, non-shrinking download.
+    if [ -z "${vm_out:-}" ] && c 120 download -s "$S" /content/TTFT_OUT_DIR "$STAGE/OUT_DIR" > /dev/null 2>&1; then
+        vm_out=$(tr -d '\n' < "$STAGE/OUT_DIR")
+    fi
+    if [ -n "${vm_out:-}" ]; then
+        for rel in story3k/raw.jsonl story3k/summary.jsonl timing/raw.jsonl timing/summary.jsonl; do
+            mkdir -p "$OUT/relay/$(dirname "$rel")"
+            if c 300 download -s "$S" "$vm_out/$rel" "$STAGE/relay.tmp" > /dev/null 2>&1 &&
+               [ "$(stat -c %s "$STAGE/relay.tmp")" -ge "$(stat -c %s "$OUT/relay/$rel" 2>/dev/null || echo 0)" ]; then
+                mv -f "$STAGE/relay.tmp" "$OUT/relay/$rel"
+            fi
+        done
+    fi
     if [ "$state" = DONE ] || [ "$state" = FAILED ]; then break; fi
     if past_deadline; then log "deadline reached"; state=DEADLINE; break; fi
 done
