@@ -30,14 +30,16 @@ log() { echo "$(date +%H:%M:%S) $*"; }
 # while exec was dead.
 c() { local t=$1; shift; timeout "$t" $COL "$@"; }
 
-# ---- refuse to measure code that is not a commit
+# ---- only committed code reaches the VM
+# Everything shipped comes from HEAD (git archive, git show), so uncommitted
+# edits in either working tree cannot leak into a measurement and are only
+# noted. (Refusing on them blocked runs on another session's work in
+# progress in paperkiln, 17 Oct 2026.) filemode/autocrlf: the OneDrive
+# checkout is a Windows (CRLF) working tree; without these, WSL git calls
+# every file modified.
 for repo in "$EMBER" "$PK"; do
-    if [ "$repo" = "$EMBER" ]; then paths=(.); else paths=(CMakeLists.txt include src third_party tools); fi
-    # filemode/autocrlf: the OneDrive checkout is a Windows (CRLF) working
-    # tree; without these WSL git calls every file modified. The archive
-    # below reads committed blobs, so it ships LF regardless.
-    if ! git -c core.filemode=false -c core.autocrlf=true -C "$repo" diff --quiet HEAD -- "${paths[@]}"; then
-        log "uncommitted changes in $repo (${paths[*]}): commit first"; exit 2
+    if ! git -c core.filemode=false -c core.autocrlf=true -C "$repo" diff --quiet HEAD; then
+        log "note: $repo has uncommitted changes; they are NOT shipped (HEAD is)"
     fi
 done
 EC=$(git -C "$EMBER" rev-parse --short=12 HEAD); PC=$(git -C "$PK" rev-parse --short=12 HEAD)
@@ -54,7 +56,7 @@ git -C "$EMBER" archive --format=tar.gz --prefix=ember/ -o "$STAGE/ember.tgz" HE
 git -C "$PK" archive --format=tar.gz --prefix=microtorch/ -o "$STAGE/paperkiln.tgz" HEAD \
     CMakeLists.txt include src third_party tools studio web python tests
 unzip -jo /mnt/c/ml_artifacts/paperkiln_story3k.zip paperkiln_story3k/story3k.gguf -d "$STAGE" > /dev/null
-cp "$EMBER/tools/colab_ttft_vm.sh" "$STAGE/"
+git -C "$EMBER" show HEAD:tools/colab_ttft_vm.sh > "$STAGE/colab_ttft_vm.sh"
 log "ember $EC, paperkiln $PC; staged $(du -sh "$STAGE" | cut -f1)"
 
 stop_session() { log "stopping $S"; c 120 stop -s "$S" > /dev/null 2>&1; }
