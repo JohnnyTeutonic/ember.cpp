@@ -17,9 +17,13 @@ cd /content
 exec > /content/ttft_vm.log 2>&1
 
 MODE=${1:?mode}; EMBER_COMMIT=${2:?ember commit}; PK_COMMIT=${3:?paperkiln commit}
-RUNS=${RUNS:-5}; WARMUP=${WARMUP:-10}; REPS=${REPS:-50}
+RUNS=${RUNS:-5}; WARMUP=${WARMUP:-10}; REPS=${REPS:-50}; FIRST_RUN=${FIRST_RUN:-1}
 TIMING_LENGTHS=${TIMING_LENGTHS:-"128 512 1024 2048 4096"}
-NSYS_LENGTHS=${NSYS_LENGTHS:-"128 1024 4096"}
+# Seconds-scale lengths get fewer requests (protocol deviation, docs/TTFT.md).
+LONG_LENGTHS=${LONG_LENGTHS:-""}; LONG_WARMUP=${LONG_WARMUP:-2}; LONG_REPS=${LONG_REPS:-5}
+# GPU legs of the timing-model parity check; NSYS=0 skips the kernel pass.
+PARITY_LENGTHS=${PARITY_LENGTHS:-"128 512 1024 2048 4096"}
+NSYS=${NSYS:-1}; NSYS_LENGTHS=${NSYS_LENGTHS:-"128 1024"}
 STAMP=$(date -u +%Y-%m-%d)
 OUT=/content/out/ttft_${STAMP}_${MODE}
 fail() { echo "FAILED: $*"; echo "$*" > /content/TTFT_FAILED; exit 1; }
@@ -69,7 +73,7 @@ $PARITY --model story3k.gguf --ref gpu_fp32 --test gpu_bf16 --lengths 128 \
     --max-rel-diff 5e-2 --min-cosine 0.999 --out "$OUT/parity/story3k_gpu_fp32_vs_bf16.jsonl" || parity_ok=0
 $PARITY --model timing.gguf --ref cpu --test gpu_fp32 --lengths 128 \
     --max-rel-diff 1e-3 --min-cosine 0.99999 --out "$OUT/parity/timing_cpu_vs_gpu_fp32.jsonl" || parity_ok=0
-$PARITY --model timing.gguf --ref gpu_fp32 --test gpu_bf16 --lengths $TIMING_LENGTHS \
+$PARITY --model timing.gguf --ref gpu_fp32 --test gpu_bf16 --lengths $PARITY_LENGTHS \
     --max-rel-diff 5e-2 --min-cosine 0.999 --out "$OUT/parity/timing_gpu_fp32_vs_bf16.jsonl" || parity_ok=0
 echo "parity_ok=$parity_ok" | tee "$OUT/parity/RESULT"
 [ "$MODE" = full ] && [ $parity_ok = 0 ] && fail "parity gate failed: no baseline of a wrong path"
@@ -81,11 +85,12 @@ if [ "$MODE" = probe ]; then
         --lengths $TIMING_LENGTHS --runs 1 --warmup 1 --reps 2 --out-dir "$OUT/timing" || fail "bench timing"
 elif [ "$MODE" = full ]; then
     $BENCH --model story3k.gguf --model-label "story3k (paperkiln, d128 L2 ctx256)" \
-        --lengths 128 --runs "$RUNS" --warmup "$WARMUP" --reps "$REPS" --out-dir "$OUT/story3k" \
-        || fail "bench story3k"
+        --lengths 128 --runs "$RUNS" --first-run "$FIRST_RUN" --warmup "$WARMUP" --reps "$REPS" \
+        --out-dir "$OUT/story3k" || fail "bench story3k"
     $BENCH --model timing.gguf --model-label "timing (paperkiln random, TinyLlama-1.1B shape, GQA 32/4)" \
-        --lengths $TIMING_LENGTHS --runs "$RUNS" --warmup "$WARMUP" --reps "$REPS" \
-        --out-dir "$OUT/timing" || fail "bench timing"
+        --lengths $TIMING_LENGTHS --runs "$RUNS" --first-run "$FIRST_RUN" --warmup "$WARMUP" \
+        --reps "$REPS" --long-lengths $LONG_LENGTHS --long-warmup "$LONG_WARMUP" \
+        --long-reps "$LONG_REPS" --out-dir "$OUT/timing" || fail "bench timing"
 else
     fail "unknown mode $MODE"
 fi
@@ -93,19 +98,24 @@ fi
 # Kernel-time pass: nsys under the same harness, separate from the timed runs
 # (profiling perturbs timing, so these numbers never enter the TTFT records).
 echo "--- nsys $(date -u +%T)"
+WANT_NSYS=$NSYS
 NSYS=$(command -v nsys || ls /usr/local/cuda/bin/nsys /opt/nvidia/nsight-systems/*/bin/nsys 2>/dev/null | head -1)
-if [ -z "$NSYS" ]; then
+if [ "$WANT_NSYS" = 0 ]; then
+    echo "nsys pass skipped in this session (NSYS=0)"; NSYS=SKIP
+elif [ -z "$NSYS" ]; then
     apt-get install -y -q nsight-systems-cli > /dev/null 2>&1 ||
         apt-get install -y -q "cuda-nsight-systems-$(nvcc --version | sed -n 's/.*release \([0-9]*\)\.\([0-9]*\).*/\1-\2/p')" > /dev/null 2>&1
     NSYS=$(command -v nsys || ls /opt/nvidia/nsight-systems/*/bin/nsys /usr/local/cuda/bin/nsys 2>/dev/null | head -1)
 fi
-if [ -z "$NSYS" ]; then
+if [ "$NSYS" = SKIP ]; then
+    :
+elif [ -z "$NSYS" ]; then
     echo "nsys unavailable on this image" | tee "$OUT/NSYS_UNAVAILABLE"
 else
     "$NSYS" --version > "$OUT/nsys_version.txt" 2>&1
     for L in $NSYS_LENGTHS; do
         D="$OUT/nsys_timing_$L"
-        $BENCH --model timing.gguf --lengths "$L" --runs 1 --warmup 2 --reps 5 --out-dir "$D" \
+        $BENCH --model timing.gguf --lengths "$L" --runs 1 --warmup 1 --reps 3 --out-dir "$D" \
             --wrapper "$NSYS profile -t cuda,nvtx -s none --cpuctxsw=none --force-overwrite=true -o {run_dir}/prof" \
             || { echo "nsys bench $L failed"; continue; }
         for R in nvtx_gpu_proj_sum nvtx_kern_sum cuda_gpu_kern_sum nvtx_sum; do

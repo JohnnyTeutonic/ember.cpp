@@ -183,6 +183,12 @@ def main():
     ap.add_argument("--warmup", type=int, default=10)
     ap.add_argument("--reps", type=int, default=50)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--first-run", type=int, default=1,
+                    help="index of the first run (runs split across VMs stay distinct)")
+    ap.add_argument("--long-lengths", type=int, nargs="*", default=[],
+                    help="lengths measured with --long-warmup/--long-reps instead")
+    ap.add_argument("--long-warmup", type=int, default=2)
+    ap.add_argument("--long-reps", type=int, default=5)
     ap.add_argument("--kernel-variant", default="baseline")
     ap.add_argument("--chunk-size", type=int, default=None)
     ap.add_argument("--prefix-cache", action="store_true")
@@ -219,7 +225,8 @@ def main():
         return [make_prompt(words, n_words, rng) for _ in range(count)]
 
     with open(raw_path, "w") as raw, open(sum_path, "w") as summ:
-        for run in range(1, args.runs + 1):
+        last_run = args.first_run + args.runs - 1
+        for run in range(args.first_run, last_run + 1):
             run_dir = os.path.join(args.out_dir, f"run{run}")
             os.makedirs(run_dir, exist_ok=True)
             port = free_port()
@@ -227,15 +234,19 @@ def main():
             proc, log = start_server(args, run_dir, port)
             order = list(args.lengths)
             random.Random(f"order:{args.seed}:{run}").shuffle(order)
-            print(f"run {run}/{args.runs}: lengths in order {order}", flush=True)
+            print(f"run {run} (of {args.first_run}..{last_run}): lengths in order {order}",
+                  flush=True)
             try:
                 for length in order:
                     # Calibrate words -> tokens once (BOS etc.), then hold it exact.
                     probe = prompt_set(length, "calibrate", 1, length)[0]
                     _, pay = post(port, probe, args.request_timeout)
                     n_words = length - (pay["ttft"]["num_prompt_tokens"] - length)
-                    rows = {"warmup": prompt_set(length, "warmup", args.warmup, n_words),
-                            "measure": prompt_set(length, "measure", args.reps, n_words)}
+                    long = length in args.long_lengths
+                    warmup = args.long_warmup if long else args.warmup
+                    reps = args.long_reps if long else args.reps
+                    rows = {"warmup": prompt_set(length, "warmup", warmup, n_words),
+                            "measure": prompt_set(length, "measure", reps, n_words)}
                     measured = []
                     for phase in ("warmup", "measure"):
                         for i, prompt in enumerate(rows[phase]):
@@ -268,7 +279,9 @@ def main():
                             "server_pre_generate_ms", "tokenize_ms", "kv_reset_ms", "embed_ms",
                             "prefill_wall_ms", "prefill_gpu_span_ms", "sample_ms")},
                         "batch_prefill": all(r["batch_prefill"] for r in measured),
-                        "n": len(measured), "warmup_discarded": args.warmup,
+                        "n": len(measured), "warmup_discarded": warmup,
+                        "protocol_deviation": ("reduced reps at a seconds-scale length "
+                                               "(docs/TTFT.md)") if long else None,
                         "run": run, "model": model_label,
                         "gpu": hw_start["gpu"], "gpu_uuid": hw_start["gpu_uuid"],
                         "driver_version": hw_start["driver_version"],
