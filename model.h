@@ -403,7 +403,8 @@ class TinyLlamaModel {
   // GPU workspace buffers
   
   // Persistent batch processing buffers to eliminate per-forward-pass allocations
-  static constexpr int MAX_BATCH_TOKENS = 2048;  // Maximum tokens we can process in one batch
+  static constexpr int MAX_BATCH_TOKENS = 2048;  // Initial capacity of the batch buffers (they grow on demand)
+  int persistent_batch_capacity_ = 0;            // tokens the batch buffers currently hold
   
   // Persistent GPU buffers for batch processing (allocated once, reused)
   float* d_persistent_batch_input_ = nullptr;           // [MAX_BATCH_TOKENS, hidden_size]
