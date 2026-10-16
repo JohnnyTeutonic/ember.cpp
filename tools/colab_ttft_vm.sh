@@ -30,6 +30,8 @@ fail() { echo "FAILED: $*"; echo "$*" > /content/TTFT_FAILED; exit 1; }
 
 echo "=== ttft vm $(date -u) mode=$MODE ember=$EMBER_COMMIT paperkiln=$PK_COMMIT ==="
 mkdir -p "$OUT" /content/src
+# The driver relays $OUT's JSONL files every poll (reclaims lose the VM).
+echo "$OUT" > /content/TTFT_OUT_DIR
 { nvidia-smi; nvidia-smi -q -d CLOCK,PERFORMANCE,POWER; nvcc --version; uname -a;
   nproc; free -g; } > "$OUT/hardware.txt" 2>&1
 
