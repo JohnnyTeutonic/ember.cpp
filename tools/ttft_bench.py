@@ -301,6 +301,9 @@ def main():
                             "server_pre_generate_ms", "tokenize_ms", "kv_reset_ms", "embed_ms",
                             "prefill_wall_ms", "prefill_gpu_span_ms", "sample_ms")},
                         "batch_prefill": all(r["batch_prefill"] for r in measured),
+                        # Prefix-cache opportunity (logged; nothing is reused yet).
+                        "prefix_hit_rate_mean": round(sum(r.get("prefix_hit_rate", 0.0)
+                                                          for r in measured) / len(measured), 4),
                         "n": len(measured), "warmup_discarded": warmup,
                         "protocol_deviation": ("reduced reps at a seconds-scale length "
                                                "(docs/TTFT.md)") if long else None,
