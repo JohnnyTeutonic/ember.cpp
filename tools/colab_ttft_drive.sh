@@ -14,7 +14,7 @@
 # Results land in /mnt/c/ml_artifacts/ttft/<session>/ (outside OneDrive).
 set -uo pipefail
 MODE=${1:?mode}; S=${2:?session}; MAXMIN=${3:?max minutes}; shift 3
-VM_ENV="$*"
+VM_ENV=$(printf '%q ' "$@")   # shell-quoted: values may hold spaces (LONG_LENGTHS="2048 4096")
 COL=~/.local/bin/colab
 COLAB_PY=~/.local/share/uv/tools/google-colab-cli/bin/python
 ROOT=/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete
@@ -87,7 +87,7 @@ log "uploaded"
 cat > "$STAGE/launch.py" <<EOF
 import os, subprocess
 if not os.path.exists("/content/ttft_vm.log"):
-    subprocess.Popen("cd /content && $VM_ENV bash colab_ttft_vm.sh $MODE $EC $PC", shell=True,
+    subprocess.Popen(r"""cd /content && $VM_ENV bash colab_ttft_vm.sh $MODE $EC $PC""", shell=True,
                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                      stderr=subprocess.DEVNULL, close_fds=True, start_new_session=True)
 print("TTFT_LAUNCH_SENT")
