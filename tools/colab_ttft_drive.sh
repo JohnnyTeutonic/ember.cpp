@@ -99,10 +99,18 @@ done
 
 # ---- bring everything home, then the trap stops the session
 timeout 900 $COL download -s "$S" /content/ttft_vm.log "$OUT/ttft_vm.log" > /dev/null 2>&1
-if [ "$state" = DONE ]; then
-    timeout 1800 $COL download -s "$S" /content/ttft_out.zip "$OUT/ttft_out.zip" > /dev/null 2>&1 \
-        && (cd "$OUT" && unzip -oq ttft_out.zip) && log "results in $OUT"
-else
-    log "session ended $state; log at $OUT/ttft_vm.log"
+if [ "$state" != DONE ]; then
+    # Partial results are still results: package whatever exists.
+    cat > "$STAGE/partial.py" <<'EOF'
+import shutil, subprocess
+subprocess.run("pkill -f colab_ttft_vm.sh; pkill -f ttft_bench.py; pkill -f ttft_parity.py; "
+               "pkill -f tinyllama_server", shell=True)
+shutil.make_archive("/content/ttft_out", "zip", "/content/out")
+print("PARTIAL_PACKED")
+EOF
+    $COL exec -s "$S" -f "$STAGE/partial.py" --timeout 300 > /dev/null 2>&1
 fi
+timeout 1800 $COL download -s "$S" /content/ttft_out.zip "$OUT/ttft_out.zip" > /dev/null 2>&1 \
+    && (cd "$OUT" && unzip -oq ttft_out.zip) && log "results ($state) in $OUT" \
+    || log "no results downloaded ($state); log at $OUT/ttft_vm.log"
 echo "$state" > "$OUT/DRIVER_STATE"

@@ -73,13 +73,17 @@ int main(int argc, char** argv) {
   if (argc > 4) {
     www_path = argv[4];
   }
+  int n_gpu_layers = -1;  // -1 all layers on GPU, 0 none, N that many
+  if (argc > 5) {
+    n_gpu_layers = std::stoi(argv[5]);
+  }
 
   Logger::info("Starting TinyLlama Chat Server...");
   
   std::shared_ptr<tinyllama::TinyLlamaSession> session;
   try {
     Logger::info("Loading model from: " + model_dir);
-    session = std::make_shared<tinyllama::TinyLlamaSession>(model_dir, "tokenizer.json", 4, -1, true);
+    session = std::make_shared<tinyllama::TinyLlamaSession>(model_dir, "tokenizer.json", 4, n_gpu_layers, true);
     Logger::info("Model loaded successfully.");
   } catch (const std::exception& e) {
     Logger::error(std::string("Failed to load model: ") + e.what());

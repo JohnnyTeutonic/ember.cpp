@@ -334,6 +334,11 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
 
     if (extension == ".gguf") {
       Logger::info("GGUF model type detected by extension for Session constructor: " + model_path_arg);
+      // The GGUF constructor decodes num_cpu_offload_layers as the RAW
+      // GPU-layer hint (<0 all GPU, 0 all CPU, >0 that many GPU layers).
+      // The translation above turned -1 into 0, which that decoder reads as
+      // "all CPU": every default GGUF run was CPU-only (docs/TTFT.md).
+      initial_model_config_for_model_ctor.num_cpu_offload_layers = num_gpu_layers_from_cli;
       model_ = std::make_unique<TinyLlamaModel>(initial_model_config_for_model_ctor, model_path_arg);
       config_ = model_->get_config(); 
     } else if (extension == ".safetensors") {
