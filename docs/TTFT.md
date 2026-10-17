@@ -471,6 +471,67 @@ What remains at 128 tokens: 67.0 ms, of which the host KV zero-fill is
 3. **Tensor-core GEMMs (TF32)** for short and medium prompts. This changes
    the numerics, so it needs its own looser parity gate.
 
+### flash_lean_kv: the host KV zero-fill skipped for GPU layers (ember `965ef88`, 17 Oct 2026)
+
+`KVCache::clear_data` now zero-fills only the host K/V vectors of layers
+that run on the CPU. The GPU layers keep their KV on the device, where
+prefill writes positions 0..n-1 before attention reads them. The full
+parity gate sends two consecutive prompts per length and doubles as the
+stale-KV check. Its values were identical to flash_v1's on every prompt,
+including each second prompt at 1024 and 4096 tokens. Records are in
+`experiments/ttft_2026-10-17/flash_lean_kv/`.
+
+| model | tokens | flash_lean | flash_lean_kv | gain (mean ± std) | verdict | ±5% line | vs baseline |
+|---|---|---|---|---|---|---|---|
+| story3k | 128 | 1.73 ms | 1.72 ms | 0.1% ± 2.03% | within noise | no change | 7.5× |
+| timing | 128 | 67.00 ms | 46.54 ms | 30.5% ± 1.47% | faster | changed | 5.0× |
+| timing | 512 | 175.1 ms | 161.0 ms | 8.1% ± 2.27% | faster | changed | 14.3× |
+| timing | 1024 | 362.8 ms | 352.5 ms | 2.9% ± 2.41% | within noise | no change | 24.3× |
+| timing | 2048 | 784.0 ms | 761.2 ms | 2.9% ± 1.51% | within noise | no change | 43.6× |
+| timing | 4096 | 2,124 ms | 2,068 ms | 2.6% ± 0.37% | faster | no change | 63.4× |
+
+The receipt's KV reset phase drops from 26 ms to 0.000 ms. Whether that
+shows up as a verdict depends on length:
+
+* At 128 tokens it is 30% of TTFT, a clean gain.
+* At 1024 and 2048, the run-to-run spread of the cell p50s (10–16 ms
+  across VMs) is about the size of the 26 ms saving, so under the protocol
+  the change is within noise. It is recorded that way.
+* story3k never paid the cost, since its host KV is 0.04 ms.
+
+## Summary so far (L4, timing model unless noted)
+
+| tokens | baseline | flash_v1 | flash_v1_fp32 | flash_lean | flash_lean_kv |
+|---|---|---|---|---|---|
+| story3k 128 | 12.96 ms | 12.06 | 11.74 | 1.73 | 1.72 ms |
+| 128 | 233.4 ms | 94.5 | 79.0 | 67.0 | 46.5 ms |
+| 512 | 2,297.6 ms | 243.4 | 214.3 | 175.1 | 161.0 ms |
+| 1024 | 8,568 ms | 470.0 | 438.8 | 362.8 | 352.5 ms |
+| 2048 | 33,219 ms | 986.5 | 940.5 | 784.0 | 761.2 ms |
+| 4096 | 131,123 ms | 2,490 | 2,446 | 2,124 | 2,068 ms |
+
+From flash_v1 onward, every step passed parity against the baseline kernel
+(max relative difference ≤ 1e-5, identical argmax). Each was measured
+against its predecessor under the same protocol. Engine changes since the
+baseline:
+
+* the tiled attention kernel (`EMBER_PREFILL_ATTN=flash`, not yet the
+  default);
+* the BF16 latch;
+* opt-in debug dumps;
+* the GPU-layer KV-reset skip.
+
+The last three are on by default. Separately, three engine bugs were fixed
+before the baseline (see above).
+
+Open levers, ranked by the op map:
+
+* attention v2 (GQA-shared tiles, tensor cores), which is 65% of GPU time
+  at 4096;
+* TF32 or BF16 tensor-core GEMMs, the largest share up to 1024 tokens;
+  they need their own parity gate;
+* making the flash kernel the default.
+
 ### How the baseline was collected (Colab)
 
 Busy L4 sessions on this account were reclaimed about 22–26 minutes after
