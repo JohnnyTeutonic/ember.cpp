@@ -2393,13 +2393,19 @@ static bool launch_flash2_prefill_attention(float* out, const float* q, const fl
 }
 
 // Read once: which prefill attention kernel to launch (docs/TTFT.md).
-// 0 = baseline, 1 = flash (v1), 2 = flash2 (v2, falls back to v1).
+// 0 = baseline, 1 = flash (v1), 2 = flash2 (v2, falls back to v1, then to
+// the baseline kernel when an assumption does not hold).
+// Default (unset) is flash2. It matched the baseline kernel to <= 1e-5
+// relative on the first-token logits at every length up to 4096, and was
+// 2.8% to 39.8% faster than v1 there, 105x the original TTFT at 4096
+// (docs/TTFT.md). EMBER_PREFILL_ATTN=baseline restores the original kernel.
 static int prefill_attention_mode() {
     static const int mode = [] {
         const char* v = std::getenv("EMBER_PREFILL_ATTN");
-        if (v == nullptr) return 0;
+        if (v == nullptr) return 2;
         const std::string s(v);
-        return s == "flash2" ? 2 : (s == "flash" ? 1 : 0);
+        if (s == "baseline") return 0;
+        return s == "flash" ? 1 : 2;
     }();
     return mode;
 }
