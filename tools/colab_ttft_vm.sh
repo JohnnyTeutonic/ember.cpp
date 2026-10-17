@@ -101,17 +101,20 @@ if [ "$MODE" = resume ]; then
         --max-rel-diff 5e-2 --min-cosine 0.999 --out "$OUT/parity/timing_gpu_fp32_vs_bf16.jsonl" \
         || fail "parity gate failed (timing gpu_fp32 vs default)"
     if [ "${KERNEL_VARIANT#flash}" != "$KERNEL_VARIANT" ]; then   # any flash* variant
+        # The kernel under test, in FP32 GEMMs, against the baseline kernel.
+        FLASH_CFG=gpu_fp32_flash
+        case " $VARIANT_ENV " in *" EMBER_PREFILL_ATTN=flash2 "*) FLASH_CFG=gpu_fp32_flash2 ;; esac
         # The variant must compute what the baseline kernel computes.
-        $PARITY --model timing.gguf --ref gpu_fp32 --test gpu_fp32_flash --lengths 128 \
+        $PARITY --model timing.gguf --ref gpu_fp32 --test "$FLASH_CFG" --lengths 128 \
             --max-rel-diff 1e-3 --min-cosine 0.99999 --out "$OUT/parity/timing_baseline_vs_flash_128.jsonl" \
             || fail "parity gate failed (baseline kernel vs flash_v1)"
         if grep -qx parity_variant "$TODO"; then
             # One-time full gate, banked once: every length class incl. 4096.
-            $PARITY --model timing.gguf --ref gpu_fp32 --test gpu_fp32_flash --lengths 128 1024 4096 \
+            $PARITY --model timing.gguf --ref gpu_fp32 --test "$FLASH_CFG" --lengths 128 1024 4096 \
                 --max-rel-diff 1e-3 --min-cosine 0.99999 \
                 --out "$OUT/parity/timing_baseline_vs_flash_full.jsonl" \
                 || fail "parity gate failed (baseline kernel vs flash_v1, full)"
-            $PARITY --model story3k.gguf --ref gpu_fp32 --test gpu_fp32_flash --lengths 128 \
+            $PARITY --model story3k.gguf --ref gpu_fp32 --test "$FLASH_CFG" --lengths 128 \
                 --max-rel-diff 1e-3 --min-cosine 0.99999 \
                 --out "$OUT/parity/story3k_baseline_vs_flash.jsonl" \
                 || fail "parity gate failed (story3k baseline kernel vs flash_v1)"

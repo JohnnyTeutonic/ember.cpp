@@ -39,6 +39,7 @@ CONFIGS = {
     # baseline kernel (gpu_fp32 for gpu_fp32_flash, gpu_bf16 for gpu_flash).
     "gpu_fp32_flash": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash"]),
     "gpu_flash": (-1, ["EMBER_PREFILL_ATTN=flash"]),
+    "gpu_fp32_flash2": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash2"]),
 }
 
 
