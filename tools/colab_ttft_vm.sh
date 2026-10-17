@@ -26,11 +26,15 @@ PARITY_LENGTHS=${PARITY_LENGTHS:-"128 512 1024 2048 4096"}
 NSYS=${NSYS:-1}; NSYS_LENGTHS=${NSYS_LENGTHS:-"128 1024"}
 STAMP=$(date -u +%Y-%m-%d_%H%M%S)   # time too: a resumed lane gets one dir per launch
 OUT=/content/out/ttft_${STAMP}_${MODE}
+fail() { echo "FAILED: $*"; echo "$*" > /content/TTFT_FAILED; exit 1; }
 # resume mode (tools/ttft_supervise.py): /content/ttft_todo.txt lists what is
-# not yet banked, one "story3k RUN:LEN", "timing RUN:LEN" or "nsys" per line.
+# not yet banked, one "story3k RUN:LEN", "timing RUN:LEN", "nsys" or
+# "parity_variant" per line. Missing or empty is a failure, never a no-op
+# "done" (17 Oct 2026: a failed upload left no to-do, and a guard placed
+# before fail() existed let the VM report DONE having run nothing).
 TODO=/content/ttft_todo.txt
 if [ "$MODE" = resume ]; then
-    [ -f "$TODO" ] || fail "resume mode needs $TODO"
+    [ -s "$TODO" ] || fail "resume mode needs a non-empty $TODO (upload failed?)"
     NSYS=$(grep -qx nsys "$TODO" && echo 1 || echo 0)
 fi
 # Kernel variant under test (ttft_supervise.py --variant): its name and the
@@ -44,7 +48,6 @@ ENV_ARGS=""; for kv in $VARIANT_ENV; do ENV_ARGS="$ENV_ARGS --env $kv"; done
 OVERRIDES=$(sed -n 3p /content/ttft_variant.txt 2>/dev/null)
 [ -n "$OVERRIDES" ] || OVERRIDES="2048:2:5 4096:1:3"
 [ "$OVERRIDES" = none ] && OVERRIDES=""
-fail() { echo "FAILED: $*"; echo "$*" > /content/TTFT_FAILED; exit 1; }
 
 echo "=== ttft vm $(date -u) mode=$MODE ember=$EMBER_COMMIT paperkiln=$PK_COMMIT ==="
 mkdir -p "$OUT" /content/src
