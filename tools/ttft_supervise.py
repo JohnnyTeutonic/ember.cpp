@@ -97,6 +97,11 @@ VARIANTS = {
     "default_check": dict(session="ttftc1", bank=f"{ART}/bank_default_check",
                           env="", overrides="none", parity_gate=False,
                           commit="52770f104ef4", runs=1, nsys=False),
+    # No environment at all after TF32 became the default too: one run per
+    # length to confirm an unconfigured server lands on flash_v2_tf32.
+    "default_check_tf32": dict(session="ttftc2", bank=f"{ART}/bank_default_check_tf32",
+                               env="", overrides="none", parity_gate=False,
+                               commit="061636e688c1", runs=1, nsys=False),
     # Diagnostic lanes (not TTFT records), pinned to 50b1ac6: op timer in,
     # BF16 latch (d4e7354) not yet, so optime_flash still shows the failed
     # BF16 attempts it exists to measure. EMBER_OP_TIMING=1 puts per-op GPU
