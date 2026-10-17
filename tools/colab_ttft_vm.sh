@@ -100,7 +100,7 @@ if [ "$MODE" = resume ]; then
     $PARITY --model timing.gguf --ref gpu_fp32 --test gpu_bf16 --lengths 128 \
         --max-rel-diff 5e-2 --min-cosine 0.999 --out "$OUT/parity/timing_gpu_fp32_vs_bf16.jsonl" \
         || fail "parity gate failed (timing gpu_fp32 vs default)"
-    if [ "$KERNEL_VARIANT" = flash_v1 ]; then
+    if [ "${KERNEL_VARIANT#flash}" != "$KERNEL_VARIANT" ]; then   # any flash* variant
         # The variant must compute what the baseline kernel computes.
         $PARITY --model timing.gguf --ref gpu_fp32 --test gpu_fp32_flash --lengths 128 \
             --max-rel-diff 1e-3 --min-cosine 0.99999 --out "$OUT/parity/timing_baseline_vs_flash_128.jsonl" \
