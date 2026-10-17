@@ -102,6 +102,11 @@ VARIANTS = {
     "default_check_tf32": dict(session="ttftc2", bank=f"{ART}/bank_default_check_tf32",
                                env="", overrides="none", parity_gate=False,
                                commit="061636e688c1", runs=1, nsys=False),
+    # Op map of the current defaults (flash2 + TF32 + overhead fixes), to
+    # pick the next lever. Diagnostic, one run per length.
+    "optime_default": dict(session="ttftd3", bank=f"{ART}/bank_optime_default",
+                           env="EMBER_OP_TIMING=1", overrides="none", parity_gate=False,
+                           commit="0426f244cc4b", runs=1, nsys=False),
     # Diagnostic lanes (not TTFT records), pinned to 50b1ac6: op timer in,
     # BF16 latch (d4e7354) not yet, so optime_flash still shows the failed
     # BF16 attempts it exists to measure. EMBER_OP_TIMING=1 puts per-op GPU
