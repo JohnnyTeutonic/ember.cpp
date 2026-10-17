@@ -411,6 +411,25 @@ What it shows:
    GEMMs (TF32 or a working BF16 path) are the lever there. They change the
    numerics, so they need their own parity gate.
 
+The same map with the BF16 attempts on (lane `optime_flash`, same build)
+shows where they land, inside the GEMM ops. Idle between ops stays at
+about 2 ms either way:
+
+| tokens | GEMM ops, BF16 on | GEMM ops, BF16 off | difference (map, 1 run) | TTFT difference (5 runs) |
+|---|---|---|---|---|
+| story3k 128 | 1.3 | 0.4 | +0.9 | 0.3 |
+| 128 | 45.4 | 28.3 | +17.1 | 15.4 |
+| 512 | 134.1 | 100.4 | +33.7 | 29.1 |
+| 1024 | 246.6 | 200.6 | +46.0 | 31.1 |
+| 2048 | 429.4 | 357.0 | +72.4 | 46.1 |
+| 4096 | 773.2 | 647.4 | +125.9 | 43.7 |
+
+All values are in ms. Up to 1024 tokens, the one-run map agrees with the
+5-run TTFT measurement. At 2048 and 4096 the map's GEMM difference is
+larger than the TTFT difference; a single run per length cannot settle
+which is right, so the 5-run TTFT result stands. The map is for locating
+costs, not for sizing them.
+
 ### How the baseline was collected (Colab)
 
 Busy L4 sessions on this account were reclaimed about 22–26 minutes after
