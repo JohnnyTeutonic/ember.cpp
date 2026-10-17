@@ -1,0 +1,22 @@
+{
+ "variant": "flash_v1",
+ "bank": "/mnt/c/ml_artifacts/ttft/bank_flash_v1",
+ "launches": [
+  "ttft_2026-10-17_025621_resume",
+  "ttft_2026-10-17_030244_resume",
+  "ttft_2026-10-17_032230_resume"
+ ],
+ "commits": [
+  "8b4002333d54"
+ ],
+ "gpu_uuids": [
+  "GPU-7b66d3ae-df1a-1424-d100-4a077ca16e05",
+  "GPU-cc7cf274-41b4-635c-eef7-4b903fa3dcd8",
+  "GPU-e2818a1b-38d0-9673-5f43-95a3f51b077c"
+ ],
+ "kernel_variants": [
+  "flash_v1"
+ ],
+ "duplicates_dropped": [],
+ "cells": 30
+}
