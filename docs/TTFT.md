@@ -269,6 +269,73 @@ the server's CUDA activity. The split between kernel time and launch or
 synchronisation overhead is still open; it is recorded as a failed
 measurement, not inferred.
 
+### flash_v1: tiled prefill attention (ember `8b40023`, 17 Oct 2026)
+
+The variant changes only the prefill attention kernel: tiling, online
+softmax and causal tile skip (see the comment above
+`attention_prefill_flash_kernel`). The QKV and output projections are not
+fused, so this is the attention part of Direction 1, not full fusion. It
+is selected with `EMBER_PREFILL_ATTN=flash`; the default is still the
+baseline kernel.
+
+**Parity gate (passed before any timing counted):** baseline kernel vs
+flash_v1, FP32, first-token logits. Max relative difference was ≤ 1e-5
+(1.4e-6 to 8.5e-6) at 128, 1024 and 4096 tokens on the timing model and at
+128 on story3k, with cosine 1.00000000 and an identical argmax in every
+pair. Every VM also passed a 128-token check before its cells.
+
+**TTFT** (full protocol at every length, 10 + 50 requests × 5 runs; 3
+L4s). Records are in `experiments/ttft_2026-10-17/flash_v1/`. Gains are
+per-run, `1 - flash_p50 / baseline_p50`, judged by the noise rule.
+
+| model | tokens | baseline p50 | flash_v1 p50 | speedup | gain (mean ± std) | verdict |
+|---|---|---|---|---|---|---|
+| story3k | 128 | 12.96 ms | 12.06 ms | 1.07× | 6.9% ± 0.92% | faster |
+| timing | 128 | 233.4 ms | 94.5 ms | 2.5× | 59.5% ± 0.23% | faster |
+| timing | 512 | 2,297.6 ms | 243.4 ms | 9.4× | 89.4% ± 0.08% | faster |
+| timing | 1024 | 8,568 ms | 470.0 ms | 18.2× | 94.5% ± 0.02% | faster |
+| timing | 2048 | 33,219 ms | 986.5 ms | 33.7× | 97.0% ± 0.03% | faster |
+| timing | 4096 | 131,123 ms | 2,490 ms | 52.7× | 98.1% ± 0.01% | faster |
+
+The attention falsifier did not hold: TTFT moved far beyond ±5% at every
+length on the timing model. Swapping only this one kernel turned a
+quadratic 131 s into 2.5 s. That is the direct confirmation the baseline's
+GPU-span data could only suggest: the per-position attention kernel was
+nearly all of the baseline's TTFT. story3k moves only 6.9%, just past the
+line. At d=128 with 2 layers, its 12 ms was never dominated by attention.
+
+What remains (flash_v1 phase medians):
+
+| tokens | TTFT | KV reset | GPU span |
+|---|---|---|---|
+| 128 | 94.5 ms | 25.9 ms | 66.7 ms |
+| 512 | 243.4 ms | 25.9 ms | 213.2 ms |
+| 1024 | 470.0 ms | 25.9 ms | 436.7 ms |
+| 2048 | 986.5 ms | 25.9 ms | 945.9 ms |
+| 4096 | 2,490 ms | 25.9 ms | 2,409.7 ms |
+
+Up to 2048 tokens, TTFT now roughly doubles per doubling of length, so the
+linear-in-length projections dominate. Attention's quadratic share shows
+again at 4096 (×2.5). At FP32 peak, the 2048-token projection work would
+take about 0.15 s, so 0.95 s of GPU span leaves headroom of several times.
+The candidates, in the order the data supports:
+
+1. **The failed BF16 attempt before each of the 154 GEMMs per prefill.**
+   Each attempt makes two `cudaMalloc`, a conversion, two `cudaFree`
+   (each a device sync) and two error log lines. Since the attempt always
+   fails here, switching it off (`EMBER_DISABLE_BF16=1`) gives
+   bit-identical output, so the `flash_v1_fp32` lane measures exactly
+   what these attempts cost.
+2. **The 26 ms host KV zero-fill.** It is 27% of TTFT at 128 tokens and
+   is never read on the GPU path.
+3. **Per-layer fixed costs:** the debug device-to-host copies, the device
+   syncs after RoPE, after the KV update and around attention, and the
+   per-layer logging.
+4. **GEMM precision** (TF32 or working BF16 tensor cores). This changes
+   numerics, so it needs its own looser parity gate.
+5. **Attention v2:** sharing each K/V tile across a GQA group of 8 query
+   heads, which matters most at 4096.
+
 ### How the baseline was collected (Colab)
 
 Busy L4 sessions on this account were reclaimed about 22–26 minutes after
