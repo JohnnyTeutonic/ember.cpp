@@ -2185,14 +2185,225 @@ __global__ void attention_prefill_flash_kernel(
     }
 }
 
-// Read once: which prefill attention kernel to launch (docs/TTFT.md).
-static bool use_flash_prefill_attention() {
-    static const bool on = [] {
-        const char* v = std::getenv("EMBER_PREFILL_ATTN");
-        return v != nullptr && std::string(v) == "flash";
-    }();
-    return on;
+// ---------------------------------------------------------------------------
+// Prefill attention v2 (kernel_variant "flash_v2"; EMBER_PREFILL_ATTN=flash2).
+//
+// Same computation as flash_v1 and the baseline: causal attention of the
+// batch's queries over cache positions 0..start + t. The op map
+// (docs/TTFT.md) showed v1 spending ~2 shared/L1 loads per FMA and loading
+// every K/V tile once per query head, though the 8 query heads of a GQA
+// group read the same K/V. v2 changes the work decomposition, not the
+// arithmetic:
+//
+//  * GQA-shared tiles. One block per (KV head, tile of FA2_TQ query
+//    tokens) owns all G = H_q / H_kv query heads of that KV head: 64 rows
+//    (FA2_ROWS = FA2_TQ * G), row r = (token r / G, head r % G). Each K/V
+//    tile is loaded once for all of them.
+//  * Register micro-tiles. Scores S = Q K^T for a 64 x 32 tile are computed
+//    4 rows x 4 keys per thread, so each pair of shared loads feeds 16 FMAs
+//    instead of 1. P V: each thread owns 2 rows x D/4 dims (dims interleaved
+//    by 4 so shared reads are conflict-free), with 2 P values reused across
+//    D/4 dims.
+//  * Online softmax per row, as in v1: running max m, normaliser l, and the
+//    accumulator rescaled by exp(m_old - m_new). Two threads per row reduce
+//    the tile max and sum with a shuffle. A row entirely masked within a
+//    tile leaves m, l and the accumulator unchanged (guarded, not NaN).
+//
+// Assumptions: head_dim is 32 or 64, and G divides 64. Static shared
+// memory stays under 48 KB at D = 64: Q 64 x 65, K 32 x 65, V 32 x 64,
+// S 64 x 33 floats. Otherwise the dispatcher uses v1. Still FP32 on CUDA
+// cores (no tensor cores), so parity with v1 and the baseline is to FP32
+// rounding. Tile sizes are fixed; tuning them per GPU is its own
+// experiment.
+// ---------------------------------------------------------------------------
+constexpr int FA2_ROWS = 64;     // query rows (token x head) per block
+constexpr int FA2_BN = 32;       // keys per K/V tile
+constexpr int FA2_THREADS = 128;
+
+template <int D>
+__global__ void attention_prefill_flash2_kernel(
+    float* __restrict__ out, const float* __restrict__ q, const float* __restrict__ k_cache,
+    const float* __restrict__ v_cache, int num_tokens, int num_q_heads, int num_kv_heads,
+    int start_pos, float scale) {
+    constexpr int DPT = D / 4;                 // P.V dims per thread
+    __shared__ float sQ[FA2_ROWS][D + 1];
+    __shared__ float sK[FA2_BN][D + 1];
+    __shared__ float sV[FA2_BN][D];
+    __shared__ float sS[FA2_ROWS][FA2_BN + 1];
+    __shared__ float sM[FA2_ROWS], sL[FA2_ROWS], sCorr[FA2_ROWS];
+
+    const int tid = threadIdx.x;
+    const int group = num_q_heads / num_kv_heads;  // G
+    const int tq = FA2_ROWS / group;                // query tokens per block
+    const int kv_head = blockIdx.y;
+    const int tok0 = blockIdx.x * tq;
+    const int tok_last = min(tok0 + tq, num_tokens) - 1;
+    const int kv_end = start_pos + tok_last + 1;
+    const size_t kv_stride = (size_t)num_kv_heads * D;
+
+    // Row r -> (token, query head). Out-of-range tokens load zeros and are
+    // never written.
+    for (int idx = tid; idx < FA2_ROWS * D; idx += FA2_THREADS) {
+        const int r = idx / D, d = idx % D;
+        const int t = tok0 + r / group;
+        const int h = kv_head * group + r % group;
+        sQ[r][d] = t < num_tokens ? q[((size_t)t * num_q_heads + h) * D + d] : 0.0f;
+    }
+    if (tid < FA2_ROWS) {
+        sM[tid] = -FLT_MAX;
+        sL[tid] = 0.0f;
+    }
+
+    // P.V ownership: rows pr0, pr0 + 1; dims pc + 4k.
+    const int pr0 = (tid / 4) * 2;
+    const int pc = tid % 4;
+    float acc[2][DPT];
+#pragma unroll
+    for (int i = 0; i < 2; ++i)
+#pragma unroll
+        for (int k = 0; k < DPT; ++k) acc[i][k] = 0.0f;
+
+    // Score micro-tile ownership: rows sr0..sr0+3, keys sc0..sc0+3.
+    const int sr0 = (tid / 8) * 4;
+    const int sc0 = (tid % 8) * 4;
+
+    for (int kv0 = 0; kv0 < kv_end; kv0 += FA2_BN) {
+        __syncthreads();  // previous tile's P.V reads of sS/sV are done
+        for (int idx = tid; idx < FA2_BN * D; idx += FA2_THREADS) {
+            const int j = idx / D, d = idx % D;
+            const int pos = kv0 + j;
+            const bool in = pos < kv_end;
+            const size_t off = (size_t)pos * kv_stride + (size_t)kv_head * D + d;
+            sK[j][d] = in ? k_cache[off] : 0.0f;
+            sV[j][d] = in ? v_cache[off] : 0.0f;
+        }
+        __syncthreads();
+
+        // S = Q K^T * scale, causal mask.
+        float s[4][4];
+#pragma unroll
+        for (int i = 0; i < 4; ++i)
+#pragma unroll
+            for (int j = 0; j < 4; ++j) s[i][j] = 0.0f;
+#pragma unroll 8
+        for (int d = 0; d < D; ++d) {
+            float qv[4], kv[4];
+#pragma unroll
+            for (int i = 0; i < 4; ++i) qv[i] = sQ[sr0 + i][d];
+#pragma unroll
+            for (int j = 0; j < 4; ++j) kv[j] = sK[sc0 + j][d];
+#pragma unroll
+            for (int i = 0; i < 4; ++i)
+#pragma unroll
+                for (int j = 0; j < 4; ++j) s[i][j] += qv[i] * kv[j];
+        }
+#pragma unroll
+        for (int i = 0; i < 4; ++i) {
+            const int r = sr0 + i;
+            const int q_pos = start_pos + tok0 + r / group;
+#pragma unroll
+            for (int j = 0; j < 4; ++j) {
+                const int key = kv0 + sc0 + j;
+                sS[r][sc0 + j] = (key <= q_pos && key < kv_end) ? s[i][j] * scale : -FLT_MAX;
+            }
+        }
+        __syncthreads();
+
+        // Online softmax: two threads per row, 16 keys each.
+        {
+            const int r = tid / 2, half = tid % 2;
+            float tmax = -FLT_MAX;
+#pragma unroll
+            for (int j = 0; j < FA2_BN / 2; ++j) tmax = fmaxf(tmax, sS[r][half * 16 + j]);
+            tmax = fmaxf(tmax, __shfl_xor_sync(0xffffffff, tmax, 1));
+            // Branch-free: lanes of different rows share a warp, so every
+            // lane runs the same shuffles. A row with no visible key in this
+            // tile (any == false) gets p = 0 and corr = 1: m, l and its
+            // accumulator are left as they were.
+            const bool any = tmax > -FLT_MAX;
+            const float m_old = sM[r];
+            const float m_new = any ? fmaxf(m_old, tmax) : m_old;
+            const float corr = any ? expf(m_old - m_new) : 1.0f;  // 0 when m_old is -FLT_MAX
+            float p_sum = 0.0f;
+#pragma unroll
+            for (int j = 0; j < FA2_BN / 2; ++j) {
+                const float sv = sS[r][half * 16 + j];
+                const float p = (any && sv > -FLT_MAX) ? expf(sv - m_new) : 0.0f;
+                sS[r][half * 16 + j] = p;
+                p_sum += p;
+            }
+            p_sum += __shfl_xor_sync(0xffffffff, p_sum, 1);
+            if (half == 0) {
+                sM[r] = m_new;
+                sL[r] = sL[r] * corr + p_sum;
+                sCorr[r] = corr;
+            }
+        }
+        __syncthreads();
+
+        // acc = acc * corr + P V.
+        const float c0 = sCorr[pr0], c1 = sCorr[pr0 + 1];
+#pragma unroll
+        for (int k = 0; k < DPT; ++k) {
+            acc[0][k] *= c0;
+            acc[1][k] *= c1;
+        }
+#pragma unroll 4
+        for (int j = 0; j < FA2_BN; ++j) {
+            const float p0 = sS[pr0][j], p1 = sS[pr0 + 1][j];
+#pragma unroll
+            for (int k = 0; k < DPT; ++k) {
+                const float v = sV[j][pc + 4 * k];
+                acc[0][k] += p0 * v;
+                acc[1][k] += p1 * v;
+            }
+        }
+    }
+
+    __syncthreads();
+#pragma unroll
+    for (int i = 0; i < 2; ++i) {
+        const int r = pr0 + i;
+        const int t = tok0 + r / group;
+        if (t >= num_tokens) continue;
+        const int h = kv_head * group + r % group;
+        const float inv_l = 1.0f / sL[r];   // l > 0: key 0 is visible to every row
+        float* o = out + ((size_t)t * num_q_heads + h) * D;
+#pragma unroll
+        for (int k = 0; k < DPT; ++k) o[pc + 4 * k] = acc[i][k] * inv_l;
+    }
 }
+
+static bool launch_flash2_prefill_attention(float* out, const float* q, const float* k_cache,
+                                            const float* v_cache, int num_tokens, int num_q_heads,
+                                            int num_kv_heads, int head_dim, int start_pos,
+                                            float scale, cudaStream_t stream) {
+    if (num_kv_heads <= 0 || num_q_heads % num_kv_heads != 0) return false;
+    const int group = num_q_heads / num_kv_heads;
+    if (FA2_ROWS % group != 0) return false;
+    const int tq = FA2_ROWS / group;
+    dim3 grid((num_tokens + tq - 1) / tq, num_kv_heads);
+    dim3 block(FA2_THREADS);
+    switch (head_dim) {
+        case 32: attention_prefill_flash2_kernel<32><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale); break;
+        case 64: attention_prefill_flash2_kernel<64><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale); break;
+        default: return false;
+    }
+    return true;
+}
+
+// Read once: which prefill attention kernel to launch (docs/TTFT.md).
+// 0 = baseline, 1 = flash (v1), 2 = flash2 (v2, falls back to v1).
+static int prefill_attention_mode() {
+    static const int mode = [] {
+        const char* v = std::getenv("EMBER_PREFILL_ATTN");
+        if (v == nullptr) return 0;
+        const std::string s(v);
+        return s == "flash2" ? 2 : (s == "flash" ? 1 : 0);
+    }();
+    return mode;
+}
+static bool use_flash_prefill_attention() { return prefill_attention_mode() >= 1; }
 
 // Launch the tiled kernel if its assumptions hold; false means "use the
 // baseline kernel instead".
@@ -2313,7 +2524,13 @@ void attention_batch_prefill_cuda(
     // Only the launch differs between kernel variants: the debug copies and
     // the device sync around it stay identical, so a TTFT change is the
     // kernel's alone.
-    if (use_flash_prefill_attention() &&
+    if (prefill_attention_mode() == 2 &&
+        launch_flash2_prefill_attention(d_output_batch_strided, d_q_batch_strided,
+                                        d_kv_cache_k_base, d_kv_cache_v_base, num_tokens_in_batch,
+                                        num_q_heads, num_kv_heads, head_dim, start_pos_in_kv_cache,
+                                        scale, stream)) {
+        // launched v2
+    } else if (use_flash_prefill_attention() &&
         launch_flash_prefill_attention(d_output_batch_strided, d_q_batch_strided,
                                        d_kv_cache_k_base, d_kv_cache_v_base, num_tokens_in_batch,
                                        num_q_heads, num_kv_heads, head_dim, start_pos_in_kv_cache,
