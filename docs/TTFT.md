@@ -430,6 +430,47 @@ larger than the TTFT difference; a single run per length cannot settle
 which is right, so the 5-run TTFT result stands. The map is for locating
 costs, not for sizing them.
 
+### flash_lean: the two overhead fixes the map pointed to (ember `034421f`, 17 Oct 2026)
+
+This is the flash_v1 kernel on the build with:
+
+* the batched BF16 GEMM attempt latched off after its first failure
+  (`d4e7354`), and
+* the prefill debug dumps made opt-in (`034421f`, `EMBER_PREFILL_DEBUG=1`).
+
+It uses plain `EMBER_PREFILL_ATTN=flash`, with no environment workaround.
+Its parity values against the baseline kernel are identical to flash_v1's
+(max relative difference 9.73e-6 on story3k and 8.53e-6 on timing, argmax
+equal everywhere), as expected, since neither fix touches arithmetic.
+Records are in `experiments/ttft_2026-10-17/flash_lean/`, with the full
+protocol at every length on 3 L4s.
+
+| model | tokens | baseline | flash_v1_fp32 | flash_lean | vs flash_v1_fp32 | vs baseline |
+|---|---|---|---|---|---|---|
+| story3k | 128 | 12.96 ms | 11.74 ms | 1.73 ms | 85.3% ± 0.23% | 7.5× |
+| timing | 128 | 233.4 ms | 79.0 ms | 67.0 ms | 15.2% ± 0.30% | 3.5× |
+| timing | 512 | 2,297.6 ms | 214.3 ms | 175.1 ms | 18.3% ± 1.38% | 13.1× |
+| timing | 1024 | 8,568 ms | 438.8 ms | 362.8 ms | 17.3% ± 1.01% | 23.6× |
+| timing | 2048 | 33,219 ms | 940.5 ms | 784.0 ms | 16.6% ± 0.40% | 42.4× |
+| timing | 4096 | 131,123 ms | 2,446 ms | 2,124 ms | 13.2% ± 1.17% | 61.7× |
+
+Every cell is "faster" under the noise rule and beyond the ±5% line. The
+saving over flash_v1_fp32 matches the op map's "outside ops" figure, about
+12 ms at 128 tokens and about 156 ms at 2048, which identifies it as the
+debug K/V dump. Story3k shows the dump most clearly: it was 9.4 of its
+11.7 ms.
+
+What remains at 128 tokens: 67.0 ms, of which the host KV zero-fill is
+26.0 ms (39%) and the GPU span 39.2 ms. At 4096 tokens, the GPU span is
+2,044 of 2,124 ms. In the order the data supports, the next levers are:
+
+1. **Skip the host KV zero-fill when no layer runs on the CPU.** It costs
+   26 ms per request, and the GPU path never reads those vectors.
+2. **Attention v2:** GQA-shared K/V tiles and tensor cores, for long
+   prompts.
+3. **Tensor-core GEMMs (TF32)** for short and medium prompts. This changes
+   the numerics, so it needs its own looser parity gate.
+
 ### How the baseline was collected (Colab)
 
 Busy L4 sessions on this account were reclaimed about 22–26 minutes after
