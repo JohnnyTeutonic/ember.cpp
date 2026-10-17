@@ -187,8 +187,11 @@ The baseline prefill takes 33 s at 2048 tokens and about 130 s at 4096. At
 those lengths the full protocol (5 runs × 61 requests) would cost about
 15 L4-hours. The run-to-run spread there is under 0.05% of p50 (probe 3:
 p90 − p50 = 12 ms on 33.3 s), so 50 repetitions add almost no precision.
-At 2048 and 4096 the baseline therefore uses 2 warmup + 5 measured requests
-per run, still over 5 fresh-server runs. Those rows carry
+The baseline therefore uses 2 warmup + 5 measured requests per run at 2048
+tokens, and 1 + 3 at 4096, so that a 4096 cell (about 11 minutes) fits
+inside one short-lived VM. Both lengths still run over 5 fresh-server runs.
+Variants fast enough to need no deviation use the full protocol at every
+length. Those rows carry
 `"protocol_deviation"`. Every other length, and story3k, follows the full
 protocol. The 5 runs are split over 3 L4 VMs (runs 1–2, 3–4, 5). Each VM
 passes the parity gate before timing. `gpu_uuid` records which physical GPU
@@ -196,7 +199,93 @@ served each run.
 
 ## Results
 
-Pending: the baseline sweep.
+### Baseline (ember `dbadee2`, Colab L4, 17 Oct 2026)
+
+These are 30 cells (model × run × length) over 5 fresh-server runs, served by
+12 different physical L4s (driver 580.82.07, CUDA 13.0). Records are in
+`experiments/ttft_2026-10-17/baseline/`: `summary.jsonl`, `manifest.json`
+and `table.md`. Two story3k cells came from a session whose commit,
+`e506934`, differs from `dbadee2` only under `tools/`, so the engine code
+is identical for all 30 cells.
+
+The TTFT columns give the mean over runs of each run's p50, with the
+standard deviation of those per-run p50s.
+
+| model | tokens | TTFT p50 | run-to-run std | p90 | worst p99 | requests per run |
+|---|---|---|---|---|---|---|
+| story3k | 128 | 12.96 ms | 0.07 ms | 13.11 ms | 14.44 ms | 10 + 50 |
+| timing | 128 | 233.4 ms | 0.63 ms | 234.4 ms | 237.1 ms | 10 + 50 |
+| timing | 512 | 2,297.6 ms | 3.6 ms | 2,300.8 ms | 2,306.3 ms | 10 + 50 |
+| timing | 1024 | 8,568 ms | 16 ms | 8,579 ms | 8,602 ms | 10 + 50 |
+| timing | 2048 | 33,219 ms | 40 ms | 33,227 ms | 33,290 ms | 2 + 5 (deviation) |
+| timing | 4096 | 131,123 ms | 58 ms | 131,125 ms | 131,223 ms | 1 + 3 (deviation) |
+
+Phase medians for the timing model, averaged over runs:
+
+| tokens | KV reset | embedding | prefill wall | GPU span | GPU span / TTFT |
+|---|---|---|---|---|---|
+| 128 | 25.8 ms | 0.3 ms | 206.6 ms | 205.7 ms | 0.881 |
+| 512 | 25.9 ms | 1.4 ms | 2,269.6 ms | 2,267.5 ms | 0.987 |
+| 1024 | 25.9 ms | 2.8 ms | 8,538.4 ms | 8,534.3 ms | 0.996 |
+| 2048 | 26.0 ms | 11.3 ms | 33,180.9 ms | 33,167.6 ms | 0.998 |
+| 4096 | 25.9 ms | 24.2 ms | 131,071.2 ms | 131,042.5 ms | 0.999 |
+
+Tokenisation, server parsing and sampling stay under 1 ms at every length.
+The client round trip adds 0.5–5 ms to the server-side TTFT.
+
+What the baseline says:
+
+1. **Prefill is quadratic and almost entirely on the GPU timeline.** From
+   512 tokens upward, each doubling of length multiplies TTFT by 3.7–3.9.
+   The GPU span is 99%+ of TTFT from 512 tokens. The matrix work of a
+   2048-token prefill at this shape is about 4.5 TFLOP, roughly 0.15 s at
+   the L4's FP32 rate. The measured 33 s is about 200× that. The cost has
+   the quadratic signature of `attention_batch_prefill_cuda_kernel`
+   (fact 3 above). The GPU span cannot separate kernels from GPU idle
+   time, though, and the nsys pass that should have done so captured
+   nothing (below). So "attention is the cost" is an inference here. The
+   flash_v1 comparison tests it directly.
+2. **A constant 26 ms per request goes on zero-filling the host KV
+   vectors** (`kv_cache_.clear_data()`). That is 11% of TTFT at 128
+   tokens, and the vectors are not read on the GPU path. It is the
+   cheapest fix in the profile, and a separate experiment.
+3. **The noise floor is tiny.** The run-to-run standard deviation of p50
+   is 0.04–0.5% of the mean, so any change above about 1% clears the
+   50%-of-improvement rule easily. The reduced repetitions at 2048 and
+   4096 cost no meaningful precision: p90 − p50 is 0.02% and 0.002% of
+   p50 there.
+4. **story3k is 13 ms, almost all of it on the GPU timeline** (12.35 of
+   12.96 ms) for a 2-layer, d=128 model. At this size the cost cannot be
+   FLOPs. It points to per-layer fixed costs: synchronising copies,
+   logging, allocations and the per-position loop of the attention
+   kernel.
+
+The nsys kernel pass (`nsys_timing_128`, `nsys_timing_1024`, Nsight Systems
+2025.3.1) produced reports with no CUDA kernel and no NVTX data. A report
+opened locally with nsys 2024.5.1 contains three tables and "does not
+contain CUDA kernel data". TTFT under the profiler equalled TTFT without it
+(8,569 ms vs 8,568 ms at 1024 tokens). The profiler therefore never hooked
+the server's CUDA activity. The split between kernel time and launch or
+synchronisation overhead is still open; it is recorded as a failed
+measurement, not inferred.
+
+### How the baseline was collected (Colab)
+
+Busy L4 sessions on this account were reclaimed about 22–26 minutes after
+creation. At first this was blamed on running parallel sessions; it then
+recurred with a single session. So the baseline ran as a resumable lane on
+the repo's supervisor (`tools/ttft_supervise.py`, path B of
+`microtorch/AGENTS.md`), working as follows:
+
+* The unit of work is one cell.
+* Each VM gets the not-yet-banked cells, packed longest first to fit about
+  880 s of measurement, and passes a quick parity gate.
+* Finished cells are relayed home every minute.
+* The lane stops the VM when its batch is done, and relaunches after a
+  reclaim.
+
+The baseline took 12 VM launches. No banked cell was lost or duplicated,
+and engine-level parity passed on every VM.
 
 ## Directions and falsifiers
 
