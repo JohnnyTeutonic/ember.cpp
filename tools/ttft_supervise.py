@@ -65,17 +65,20 @@ VARIANTS = {
     "flash_v1_fp32": dict(session="ttftv2", bank=f"{ART}/bank_flash_v1_fp32",
                           env="EMBER_PREFILL_ATTN=flash EMBER_DISABLE_BF16=1", overrides="none",
                           parity_gate=True, commit=None),
-    # Diagnostic lanes (not TTFT records): EMBER_OP_TIMING=1 puts per-op GPU
+    # Diagnostic lanes (not TTFT records), pinned to 50b1ac6: op timer in,
+    # BF16 latch (d4e7354) not yet, so optime_flash still shows the failed
+    # BF16 attempts it exists to measure. EMBER_OP_TIMING=1 puts per-op GPU
     # time and GPU-idle-between-ops into every receipt (op_ms), the split
     # nsys could not capture on Colab. One run per length is enough to read
     # where the time goes; the events perturb TTFT slightly, so these banks
     # are never compared against the TTFT lanes.
     "optime_flash": dict(session="ttftd1", bank=f"{ART}/bank_optime_flash",
                          env="EMBER_PREFILL_ATTN=flash EMBER_OP_TIMING=1", overrides="none",
-                         parity_gate=False, commit=None, runs=1, nsys=False),
+                         parity_gate=False, commit="50b1ac6617b0", runs=1, nsys=False),
     "optime_flash_fp32": dict(session="ttftd2", bank=f"{ART}/bank_optime_flash_fp32",
                               env="EMBER_PREFILL_ATTN=flash EMBER_DISABLE_BF16=1 EMBER_OP_TIMING=1",
-                              overrides="none", parity_gate=False, commit=None, runs=1, nsys=False),
+                              overrides="none", parity_gate=False, commit="50b1ac6617b0", runs=1,
+                              nsys=False),
 }
 
 # Packing a VM's to-do list (Oct 2026: busy L4 sessions live ~22 min, ~5 of
