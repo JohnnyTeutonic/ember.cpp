@@ -2380,10 +2380,19 @@ void TinyLlamaModel::smart_gemm_batch_cuda(bool transa_user, bool transb_user,
     Logger::info("[SMART_GEMM] Using FP32 GEMM for " + std::string(operation_name) + 
                  " (batch_size=" + std::to_string(m_user) + " < " + std::to_string(tensor_core_threshold) + 
                  " or Tensor Cores unavailable)");
+    // EMBER_GEMM_TF32=1 (docs/TTFT.md, lane flash_v2_tf32): run this FP32
+    // GEMM on tensor cores in TF32 (FP32 inputs, outputs and accumulation;
+    // products rounded to a 10-bit mantissa). Scoped to this call: the math
+    // mode is restored right after, so decode matvecs and the LM head keep
+    // FP32 math. Changes numerics, so it is gated by a looser parity check
+    // than the FP32 kernels (relative diff <= 5e-2, cosine >= 0.999).
+    static const bool tf32 = std::getenv("EMBER_GEMM_TF32") != nullptr;
+    if (tf32) cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH);
     gemm_f32_f32_cuda(cublas_handle_, transa_user, transb_user,
                       m_user, n_user, k_user, alpha_user,
                       A_f32_user, lda_user, B_f32_user, ldb_user,
                       beta_user, C_f32_user, ldc_user, stream);
+    if (tf32) cublasSetMathMode(cublas_handle_, CUBLAS_DEFAULT_MATH);
 }
 #endif // HAS_CUDA
 
