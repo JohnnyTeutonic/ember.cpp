@@ -57,6 +57,14 @@ VARIANTS = {
     "flash_v1": dict(session="ttftv1", bank=f"{ART}/bank_flash_v1",
                      env="EMBER_PREFILL_ATTN=flash", overrides="none", parity_gate=True,
                      commit="8b4002333d54"),
+    # flash_v1 with the BF16 GEMM attempt switched off. On this stack every
+    # BF16 cublasGemmEx fails, after two cudaMalloc, a conversion, two
+    # cudaFree (each a device sync) and error logging, and falls back to
+    # FP32: 154 times per prefill. The output is bit-identical, so this
+    # variant measures exactly what those failed attempts cost.
+    "flash_v1_fp32": dict(session="ttftv2", bank=f"{ART}/bank_flash_v1_fp32",
+                          env="EMBER_PREFILL_ATTN=flash EMBER_DISABLE_BF16=1", overrides="none",
+                          parity_gate=True, commit=None),
 }
 
 # Packing a VM's to-do list (Oct 2026: busy L4 sessions live ~22 min, ~5 of
