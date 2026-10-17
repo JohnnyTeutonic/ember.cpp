@@ -556,16 +556,60 @@ The single run sits 1–5% below the flash_v2 range. One VM cannot separate
 that from physical-GPU variation, so it is a confirmation of the default,
 not a claimed gain.
 
+### flash_v2_tf32: TF32 tensor cores for the projection GEMMs (ember `25f6e13`, 17-18 Oct 2026)
+
+With `EMBER_GEMM_TF32=1`, `smart_gemm_batch_cuda`'s FP32 GEMM runs with
+`CUBLAS_TF32_TENSOR_OP_MATH`. Inputs, outputs and accumulation stay FP32;
+products are rounded to a 10-bit mantissa. The math mode is set around that
+call and restored right after, so decode matvecs and the LM head keep FP32
+math. This changes the arithmetic, so it is held to the looser gate fixed
+before measuring: relative difference ≤ 5e-2 and cosine ≥ 0.999 against the
+baseline kernel, the same bar the BF16 path had.
+
+**Parity gate:** baseline kernel vs flash2 + TF32, first-token logits.
+
+| model | tokens | max relative diff | cosine | argmax |
+|---|---|---|---|---|
+| story3k | 128 | 2.9e-4, 9.1e-5 | 1.000000 | identical (2/2) |
+| timing | 128 | 2.1e-3, 2.7e-3 | 0.999997 | identical (2/2) |
+| timing | 1024 | 2.8e-3, 2.0e-3 | 0.999997 | identical (2/2) |
+| timing | 4096 | 2.9e-3, 2.0e-3 | 0.999997–0.999998 | identical (2/2) |
+
+The worst case is about 17× inside the gate. The error is about 400× larger
+than the FP32 kernels' (about 5e-6), which shows that tensor cores really
+engaged.
+
+**TTFT** (full protocol at every length; records in
+`experiments/ttft_2026-10-17/flash_v2_tf32/`):
+
+| model | tokens | flash_v2 | flash_v2_tf32 | gain (mean ± std) | verdict | ±5% line | vs baseline |
+|---|---|---|---|---|---|---|---|
+| story3k | 128 | 1.62 ms | 1.61 ms | 0.4% ± 1.35% | within noise | no change | 8.0× |
+| timing | 128 | 45.2 ms | 31.2 ms | 30.9% ± 0.41% | faster | changed | 7.5× |
+| timing | 512 | 152.0 ms | 64.8 ms | 57.3% ± 1.15% | faster | changed | 35× |
+| timing | 1024 | 317.5 ms | 123.2 ms | 61.2% ± 1.10% | faster | changed | 70× |
+| timing | 2048 | 577.4 ms | 261.1 ms | 54.8% ± 0.74% | faster | changed | 127× |
+| timing | 4096 | 1,244 ms | 698.1 ms | 43.9% ± 0.99% | faster | changed | 188× |
+
+The gain peaks at 512–1024 tokens, where the FP32 projections were the
+largest share (op map). It is smaller at 4096, where FP32 attention is a
+larger share, and absent on story3k, whose projections are tiny.
+
+TF32 is **not** the default: it changes the numerics (relative error about
+2e-3 on the logits; argmax unchanged on every gated prompt), and switching
+it on by default is a precision-policy decision. Enable it with
+`EMBER_GEMM_TF32=1`.
+
 ## Summary so far (L4, timing model unless noted)
 
-| tokens | baseline | flash_v1 | flash_v1_fp32 | flash_lean | flash_lean_kv | flash_v2 |
-|---|---|---|---|---|---|---|
-| story3k 128 | 12.96 ms | 12.06 | 11.74 | 1.73 | 1.72 | 1.62 ms |
-| 128 | 233.4 ms | 94.5 | 79.0 | 67.0 | 46.5 | 45.2 ms |
-| 512 | 2,297.6 ms | 243.4 | 214.3 | 175.1 | 161.0 | 152.0 ms |
-| 1024 | 8,568 ms | 470.0 | 438.8 | 362.8 | 352.5 | 317.5 ms |
-| 2048 | 33,219 ms | 986.5 | 940.5 | 784.0 | 761.2 | 577.4 ms |
-| 4096 | 131,123 ms | 2,490 | 2,446 | 2,124 | 2,068 | 1,244 ms |
+| tokens | baseline | flash_v1 | flash_v1_fp32 | flash_lean | flash_lean_kv | flash_v2 (default) | flash_v2_tf32 |
+|---|---|---|---|---|---|---|---|
+| story3k 128 | 12.96 ms | 12.06 | 11.74 | 1.73 | 1.72 | 1.62 | 1.61 ms |
+| 128 | 233.4 ms | 94.5 | 79.0 | 67.0 | 46.5 | 45.2 | 31.2 ms |
+| 512 | 2,297.6 ms | 243.4 | 214.3 | 175.1 | 161.0 | 152.0 | 64.8 ms |
+| 1024 | 8,568 ms | 470.0 | 438.8 | 362.8 | 352.5 | 317.5 | 123.2 ms |
+| 2048 | 33,219 ms | 986.5 | 940.5 | 784.0 | 761.2 | 577.4 | 261.1 ms |
+| 4096 | 131,123 ms | 2,490 | 2,446 | 2,124 | 2,068 | 1,244 | 698.1 ms |
 
 From flash_v1 onward, every step passed parity against the baseline kernel
 (max relative difference ≤ 1e-5, identical argmax). Each was measured
