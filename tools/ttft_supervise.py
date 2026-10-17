@@ -65,6 +65,14 @@ VARIANTS = {
     "flash_v1_fp32": dict(session="ttftv2", bank=f"{ART}/bank_flash_v1_fp32",
                           env="EMBER_PREFILL_ATTN=flash EMBER_DISABLE_BF16=1", overrides="none",
                           parity_gate=True, commit=None),
+    # flash_v1 on the build with the two overhead fixes the measurements
+    # pointed to: the batched BF16 GEMM attempt latched off after its first
+    # failure (d4e7354) and the prefill debug dumps made opt-in. Plain
+    # EMBER_PREFILL_ATTN=flash: no env workaround. Compared against
+    # flash_v1_fp32 (same kernel, BF16 attempts off by env, dumps on).
+    "flash_lean": dict(session="ttftv3", bank=f"{ART}/bank_flash_lean",
+                       env="EMBER_PREFILL_ATTN=flash", overrides="none", parity_gate=True,
+                       commit="034421fb540b"),
     # Diagnostic lanes (not TTFT records), pinned to 50b1ac6: op timer in,
     # BF16 latch (d4e7354) not yet, so optime_flash still shows the failed
     # BF16 attempts it exists to measure. EMBER_OP_TIMING=1 puts per-op GPU
