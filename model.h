@@ -188,10 +188,19 @@ struct KVCache {
         current_batch_size = 0;
         batch_seq_lens.clear();
         
-        // For batch processing, we MUST clear the actual KV data to prevent cross-sequence contamination
-        for (auto& layer : layers) {
-            std::fill(layer.k.begin(), layer.k.end(), 0.0f);
-            std::fill(layer.v.begin(), layer.v.end(), 0.0f);
+        // For batch processing, we MUST clear the actual KV data to prevent cross-sequence contamination.
+        // Only layers that run on the CPU read these host vectors. The GPU
+        // layers (the top allocated_num_layers) keep their KV on the device,
+        // where prefill writes positions 0..n-1 before attention reads them.
+        // Zero-filling their unused host copies cost a constant 26 ms per
+        // request on the TTFT timing model (docs/TTFT.md).
+        size_t host_layers = layers.size();
+#ifdef HAS_CUDA
+        host_layers -= std::min(host_layers, static_cast<size_t>(std::max(allocated_num_layers, 0)));
+#endif
+        for (size_t i = 0; i < host_layers; ++i) {
+            std::fill(layers[i].k.begin(), layers[i].k.end(), 0.0f);
+            std::fill(layers[i].v.begin(), layers[i].v.end(), 0.0f);
         }
         
         // Logger::debug("[KVCache] clear_data() called. seq_len reset to 0. K/V vectors cleared for batch processing.");
