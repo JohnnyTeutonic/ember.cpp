@@ -31,6 +31,7 @@ import glob
 import json
 import os
 import shutil
+import statistics
 import subprocess
 import sys
 
@@ -55,7 +56,7 @@ VARIANTS = {
                      parity_gate=False, commit="dbadee28a481"),
     "flash_v1": dict(session="ttftv1", bank=f"{ART}/bank_flash_v1",
                      env="EMBER_PREFILL_ATTN=flash", overrides="none", parity_gate=True,
-                     commit=None),
+                     commit="8b4002333d54"),
 }
 
 # Packing a VM's to-do list (Oct 2026: busy L4 sessions live ~22 min, ~5 of
@@ -126,8 +127,11 @@ def parity_banked():
 
 
 def cell_costs():
-    """Seconds per (model, length): observed in this lane's bank if any."""
-    costs = dict(DEFAULT_COST_S)
+    """Seconds per (model, length): observed in this lane's bank if any.
+    Lengths this lane has not measured yet get the baseline default scaled
+    by the mean observed/default ratio of the ones it has: a 100x faster
+    variant would otherwise be packed like the baseline, one VM per cell."""
+    observed = {}
     for path in glob.glob(f"{V['bank']}/*/*/summary.jsonl"):
         model = os.path.basename(os.path.dirname(path))
         with open(path) as f:
@@ -135,7 +139,11 @@ def cell_costs():
                 if line.strip():
                     r = json.loads(line)
                     requests = 1 + r["warmup_discarded"] + r["n"]
-                    costs[(model, r["input_len"])] = requests * r["ttft_ms"]["p50"] / 1000.0
+                    observed[(model, r["input_len"])] = requests * r["ttft_ms"]["p50"] / 1000.0
+    ratios = [observed[k] / DEFAULT_COST_S[k] for k in observed if k in DEFAULT_COST_S]
+    scale = max(statistics.mean(ratios), 0.01) if ratios else 1.0
+    costs = {k: v * scale for k, v in DEFAULT_COST_S.items()}
+    costs.update(observed)
     return costs
 
 
