@@ -104,18 +104,24 @@ if [ "$MODE" = resume ]; then
         # The kernel under test, in FP32 GEMMs, against the baseline kernel.
         FLASH_CFG=gpu_fp32_flash
         case " $VARIANT_ENV " in *" EMBER_PREFILL_ATTN=flash2 "*) FLASH_CFG=gpu_fp32_flash2 ;; esac
+        # FP32 variants must match to FP32 rounding. TF32 projection GEMMs
+        # change the arithmetic, so they get the looser gate fixed before
+        # their numbers were seen (the gate the BF16 path was held to).
+        GATE_REL=1e-3; GATE_COS=0.99999
+        case " $VARIANT_ENV " in *" EMBER_GEMM_TF32=1 "*)
+            FLASH_CFG=gpu_tf32_flash2; GATE_REL=5e-2; GATE_COS=0.999 ;; esac
         # The variant must compute what the baseline kernel computes.
         $PARITY --model timing.gguf --ref gpu_fp32 --test "$FLASH_CFG" --lengths 128 \
-            --max-rel-diff 1e-3 --min-cosine 0.99999 --out "$OUT/parity/timing_baseline_vs_flash_128.jsonl" \
-            || fail "parity gate failed (baseline kernel vs flash_v1)"
+            --max-rel-diff "$GATE_REL" --min-cosine "$GATE_COS" --out "$OUT/parity/timing_baseline_vs_flash_128.jsonl" \
+            || fail "parity gate failed (baseline kernel vs $FLASH_CFG)"
         if grep -qx parity_variant "$TODO"; then
             # One-time full gate, banked once: every length class incl. 4096.
             $PARITY --model timing.gguf --ref gpu_fp32 --test "$FLASH_CFG" --lengths 128 1024 4096 \
-                --max-rel-diff 1e-3 --min-cosine 0.99999 \
+                --max-rel-diff "$GATE_REL" --min-cosine "$GATE_COS" \
                 --out "$OUT/parity/timing_baseline_vs_flash_full.jsonl" \
-                || fail "parity gate failed (baseline kernel vs flash_v1, full)"
+                || fail "parity gate failed (baseline kernel vs $FLASH_CFG, full)"
             $PARITY --model story3k.gguf --ref gpu_fp32 --test "$FLASH_CFG" --lengths 128 \
-                --max-rel-diff 1e-3 --min-cosine 0.99999 \
+                --max-rel-diff "$GATE_REL" --min-cosine "$GATE_COS" \
                 --out "$OUT/parity/story3k_baseline_vs_flash.jsonl" \
                 || fail "parity gate failed (story3k baseline kernel vs flash_v1)"
         fi

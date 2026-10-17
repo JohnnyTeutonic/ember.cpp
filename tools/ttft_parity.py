@@ -42,6 +42,8 @@ CONFIGS = {
     "gpu_fp32_flash": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash"]),
     "gpu_flash": (-1, ["EMBER_PREFILL_ATTN=flash"]),
     "gpu_fp32_flash2": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash2"]),
+    # TF32 projection GEMMs on the flash2 kernel (changes numerics: loose gate).
+    "gpu_tf32_flash2": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash2", "EMBER_GEMM_TF32=1"]),
 }
 
 
