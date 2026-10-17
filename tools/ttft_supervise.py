@@ -46,12 +46,31 @@ ART = "/mnt/c/ml_artifacts/ttft"
 # counts ("" = VM default 2048:2:5 4096:1:3, "none" = full protocol at every
 # length), and whether a one-time full parity gate against the baseline
 # kernel must be banked before the lane counts as done.
+#
+# commit pins the ember code a lane measures (None = HEAD when the lane
+# starts). The baseline is pinned to the commit its first cells ran on, so
+# all 30 cells measure identical code however far HEAD has moved.
 VARIANTS = {
     "baseline": dict(session="ttft", bank=f"{ART}/bank", env="", overrides="",
-                     parity_gate=False),
+                     parity_gate=False, commit="dbadee28a481"),
     "flash_v1": dict(session="ttftv1", bank=f"{ART}/bank_flash_v1",
-                     env="EMBER_PREFILL_ATTN=flash", overrides="none", parity_gate=True),
+                     env="EMBER_PREFILL_ATTN=flash", overrides="none", parity_gate=True,
+                     commit=None),
 }
+
+# Packing a VM's to-do list (Oct 2026: busy L4 sessions live ~22 min, ~5 of
+# which go on upload, build, model generation and the parity gate). A VM gets
+# only the cells that fit BUDGET_S of measurement, longest first, so it never
+# starts a cell it cannot finish; when it finishes its batch the lane stops it
+# and relaunches with the next one. Costs are seconds per cell, taken from
+# this lane's own banked cells when it has one at that (model, length), else
+# these baseline-kernel defaults (calibration + warmup + measured requests).
+BUDGET_S = 880   # sessions died 1326-1448 s after creation; setup ~330 s
+DEFAULT_COST_S = {("story3k", 128): 5, ("timing", 128): 20, ("timing", 512): 150,
+                  ("timing", 1024): 540, ("timing", 2048): 280, ("timing", 4096): 690}
+RUN_LOAD_S = 25        # fresh server per run: model load + warm path
+NSYS_COST_S = 300
+PARITY_VARIANT_COST_S = 10 ** 6   # 4096 on the baseline kernel twice: always its own VM
 FLASH_PARITY_FILES = ("timing_baseline_vs_flash_full.jsonl", "story3k_baseline_vs_flash.jsonl")
 
 RUNS = range(1, 6)
@@ -106,6 +125,36 @@ def parity_banked():
     return False
 
 
+def cell_costs():
+    """Seconds per (model, length): observed in this lane's bank if any."""
+    costs = dict(DEFAULT_COST_S)
+    for path in glob.glob(f"{V['bank']}/*/*/summary.jsonl"):
+        model = os.path.basename(os.path.dirname(path))
+        with open(path) as f:
+            for line in f:
+                if line.strip():
+                    r = json.loads(line)
+                    requests = 1 + r["warmup_discarded"] + r["n"]
+                    costs[(model, r["input_len"])] = requests * r["ttft_ms"]["p50"] / 1000.0
+    return costs
+
+
+def pack(missing):
+    """The longest-first subset of missing cells that fits one VM's budget
+    (at least one cell, so a lane can never stall on an oversized cell)."""
+    costs = cell_costs()
+    batch, spent, runs = [], 0.0, set()
+    for cell in sorted(missing, key=lambda c: -costs.get((c[0], c[2]), 600)):
+        model, run, n = cell
+        cost = costs.get((model, n), 600) + (0 if (model, run) in runs else RUN_LOAD_S)
+        if batch and spent + cost > BUDGET_S:
+            continue
+        batch.append(cell)
+        spent += cost
+        runs.add((model, run))
+    return batch, spent
+
+
 def git(*args):
     return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout
 
@@ -123,16 +172,17 @@ class TtftJob(sup.Job):
         self.stage = os.path.expanduser(f"~/ttft_supervisor/{variant}/stage")
         os.makedirs(self.stage, exist_ok=True)
         os.makedirs(V["bank"], exist_ok=True)
-        self.ec = git("-C", EMBER, "rev-parse", "--short=12", "HEAD").strip()
+        ref = V["commit"] or "HEAD"
+        self.ec = git("-C", EMBER, "rev-parse", "--short=12", ref).strip()
         self.pc = git("-C", PK, "rev-parse", "--short=12", "HEAD").strip()
         git("-C", EMBER, "archive", "--format=tar.gz", "--prefix=ember/",
-            "-o", f"{self.stage}/ember.tgz", "HEAD")
+            "-o", f"{self.stage}/ember.tgz", ref)
         git("-C", PK, "archive", "--format=tar.gz", "--prefix=microtorch/",
             "-o", f"{self.stage}/paperkiln.tgz", "HEAD",
             "CMakeLists.txt", "include", "src", "third_party", "tools", "studio", "web",
             "python", "tests")
         with open(f"{self.stage}/colab_ttft_vm.sh", "w") as f:
-            f.write(git("-C", EMBER, "show", "HEAD:tools/colab_ttft_vm.sh"))
+            f.write(git("-C", EMBER, "show", f"{ref}:tools/colab_ttft_vm.sh"))
         with open(f"{self.stage}/ttft_variant.txt", "w") as f:
             f.write(f"{variant}\n{V['env']}\n{V['overrides']}\n")
         subprocess.run(["unzip", "-jo", "/mnt/c/ml_artifacts/paperkiln_story3k.zip",
@@ -156,11 +206,21 @@ class TtftJob(sup.Job):
         return not self.todo()
 
     def uploads(self):
-        items = self.todo()
+        # The variant's full parity gate comes first, alone: no cell counts
+        # until it passes. Then cells packed to one VM life; nsys rides along
+        # once every cell is banked.
+        if not parity_banked():
+            items, note = ["parity_variant"], "full parity gate"
+        else:
+            batch, spent = pack(sorted(required() - banked()))
+            items = [f"{m} {r}:{n}" for m, r, n in batch]
+            note = f"{len(batch)} cells, ~{spent:.0f} s"
+            if not batch and not nsys_banked():
+                items, note = ["nsys"], "nsys pass"
         with open(f"{self.stage}/ttft_todo.txt", "w") as f:
             f.write("\n".join(items) + "\n")
         self.vm_out = None
-        sup.log(f"[{self.name}] launching with {len(items)} to-do items")
+        sup.log(f"[{self.name}] launching: {note} ({len(self.todo())} items left overall)")
         return [(f"{self.stage}/{name}", f"/content/{name}") for name in
                 ("ember.tgz", "paperkiln.tgz", "story3k.gguf", "colab_ttft_vm.sh",
                  "ttft_todo.txt", "ttft_variant.txt")]
@@ -202,9 +262,23 @@ class TtftJob(sup.Job):
         self.fetch("/content/ttft_vm.log", f"{dest}/ttft_vm.log")
         rc, _ = self.colab("download", "-s", self.name, "/content/TTFT_DONE",
                            f"{self.stage}/TTFT_DONE", timeout=120)
-        if rc == 0 and not os.path.exists(f"{dest}/full"):
+        finished = rc == 0
+        if finished and not os.path.exists(f"{dest}/full"):
             if self.fetch("/content/ttft_out.zip", f"{dest}/ttft_out.zip", timeout=900):
                 shutil.unpack_archive(f"{dest}/ttft_out.zip", f"{dest}/full")
+        if not finished:
+            rc, _ = self.colab("download", "-s", self.name, "/content/TTFT_FAILED",
+                               f"{dest}/TTFT_FAILED", timeout=120)
+            if rc == 0:
+                sup.log(f"[{self.name}] VM job FAILED (see {dest}/ttft_vm.log)")
+                finished = True
+        if finished and not self.is_done():
+            # Batch over (or failed): free the VM now and relaunch with the
+            # next batch, rather than leave it idle until a reclaim. A failed
+            # batch banks nothing, so the stall guard counts it.
+            sup.log(f"[{self.name}] batch finished -> stopping VM, next batch")
+            self.stop()
+            self.state = "WAITING"
 
     def progress(self):
         need = required()
