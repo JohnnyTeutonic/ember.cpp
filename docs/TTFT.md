@@ -595,14 +595,26 @@ The gain peaks at 512–1024 tokens, where the FP32 projections were the
 largest share (op map). It is smaller at 4096, where FP32 attention is a
 larger share, and absent on story3k, whose projections are tiny.
 
-TF32 is **not** the default: it changes the numerics (relative error about
-2e-3 on the logits; argmax unchanged on every gated prompt), and switching
-it on by default is a precision-policy decision. Enable it with
-`EMBER_GEMM_TF32=1`.
+**TF32 is the default since ember `061636e` (18 Oct 2026), at the owner's
+decision**, because it lowers TTFT at every timing-model length.
+`EMBER_GEMM_TF32=0` restores FP32 GEMM math. Every parity reference
+configuration now pins `EMBER_GEMM_TF32=0` (and `EMBER_PREFILL_ATTN=baseline`
+where relevant), so gates still compare against the original arithmetic.
+Lane `default_check_tf32` (no environment, one run per length) confirms that
+an unconfigured server lands on the TF32 numbers:
+
+| tokens | default (1 run) | flash_v2_tf32 (5-run range) |
+|---|---|---|
+| story3k 128 | 1.68 ms | 1.59–1.65 ms |
+| 128 | 31.6 ms | 30.9–31.5 ms |
+| 512 | 63.5 ms | 63.5–66.0 ms |
+| 1024 | 121.3 ms | 119.3–125.9 ms |
+| 2048 | 257.5 ms | 254.2–266.3 ms |
+| 4096 | 688.8 ms | 685.0–710.5 ms |
 
 ## Summary so far (L4, timing model unless noted)
 
-| tokens | baseline | flash_v1 | flash_v1_fp32 | flash_lean | flash_lean_kv | flash_v2 (default) | flash_v2_tf32 |
+| tokens | baseline | flash_v1 | flash_v1_fp32 | flash_lean | flash_lean_kv | flash_v2 | flash_v2_tf32 (default) |
 |---|---|---|---|---|---|---|---|
 | story3k 128 | 12.96 ms | 12.06 | 11.74 | 1.73 | 1.72 | 1.62 | 1.61 ms |
 | 128 | 233.4 ms | 94.5 | 79.0 | 67.0 | 46.5 | 45.2 | 31.2 ms |
