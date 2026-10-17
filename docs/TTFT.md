@@ -336,6 +336,37 @@ The candidates, in the order the data supports:
 5. **Attention v2:** sharing each K/V tile across a GQA group of 8 query
    heads, which matters most at 4096.
 
+### flash_v1_fp32: the failed BF16 attempts priced (ember `8aca10d`, 17 Oct 2026)
+
+This is flash_v1 with `EMBER_DISABLE_BF16=1`. Every BF16 `cublasGemmEx`
+fails on this stack and falls back to FP32, so the logits are bit-identical
+to flash_v1's (its parity gate against the baseline kernel passed exactly as
+flash_v1's did). The only difference is that the 154 attempts per prefill
+no longer run. Records are in
+`experiments/ttft_2026-10-17/flash_v1_fp32/`, with the full protocol at
+every length.
+
+| model | tokens | flash_v1 p50 | flash_v1_fp32 p50 | saved | gain (mean ± std) | verdict | ±5% line |
+|---|---|---|---|---|---|---|---|
+| story3k | 128 | 12.06 ms | 11.74 ms | 0.3 ms | 2.6% ± 1.35% | within noise | no change |
+| timing | 128 | 94.45 ms | 79.01 ms | 15.4 ms | 16.3% ± 0.57% | faster | changed |
+| timing | 512 | 243.4 ms | 214.3 ms | 29.1 ms | 12.0% ± 1.22% | faster | changed |
+| timing | 1024 | 470.0 ms | 438.8 ms | 31.1 ms | 6.6% ± 0.67% | faster | changed |
+| timing | 2048 | 986.5 ms | 940.5 ms | 46.1 ms | 4.7% ± 0.88% | faster | no change |
+| timing | 4096 | 2,490 ms | 2,446 ms | 43.7 ms | 1.8% ± 1.40% | within noise | no change |
+
+The failed attempts cost 15–46 ms per prefill. That is a nearly constant
+cost (allocation, synchronising frees, logging) plus a conversion that grows
+with prompt length. Relative to TTFT, the saving matters most for short
+prompts. At 2048 tokens the two rules disagree: the gain is clean of noise
+(std 0.88% against a 4.7% mean) but under the ±5% falsifier line, and both
+are reported. At 4096 it is within noise.
+
+Against the baseline, flash_v1_fp32 gives 233 → 79 ms at 128 tokens
+(2.95×) and 131 s → 2.45 s at 4096 (53.6×). The engine fix that makes this
+the default is to stop attempting BF16 after its first failure, rather than
+rely on an environment variable. It is not yet implemented.
+
 ### How the baseline was collected (Colab)
 
 Busy L4 sessions on this account were reclaimed about 22–26 minutes after
