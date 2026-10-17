@@ -367,6 +367,50 @@ Against the baseline, flash_v1_fp32 gives 233 → 79 ms at 128 tokens
 the default is to stop attempting BF16 after its first failure, rather than
 rely on an environment variable. It is not yet implemented.
 
+### Where flash_v1_fp32's time goes (`EMBER_OP_TIMING=1`, diagnostic)
+
+nsys captured no CUDA activity on Colab, so the kernel-versus-overhead
+split is measured in-engine. CUDA events are recorded before and after
+each op of every layer (`PrefillOpTimer`, `model.cpp`). Lane
+`optime_flash_fp32` ran one run per length, 10 + 50 requests, at ember
+`50b1ac6` with flash attention and BF16 attempts off. The events perturb
+TTFT slightly, so these numbers are a map, not records. Each figure is a
+median over requests, summed over all layers, in ms:
+
+| tokens | TTFT | KV reset | GPU span (receipt) | timed ops | outside ops | idle between ops | FFN GEMMs | Q/KV/O GEMMs | attention | other ops |
+|---|---|---|---|---|---|---|---|---|---|---|
+| story3k 128 | 11.7 | 0.1 | 11.0 | 1.6 | 9.4 | 0.4 | 0.2 | 0.3 | 0.3 | 0.5 |
+| 128 | 80.8 | 26.1 | 52.8 | 42.2 | 10.6 | 1.9 | 20.5 | 7.8 | 4.2 | 7.9 |
+| 512 | 213.9 | 25.9 | 183.8 | 143.8 | 40.0 | 2.0 | 77.7 | 22.8 | 29.2 | 11.9 |
+| 1024 | 438.8 | 26.1 | 405.5 | 325.0 | 80.5 | 2.2 | 154.0 | 46.6 | 101.9 | 19.8 |
+| 2048 | 941.3 | 26.1 | 900.2 | 742.1 | 158.2 | 2.3 | 277.5 | 79.5 | 348.1 | 34.8 |
+| 4096 | 2,422.8 | 26.1 | 2,351.8 | 2,038.0 | 313.7 | 2.5 | 500.1 | 147.3 | 1,317.5 | 70.6 |
+
+"Other ops" covers the norms, residuals, SwiGLU, RoPE, the KV update, the
+residual copy and the LM head. "Outside ops" is the part of the GPU span
+before the first timed op or after the last.
+
+What it shows:
+
+1. **The time outside the timed ops grows linearly, at about 77 µs per
+   token.** That is 8 synchronous device-to-host copies per token (2 per KV
+   head), about 10 µs each: the debug K/V cache dump at the end of the
+   forward, whose strings were never logged. On story3k it is 9.4 of 11.7 ms.
+   `034421f` makes the dumps opt-in (`EMBER_PREFILL_DEBUG=1`), and the
+   `flash_lean` lane measures the effect.
+2. **Idle between ops is about 2 ms at every length.** Once the failed BF16
+   attempts are gone, the per-layer synchronisations and logging cost almost
+   nothing; they were not the bottleneck.
+3. **Attention is the largest op again from 2048 tokens:** 348 ms at 2048
+   and 1,318 ms at 4096 (65% of the timed ops). flash_v1 re-reads K/V for
+   each of the 8 query heads in a GQA group and runs on FP32 CUDA cores, so
+   attention v2 (GQA-shared tiles, tensor cores) is the lever for long
+   prompts.
+4. **Up to 1024 tokens, the FP32 FFN GEMMs dominate.** The projection GEMMs
+   run at roughly 10 TFLOPS, about a third of the L4's FP32 peak. Tensor-core
+   GEMMs (TF32 or a working BF16 path) are the lever there. They change the
+   numerics, so they need their own parity gate.
+
 ### How the baseline was collected (Colab)
 
 Busy L4 sessions on this account were reclaimed about 22–26 minutes after
