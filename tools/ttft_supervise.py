@@ -65,6 +65,17 @@ VARIANTS = {
     "flash_v1_fp32": dict(session="ttftv2", bank=f"{ART}/bank_flash_v1_fp32",
                           env="EMBER_PREFILL_ATTN=flash EMBER_DISABLE_BF16=1", overrides="none",
                           parity_gate=True, commit=None),
+    # Diagnostic lanes (not TTFT records): EMBER_OP_TIMING=1 puts per-op GPU
+    # time and GPU-idle-between-ops into every receipt (op_ms), the split
+    # nsys could not capture on Colab. One run per length is enough to read
+    # where the time goes; the events perturb TTFT slightly, so these banks
+    # are never compared against the TTFT lanes.
+    "optime_flash": dict(session="ttftd1", bank=f"{ART}/bank_optime_flash",
+                         env="EMBER_PREFILL_ATTN=flash EMBER_OP_TIMING=1", overrides="none",
+                         parity_gate=False, commit=None, runs=1, nsys=False),
+    "optime_flash_fp32": dict(session="ttftd2", bank=f"{ART}/bank_optime_flash_fp32",
+                              env="EMBER_PREFILL_ATTN=flash EMBER_DISABLE_BF16=1 EMBER_OP_TIMING=1",
+                              overrides="none", parity_gate=False, commit=None, runs=1, nsys=False),
 }
 
 # Packing a VM's to-do list (Oct 2026: busy L4 sessions live ~22 min, ~5 of
@@ -90,8 +101,9 @@ V = None  # the selected variant's entry, set in main()
 
 
 def required():
-    cells = {("story3k", r, 128) for r in RUNS}
-    cells |= {("timing", r, n) for r in RUNS for n in TIMING_LENGTHS}
+    runs = range(1, V.get("runs", len(RUNS)) + 1)
+    cells = {("story3k", r, 128) for r in runs}
+    cells |= {("timing", r, n) for r in runs for n in TIMING_LENGTHS}
     return cells
 
 
@@ -111,6 +123,8 @@ def banked():
 def nsys_banked():
     """The kernel pass came home (full/<vm out dir>/nsys_timing_<n>), or the
     image had no nsys, which is recorded rather than retried forever."""
+    if not V.get("nsys", True):
+        return True                      # diagnostic lanes skip the kernel pass
     if glob.glob(f"{V['bank']}/*/full/*/NSYS_UNAVAILABLE"):
         return True
     return all(glob.glob(f"{V['bank']}/*/full/*/nsys_timing_{n}") for n in NSYS_LENGTHS)

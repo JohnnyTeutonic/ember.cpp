@@ -2,6 +2,7 @@
 #define TINYLLAMA_API_H
 
 #include <chrono>
+#include <map>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -52,6 +53,11 @@ struct TtftBreakdown {
   int prefix_prev_cached_tokens = 0;
   int prefix_reusable_tokens = 0;
   double prefix_hit_rate = 0.0;
+
+  // Per-op GPU time of the batched prefill (EMBER_OP_TIMING=1 only; empty
+  // otherwise): op name -> ms over all layers, plus gpu_busy_in_ops,
+  // gpu_idle_between_ops and gpu_span. See PrefillOpTimer in model.cpp.
+  std::map<std::string, double> op_ms;
 };
 
 /**
