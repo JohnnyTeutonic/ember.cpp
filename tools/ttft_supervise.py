@@ -73,6 +73,12 @@ VARIANTS = {
     "flash_lean": dict(session="ttftv3", bank=f"{ART}/bank_flash_lean",
                        env="EMBER_PREFILL_ATTN=flash", overrides="none", parity_gate=True,
                        commit="034421fb540b"),
+    # flash_lean plus the host KV zero-fill skipped for GPU layers. Compared
+    # against flash_lean; its full parity gate (two consecutive prompts per
+    # length, up to 4096) doubles as the stale-KV check.
+    "flash_lean_kv": dict(session="ttftv4", bank=f"{ART}/bank_flash_lean_kv",
+                          env="EMBER_PREFILL_ATTN=flash", overrides="none", parity_gate=True,
+                          commit="965ef8820d25"),
     # Diagnostic lanes (not TTFT records), pinned to 50b1ac6: op timer in,
     # BF16 latch (d4e7354) not yet, so optime_flash still shows the failed
     # BF16 attempts it exists to measure. EMBER_OP_TIMING=1 puts per-op GPU
