@@ -489,6 +489,7 @@ class TinyLlamaModel {
  private:
   ModelConfig config_;
   bool use_bf16_tensor_cores_ = false;
+  bool bf16_batch_gemm_failed_ = false;  // latched by smart_gemm_batch_cuda on the first BF16 failure
 
   std::vector<uint16_t> embed_tokens;
   std::vector<uint16_t> lm_head;
