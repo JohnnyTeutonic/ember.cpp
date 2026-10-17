@@ -33,8 +33,10 @@ import ttft_bench as tb  # noqa: E402  (shared prompt + server plumbing)
 
 CONFIGS = {
     "cpu": (0, []),
-    "gpu_fp32": (-1, ["EMBER_DISABLE_BF16=1"]),
-    "gpu_bf16": (-1, []),
+    # The GPU references pin the BASELINE kernel explicitly: since flash2
+    # became the default, an unset EMBER_PREFILL_ATTN no longer means it.
+    "gpu_fp32": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=baseline"]),
+    "gpu_bf16": (-1, ["EMBER_PREFILL_ATTN=baseline"]),
     # Kernel variants: the reference for each is the same config on the
     # baseline kernel (gpu_fp32 for gpu_fp32_flash, gpu_bf16 for gpu_flash).
     "gpu_fp32_flash": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash"]),
