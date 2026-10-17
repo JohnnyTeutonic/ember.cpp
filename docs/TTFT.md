@@ -499,16 +499,49 @@ shows up as a verdict depends on length:
   the change is within noise. It is recorded that way.
 * story3k never paid the cost, since its host KV is 0.04 ms.
 
+### flash_v2: attention with GQA-shared tiles and register micro-tiles (ember `f1deda2`, 17 Oct 2026)
+
+`EMBER_PREFILL_ATTN=flash2`, on the flash_lean_kv build; the only
+difference from flash_lean_kv is the kernel.
+
+* One block per (KV head, query tile) covers all G query heads of that KV
+  head (64 rows), so each K/V tile is loaded once per group, not once per
+  query head.
+* Scores come from 4 × 4 register micro-tiles, about 0.5 shared loads per
+  FMA instead of v1's 2.
+* P·V reads are conflict-free.
+
+The arithmetic is still FP32 (assumptions above
+`attention_prefill_flash2_kernel`). Parity gate, baseline kernel vs flash2:
+max relative difference ≤ 9.0e-6 at every length up to 4096 and on
+story3k, cosine 1.00000000, argmax identical. Its values differ slightly
+from v1's (e.g. 4.22e-6 vs 3.57e-6 at 1024), which shows v2 ran rather than
+falling back. Records are in `experiments/ttft_2026-10-17/flash_v2/`.
+
+| model | tokens | flash_lean_kv | flash_v2 | gain (mean ± std) | verdict | ±5% line | vs baseline |
+|---|---|---|---|---|---|---|---|
+| story3k | 128 | 1.72 ms | 1.62 ms | 6.2% ± 0.84% | faster | changed | 8.0× |
+| timing | 128 | 46.5 ms | 45.2 ms | 2.8% ± 1.38% | faster | no change | 5.2× |
+| timing | 512 | 161.0 ms | 152.0 ms | 5.6% ± 1.76% | faster | changed | 15.1× |
+| timing | 1024 | 352.5 ms | 317.5 ms | 9.9% ± 2.67% | faster | changed | 27.0× |
+| timing | 2048 | 761.2 ms | 577.4 ms | 24.1% ± 1.17% | faster | changed | 57.5× |
+| timing | 4096 | 2,068 ms | 1,244 ms | 39.8% ± 0.42% | faster | changed | 105× |
+
+The gain grows with length, as expected for a change to the quadratic
+term. At 4096 tokens attention was 65% of flash_v1's timed GPU work (op
+map), and v2 removes 824 ms of TTFT there. At 128 tokens attention is a few
+milliseconds, so the 2.8% gain is clean of noise but under the ±5% line.
+
 ## Summary so far (L4, timing model unless noted)
 
-| tokens | baseline | flash_v1 | flash_v1_fp32 | flash_lean | flash_lean_kv |
-|---|---|---|---|---|---|
-| story3k 128 | 12.96 ms | 12.06 | 11.74 | 1.73 | 1.72 ms |
-| 128 | 233.4 ms | 94.5 | 79.0 | 67.0 | 46.5 ms |
-| 512 | 2,297.6 ms | 243.4 | 214.3 | 175.1 | 161.0 ms |
-| 1024 | 8,568 ms | 470.0 | 438.8 | 362.8 | 352.5 ms |
-| 2048 | 33,219 ms | 986.5 | 940.5 | 784.0 | 761.2 ms |
-| 4096 | 131,123 ms | 2,490 | 2,446 | 2,124 | 2,068 ms |
+| tokens | baseline | flash_v1 | flash_v1_fp32 | flash_lean | flash_lean_kv | flash_v2 |
+|---|---|---|---|---|---|---|
+| story3k 128 | 12.96 ms | 12.06 | 11.74 | 1.73 | 1.72 | 1.62 ms |
+| 128 | 233.4 ms | 94.5 | 79.0 | 67.0 | 46.5 | 45.2 ms |
+| 512 | 2,297.6 ms | 243.4 | 214.3 | 175.1 | 161.0 | 152.0 ms |
+| 1024 | 8,568 ms | 470.0 | 438.8 | 362.8 | 352.5 | 317.5 ms |
+| 2048 | 33,219 ms | 986.5 | 940.5 | 784.0 | 761.2 | 577.4 ms |
+| 4096 | 131,123 ms | 2,490 | 2,446 | 2,124 | 2,068 | 1,244 ms |
 
 From flash_v1 onward, every step passed parity against the baseline kernel
 (max relative difference ≤ 1e-5, identical argmax). Each was measured
