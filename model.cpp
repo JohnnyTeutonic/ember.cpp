@@ -2261,7 +2261,8 @@ void TinyLlamaModel::smart_gemm_batch_cuda(bool transa_user, bool transb_user,
     
     // Tensor Cores are most beneficial for larger batch sizes
     const int tensor_core_threshold = 4; // Use BF16 Tensor Cores when batch size >= 4
-    bool use_tensor_cores = use_bf16_tensor_cores_ && (m_user >= tensor_core_threshold);
+    bool use_tensor_cores = use_bf16_tensor_cores_ && !bf16_batch_gemm_failed_ &&
+                            (m_user >= tensor_core_threshold);
     
     // Determine which BF16 weight to use based on operation name and weight pointer
     uint16_t* bf16_weight_ptr = nullptr;
@@ -2347,8 +2348,19 @@ void TinyLlamaModel::smart_gemm_batch_cuda(bool transa_user, bool transb_user,
                 Logger::info("[SMART_GEMM] Successfully used BF16 Tensor Cores for " + std::string(operation_name));
                 return;
             } catch (const std::exception& e) {
-                Logger::warning("[SMART_GEMM] BF16 Tensor Cores failed for " + std::string(operation_name) + 
-                               ": " + e.what() + ". Falling back to FP32.");
+                // Latch this batched-GEMM path off for the rest of the
+                // session. A failure here is a property of the GPU/CUDA/
+                // cuBLAS stack, not of this call: on L4 + CUDA 13 every
+                // attempt fails, and each retry cost two cudaMalloc, a
+                // conversion, two synchronising cudaFree and logging, 154
+                // times per prefill (15-46 ms of TTFT; docs/TTFT.md,
+                // flash_v1_fp32). Outputs are unchanged: the FP32 path below
+                // is what ran anyway. A separate flag, so the decode LM-head
+                // matvec's own BF16 choice (use_bf16_tensor_cores_) is
+                // untouched.
+                Logger::warning("[SMART_GEMM] BF16 Tensor Cores failed for " + std::string(operation_name) +
+                               ": " + e.what() + ". Falling back to FP32 and disabling batched BF16 GEMMs for this session.");
+                bf16_batch_gemm_failed_ = true;
                 use_tensor_cores = false;
             }
         }
