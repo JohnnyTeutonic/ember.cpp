@@ -85,6 +85,12 @@ VARIANTS = {
     "flash_v2": dict(session="ttftv5", bank=f"{ART}/bank_flash_v2",
                      env="EMBER_PREFILL_ATTN=flash2", overrides="none", parity_gate=True,
                      commit="f1deda2c7c45"),
+    # The engine with NO environment at all, after flash2 became the
+    # default (52770f1): one run per length to confirm an unconfigured server
+    # lands on the flash_v2 numbers. A check, not a new record set.
+    "default_check": dict(session="ttftc1", bank=f"{ART}/bank_default_check",
+                          env="", overrides="none", parity_gate=False,
+                          commit="52770f104ef4", runs=1, nsys=False),
     # Diagnostic lanes (not TTFT records), pinned to 50b1ac6: op timer in,
     # BF16 latch (d4e7354) not yet, so optime_flash still shows the failed
     # BF16 attempts it exists to measure. EMBER_OP_TIMING=1 puts per-op GPU
