@@ -1523,6 +1523,16 @@ std::vector<std::vector<float>> TinyLlamaModel::forward_cpu_batch_generation(
 }
 
 #ifdef HAS_CUDA
+// EMBER_PREFILL_DEBUG=1 turns the prefill forward's debug device-to-host
+// dumps back on (first-layer Q/K/V samples, last-token hidden state, and a
+// per-token x per-KV-head K/V cache dump: two synchronous copies each, i.e.
+// 2 x tokens x kv_heads blocking copies per prefill, whose strings were never
+// even logged). Off by default since docs/TTFT.md measured their cost.
+static bool prefill_debug_enabled() {
+    static const bool on = std::getenv("EMBER_PREFILL_DEBUG") != nullptr;
+    return on;
+}
+
 // EMBER_OP_TIMING=1 (docs/TTFT.md): where the prefill forward's GPU time
 // goes, without a profiler (nsys captured no CUDA activity on Colab).
 //
@@ -1701,7 +1711,7 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
             ", weight_ptr=" + Logger::ptrToString(w_q_layer_ptr) +
             ", output_ptr=" + Logger::ptrToString(d_batch_q_proj_out));
         // Q_PROJ_OUT LOGGING (Unchanged)
-        if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 0 && hidden_size > 0) { // Existing logging condition
+        if (prefill_debug_enabled() && l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 0 && hidden_size > 0) { // Existing logging condition
             int log_elements_common = std::min(static_cast<int>(head_dim), 3);
             if (log_elements_common <= 0 && hidden_size > 0) log_elements_common = std::min(static_cast<int>(hidden_size), 3);
             if (log_elements_common > 0) {
@@ -1734,7 +1744,7 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
                               d_batch_v_proj_out, n_kv_dim, stream, "V_PROJ_GEN");
         op_timer.end();
 
-        if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 0 && head_dim > 0) { // Existing logging condition
+        if (prefill_debug_enabled() && l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 0 && head_dim > 0) { // Existing logging condition
             int log_elements_rope = std::min(3, head_dim);
             for (int token_to_log_idx_rope = 0; token_to_log_idx_rope < std::min(num_tokens_in_batch, 2); ++token_to_log_idx_rope) {
                 if (d_batch_q_proj_out && config_.num_attention_heads > 0) {
@@ -1761,7 +1771,7 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
         op_timer.end();
         gpuErrchk(cudaStreamSynchronize(stream));
 
-        if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 0 && head_dim > 0) { // Existing logging condition
+        if (prefill_debug_enabled() && l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 0 && head_dim > 0) { // Existing logging condition
             int log_elements_rope = std::min(3, head_dim);
             for (int token_to_log_idx_rope = 0; token_to_log_idx_rope < std::min(num_tokens_in_batch, 2); ++token_to_log_idx_rope) {
                 if (d_batch_q_proj_out && config_.num_attention_heads > 0) {
@@ -1779,7 +1789,7 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
             }
         }
 
-        if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 0 && head_dim > 0 && config_.num_key_value_heads > 0) { // Existing logging
+        if (prefill_debug_enabled() && l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 0 && head_dim > 0 && config_.num_key_value_heads > 0) { // Existing logging
             int log_elements = std::min(3, head_dim);
             if (d_batch_k_proj_out) {
                 std::vector<float> h_k_log_token0(log_elements);
@@ -1891,7 +1901,7 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
         Logger::info("[FWD_DEV_BATCH_PREFILL_LAYER_END] Layer " + std::to_string(l_model_idx) + " finished. Next d_batch_x_ptr: " + Logger::ptrToString(d_batch_x_ptr));
     }
 
-  if (num_tokens_in_batch > 0) {
+  if (prefill_debug_enabled() && num_tokens_in_batch > 0) {
       std::vector<float> h_last_token_hidden_state(config_.hidden_size);
       size_t offset_last_token_hidden_state = (size_t)(num_tokens_in_batch - 1) * config_.hidden_size;
       
@@ -1927,7 +1937,7 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
 
     Logger::log_vector_stats("[FWD_DEV_BATCH_PREFILL_FINAL_LOGITS]", h_logits, 20);
 
-    if (config_.num_hidden_layers > config_.num_cpu_offload_layers && kv_cache != nullptr && num_tokens_in_batch > 0) {
+    if (prefill_debug_enabled() && config_.num_hidden_layers > config_.num_cpu_offload_layers && kv_cache != nullptr && num_tokens_in_batch > 0) {
         int first_gpu_layer_model_idx = config_.num_cpu_offload_layers;
         if (static_cast<size_t>(first_gpu_layer_model_idx) < kv_cache->layers.size()) {
             const KVCacheLayer& cache_layer_to_log = kv_cache->layers[first_gpu_layer_model_idx];

@@ -2246,7 +2246,10 @@ void attention_batch_prefill_cuda(
 
     // Log initial input values (first token, first head, first few elements)
     int log_count_elements = std::min(3, head_dim);
-    if (num_tokens_in_batch > 0 && head_dim > 0) {
+    // Debug samples and the device sync below: EMBER_PREFILL_DEBUG=1 only
+    // (same-stream ordering already orders the next op after this kernel).
+    static const bool debug = std::getenv("EMBER_PREFILL_DEBUG") != nullptr;
+    if (debug && num_tokens_in_batch > 0 && head_dim > 0) {
         // Log Q for Token 0 and Token 1
         if (d_q_batch_strided && num_q_heads > 0) {
             for (int token_to_log_idx = 0; token_to_log_idx < std::min(num_tokens_in_batch, 2); ++token_to_log_idx) {
@@ -2336,7 +2339,7 @@ void attention_batch_prefill_cuda(
     gpuErrchk(cudaGetLastError());
 
     // Log output values
-    if (num_tokens_in_batch > 0 && num_q_heads > 0 && head_dim > 0 && d_output_batch_strided) {
+    if (debug && num_tokens_in_batch > 0 && num_q_heads > 0 && head_dim > 0 && d_output_batch_strided) {
         for (int token_to_log_idx = 0; token_to_log_idx < std::min(num_tokens_in_batch, 2); ++token_to_log_idx) {
             std::vector<float> h_out_sample(log_count_elements);
             // Output is [B, H_q, D_h]. 
@@ -2344,10 +2347,10 @@ void attention_batch_prefill_cuda(
             gpuErrchk(cudaMemcpyAsync(h_out_sample.data(), out_token_ptr, log_count_elements * sizeof(float), cudaMemcpyDeviceToHost, stream));
         }
     }
-    cudaDeviceSynchronize();
+    if (debug) cudaDeviceSynchronize();
 
     // Log output values
-    if (num_tokens_in_batch > 0 && num_q_heads > 0 && head_dim > 0 && d_output_batch_strided) {
+    if (debug && num_tokens_in_batch > 0 && num_q_heads > 0 && head_dim > 0 && d_output_batch_strided) {
         for (int token_to_log_idx = 0; token_to_log_idx < std::min(num_tokens_in_batch, 2); ++token_to_log_idx) {
             std::vector<float> h_out_sample(log_count_elements);
             // Output is [B, H_q, D_h]. 
