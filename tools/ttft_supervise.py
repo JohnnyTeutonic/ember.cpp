@@ -212,11 +212,15 @@ class TtftJob(sup.Job):
         if not parity_banked():
             items, note = ["parity_variant"], "full parity gate"
         else:
-            batch, spent = pack(sorted(required() - banked()))
+            missing = sorted(required() - banked())
+            batch, spent = pack(missing)
             items = [f"{m} {r}:{n}" for m, r, n in batch]
             note = f"{len(batch)} cells, ~{spent:.0f} s"
-            if not batch and not nsys_banked():
-                items, note = ["nsys"], "nsys pass"
+            # nsys runs after the cells, so it rides along on the batch that
+            # takes the last cells when the budget allows (saves a VM).
+            if not nsys_banked() and len(batch) == len(missing) and spent + NSYS_COST_S <= BUDGET_S:
+                items.append("nsys")
+                note += " + nsys"
         with open(f"{self.stage}/ttft_todo.txt", "w") as f:
             f.write("\n".join(items) + "\n")
         self.vm_out = None
