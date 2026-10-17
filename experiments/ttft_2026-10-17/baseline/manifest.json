@@ -1,0 +1,41 @@
+{
+ "variant": "baseline",
+ "bank": "/mnt/c/ml_artifacts/ttft/bank",
+ "launches": [
+  "ttft_2026-10-16_222740_resume",
+  "ttft_2026-10-16_225533_resume",
+  "ttft_2026-10-16_232140_resume",
+  "ttft_2026-10-16_234915_resume",
+  "ttft_2026-10-17_001804_resume",
+  "ttft_2026-10-17_004556_resume",
+  "ttft_2026-10-17_011205_resume",
+  "ttft_2026-10-17_013012_resume",
+  "ttft_2026-10-17_014644_resume",
+  "ttft_2026-10-17_020405_resume",
+  "ttft_2026-10-17_022046_resume",
+  "ttftfullA2_relay"
+ ],
+ "commits": [
+  "dbadee28a481",
+  "e506934686e6"
+ ],
+ "gpu_uuids": [
+  "GPU-071a3b9b-9827-7512-ff99-bee7059234e6",
+  "GPU-1d5cc1d9-05ba-541a-082b-ee8c67860b85",
+  "GPU-421f55a6-4306-f792-59cd-22cd87d666f1",
+  "GPU-a9b612c0-7314-de32-8d25-90e365b02ece",
+  "GPU-ab008d96-de91-4ced-8a69-b102c362953d",
+  "GPU-ae130202-647b-3cc1-bfbd-ed3a235533fd",
+  "GPU-b26838e9-bc9e-c857-ee43-1d59aec2be92",
+  "GPU-b9884e13-407c-c33f-18ff-9f142dcc152a",
+  "GPU-cfbc7ce1-4026-bb63-e026-f2e39dc97938",
+  "GPU-e68b0398-11d6-af23-9969-832c88c81185",
+  "GPU-ebdd73b6-6004-09e4-f581-2f1b23d07066",
+  "GPU-fee0eaa8-680e-2c06-6379-5cdd6d4255a3"
+ ],
+ "kernel_variants": [
+  "baseline"
+ ],
+ "duplicates_dropped": [],
+ "cells": 30
+}
