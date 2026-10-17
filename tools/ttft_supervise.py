@@ -228,6 +228,40 @@ class TtftJob(sup.Job):
     def boot(self):
         return f"{self.stage}/boot.py"
 
+    def launch(self):
+        """supervisor.Job.launch with one change: the boot counts as done when
+        the VM log appears, not when the boot exec returns 0. The exec can
+        hang past its timeout after the detached job has started (17 Oct
+        2026: rc=124 twice, then success, ~9 min of a ~22 min VM life spent
+        retrying). The boot script is idempotent, so retrying is safe."""
+        if os.path.exists(self.cfg) and os.path.getsize(self.cfg) > 2:
+            self.colab("stop", "-s", self.name, timeout=90)
+        with open(self.cfg, "w") as f:
+            f.write("{}")
+        rc, out = self.colab("new", "-s", self.name, "--gpu", self.gpu, timeout=300)
+        if rc != 0 or any(s in out for s in ("Service Unavailable", "TooMany", "Failed to issue")):
+            sup.log(f"[{self.name}] no {self.gpu} available; will retry")
+            return False
+        shutil.copy(self.cfg, os.path.join(sup.REG, f"{self.name}-{int(__import__('time').time())}.json"))
+        for local, remote in self.uploads():
+            rc, _ = self.colab("upload", "-s", self.name, local, remote, timeout=1200)
+            if rc != 0:
+                sup.log(f"[{self.name}] UPLOAD FAILED: {local} -> {remote} (rc={rc})")
+        probe = f"{self.stage}/vm.log.probe"
+        for attempt in range(1, 4):
+            self.colab("exec", "-s", self.name, "-f", self.boot(), "--timeout", "60", timeout=90)
+            rc, _ = self.colab("download", "-s", self.name, "/content/ttft_vm.log", probe,
+                               timeout=120)
+            if rc == 0:
+                sup.log(f"[{self.name}] launched on {self.gpu} (VM log present, attempt {attempt})")
+                self.state = "RUNNING"
+                self.dead_probes = 0
+                return True
+            sup.log(f"[{self.name}] boot not confirmed (attempt {attempt}/3)")
+        sup.log(f"[{self.name}] boot failed 3x -> stopping the session")
+        self.stop()
+        return False
+
     # -- relay -------------------------------------------------------------
     def fetch(self, remote, local, timeout=180):
         """Download to a temp file; replace only if it did not shrink."""
