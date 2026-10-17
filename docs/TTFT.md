@@ -532,6 +532,30 @@ term. At 4096 tokens attention was 65% of flash_v1's timed GPU work (op
 map), and v2 removes 824 ms of TTFT there. At 128 tokens attention is a few
 milliseconds, so the 2.8% gain is clean of noise but under the ±5% line.
 
+### flash2 is the default (ember `52770f1`)
+
+With `EMBER_PREFILL_ATTN` unset, the engine now runs flash2. It falls back
+to v1, then to the baseline kernel, when an assumption does not hold, and
+`EMBER_PREFILL_ATTN=baseline` restores the original kernel. The parity
+tool's GPU references pin `EMBER_PREFILL_ATTN=baseline` explicitly, so a
+gate still compares against the original kernel.
+
+Lane `default_check` (no environment at all, one run per length) confirms
+that an unconfigured server lands on the flash_v2 numbers:
+
+| tokens | default (1 run) | flash_v2 (5-run range) |
+|---|---|---|
+| story3k 128 | 1.64 ms | 1.60–1.64 ms |
+| 128 | 43.3 ms | 44.5–45.5 ms |
+| 512 | 138.7 ms | 146.5–153.8 ms |
+| 1024 | 299.2 ms | 314.7–320.2 ms |
+| 2048 | 547.8 ms | 563.1–582.8 ms |
+| 4096 | 1,215 ms | 1,236–1,251 ms |
+
+The single run sits 1–5% below the flash_v2 range. One VM cannot separate
+that from physical-GPU variation, so it is a confirmation of the default,
+not a claimed gain.
+
 ## Summary so far (L4, timing model unless noted)
 
 | tokens | baseline | flash_v1 | flash_v1_fp32 | flash_lean | flash_lean_kv | flash_v2 |
