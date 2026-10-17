@@ -79,6 +79,12 @@ VARIANTS = {
     "flash_lean_kv": dict(session="ttftv4", bank=f"{ART}/bank_flash_lean_kv",
                           env="EMBER_PREFILL_ATTN=flash", overrides="none", parity_gate=True,
                           commit="965ef8820d25"),
+    # Attention v2 on the flash_lean_kv build: the only difference from
+    # flash_lean_kv is EMBER_PREFILL_ATTN=flash2, so the comparison isolates
+    # the kernel. Gate: baseline kernel vs flash2 (FP32), up to 4096.
+    "flash_v2": dict(session="ttftv5", bank=f"{ART}/bank_flash_v2",
+                     env="EMBER_PREFILL_ATTN=flash2", overrides="none", parity_gate=True,
+                     commit="f1deda2c7c45"),
     # Diagnostic lanes (not TTFT records), pinned to 50b1ac6: op timer in,
     # BF16 latch (d4e7354) not yet, so optime_flash still shows the failed
     # BF16 attempts it exists to measure. EMBER_OP_TIMING=1 puts per-op GPU
