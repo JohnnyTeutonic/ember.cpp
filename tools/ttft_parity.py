@@ -33,15 +33,16 @@ import ttft_bench as tb  # noqa: E402  (shared prompt + server plumbing)
 
 CONFIGS = {
     "cpu": (0, []),
-    # The GPU references pin the BASELINE kernel explicitly: since flash2
-    # became the default, an unset EMBER_PREFILL_ATTN no longer means it.
-    "gpu_fp32": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=baseline"]),
-    "gpu_bf16": (-1, ["EMBER_PREFILL_ATTN=baseline"]),
+    # The GPU references pin the BASELINE kernel and FP32 GEMM math
+    # explicitly: flash2 and TF32 are now the defaults, so an unset
+    # environment no longer means the original arithmetic.
+    "gpu_fp32": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=baseline", "EMBER_GEMM_TF32=0"]),
+    "gpu_bf16": (-1, ["EMBER_PREFILL_ATTN=baseline", "EMBER_GEMM_TF32=0"]),
     # Kernel variants: the reference for each is the same config on the
     # baseline kernel (gpu_fp32 for gpu_fp32_flash, gpu_bf16 for gpu_flash).
-    "gpu_fp32_flash": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash"]),
-    "gpu_flash": (-1, ["EMBER_PREFILL_ATTN=flash"]),
-    "gpu_fp32_flash2": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash2"]),
+    "gpu_fp32_flash": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash", "EMBER_GEMM_TF32=0"]),
+    "gpu_flash": (-1, ["EMBER_PREFILL_ATTN=flash", "EMBER_GEMM_TF32=0"]),
+    "gpu_fp32_flash2": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash2", "EMBER_GEMM_TF32=0"]),
     # TF32 projection GEMMs on the flash2 kernel (changes numerics: loose gate).
     "gpu_tf32_flash2": (-1, ["EMBER_DISABLE_BF16=1", "EMBER_PREFILL_ATTN=flash2", "EMBER_GEMM_TF32=1"]),
 }
