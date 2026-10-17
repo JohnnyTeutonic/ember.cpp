@@ -711,6 +711,7 @@ if (prefill_enabled) {
           float fwd_span_ms = 0.0f;
           gpuErrchk(cudaEventElapsedTime(&fwd_span_ms, ev_fwd_start, ev_fwd_end));
           last_ttft_.prefill_gpu_span_ms = fwd_span_ms;
+          last_ttft_.op_ms = model_->last_prefill_op_ms();
           gpuErrchk(cudaEventDestroy(ev_fwd_start));
           gpuErrchk(cudaEventDestroy(ev_fwd_end));
 

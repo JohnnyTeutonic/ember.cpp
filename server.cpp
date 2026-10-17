@@ -249,7 +249,8 @@ int main(int argc, char** argv) {
               {"sample_ms", tb.sample_ms},
               {"prefix_prev_cached_tokens", tb.prefix_prev_cached_tokens},
               {"prefix_reusable_tokens", tb.prefix_reusable_tokens},
-              {"prefix_hit_rate", tb.prefix_hit_rate}};
+              {"prefix_hit_rate", tb.prefix_hit_rate},
+              {"op_ms", tb.op_ms}};
 
           res.set_content(res_json.dump(), "application/json");
           Logger::info("Response sent successfully.");

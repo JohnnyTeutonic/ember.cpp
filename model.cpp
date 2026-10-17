@@ -1523,6 +1523,77 @@ std::vector<std::vector<float>> TinyLlamaModel::forward_cpu_batch_generation(
 }
 
 #ifdef HAS_CUDA
+// EMBER_OP_TIMING=1 (docs/TTFT.md): where the prefill forward's GPU time
+// goes, without a profiler (nsys captured no CUDA activity on Colab).
+//
+// A CUDA event is recorded on the stream immediately before and after each
+// operation. The interval between an op's two events is the GPU time from
+// its first piece of GPU work to its last; summed per op name over all
+// layers, it is that op's share. Whatever falls BETWEEN one op's end event
+// and the next op's begin event is time the GPU waited on the host
+// (synchronising debug copies, logging, allocation), reported as
+// "gpu_idle_between_ops". Caveat: host stalls INSIDE an op call (e.g. the
+// failed BF16 attempt inside each batched GEMM) count toward that op.
+// Off by default: the events and the end-of-call synchronisation cost a
+// little, so timed runs never mix with TTFT records.
+namespace {
+class PrefillOpTimer {
+ public:
+  PrefillOpTimer(cudaStream_t stream)
+      : stream_(stream), on_(std::getenv("EMBER_OP_TIMING") != nullptr) {}
+  ~PrefillOpTimer() {
+    for (auto& op : ops_) {
+      cudaEventDestroy(op.begin);
+      cudaEventDestroy(op.end);
+    }
+  }
+  void begin(const char* name) {
+    if (!on_) return;
+    Op op{name, nullptr, nullptr};
+    cudaEventCreate(&op.begin);
+    cudaEventCreate(&op.end);
+    cudaEventRecord(op.begin, stream_);
+    ops_.push_back(op);
+  }
+  void end() {
+    if (on_ && !ops_.empty()) cudaEventRecord(ops_.back().end, stream_);
+  }
+  // Per-op totals in ms, plus the idle gaps and the whole span.
+  std::map<std::string, double> collect() {
+    std::map<std::string, double> out;
+    if (!on_ || ops_.empty()) return out;
+    cudaEventSynchronize(ops_.back().end);
+    double busy = 0.0, idle = 0.0;
+    for (size_t i = 0; i < ops_.size(); ++i) {
+      float ms = 0.0f;
+      cudaEventElapsedTime(&ms, ops_[i].begin, ops_[i].end);
+      out[ops_[i].name] += ms;
+      busy += ms;
+      if (i > 0) {
+        float gap = 0.0f;
+        cudaEventElapsedTime(&gap, ops_[i - 1].end, ops_[i].begin);
+        idle += gap;
+      }
+    }
+    float span = 0.0f;
+    cudaEventElapsedTime(&span, ops_.front().begin, ops_.back().end);
+    out["gpu_busy_in_ops"] = busy;
+    out["gpu_idle_between_ops"] = idle;
+    out["gpu_span"] = span;
+    return out;
+  }
+
+ private:
+  struct Op {
+    const char* name;
+    cudaEvent_t begin, end;
+  };
+  cudaStream_t stream_;
+  bool on_;
+  std::vector<Op> ops_;
+};
+}  // namespace
+
 std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
     float* d_batch_input_embeddings, // This is now assumed to be activations *after* CPU layers if any
     int num_tokens_in_batch,
@@ -1597,6 +1668,7 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
         Logger::fatal("cublasSetStream failed in forward_device_batch_prefill");
         throw std::runtime_error("cublasSetStream failed");
     }
+    PrefillOpTimer op_timer(stream);  // EMBER_OP_TIMING=1 only
 
     Logger::info("[FWD_DEV_BATCH_PREFILL_MAIN_LOOP_ENTRY] num_cpu_offload_layers: " + std::to_string(config_.num_cpu_offload_layers) + 
                  ", total_hidden_layers: " + std::to_string(config_.num_hidden_layers));
@@ -1606,18 +1678,24 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
         Logger::info("[FWD_DEV_BATCH_PREFILL_LAYER_START] Processing Layer: model_idx=" + std::to_string(l_model_idx) + ", gpu_idx=" + std::to_string(l_gpu_idx) + 
                      ". Current d_batch_x_ptr: " + Logger::ptrToString(d_batch_x_ptr));
         // Weight dequantization handled by ensure_f32_concatenated_weights_loaded() below
+        op_timer.begin("residual_copy");
         gpuErrchk(cudaMemcpyAsync(d_batch_residual_attn_in, d_batch_x_ptr, batch_hidden_size_bytes, cudaMemcpyDeviceToDevice, stream));
+        op_timer.end();
 
+        op_timer.begin("rmsnorm");
         rmsnorm_batch_cuda(d_batch_x_norm_out_attn, d_batch_x_ptr, 
                            layers[l_model_idx].input_layernorm_dev,
                            num_tokens_in_batch, hidden_size, config_.rms_norm_eps, stream);
+        op_timer.end();
 
         ensure_f32_concatenated_weights_loaded();
         
         const float* w_q_layer_ptr = w_q_f32_dev_ + (size_t)l_gpu_idx * hidden_size * hidden_size;
+        op_timer.begin("q_gemm");
         smart_gemm_batch_cuda(false, true, num_tokens_in_batch, hidden_size, hidden_size, &alpha,
                               d_batch_x_norm_out_attn, hidden_size, w_q_layer_ptr, hidden_size, &beta,
                               d_batch_q_proj_out, hidden_size, stream, "Q_PROJ_GEN");
+        op_timer.end();
         Logger::info("[GPU_Q_PROJ] Layer=" + std::to_string(l_model_idx) + 
             ", input_ptr=" + Logger::ptrToString(d_batch_x_norm_out_attn) +
             ", weight_ptr=" + Logger::ptrToString(w_q_layer_ptr) +
@@ -1643,14 +1721,18 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
         }
 
         const float* w_k_layer_ptr = w_k_f32_dev_ + (size_t)l_gpu_idx * n_kv_dim * hidden_size;
+        op_timer.begin("kv_gemm");
         smart_gemm_batch_cuda(false, true, num_tokens_in_batch, n_kv_dim, hidden_size, &alpha,
                               d_batch_x_norm_out_attn, hidden_size, w_k_layer_ptr, n_kv_dim, &beta,
                               d_batch_k_proj_out, n_kv_dim, stream, "K_PROJ_GEN");
+        op_timer.end();
 
         const float* w_v_layer_ptr = w_v_f32_dev_ + (size_t)l_gpu_idx * n_kv_dim * hidden_size;
+        op_timer.begin("kv_gemm");
         smart_gemm_batch_cuda(false, true, num_tokens_in_batch, n_kv_dim, hidden_size, &alpha,
                               d_batch_x_norm_out_attn, hidden_size, w_v_layer_ptr, n_kv_dim, &beta,
                               d_batch_v_proj_out, n_kv_dim, stream, "V_PROJ_GEN");
+        op_timer.end();
 
         if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 0 && head_dim > 0) { // Existing logging condition
             int log_elements_rope = std::min(3, head_dim);
@@ -1672,9 +1754,11 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
             }
         }
         
+        op_timer.begin("rope");
         rope_batch_cuda(d_batch_q_proj_out, d_batch_k_proj_out, all_freqs_cis_dev, num_tokens_in_batch,
                         config_.num_attention_heads, config_.num_key_value_heads, head_dim,
                         current_model_pos, config_.is_gguf_file_loaded, stream);
+        op_timer.end();
         gpuErrchk(cudaStreamSynchronize(stream));
 
         if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 0 && head_dim > 0) { // Existing logging condition
@@ -1715,68 +1799,90 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
 
         float* d_layer_k_cache_ptr = kv_cache->layers[l_model_idx].k_dev_fp32; 
         float* d_layer_v_cache_ptr = kv_cache->layers[l_model_idx].v_dev_fp32;
+        op_timer.begin("kv_update");
         update_kv_cache_batch_cuda(d_layer_k_cache_ptr, d_batch_k_proj_out, current_model_pos, num_tokens_in_batch,
                                    config_.num_key_value_heads, head_dim, kv_cache->max_seq_len_config_, stream);
+        op_timer.end();
+        op_timer.begin("kv_update");
         update_kv_cache_batch_cuda(d_layer_v_cache_ptr, d_batch_v_proj_out, current_model_pos, num_tokens_in_batch,
                                    config_.num_key_value_heads, head_dim, kv_cache->max_seq_len_config_, stream);
+        op_timer.end();
         gpuErrchk(cudaStreamSynchronize(stream)); 
         
         float current_attention_scale = 1.0f / sqrtf((float)head_dim);
+        op_timer.begin("attention");
         attention_batch_prefill_cuda(d_batch_q_proj_out, nullptr, nullptr, 
                                      d_layer_k_cache_ptr, d_layer_v_cache_ptr, 
                                      d_batch_attn_heads_concat_out, num_tokens_in_batch, current_model_pos, 
                                      kv_cache->max_seq_len_config_, config_.num_attention_heads, 
-                                     config_.num_key_value_heads, head_dim, current_attention_scale, stream, nullptr);        
+                                     config_.num_key_value_heads, head_dim, current_attention_scale, stream, nullptr);
+        op_timer.end();        
         const float* w_o_layer_ptr = w_o_f32_dev_ + (size_t)l_gpu_idx * hidden_size * hidden_size;
+        op_timer.begin("o_gemm");
         smart_gemm_batch_cuda(false, true, num_tokens_in_batch, hidden_size, hidden_size, &alpha,
                               d_batch_attn_heads_concat_out, hidden_size, w_o_layer_ptr, hidden_size, &beta,
                               d_batch_attn_final_proj_out, hidden_size, stream, "O_PROJ_GEN");
+        op_timer.end();
 
         if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 1 && hidden_size > 0) { /* ... */ }
+        op_timer.begin("residual");
         add_residual_batch_cuda(d_batch_residual_ffn_in, d_batch_attn_final_proj_out, d_batch_residual_attn_in,
                                 num_tokens_in_batch, hidden_size, stream);
+        op_timer.end();
         if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 1 && hidden_size > 0) { /* ... */ }
 
 
+        op_timer.begin("rmsnorm");
         rmsnorm_batch_cuda(d_batch_x_norm_out_ffn, d_batch_residual_ffn_in, 
                            layers[l_model_idx].post_attention_layernorm_dev,
                            num_tokens_in_batch, hidden_size, config_.rms_norm_eps, stream);
+        op_timer.end();
         // RMSNORM_FFN_OUT LOGGING (Unchanged) - Logging Point 3
         if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 1 && hidden_size > 0) { /* ... */ }
 
 
         const float* w1_layer_ptr = w_gate_f32_dev_ + (size_t)l_gpu_idx * hidden_size * ffn_intermediate_dim;
+        op_timer.begin("ffn_gemm");
         smart_gemm_batch_cuda(false, true, num_tokens_in_batch, ffn_intermediate_dim, hidden_size, &alpha,
                               d_batch_x_norm_out_ffn, hidden_size, w1_layer_ptr, ffn_intermediate_dim, &beta,
                               d_batch_ffn_gate_proj_out, ffn_intermediate_dim, stream, "FFN_GATE_PROJ_GEN");
+        op_timer.end();
         // FFN_GATE_PROJ_OUT LOGGING (Unchanged) - Logging Point 4
         if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 1 && ffn_intermediate_dim > 0) { /* ... */ }
 
 
         const float* w3_layer_ptr = w_up_f32_dev_ + (size_t)l_gpu_idx * hidden_size * ffn_intermediate_dim;
+        op_timer.begin("ffn_gemm");
         smart_gemm_batch_cuda(false, true, num_tokens_in_batch, ffn_intermediate_dim, hidden_size, &alpha,
                               d_batch_x_norm_out_ffn, hidden_size, w3_layer_ptr, ffn_intermediate_dim, &beta,
                               d_batch_ffn_up_proj_out, ffn_intermediate_dim, stream, "FFN_UP_PROJ_GEN");
+        op_timer.end();
         // FFN_UP_PROJ_OUT LOGGING (Unchanged) - Logging Point 5
         if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 1 && ffn_intermediate_dim > 0) { /* ... */ }
 
 
+        op_timer.begin("swiglu");
         swiglu_batch_cuda(d_batch_ffn_swiglu_out, d_batch_ffn_gate_proj_out, d_batch_ffn_up_proj_out,
                           num_tokens_in_batch, ffn_intermediate_dim, stream);
+        op_timer.end();
         // FFN_SWIGLU_OUT LOGGING (Unchanged) - Logging Point 6
          if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 1 && ffn_intermediate_dim > 0) { /* ... */ }
 
 
         const float* w2_layer_ptr = w_down_f32_dev_ + (size_t)l_gpu_idx * ffn_intermediate_dim * hidden_size;
+        op_timer.begin("ffn_gemm");
         smart_gemm_batch_cuda(false, true, num_tokens_in_batch, hidden_size, ffn_intermediate_dim, &alpha,
                               d_batch_ffn_swiglu_out, ffn_intermediate_dim, w2_layer_ptr, hidden_size, &beta,
                               d_batch_ffn_down_proj_out, hidden_size, stream, "FFN_DOWN_PROJ_GEN");
+        op_timer.end();
         // FFN_DOWN_PROJ_OUT LOGGING (Unchanged) - Logging Point 7
         if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 1 && hidden_size > 0) { /* ... */ }
         
 
+        op_timer.begin("residual");
         add_residual_batch_cuda(d_batch_layer_output, d_batch_ffn_down_proj_out, d_batch_residual_ffn_in,
                                 num_tokens_in_batch, hidden_size, stream);
+        op_timer.end();
         // POST_RESIDUAL_FFN LOGGING (Unchanged) - Logging Point 8
         if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 1 && hidden_size > 0) { /* ... */ }
 
@@ -1796,9 +1902,11 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
       gpuErrchk(cudaStreamSynchronize(stream)); 
       Logger::log_vector_stats("[FWD_DEV_BATCH_PREFILL_LAST_TOKEN_HIDDEN_STATE_PRE_FINAL_RMSNORM]", h_last_token_hidden_state, 20);
   }
+    op_timer.begin("rmsnorm_final");
     rmsnorm_batch_cuda(d_batch_x_norm_out_attn, d_batch_x_ptr, 
                        final_norm_dev,
                        num_tokens_in_batch, hidden_size, config_.rms_norm_eps, stream);
+    op_timer.end();
     
     if (config_.num_cpu_offload_layers < config_.num_hidden_layers && num_tokens_in_batch > 0 && hidden_size > 0) { /* ... */ }
     float* d_logits_last_token;
@@ -1807,8 +1915,10 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
     // Only calculate logits for the last token in the batch for prefill output
     float* d_last_token_activations_for_logits = d_batch_x_norm_out_attn + (size_t)(num_tokens_in_batch - 1) * hidden_size;
 
+    op_timer.begin("lm_head");
     matvec_f32_f32_cuda(cublas_handle_, lm_head_f32_dev_, d_last_token_activations_for_logits,
                         d_logits_last_token, vocab_size, hidden_size, stream);
+    op_timer.end();
 
     std::vector<float> h_logits(vocab_size);
     gpuErrchk(cudaMemcpyAsync(h_logits.data(), d_logits_last_token, (size_t)vocab_size * sizeof(float),
@@ -1857,6 +1967,7 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
         }
     }
     gpuErrchk(cudaFree(d_logits_last_token));
+    last_prefill_op_ms_ = op_timer.collect();
     Logger::info("[FWD_DEV_BATCH_PREFILL_EXIT] Function finished.");
     return h_logits;
 }
