@@ -85,6 +85,12 @@ VARIANTS = {
     "flash_v2": dict(session="ttftv5", bank=f"{ART}/bank_flash_v2",
                      env="EMBER_PREFILL_ATTN=flash2", overrides="none", parity_gate=True,
                      commit="f1deda2c7c45"),
+    # flash_v2 (the default kernel) with TF32 projection GEMMs. Changes
+    # numerics: gated at rel <= 5e-2 / cosine >= 0.999 against the baseline
+    # kernel (VM script). Compared against flash_v2 for TTFT.
+    "flash_v2_tf32": dict(session="ttftv6", bank=f"{ART}/bank_flash_v2_tf32",
+                          env="EMBER_PREFILL_ATTN=flash2 EMBER_GEMM_TF32=1", overrides="none",
+                          parity_gate=True, commit="25f6e13784af"),
     # The engine with NO environment at all, after flash2 became the
     # default (52770f1): one run per length to confirm an unconfigured server
     # lands on the flash_v2 numbers. A check, not a new record set.
