@@ -665,10 +665,16 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   std::vector<float> current_data_host; // To hold embedding or output of CPU layers
   int start_pos_for_loop = 0;
 
-  // Prefill logic: Use batch prefill for longer prompts to maintain coherence
-  // For single sequences, only use batch prefill for very long prompts (>= 32 tokens)
-  // to avoid the overhead of CUDA batch processing for short sequences
-  bool prefill_enabled = num_prompt_tokens >= 32;
+  // Batch prefill for every prompt length. The old 32-token threshold cost
+  // short (chat-sized) prompts: on chat_sft_bpe, 20 prompts of 10-30 tokens,
+  // p50 TTFT 294-338 ms -> 53-55 ms on CUDA and 983-1251 -> 592-650 ms on CPU,
+  // with identical greedy replies (experiments/chat_2026-10-18/).
+  // EMBER_PREFILL_MIN restores a threshold (measurement knob).
+  static const int prefill_min = [] {
+    const char* v = std::getenv("EMBER_PREFILL_MIN");
+    return v && *v ? std::max(1, std::atoi(v)) : 1;
+  }();
+  bool prefill_enabled = num_prompt_tokens >= prefill_min;
 
 if (prefill_enabled) {
       Logger::info("[Generate API] Prefill enabled. num_prompt_tokens: " + std::to_string(num_prompt_tokens) + 
