@@ -138,6 +138,75 @@ int main(int argc, char** argv) {
       if (req_json.contains("top_p"))
         top_p = req_json["top_p"].get<float>();
 
+          // paperkiln byte-level BPE chat models: the same /chat contract as
+          // mtstudio chat. The prompt is exactly the SFT template: each past
+          // turn <|user|>U<|assistant|>A<|endoftext|>, then
+          // <|user|>U<|assistant|> (no BOS, no separators), with the oldest
+          // turns dropped until prompt + max_new_tokens fits the context.
+          if (session->is_bpe()) {
+            if (req_json.contains("seed")) session->set_seed(req_json["seed"].get<unsigned>());
+            std::vector<std::pair<std::string, std::string>> turns;
+            if (req_json.contains("history") && req_json["history"].is_array()) {
+              std::string pending_user;
+              bool have_user = false;
+              for (const auto& h : req_json["history"]) {
+                if (h.contains("role")) {   // [{"role": "user"|"assistant", "content": ...}]
+                  const std::string role = h.value("role", "");
+                  const std::string content = h.value("content", "");
+                  if (role == "user") {
+                    pending_user = content;
+                    have_user = true;
+                  } else if (role == "assistant" && have_user) {
+                    turns.emplace_back(pending_user, content);
+                    have_user = false;
+                  }
+                } else {                    // [{"user": ..., "assistant": ...}]
+                  turns.emplace_back(h.value("user", ""), h.value("assistant", ""));
+                }
+              }
+            }
+            const std::string tail = "<|user|>" + user_input_from_client + "<|assistant|>";
+            auto build = [&](size_t from) {
+              std::string p;
+              for (size_t i = from; i < turns.size(); ++i)
+                p += "<|user|>" + turns[i].first + "<|assistant|>" + turns[i].second + "<|endoftext|>";
+              return p + tail;
+            };
+            const int ctx = session->get_config().max_position_embeddings;
+            size_t from = 0;
+            std::string prompt = build(from);
+            while (from < turns.size() && session->bpe_token_count(prompt) + max_new_tokens > ctx)
+              prompt = build(++from);
+            const int prompt_tokens = session->bpe_token_count(prompt);
+            if (prompt_tokens >= ctx) {
+              res.status = 400;
+              json err;
+              err["error"] = "message is " + std::to_string(prompt_tokens) + " tokens; the model's context is " +
+                             std::to_string(ctx);
+              res.set_content(err.dump(), "application/json");
+              return;
+            }
+            const std::string reply = session->generate(prompt, max_new_tokens, temperature, top_k, top_p, "", false);
+            const tinyllama::TtftBreakdown& tb = session->last_ttft();
+            auto ms = [](auto a, auto b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
+            json res_json;
+            res_json["reply"] = reply;
+            res_json["stop_reason"] = session->last_stop_reason();
+            res_json["tokens"] = session->last_generated_tokens();
+            res_json["prompt_tokens"] = prompt_tokens;
+            res_json["history_turns_used"] = static_cast<int>(turns.size() - from);
+            res_json["ttft"] = {
+                {"first_token", tb.first_token},
+                {"request_to_first_token_ms", tb.first_token ? ms(t_request, tb.t_first_token) : -1.0},
+                {"ttft_ms", tb.ttft_ms},
+                {"num_prompt_tokens", tb.num_prompt_tokens},
+                {"batch_prefill", tb.batch_prefill},
+                {"prefill_wall_ms", tb.prefill_wall_ms},
+                {"prefill_gpu_span_ms", tb.prefill_gpu_span_ms}};
+            res.set_content(res_json.dump(), "application/json");
+            return;
+          }
+
           Logger::info("Processing user input: " +
                        user_input_from_client.substr(0, 100) + "...");
 
@@ -270,6 +339,21 @@ int main(int argc, char** argv) {
         }
       });
   
+  // Liveness and what is being served (same path as mtstudio chat).
+  svr.Get("/health", [&session, &model_dir](const httplib::Request&, httplib::Response& res) {
+    const ModelConfig& c = session->get_config();
+    json h;
+    h["status"] = "ok";
+    h["model"] = model_dir;
+    h["tokenizer"] = session->is_bpe() ? "bpe" : "ember";
+    h["context"] = c.max_position_embeddings;
+    h["vocab_size"] = c.vocab_size;
+    h["hidden_size"] = c.hidden_size;
+    h["layers"] = c.num_hidden_layers;
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_content(h.dump(), "application/json");
+  });
+
   svr.Options("/chat", [](const httplib::Request& req, httplib::Response& res) {
     res.set_header("Access-Control-Allow-Origin", "*");
     res.set_header("Access-Control-Allow-Headers", "Content-Type");

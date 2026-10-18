@@ -10,6 +10,7 @@
 #include <random>
 #include <sstream>
 
+#include "bpe_tokenizer.h"
 #include "model.h"
 #include "tokenizer.h"
 
@@ -160,6 +161,23 @@ class TinyLlamaSession {
   // Timing of the most recent generate() call up to its first token.
   const TtftBreakdown& last_ttft() const { return last_ttft_; }
 
+  // Byte-level BPE chat models (GGUF tokenizer.ggml.model == "bpe",
+  // paperkiln exports). In this mode generate() takes the prompt verbatim
+  // (the caller builds the chat template), encodes it with the GGUF's own
+  // merges and no BOS, stops at <|endoftext|> or at a generated <|user|> or
+  // <|assistant|> (the marker is cut), and strips the reply's leading and
+  // trailing whitespace. Repetition penalty is off, matching mtstudio chat.
+  bool is_bpe() const { return bpe_ != nullptr; }
+  int bpe_token_count(const std::string& text) const {
+    return bpe_ ? static_cast<int>(bpe_->encode(text).size()) : 0;
+  }
+  // How the last generate() ended ("eos", "turn" or "length") and how many
+  // tokens it produced, the stop marker excluded. Set in BPE mode.
+  const std::string& last_stop_reason() const { return last_stop_reason_; }
+  int last_generated_tokens() const { return last_generated_tokens_; }
+  // Reseeds the sampler (a request's "seed").
+  void set_seed(unsigned seed) { rng_.seed(seed); }
+
  private:
   TinyLlamaSession(const TinyLlamaSession&) = delete;
   TinyLlamaSession& operator=(const TinyLlamaSession&) = delete;
@@ -187,6 +205,9 @@ class TinyLlamaSession {
   std::string generated_text_for_api_return_; // Added to accumulate full response
   TtftBreakdown last_ttft_;            // see last_ttft()
   std::vector<int> kv_token_history_;  // token ids the previous generate() left in the KV cache
+  std::unique_ptr<microtorch::bpe::Tokenizer> bpe_;  // set for "bpe" GGUFs; see is_bpe()
+  std::string last_stop_reason_;
+  int last_generated_tokens_ = 0;
 
   // Batch processing support
   int max_batch_size_ = 1;  // Maximum number of sequences for batch processing
