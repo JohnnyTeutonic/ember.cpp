@@ -246,6 +246,10 @@ class TtftJob(sup.Job):
         self.variant = variant
         self.stage = os.path.expanduser(f"~/ttft_supervisor/{variant}/stage")
         os.makedirs(self.stage, exist_ok=True)
+        # The session handle lives on ext4, not in /tmp (the supervisor's
+        # default): on 18 Oct 2026 a WSL distro restart wiped /tmp mid-batch,
+        # orphaning a live VM until it was re-adopted by hand.
+        self.cfg = os.path.expanduser(f"~/ttft_supervisor/{variant}/colab_cfg.json")
         os.makedirs(V["bank"], exist_ok=True)
         ref = V["commit"] or "HEAD"
         self.ec = git("-C", EMBER, "rev-parse", "--short=12", ref).strip()
