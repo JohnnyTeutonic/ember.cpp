@@ -42,11 +42,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return kept.join(' ');
     }
 
+    // BPE chat models (paperkiln): the server applies the chat template and
+    // fits the history to the context, so send the turns as they are.
+    let isBpe = false;
+    fetch('/health').then(r => r.ok ? r.json() : null).then(h => {
+        if (!h) return;
+        isBpe = h.tokenizer === 'bpe';
+        const name = (h.model || '').split('/').pop();
+        document.title = 'ember chat: ' + name;
+        const info = document.getElementById('model-info');
+        if (info) info.textContent = `${name} · ${h.layers} layers · d${h.hidden_size} · ctx ${h.context} · ${h.tokenizer}`;
+    }).catch(() => {});
+
     async function sendMessage() {
         const messageText = messageInput.value.trim();
         if (!messageText) return; // Don't send empty messages
 
-        const prompt = buildPrompt(messageText);
+        const sampling = {
+            temperature: 0.7,  // Tiny models at 0.1 collapse to their most generic phrases
+            top_k: 40,        // Limit to top 40 tokens
+            top_p: 0.9        // Sample from 90% of probability mass
+        };
+        const body = isBpe
+            ? { user_input: messageText, history: conversationHistory.slice(), max_new_tokens: 64, ...sampling }
+            : { user_input: buildPrompt(messageText), max_new_tokens: 45, ...sampling };
         addMessageToHistory('user', messageText);
         messageInput.value = ''; // Clear input field
 
@@ -56,13 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    user_input: prompt,
-                    temperature: 0.7,  // Tiny models at 0.1 collapse to their most generic phrases
-                    max_new_tokens: 45,
-                    top_k: 40,        // Limit to top 40 tokens
-                    top_p: 0.9        // Sample from 90% of probability mass
-                })
+                body: JSON.stringify(body)
             });
 
             if (!response.ok) {
