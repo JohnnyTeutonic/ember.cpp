@@ -195,6 +195,13 @@ int main(int argc, char** argv) {
             res_json["tokens"] = session->last_generated_tokens();
             res_json["prompt_tokens"] = prompt_tokens;
             res_json["history_turns_used"] = static_cast<int>(turns.size() - from);
+            // Opt-in exact ids (preference data needs the sampled ids, not a
+            // re-encoding of the stripped reply text).
+            if (req_json.value("return_ids", false)) {
+              res_json["prompt_ids"] = session->last_prompt_ids();
+              res_json["ids"] = session->last_generated_ids();
+              res_json["stop_id"] = session->last_stop_id();
+            }
             res_json["ttft"] = {
                 {"first_token", tb.first_token},
                 {"request_to_first_token_ms", tb.first_token ? ms(t_request, tb.t_first_token) : -1.0},

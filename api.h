@@ -175,6 +175,13 @@ class TinyLlamaSession {
   // tokens it produced, the stop marker excluded. Set in BPE mode.
   const std::string& last_stop_reason() const { return last_stop_reason_; }
   int last_generated_tokens() const { return last_generated_tokens_; }
+  // The exact ids behind the last BPE reply: the prompt as encoded, the
+  // sampled tokens (stop marker excluded) and the stop marker's id (-1 at
+  // "length"). Re-encoding the decoded, whitespace-stripped reply need not
+  // give back the sampled ids.
+  const std::vector<int>& last_prompt_ids() const { return last_prompt_ids_; }
+  const std::vector<int>& last_generated_ids() const { return last_generated_ids_; }
+  int last_stop_id() const { return last_stop_id_; }
   // Reseeds the sampler (a request's "seed").
   void set_seed(unsigned seed) { rng_.seed(seed); }
 
@@ -208,6 +215,8 @@ class TinyLlamaSession {
   std::unique_ptr<microtorch::bpe::Tokenizer> bpe_;  // set for "bpe" GGUFs; see is_bpe()
   std::string last_stop_reason_;
   int last_generated_tokens_ = 0;
+  std::vector<int> last_prompt_ids_, last_generated_ids_;
+  int last_stop_id_ = -1;
 
   // Batch processing support
   int max_batch_size_ = 1;  // Maximum number of sequences for batch processing

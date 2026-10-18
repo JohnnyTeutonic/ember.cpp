@@ -633,6 +633,9 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   bool stopped_at_first = false;
   last_stop_reason_ = "length";
   last_generated_tokens_ = 0;
+  last_prompt_ids_ = tokens;
+  last_generated_ids_.clear();
+  last_stop_id_ = -1;
 
   if (tokens.empty()) {
     Logger::warning("Tokenization resulted in empty ID list for prompt: " +
@@ -942,9 +945,11 @@ if (prefill_enabled) {
     std::vector<int> out = generated_token_ids;
     if (!out.empty() && is_stop(out.back())) {
       last_stop_reason_ = out.back() == 1 ? "eos" : "turn";
+      last_stop_id_ = out.back();
       out.pop_back();
     }
     last_generated_tokens_ = static_cast<int>(out.size());
+    last_generated_ids_ = out;
     result = bpe_->decode(out);
     // Strip leading and trailing whitespace (the C isspace set), as mtstudio does.
     const char* ws = " \t\n\v\f\r";
