@@ -446,7 +446,25 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
   }
 
   eos_token_id_ = config_.eos_token_id; // Use the session's config_ which is now model's config
-  
+
+  // paperkiln byte-level BPE (tokenizer.ggml.model == "bpe"): ember's own
+  // Tokenizer cannot read its id-pair merges, so encode/decode go through
+  // the vendored microtorch::bpe::Tokenizer instead (see is_bpe()).
+  {
+    std::string ext = std::filesystem::path(model_path_arg).extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    if (ext == ".gguf") {
+      microtorch::bpe::GgufTokenizer g = microtorch::bpe::read_gguf_tokenizer(model_path_arg);
+      if (g.model == "bpe") {
+        if (g.merges.empty()) throw std::runtime_error("BPE GGUF has no tokenizer.ggml.merges");
+        bpe_ = std::make_unique<microtorch::bpe::Tokenizer>(std::move(g.tokens), g.merges);
+        repetition_penalty_ = 1.0f;  // mtstudio chat applies none
+        Logger::info("BPE tokenizer: " + std::to_string(bpe_->size()) + " tokens, " +
+                     std::to_string(g.merges.size()) + " merges (chat mode)");
+      }
+    }
+  }
+
   const ModelConfig& final_model_config = model_->get_config(); // Explicitly use model's config
   int total_model_layers = final_model_config.num_hidden_layers;
   
@@ -529,7 +547,12 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   // Priority 0: WORD_LEVEL models (transformer_cpp exports) are raw word-level
   // LMs: "Q:"/"A:" wrappers are OOV noise that shift every position, and any
   // chat formatting ("user: ... assistant:") is the caller's contract.
-  if (config_.tokenizer_family == ModelConfig::TokenizerFamily::WORD_LEVEL) {
+  // BPE chat models: the caller (server.cpp) already built the exact SFT
+  // template with its <|user|>/<|assistant|> markers; nothing is added.
+  if (bpe_) {
+    final_prompt_for_encoding = user_prompt;
+    used_chat_template = false;
+  } else if (config_.tokenizer_family == ModelConfig::TokenizerFamily::WORD_LEVEL) {
     Logger::info("[Generate API] WORD_LEVEL tokenizer: using raw prompt (no Q/A or chat template).");
     final_prompt_for_encoding = user_prompt;
     used_chat_template = false;
@@ -587,7 +610,20 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   
   Logger::debug("[Generate API] Final prompt for encoding (first 100 chars): \\\"" + final_prompt_for_encoding.substr(0, 100) + "\\\"");
 
-  std::vector<int> tokens = tokenizer_->encode(final_prompt_for_encoding, true, false, Tokenizer::PreTokenizeMethod::DEFAULT); // add_bos=true, add_eos=false (EOS handled by loop)
+  // BPE chat models take no BOS (the SFT template starts at <|user|>).
+  std::vector<int> tokens = bpe_ ? bpe_->encode(final_prompt_for_encoding)
+                                 : tokenizer_->encode(final_prompt_for_encoding, true, false, Tokenizer::PreTokenizeMethod::DEFAULT); // add_bos=true, add_eos=false (EOS handled by loop)
+  // Stop tokens: <|endoftext|> always; in BPE chat mode also a generated
+  // <|user|> or <|assistant|> (the model starting the next turn).
+  auto is_stop = [&](int id) {
+    return bpe_ ? (id == 1 || id == 2 || id == 3) : id == eos_token_id_;
+  };
+  auto decode_one = [&](int id) {
+    return bpe_ ? bpe_->decode({id}) : tokenizer_->decode({id}, false);
+  };
+  bool stopped_at_first = false;
+  last_stop_reason_ = "length";
+  last_generated_tokens_ = 0;
 
   if (tokens.empty()) {
     Logger::warning("Tokenization resulted in empty ID list for prompt: " +
@@ -737,18 +773,22 @@ if (prefill_enabled) {
       generated_count++;
 
       // Stream the first generated token from prefill
-      generated_stream_ << tokenizer_->decode({next_token_id}, false);
-      generated_text_for_api_return_ += tokenizer_->decode({next_token_id}, false);
+      generated_stream_ << decode_one(next_token_id);
+      generated_text_for_api_return_ += decode_one(next_token_id);
       last_ttft_.t_first_token = ttft_clock::now();
       last_ttft_.first_token = true;
       last_ttft_.sample_ms = ms_between(t_sample, last_ttft_.t_first_token);
       last_ttft_.ttft_ms = ms_between(last_ttft_.t_entry, last_ttft_.t_first_token);
 
       start_pos_for_loop = num_prompt_tokens; // Next token will be at num_prompt_tokens
+      if (bpe_ && is_stop(next_token_id)) {
+        stopped_at_first = true;  // the reply is empty; skip the decode loop
+        total_steps = 0;
+      }
       kv_cache_.seq_len = num_prompt_tokens; // KVCache is now filled up to num_prompt_tokens
 
       Logger::info("[Generate API] Prefill completed. next_token_id: " + std::to_string(next_token_id) + 
-                   ", Decoded: \"" + tokenizer_->decode({next_token_id}, false) + "\"" + 
+                   ", Decoded: \"" + decode_one(next_token_id) + "\"" + 
                    ", start_pos_for_loop set to: " + std::to_string(start_pos_for_loop));
   }
 
@@ -834,27 +874,27 @@ if (prefill_enabled) {
         generated_count++;
         
         // Stream the generated token
-        generated_stream_ << tokenizer_->decode({next_token_id}, false);
-        generated_text_for_api_return_ += tokenizer_->decode({next_token_id}, false);
+        generated_stream_ << decode_one(next_token_id);
+        generated_text_for_api_return_ += decode_one(next_token_id);
       } else {
         // This is the first token sampled from the last prompt position
         generated_token_ids.push_back(next_token_id);
         generated_count++;
         
         // Stream the first generated token
-        generated_stream_ << tokenizer_->decode({next_token_id}, false);
-        generated_text_for_api_return_ += tokenizer_->decode({next_token_id}, false);
+        generated_stream_ << decode_one(next_token_id);
+        generated_text_for_api_return_ += decode_one(next_token_id);
         // Token-by-token path: only the total is recorded (batch_prefill=false).
         last_ttft_.t_first_token = ttft_clock::now();
         last_ttft_.first_token = true;
         last_ttft_.ttft_ms = ms_between(last_ttft_.t_entry, last_ttft_.t_first_token);
 
         Logger::info("[Generate API] First token sampled from prompt: " + std::to_string(next_token_id) + 
-                     ", Decoded: \"" + tokenizer_->decode({next_token_id}, false) + "\"");
+                     ", Decoded: \"" + decode_one(next_token_id) + "\"");
       }
     }
 
-    if (next_token_id == eos_token_id_ && pos >= num_prompt_tokens) { // EOS only if we are generating
+    if (is_stop(next_token_id) && pos >= (bpe_ ? num_prompt_tokens - 1 : num_prompt_tokens)) { // EOS only if we are generating
       Logger::info("EOS token (" + std::to_string(eos_token_id_) +
                      ") sampled at pos " + std::to_string(pos) + ". Stopping.");
       break;
@@ -882,7 +922,24 @@ if (prefill_enabled) {
   }
   Logger::debug(generated_ids_str);
 
-  std::string result = tokenizer_->decode(generated_token_ids, true);
+  std::string result;
+  if (bpe_) {
+    std::vector<int> out = generated_token_ids;
+    if (!out.empty() && is_stop(out.back())) {
+      last_stop_reason_ = out.back() == 1 ? "eos" : "turn";
+      out.pop_back();
+    }
+    last_generated_tokens_ = static_cast<int>(out.size());
+    result = bpe_->decode(out);
+    // Strip leading and trailing whitespace (the C isspace set), as mtstudio does.
+    const char* ws = " \t\n\v\f\r";
+    const auto first = result.find_first_not_of(ws);
+    const auto last = result.find_last_not_of(ws);
+    result = first == std::string::npos ? std::string() : result.substr(first, last - first + 1);
+    (void)stopped_at_first;
+  } else {
+    result = tokenizer_->decode(generated_token_ids, true);
+  }
   Logger::info("Generated response: " + result);
 
   // What the KV cache now holds: the prompt plus every generated token that
