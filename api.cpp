@@ -160,6 +160,15 @@ static int sample_top_k_top_p_temperature(const std::vector<float>& logits,
     sum_exp += probs_double[i];
   }
 
+  // Pure temperature (top_k <= 0 or >= vocab, top_p >= 1): draw from the
+  // whole double-precision distribution, no sort and no float cumulative sum
+  // that can reach 1.0 early and drop the tail. Same distribution as
+  // paperkiln's sample_pure (charter 0001 §4); the RNG stream differs.
+  if (top_k >= vocab_size && top_p >= 1.0f && sum_exp > 0.0) {
+    std::discrete_distribution<int> pure(probs_double.begin(), probs_double.end());
+    return pure(rng);
+  }
+
   // Normalize probabilities
   if (sum_exp > 0.0) {
     for (int i = 0; i < vocab_size; ++i) {
