@@ -1118,6 +1118,136 @@ std::vector<float> TinyLlamaModel::forward_device(
   return logits;
 }
 
+// Graph decode (19 Oct 2026). forward_device() issues ~90 kernel launches,
+// cuBLAS calls and syncs per token for a 6-layer model, so a decode step on
+// a small model is bound by host launch overhead, not by the GPU (the
+// weights are ~58 MB, a fraction of a millisecond of bandwidth). Here the
+// same step is captured once as a CUDA graph and replayed per token; the
+// token id and position live in device memory (decode_step_dev_), read by
+// the device-position kernels. The kernels and their order are
+// forward_device()'s optimized path, so the arithmetic is the same.
+std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, KVCache* kv_cache) {
+  static const bool enabled = [] {
+    const char* v = std::getenv("EMBER_DECODE_GRAPH");
+    const char* o = std::getenv("EMBER_DECODE_OPT");  // the graph uses the optimized kernels
+    return !(v && std::string(v) == "0") && !(o && std::string(o) == "0");
+  }();
+  if (!enabled || decode_graph_disabled_) return {};
+  const int hs = config_.hidden_size, vs = config_.vocab_size, is = config_.intermediate_size;
+  const int n_heads = config_.num_attention_heads, n_kv = config_.num_key_value_heads;
+  const int L = config_.num_hidden_layers;
+  if (n_heads == 0) return {};
+  const int head_dim = hs / n_heads;
+  const float eps = config_.rms_norm_eps;
+  if (config_.num_cpu_offload_layers != 0 || config_.use_kvcache_quantization ||
+      !config_.use_optimized_cuda_kernels) {
+    decode_graph_disabled_ = true;
+    return {};
+  }
+  if (!kv_cache || static_cast<int>(kv_cache->layers.size()) < L || kv_cache->allocated_num_kv_heads != n_kv ||
+      kv_cache->allocated_head_dim != head_dim || pos < 0 || pos >= kv_cache->allocated_max_seq_len)
+    return {};
+  ensure_f32_concatenated_weights_loaded();
+  ensure_lm_head_dequantized();
+  if (!w_q_f32_dev_ || !w_k_f32_dev_ || !w_v_f32_dev_ || !w_o_f32_dev_ || !w_gate_f32_dev_ || !w_up_f32_dev_ ||
+      !w_down_f32_dev_ || !lm_head_f32_dev_ || !final_norm_dev || !all_freqs_cis_dev) {
+    decode_graph_disabled_ = true;
+    return {};
+  }
+
+  if (!decode_stream_) {
+    // Blocking stream: ordered against the legacy default stream the batched
+    // prefill runs on, so the graph sees the prefill's KV writes.
+    gpuErrchk(cudaStreamCreate(&decode_stream_));
+    gpuErrchk(cudaMalloc(&decode_step_dev_, 2 * sizeof(int)));
+    gpuErrchk(cudaHostAlloc(reinterpret_cast<void**>(&decode_step_host_), 2 * sizeof(int), cudaHostAllocDefault));
+    gpuErrchk(cudaHostAlloc(reinterpret_cast<void**>(&decode_logits_host_), static_cast<size_t>(vs) * sizeof(float),
+                            cudaHostAllocDefault));
+    // FP32 embedding rows exactly as the per-launch path reads them
+    // (lookup_embedding on the host; the device table is BF16).
+    std::vector<float> table(static_cast<size_t>(vs) * hs);
+    for (int t = 0; t < vs; ++t) {
+      const std::vector<float> e = lookup_embedding(t);
+      if (static_cast<int>(e.size()) != hs) {
+        decode_graph_disabled_ = true;
+        return {};
+      }
+      std::copy(e.begin(), e.end(), table.begin() + static_cast<size_t>(t) * hs);
+    }
+    gpuErrchk(cudaMalloc(&decode_embed_f32_dev_, table.size() * sizeof(float)));
+    gpuErrchk(cudaMemcpy(decode_embed_f32_dev_, table.data(), table.size() * sizeof(float), cudaMemcpyHostToDevice));
+  }
+
+  const void* key = kv_cache->layers[0].k_dev_fp32;
+  if (decode_graph_exec_ && decode_graph_key_ != key) {
+    cudaGraphExecDestroy(decode_graph_exec_);
+    decode_graph_exec_ = nullptr;
+  }
+  if (!decode_graph_exec_) {
+    cudaStream_t st = decode_stream_;
+    cublasSetStream(cublas_handle_, st);
+    if (cudaStreamBeginCapture(st, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
+      cudaGetLastError();
+      cublasSetStream(cublas_handle_, 0);
+      decode_graph_disabled_ = true;
+      Logger::warning("[decode graph] stream capture unavailable; using per-launch decode.");
+      return {};
+    }
+    const float scale = 1.0f / sqrtf(static_cast<float>(head_dim));
+    const int kv_row = n_kv * head_dim;
+    decode_embed_cuda(decode_embed_f32_dev_, x_dev_, decode_step_dev_, hs, vs, st);
+    for (int l = 0; l < L; ++l) {
+      KVCacheLayer& kvl = kv_cache->layers[l];
+      cudaMemcpyAsync(x_resid1_dev_, x_dev_, hs * sizeof(float), cudaMemcpyDeviceToDevice, st);
+      rmsnorm_vector_cuda_optimized(x_dev_, layers[l].input_layernorm_dev, x_norm_dev_, hs, eps, st);
+      matvec_f32_f32_cuda(cublas_handle_, w_q_f32_dev_ + (size_t)l * hs * hs, x_norm_dev_, q_dev_, hs, hs, st);
+      matvec_f32_f32_cuda(cublas_handle_, w_k_f32_dev_ + (size_t)l * kv_row * hs, x_norm_dev_, k_dev_, kv_row, hs, st);
+      matvec_f32_f32_cuda(cublas_handle_, w_v_f32_dev_ + (size_t)l * kv_row * hs, x_norm_dev_, v_dev_, kv_row, hs, st);
+      rope_devpos_cuda(q_dev_, n_heads, head_dim, all_freqs_cis_dev, decode_step_dev_, config_.is_gguf_file_loaded, st);
+      rope_devpos_cuda(k_dev_, n_kv, head_dim, all_freqs_cis_dev, decode_step_dev_, config_.is_gguf_file_loaded, st);
+      kv_write_devpos_cuda(kvl.k_dev_fp32, kvl.v_dev_fp32, k_dev_, v_dev_, decode_step_dev_, kv_row, st);
+      attention_devpos_cuda(q_dev_, kvl.k_dev_fp32, kvl.v_dev_fp32, attn_out_dev_, n_heads, head_dim, scale,
+                            kv_cache->allocated_max_seq_len, n_kv, decode_step_dev_, st);
+      matvec_f32_f32_cuda(cublas_handle_, w_o_f32_dev_ + (size_t)l * hs * hs, attn_out_dev_, attn_proj_dev_, hs, hs, st);
+      add_residual_cuda(attn_proj_dev_, x_resid1_dev_, x_dev_, hs, st);
+      cudaMemcpyAsync(x_resid2_dev_, x_dev_, hs * sizeof(float), cudaMemcpyDeviceToDevice, st);
+      rmsnorm_vector_cuda_optimized(x_dev_, layers[l].post_attention_layernorm_dev, x_norm_dev_, hs, eps, st);
+      matvec_f32_f32_cuda(cublas_handle_, w_gate_f32_dev_ + (size_t)l * is * hs, x_norm_dev_, gate_vec_dev_, is, hs, st);
+      matvec_f32_f32_cuda(cublas_handle_, w_up_f32_dev_ + (size_t)l * is * hs, x_norm_dev_, up_vec_dev_, is, hs, st);
+      swiglu_cuda(gate_vec_dev_, up_vec_dev_, swiglu_vec_dev_, is, st);
+      matvec_f32_f32_cuda(cublas_handle_, w_down_f32_dev_ + (size_t)l * hs * is, swiglu_vec_dev_, mlp_down_dev_, hs, is, st);
+      add_residual_cuda(mlp_down_dev_, x_resid2_dev_, x_dev_, hs, st);
+    }
+    rmsnorm_vector_cuda_optimized(x_dev_, final_norm_dev, x_norm_dev_, hs, eps, st);
+    matvec_f32_f32_cuda(cublas_handle_, lm_head_f32_dev_, x_norm_dev_, logits_dev_, vs, hs, st);
+    cudaGraph_t graph = nullptr;
+    cudaError_t e = cudaStreamEndCapture(st, &graph);
+    cublasSetStream(cublas_handle_, 0);
+    if (e == cudaSuccess) e = cudaGraphInstantiate(&decode_graph_exec_, graph, 0);
+    if (graph) cudaGraphDestroy(graph);
+    if (e != cudaSuccess) {
+      cudaGetLastError();
+      decode_graph_exec_ = nullptr;
+      decode_graph_disabled_ = true;
+      Logger::warning(std::string("[decode graph] capture failed (") + cudaGetErrorString(e) +
+                      "); using per-launch decode.");
+      return {};
+    }
+    decode_graph_key_ = key;
+    Logger::info("[decode graph] captured the decode step (" + std::to_string(L) + " layers).");
+  }
+
+  decode_step_host_[0] = token_id;
+  decode_step_host_[1] = pos;
+  gpuErrchk(cudaMemcpyAsync(decode_step_dev_, decode_step_host_, 2 * sizeof(int), cudaMemcpyHostToDevice,
+                            decode_stream_));
+  gpuErrchk(cudaGraphLaunch(decode_graph_exec_, decode_stream_));
+  gpuErrchk(cudaMemcpyAsync(decode_logits_host_, logits_dev_, static_cast<size_t>(vs) * sizeof(float),
+                            cudaMemcpyDeviceToHost, decode_stream_));
+  gpuErrchk(cudaStreamSynchronize(decode_stream_));
+  return std::vector<float>(decode_logits_host_, decode_logits_host_ + vs);
+}
+
 #endif // HAS_CUDA
 
 std::vector<float> TinyLlamaModel::forward_cpu_logits_batch(

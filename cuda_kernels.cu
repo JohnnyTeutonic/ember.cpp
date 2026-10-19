@@ -2803,7 +2803,10 @@ __global__ void attention_optimized_kernel(const float* __restrict__ Q_current, 
                                           const float* __restrict__ V_layer_cache_base, // Full V cache: [max_seq_len, num_kv_heads, head_dim]
                                           float* __restrict__ out,                    // Output for all heads: [num_q_heads, head_dim]
                                           int current_seq_len, int head_dim, float scale,
-                                          int cache_num_kv_heads, int num_q_heads) {
+                                          int cache_num_kv_heads, int num_q_heads,
+                                          const int* step_dev) {
+    // Graph decode: the length comes from device memory (step_dev[1] = pos).
+    if (step_dev) current_seq_len = step_dev[1] + 1;
 
     const int head_idx = blockIdx.x; // Current Q head index this block is working on
     const int tid_in_block = threadIdx.x;
@@ -2928,7 +2931,7 @@ void attention_cuda_optimized(const float* Q_current_dev, const float* K_layer_c
 
     attention_optimized_kernel<<<num_heads, threads_per_block, shared_mem_size, stream>>>(
         Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev,
-        current_seq_len, head_dim, scale, cache_num_kv_heads, num_heads);
+        current_seq_len, head_dim, scale, cache_num_kv_heads, num_heads, nullptr);
     gpuErrchk(cudaGetLastError());
 }
 
@@ -3112,4 +3115,89 @@ void convert_bf16_to_fp32_cuda(const uint16_t* bf16_in_dev, float* fp32_out_dev,
     
     convert_bf16_to_fp32_kernel<<<blocks, threads, 0, stream>>>(bf16_in_dev, fp32_out_dev, n_elements);
     CUDA_CHECK(cudaGetLastError());
+}
+
+// ---------------------------------------------------------------------------
+// Graph decode (19 Oct 2026). One decode step is captured once as a CUDA
+// graph and replayed per token, so every per-token value lives in device
+// memory: step_dev[0] = input token id, step_dev[1] = position. These are
+// the device-position forms of the decode kernels; the arithmetic is the
+// same as the per-launch path's.
+// ---------------------------------------------------------------------------
+__global__ void decode_embed_kernel(const float* __restrict__ table, float* __restrict__ out,
+                                    const int* __restrict__ step_dev, int hidden_size, int vocab_size) {
+  const int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= hidden_size) return;
+  const int tok = step_dev[0];
+  out[i] = (tok >= 0 && tok < vocab_size) ? table[(size_t)tok * hidden_size + i] : 0.0f;
+}
+
+void decode_embed_cuda(const float* table_dev, float* out_dev, const int* step_dev, int hidden_size,
+                       int vocab_size, cudaStream_t stream) {
+  decode_embed_kernel<<<(hidden_size + 255) / 256, 256, 0, stream>>>(table_dev, out_dev, step_dev, hidden_size,
+                                                                     vocab_size);
+  gpuErrchk(cudaGetLastError());
+}
+
+__global__ void rope_devpos_kernel(float* x, int num_heads, int head_dim, const float* all_freqs_cis_base,
+                                   const int* step_dev, bool use_adjacent_pairing) {
+  const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int total_pairs = num_heads * (head_dim / 2);
+  if (idx >= total_pairs) return;
+  const int pos = step_dev[1];
+  const int head_idx = idx / (head_dim / 2);
+  const int dim_pair_idx = idx % (head_dim / 2);
+  const size_t freq_base_offset = ((size_t)pos * (head_dim / 2) + dim_pair_idx) * 2;
+  int base_x0, base_x1;
+  if (use_adjacent_pairing) {
+    base_x0 = head_idx * head_dim + (dim_pair_idx * 2);
+    base_x1 = head_idx * head_dim + (dim_pair_idx * 2 + 1);
+  } else {
+    base_x0 = head_idx * head_dim + dim_pair_idx;
+    base_x1 = head_idx * head_dim + dim_pair_idx + (head_dim / 2);
+  }
+  const float x0 = x[base_x0];
+  const float x1 = x[base_x1];
+  const float cos_val = all_freqs_cis_base[freq_base_offset];
+  const float sin_val = all_freqs_cis_base[freq_base_offset + 1];
+  x[base_x0] = x0 * cos_val - x1 * sin_val;
+  x[base_x1] = x0 * sin_val + x1 * cos_val;
+}
+
+void rope_devpos_cuda(float* x_dev, int num_heads, int head_dim, const float* all_freqs_cis_dev_base,
+                      const int* step_dev, bool use_adjacent_pairing, cudaStream_t stream) {
+  const int total_pairs = num_heads * (head_dim / 2);
+  rope_devpos_kernel<<<(total_pairs + 255) / 256, 256, 0, stream>>>(x_dev, num_heads, head_dim,
+                                                                   all_freqs_cis_dev_base, step_dev,
+                                                                   use_adjacent_pairing);
+  gpuErrchk(cudaGetLastError());
+}
+
+// The KV cache is [pos][kv_head][dim]: position pos's row is `row` floats,
+// laid out like k/v.
+__global__ void kv_write_devpos_kernel(float* k_cache, float* v_cache, const float* __restrict__ k,
+                                       const float* __restrict__ v, const int* step_dev, int row) {
+  const int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= row) return;
+  const size_t off = (size_t)step_dev[1] * row + i;
+  k_cache[off] = k[i];
+  v_cache[off] = v[i];
+}
+
+void kv_write_devpos_cuda(float* k_cache_dev, float* v_cache_dev, const float* k_dev, const float* v_dev,
+                          const int* step_dev, int row, cudaStream_t stream) {
+  kv_write_devpos_kernel<<<(row + 255) / 256, 256, 0, stream>>>(k_cache_dev, v_cache_dev, k_dev, v_dev, step_dev,
+                                                               row);
+  gpuErrchk(cudaGetLastError());
+}
+
+void attention_devpos_cuda(const float* Q_current_dev, const float* K_layer_cache_base,
+                           const float* V_layer_cache_base, float* out_dev, int num_heads, int head_dim,
+                           float scale, int cache_max_seq_len, int cache_num_kv_heads, const int* step_dev,
+                           cudaStream_t stream) {
+  const size_t shared_mem_size = (cache_max_seq_len + 1) * sizeof(float);
+  attention_optimized_kernel<<<num_heads, 256, shared_mem_size, stream>>>(
+      Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, /*current_seq_len=*/0, head_dim, scale,
+      cache_num_kv_heads, num_heads, step_dev);
+  gpuErrchk(cudaGetLastError());
 }

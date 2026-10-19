@@ -64,10 +64,15 @@ document.addEventListener('DOMContentLoaded', () => {
             top_p: 0.9        // Sample from 90% of probability mass
         };
         const body = isBpe
-            ? { user_input: messageText, history: conversationHistory.slice(), max_new_tokens: 64, ...sampling }
+            ? { user_input: messageText, history: conversationHistory.slice(), max_new_tokens: 64, stream: true, ...sampling }
             : { user_input: buildPrompt(messageText), max_new_tokens: 45, ...sampling };
         addMessageToHistory('user', messageText);
         messageInput.value = ''; // Clear input field
+
+        if (isBpe) {
+            await streamReply(body);
+            return;
+        }
 
         try {
             const response = await fetch('/chat', {
@@ -94,6 +99,78 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error sending message:', error);
             addMessageToHistory('assistant', `Error: ${error.message}`, true);
+        }
+    }
+
+    // BPE chat models: the reply streams in as server-sent events
+    // ({"token": text} pieces, then the full reply object with "done": true).
+    // Under the reply: time to the first word and to the end, measured here
+    // in the browser, and the server's own time to first token.
+    async function streamReply(body) {
+        const div = document.createElement('div');
+        div.classList.add('message', 'server-message');
+        div.textContent = 'AI: ';
+        historyDiv.appendChild(div);
+        const t0 = performance.now();
+        let tFirst = null;
+        let shown = '';
+        try {
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buf = '';
+            let final = null;
+            for (;;) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                let cut;
+                while ((cut = buf.indexOf('\n\n')) >= 0) {
+                    const line = buf.slice(0, cut);
+                    buf = buf.slice(cut + 2);
+                    if (!line.startsWith('data: ')) continue;
+                    const ev = JSON.parse(line.slice(6));
+                    if (ev.done) {
+                        final = ev;
+                    } else if (ev.token) {
+                        if (tFirst === null) tFirst = performance.now();
+                        shown += ev.token;
+                        div.textContent = 'AI: ' + shown;
+                        historyDiv.scrollTop = historyDiv.scrollHeight;
+                    }
+                }
+            }
+            const tEnd = performance.now();
+            if (!final) throw new Error('the stream ended without a reply');
+            if (final.reply) {
+                div.textContent = 'AI: ' + final.reply;
+                conversationHistory.push({ role: 'assistant', content: final.reply });
+                // Keep the turn pairs aligned: the user turn was pushed by addMessageToHistory.
+            } else {
+                div.textContent = 'AI: (no reply: the model ended its turn at once; try rephrasing)';
+                div.classList.add('error-message');
+                conversationHistory.pop();  // drop the unanswered user turn from the prompt
+            }
+            const timing = document.createElement('div');
+            timing.classList.add('timing');
+            const first = tFirst === null ? '-' : `${Math.round(tFirst - t0)} ms`;
+            timing.textContent = `first word ${first} · done ${Math.round(tEnd - t0)} ms · ` +
+                `${final.tokens} tokens · server TTFT ${final.ttft.ttft_ms.toFixed(1)} ms`;
+            historyDiv.appendChild(timing);
+            historyDiv.scrollTop = historyDiv.scrollHeight;
+        } catch (error) {
+            console.error('Error streaming reply:', error);
+            div.textContent = `AI: Error: ${error.message}`;
+            div.classList.add('error-message');
+            conversationHistory.pop();
         }
     }
 

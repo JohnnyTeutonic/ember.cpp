@@ -2,6 +2,7 @@
 #define TINYLLAMA_API_H
 
 #include <chrono>
+#include <functional>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -184,6 +185,11 @@ class TinyLlamaSession {
   int last_stop_id() const { return last_stop_id_; }
   // Reseeds the sampler (a request's "seed").
   void set_seed(unsigned seed) { rng_.seed(seed); }
+  // Called with each generated token id (stop markers excluded) as
+  // generate() produces it; empty to stop streaming.
+  void set_token_callback(std::function<void(int)> cb) { token_callback_ = std::move(cb); }
+  // BPE detokenization of ids (BPE chat models only; empty otherwise).
+  std::string bpe_decode(const std::vector<int>& ids) const { return bpe_ ? bpe_->decode(ids) : std::string(); }
 
  private:
   TinyLlamaSession(const TinyLlamaSession&) = delete;
@@ -217,6 +223,7 @@ class TinyLlamaSession {
   int last_generated_tokens_ = 0;
   std::vector<int> last_prompt_ids_, last_generated_ids_;
   int last_stop_id_ = -1;
+  std::function<void(int)> token_callback_;
 
   // Batch processing support
   int max_batch_size_ = 1;  // Maximum number of sequences for batch processing

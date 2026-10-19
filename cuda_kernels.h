@@ -642,6 +642,20 @@ __global__ void convert_fp32_to_bf16_kernel(const float* __restrict__ fp32_in,
                                             uint16_t* __restrict__ bf16_out,
                                             size_t n_elements);
 
+// Graph decode: device-position forms of the decode kernels (cuda_kernels.cu).
+// step_dev[0] = input token id, step_dev[1] = position.
+void decode_embed_cuda(const float* table_dev, float* out_dev, const int* step_dev, int hidden_size,
+                       int vocab_size, cudaStream_t stream);
+void rope_devpos_cuda(float* x_dev, int num_heads, int head_dim, const float* all_freqs_cis_dev_base,
+                      const int* step_dev, bool use_adjacent_pairing, cudaStream_t stream);
+void kv_write_devpos_cuda(float* k_cache_dev, float* v_cache_dev, const float* k_dev, const float* v_dev,
+                          const int* step_dev, int row, cudaStream_t stream);
+void attention_devpos_cuda(const float* Q_current_dev, const float* K_layer_cache_base,
+                           const float* V_layer_cache_base, float* out_dev, int num_heads, int head_dim,
+                           float scale, int cache_max_seq_len, int cache_num_kv_heads, const int* step_dev,
+                           cudaStream_t stream);
+
+
 #endif // HAS_CUDA
 
 #endif // CUDA_KERNELS_H

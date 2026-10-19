@@ -63,12 +63,58 @@ A/B pairs, so the penalty is not only GPU clock ramp; the host side (CPU power s
 WSL scheduling under the many small launches and syncs of each decode step) is the
 likely remainder. The keep-warm was not kept.
 
+## After the fixes (graph decode, streaming)
+
+- **Graph decode** (`TinyLlamaModel::forward_device_graph`, `EMBER_DECODE_GRAPH=0` turns it off):
+  the decode step is captured once as a CUDA graph and replayed per token, the token id
+  and position read from device memory. Logits match the per-launch path within its own
+  run-to-run spread (max |dlogit| 1e-4 both ways, same argmax at every step; the
+  reductions use atomics, so neither path is bit-reproducible). Greedy parity against
+  mtstudio unchanged: 40/40 (sft5250), 39/40 (sft1500, the documented near-tie).
+  Decode p50 4.52 -> 2.68 ms/token (`tools/chat_decode_bench.py`).
+- **Streaming**: `"stream": true` returns server-sent events, `{"token": text}` per
+  piece (leading whitespace skipped, never a split UTF-8 character) and then the full
+  reply object with `"done": true`. The chat page streams and prints, under each reply,
+  the browser-measured time to the first word and to the end. `tools/chat_stream_check.py`:
+  joined pieces equal the final reply and the final reply equals the non-streaming reply
+  (same seed), 20/20 on CUDA, 10/10 on CPU; first piece at the client 16-20 ms p50.
+
+Same latency analysis after the fixes (`cuda_after.json`, 50 per row, a noisier sitting):
+
+| Earlier turns | TTFT p50 / p90 / p99 (ms) | Decode p50 (ms/token) | Request wall p50 / p90 / p99 (ms) |
+|---|---|---|---|
+| 0 | 24 / 36 / 42 | 2.6 | 72 / 145 / 166 |
+| 1 | 40 / 58 / 79 | 2.8 | 90 / 250 / 284 |
+| 2 | 60 / 129 / 163 | 3.2 | 113 / 261 / 375 |
+| 4 | 94 / 169 / 423 | 4.3 | 163 / 363 / 703 |
+| 6 | 50 / 67 / 86 | 3.2 | 109 / 229 / 276 |
+| 8 | 56 / 85 / 120 | 3.4 | 112 / 236 / 313 |
+
+Back to back (`chat_idle_gap.py`, curl and Python clients alike): request wall 37-52 ms.
+
+## The pause penalty is the laptop GPU's power state
+
+After a 2 s pause, requests take about 190-210 ms (server TTFT about 40 ms) against
+37-52 ms back to back, before and after the graph. Reading `nvidia-smi` once right after
+each request shows why: back to back the GPU is at P3 (1545 MHz core, 7000 MHz memory);
+after 2 s pauses it reads P5/P8 (210 MHz core, 405-810 MHz memory), and a short burst of
+work does not bring it back up before the reply is done. (Polling `nvidia-smi` every
+50 ms keeps the GPU awake and hides this; single reads do not.)
+
+Tried in software, none of which removed the penalty, so none was kept:
+host wait mode (`cudaDeviceScheduleSpin` / `Yield` / auto); a keep-warm 1 MiB memset every
+50 ms; a one-warp spin kernel every 20 ms; a spin kernel on every SM for ~1 ms every 5 ms
+(the GPU stayed at P8 ~270 MHz under it, and server TTFT got worse, 135-148 ms, from the
+contention); background `nvidia-smi` polling. The governor on this laptop does not raise
+clocks for that load. The setting that does is outside ember: in the NVIDIA Control Panel
+on Windows, *Manage 3D settings -> Power management mode -> Prefer maximum performance*
+(plus a Windows power plan without aggressive GPU saving), at the cost of power while
+idle.
+
 ## Levers, in order
 
-1. Capture the per-token decode step as a CUDA graph: one launch per token instead of
-   ~60 kernel launches and cuBLAS calls plus syncs, which cuts exactly the host work that
-   pauses and contention amplify.
-2. Stream tokens to the page (server-sent events) so the first words show at TTFT
-   (20-50 ms) instead of after the whole reply.
-3. Decode cost rises with context (4 -> 9 ms/token from 18 to 180 prompt tokens);
-   look at the attention kernel (one block per head, 6 blocks on a 24-SM GPU) after (1).
+1. Done: graph decode and streaming (above).
+2. The pause penalty: the driver's power setting on Windows (above), not ember code.
+3. Decode cost still rises with context (2.6 -> 4.3 ms/token from 18 to 155 prompt
+   tokens); the attention kernel runs one block per head (6 blocks on a 24-SM GPU) and
+   is the next kernel to look at.

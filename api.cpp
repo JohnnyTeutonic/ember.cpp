@@ -634,6 +634,11 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   auto decode_one = [&](int id) {
     return bpe_ ? bpe_->decode({id}) : tokenizer_->decode({id}, false);
   };
+  // Streaming: the per-token callback (set_token_callback) sees every
+  // generated token except stop markers, in order.
+  auto emit_token = [&](int id) {
+    if (token_callback_ && !is_stop(id)) token_callback_(id);
+  };
   bool stopped_at_first = false;
   last_stop_reason_ = "length";
   last_generated_tokens_ = 0;
@@ -793,6 +798,7 @@ if (prefill_enabled) {
       next_token_id = sample_top_k_top_p_temperature(logits, temperature, top_k, top_p, rng_);
       generated_token_ids.push_back(next_token_id); // Track generated token
       generated_count++;
+      emit_token(next_token_id);
 
       // Stream the first generated token from prefill
       generated_stream_ << decode_one(next_token_id);
@@ -827,7 +833,9 @@ if (prefill_enabled) {
     host_phase_ms[name] += ms_between(t_phase, now);
     t_phase = now;
   };
+#ifdef HAS_CUDA
   if (decode_timing) model_->decode_phase_ms().clear();
+#endif
   const auto t_decode_start = ttft_clock::now();
 
   for (int pos = start_pos_for_loop; pos < total_steps; ++pos) {
@@ -892,11 +900,16 @@ if (prefill_enabled) {
 #endif
     } else if (config_.num_cpu_offload_layers == 0) {
 #ifdef HAS_CUDA
-      // GPU-only mode
-      gpuErrchk(cudaMemcpy(model_->get_x_dev(), current_data_host.data(), current_data_host.size() * sizeof(float), cudaMemcpyHostToDevice));
-      host_phase("host.embed_h2d");
-      logits = model_->forward_device(model_->get_x_dev(), pos, &kv_cache_, nullptr);
-      host_phase("host.forward_device(total)");
+      // GPU-only mode: the captured decode graph when it applies, else the
+      // per-launch forward.
+      logits = model_->forward_device_graph(input_token_id, pos, &kv_cache_);
+      host_phase("host.forward_device_graph");
+      if (logits.empty()) {
+        gpuErrchk(cudaMemcpy(model_->get_x_dev(), current_data_host.data(), current_data_host.size() * sizeof(float), cudaMemcpyHostToDevice));
+        host_phase("host.embed_h2d");
+        logits = model_->forward_device(model_->get_x_dev(), pos, &kv_cache_, nullptr);
+        host_phase("host.forward_device(total)");
+      }
 #else
       Logger::error("[GPU-only Mode] GPU-only mode requested but CUDA not available. Cannot proceed.");
       break;
@@ -917,6 +930,7 @@ if (prefill_enabled) {
       if (pos >= num_prompt_tokens) {
         generated_token_ids.push_back(next_token_id);
         generated_count++;
+        emit_token(next_token_id);
         
         // Stream the generated token
         generated_stream_ << decode_one(next_token_id);
@@ -925,6 +939,7 @@ if (prefill_enabled) {
         // This is the first token sampled from the last prompt position
         generated_token_ids.push_back(next_token_id);
         generated_count++;
+        emit_token(next_token_id);
         
         // Stream the first generated token
         generated_stream_ << decode_one(next_token_id);
