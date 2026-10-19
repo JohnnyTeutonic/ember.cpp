@@ -2,31 +2,69 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
     <title>ember chat</title>
+    <meta name="description" content="A 14.6M-parameter chat model trained from scratch in paperkiln and served on CPU by ember.cpp.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◆</text></svg>">
 </head>
 <body>
-    <h1>ember chat</h1>
-    <p id="model-info" style="text-align:center;color:#666;font-size:0.9em;margin-top:-0.5em"></p>
-    <p class="intro">
-        A 14.6M-parameter chat model trained from scratch in
-        <a href="https://github.com/JohnnyTeutonic/paperkiln" target="_blank" rel="noopener">paperkiln</a>
-        and served on CPU by
-        <a href="https://github.com/JohnnyTeutonic/ember.cpp" target="_blank" rel="noopener">ember.cpp</a>,
-        both written by <a href="https://johnnyteutonic.github.io" target="_blank" rel="noopener">Jonathan Reich</a>.
-        It is good at small talk and knows no facts. Conversations are not stored.
-    </p>
-    <div id="chatbox">
-        <div id="history">
-            <p class="server-message">AI: Hello! How are you today?</p>
+    <header class="app-head">
+        <div class="inner">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">◆</span>
+                <div class="brand-text">
+                    <h1>ember chat</h1>
+                    <p id="model-info" class="model-info" role="status">Connecting to the server...</p>
+                </div>
+            </div>
+            <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle colour theme">
+                <span aria-hidden="true">◐</span>
+            </button>
         </div>
-        <div id="input-area">
-            <input type="text" id="message" maxlength="600" placeholder="Say something...">
-            <button id="send">Send</button>
-        </div>
-    </div>
+    </header>
 
+    <main id="history" class="history" role="log" aria-live="polite" aria-label="Conversation">
+        <section class="intro" aria-label="About this chat">
+            <h2>A small chat model, served on CPU</h2>
+            <p>
+                A 14.6M-parameter chat model trained from scratch in
+                <a href="https://github.com/JohnnyTeutonic/paperkiln" target="_blank" rel="noopener">paperkiln</a>
+                and served on CPU by
+                <a href="https://github.com/JohnnyTeutonic/ember.cpp" target="_blank" rel="noopener">ember.cpp</a>,
+                both written by <a href="https://johnnyteutonic.github.io" target="_blank" rel="noopener">Jonathan Reich</a>.
+                It is good at small talk and knows no facts. Conversations are not stored.
+            </p>
+            <ul class="facts" aria-label="Model facts">
+                <li>14.6M parameters</li>
+                <li>ember.cpp on CPU</li>
+                <li>streams token by token</li>
+                <li>not stored</li>
+            </ul>
+        </section>
+        <div class="message server-message">
+            <span class="avatar" aria-hidden="true">◆</span>
+            <div class="msg-body">
+                <span class="who">ember</span>
+                <div class="bubble">Hello! How are you today?</div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="composer">
+        <div class="inner">
+            <div id="input-area" class="field">
+                <label for="message" class="sr-only">Your message</label>
+                <input type="text" id="message" maxlength="600" autocomplete="off" placeholder="Say something...">
+                <button id="send" type="button">Send</button>
+            </div>
+            <p class="fineprint">Small model, small talk: it knows no facts. Conversations are not stored.</p>
+        </div>
+    </footer>
     <script src="script.js"></script>
 </body>
 </html>
