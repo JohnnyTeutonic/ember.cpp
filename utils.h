@@ -41,6 +41,10 @@ void matvec_q8k_f32_vector_cpu(const std::vector<block_q8_K>& mat_q8k,
                                std::vector<float>& out_f32, int rows,
                                int cols, bool log_first_block = false);
 
+// Mixture-of-experts FFN for one token; see utils.cpp.
+void moe_ffn_f32_cpu(const float* x, int d, int d_ff, int E, int k, const float* router, const float* gate_exps,
+                     const float* up_exps, const float* down_exps, float* out);
+
 void matvec_f32_f32_vector_cpu(const std::vector<float>& mat_f32,
                                const std::vector<float>& vec_f32,
                                std::vector<float>& out_f32, int rows,

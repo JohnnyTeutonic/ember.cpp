@@ -103,6 +103,8 @@ struct ModelConfig {
     bool use_mmap_for_gguf = true; // Whether to use mmap for GGUF files, defaults to true
     bool use_kvcache_quantization = false; /**< Whether to use INT8 quantization for KVCache on GPU */
     int num_cpu_offload_layers = 0; /**< Number of layers to offload to CPU */
+    int num_experts = 0;            /**< Mixture-of-experts: experts per layer (0 = dense FFN) */
+    int num_experts_used = 0;       /**< Mixture-of-experts: experts routed per token (top-k) */
     
     // Memory management: Enable layer-wise weight eviction to prevent OOM
     bool enable_memory_efficient_layers = true; /**< Enable automatic layer weight eviction during forward pass */
@@ -270,6 +272,12 @@ struct LayerWeights {
   std::vector<block_q6_K> gate_proj_q6k, up_proj_q6k, down_proj_q6k;
   std::vector<block_q8_0> q_proj_q8_0, k_proj_q8_0, v_proj_q8_0, o_proj_q8_0;
   std::vector<block_q8_0> gate_proj_q8_0, up_proj_q8_0, down_proj_q8_0;
+  // Mixture-of-experts FFN (llama.cpp layout): router [E][d] (ffn_gate_inp),
+  // and per expert e a contiguous [d_ff][d] gate/up block and [d][d_ff] down
+  // block (ffn_{gate,up,down}_exps). Empty for dense models.
+  std::vector<float> moe_router_f32;
+  std::vector<block_q8_0> moe_router_q8_0;
+  std::vector<float> moe_gate_exps_f32, moe_up_exps_f32, moe_down_exps_f32;
   std::vector<block_q8_K> q_proj_q8k, k_proj_q8k, v_proj_q8k, o_proj_q8k;
   std::vector<block_q8_K> gate_proj_q8k, up_proj_q8k, down_proj_q8k;
 

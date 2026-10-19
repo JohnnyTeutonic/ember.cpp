@@ -268,6 +268,11 @@ TinyLlamaModel::TinyLlamaModel(const ModelConfig& initial_config,
                       "). Clamping to " + std::to_string(this->config_.num_hidden_layers) + " (all CPU).");
       this->config_.num_cpu_offload_layers = this->config_.num_hidden_layers;
   }
+  if (this->config_.num_experts > 0 && this->config_.num_cpu_offload_layers < this->config_.num_hidden_layers) {
+      Logger::warning("Mixture-of-experts model (" + std::to_string(this->config_.num_experts) +
+                      " experts): ember's MoE FFN is CPU-only for now, so all layers run on the CPU.");
+      this->config_.num_cpu_offload_layers = this->config_.num_hidden_layers;
+  }
   Logger::info("TinyLlamaModel constructor: Final clamped num_cpu_offload_layers = " + std::to_string(this->config_.num_cpu_offload_layers));
   Logger::info("[CTOR_DEBUG_L1921] End of Model Ctor (before initialize_weights/rope call): this->config_.num_cpu_offload_layers = " + std::to_string(this->config_.num_cpu_offload_layers) +
               ", this->config_.num_hidden_layers = " + std::to_string(this->config_.num_hidden_layers));
@@ -686,6 +691,13 @@ std::vector<float> TinyLlamaModel::forward(
             : lw.post_attention_layernorm_f32;
     rmsnorm_vector_cpu(input, w_post_attn_norm_vec, x_norm_vec2, eps);
 
+    std::vector<float> mlp_out_vec(hs);
+    if (config_.num_experts > 0 && !lw.moe_gate_exps_f32.empty()) {
+      // Mixture-of-experts FFN (utils.cpp moe_ffn_f32_cpu).
+      moe_ffn_f32_cpu(x_norm_vec2.data(), hs, is, config_.num_experts, config_.num_experts_used,
+                      lw.moe_router_f32.data(), lw.moe_gate_exps_f32.data(), lw.moe_up_exps_f32.data(),
+                      lw.moe_down_exps_f32.data(), mlp_out_vec.data());
+    } else {
     std::vector<float> gate_vec(is), up_vec(is);
     // Gate-projection
     Logger::info("[CPU_FWD_MEM] Layer " + std::to_string(l) + ": About to ensure_gate_proj_dequantized");
@@ -735,7 +747,6 @@ std::vector<float> TinyLlamaModel::forward(
       for(size_t i=0; i<is; ++i) mlp_intermediate_vec[i] = activation_out_vec[i] * up_vec[i];
     }
 
-    std::vector<float> mlp_out_vec(hs);
     // Down-projection
     Logger::info("[CPU_FWD_MEM] Layer " + std::to_string(l) + ": About to ensure_down_proj_dequantized");
     ensure_down_proj_dequantized(l);
@@ -747,6 +758,7 @@ std::vector<float> TinyLlamaModel::forward(
     else if (!lw.down_proj_q6k.empty() && config_.is_gguf_file_loaded) matvec_q6k_f32_vector_cpu(lw.down_proj_q6k, mlp_intermediate_vec, mlp_out_vec, hs, is, enable_debug_logging);
     else if(!lw.down_proj.empty()) matvec_bf16_f32_vector_cpu(lw.down_proj, mlp_intermediate_vec, mlp_out_vec, hs, is);
     else throw std::runtime_error("Layer " + std::to_string(l) + ": No Down proj weights (f32, q8k, q8, q4k, q6k, bf16) for CPU");
+    }  // dense FFN
 
     for(size_t i=0; i<input.size(); ++i) input[i] = x_resid2_vec[i] + mlp_out_vec[i]; // Update input by reference
 

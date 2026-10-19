@@ -158,6 +158,8 @@ ModelConfig parse_model_config_from_gguf(const GGUFData& gguf) {
   config.num_attention_heads = get_meta_value("llama.attention.head_count",
                                get_meta_value("phi.attention.head_count",
                                get_meta_value("mistral.attention.head_count", 32)));
+  config.num_experts = get_meta_value("llama.expert_count", 0);
+  config.num_experts_used = get_meta_value("llama.expert_used_count", 0);
   config.num_hidden_layers = get_meta_value("llama.block_count",
                              get_meta_value("phi.block_count",
                              get_meta_value("mistral.block_count", 32)));
