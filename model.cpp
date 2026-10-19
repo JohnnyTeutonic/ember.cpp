@@ -480,7 +480,7 @@ TinyLlamaModel::~TinyLlamaModel() {
     w_down_f32_dev_ = nullptr;
   }
   for (float** p : {&w_moe_router_dev_, &w_moe_gate_dev_, &w_moe_up_dev_, &w_moe_down_dev_,
-                    &moe_scratch_decode_dev_, &moe_scratch_batch_dev_})
+                    &moe_scratch_decode_dev_, &moe_scratch_batch_dev_, &verify_buf_dev_})
     if (*p) { cudaFree(*p); *p = nullptr; }
 
   if (x_dev_) {
@@ -1981,7 +1981,6 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
                         config_.num_attention_heads, config_.num_key_value_heads, head_dim,
                         current_model_pos, config_.is_gguf_file_loaded, stream);
         op_timer.end();
-        gpuErrchk(cudaStreamSynchronize(stream));
 
         if (prefill_debug_enabled() && l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 0 && head_dim > 0) { // Existing logging condition
             int log_elements_rope = std::min(3, head_dim);
@@ -2029,7 +2028,6 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
         update_kv_cache_batch_cuda(d_layer_v_cache_ptr, d_batch_v_proj_out, current_model_pos, num_tokens_in_batch,
                                    config_.num_key_value_heads, head_dim, kv_cache->max_seq_len_config_, stream);
         op_timer.end();
-        gpuErrchk(cudaStreamSynchronize(stream)); 
         
         float current_attention_scale = 1.0f / sqrtf((float)head_dim);
         op_timer.begin("attention");
@@ -2659,5 +2657,82 @@ void TinyLlamaModel::moe_ffn_layer_cuda(int l_gpu_idx, const float* x, int T, fl
   moe_ffn_cuda(cublas_handle_, x, T, d, d_ff, E, k, /*renorm=*/true, w_moe_router_dev_ + (size_t)l_gpu_idx * E * d,
                w_moe_gate_dev_ + (size_t)l_gpu_idx * E * d_ff * d, w_moe_up_dev_ + (size_t)l_gpu_idx * E * d_ff * d,
                w_moe_down_dev_ + (size_t)l_gpu_idx * E * d * d_ff, moe_scratch(T), out, stream);
+}
+#endif
+
+#ifdef HAS_CUDA
+std::vector<float> TinyLlamaModel::forward_device_verify(const std::vector<int>& tokens, int pos, KVCache* kv_cache) {
+  const int n = static_cast<int>(tokens.size());
+  constexpr int kMaxRows = 33;
+  const int L = config_.num_hidden_layers, hs = config_.hidden_size, is = config_.intermediate_size;
+  const int vs = config_.vocab_size, n_heads = config_.num_attention_heads, n_kv = config_.num_key_value_heads;
+  const int head_dim = hs / n_heads, kv_row = n_kv * head_dim;
+  const float eps = config_.rms_norm_eps, scale = 1.0f / std::sqrt(static_cast<float>(head_dim));
+  if (n < 1 || n > kMaxRows || config_.num_cpu_offload_layers != 0 || !kv_cache ||
+      pos + n > kv_cache->allocated_max_seq_len)
+    return {};
+  ensure_f32_concatenated_weights_loaded();
+  ensure_lm_head_dequantized();
+  if (!w_q_f32_dev_ || !w_k_f32_dev_ || !w_v_f32_dev_ || !w_o_f32_dev_ ||
+      (config_.num_experts > 0 ? !w_moe_gate_dev_ : (!w_gate_f32_dev_ || !w_up_f32_dev_ || !w_down_f32_dev_)) ||
+      !lm_head_f32_dev_ || !final_norm_dev || !all_freqs_cis_dev)
+    return {};
+  // Rows: x, xn, resid, q, attn, o, down [hs]; k, v [kv_row]; gate, up [is]; logits [vs].
+  const size_t row = (size_t)7 * hs + 2 * kv_row + 2 * is + vs;
+  if (!verify_buf_dev_) gpuErrchk(cudaMalloc(&verify_buf_dev_, row * kMaxRows * sizeof(float)));
+  float* x = verify_buf_dev_;
+  float* xn = x + (size_t)kMaxRows * hs;
+  float* resid = xn + (size_t)kMaxRows * hs;
+  float* q = resid + (size_t)kMaxRows * hs;
+  float* attn = q + (size_t)kMaxRows * hs;
+  float* o = attn + (size_t)kMaxRows * hs;
+  float* down = o + (size_t)kMaxRows * hs;
+  float* k = down + (size_t)kMaxRows * hs;
+  float* v = k + (size_t)kMaxRows * kv_row;
+  float* gate = v + (size_t)kMaxRows * kv_row;
+  float* up = gate + (size_t)kMaxRows * is;
+  float* logits = up + (size_t)kMaxRows * is;
+  cudaStream_t st = 0;
+  std::vector<float> emb((size_t)n * hs);
+  for (int i = 0; i < n; ++i) {
+    const std::vector<float> e = lookup_embedding(tokens[i]);
+    if (e.size() != static_cast<size_t>(hs)) return {};
+    std::copy(e.begin(), e.end(), emb.begin() + (size_t)i * hs);
+  }
+  gpuErrchk(cudaMemcpyAsync(x, emb.data(), emb.size() * sizeof(float), cudaMemcpyHostToDevice, st));
+  for (int l = 0; l < L; ++l) {
+    KVCacheLayer& kvl = kv_cache->layers[l];
+    gpuErrchk(cudaMemcpyAsync(resid, x, (size_t)n * hs * sizeof(float), cudaMemcpyDeviceToDevice, st));
+    rmsnorm_batch_cuda(xn, x, layers[l].input_layernorm_dev, n, hs, eps, st);
+    gemm_rm_f32_cuda(cublas_handle_, xn, w_q_f32_dev_ + (size_t)l * hs * hs, q, n, hs, hs, st);
+    gemm_rm_f32_cuda(cublas_handle_, xn, w_k_f32_dev_ + (size_t)l * kv_row * hs, k, n, kv_row, hs, st);
+    gemm_rm_f32_cuda(cublas_handle_, xn, w_v_f32_dev_ + (size_t)l * kv_row * hs, v, n, kv_row, hs, st);
+    rope_batch_cuda(q, k, all_freqs_cis_dev, n, n_heads, n_kv, head_dim, pos, config_.is_gguf_file_loaded, st);
+    update_kv_cache_batch_cuda(kvl.k_dev_fp32, k, pos, n, n_kv, head_dim, kv_cache->max_seq_len_config_, st);
+    update_kv_cache_batch_cuda(kvl.v_dev_fp32, v, pos, n, n_kv, head_dim, kv_cache->max_seq_len_config_, st);
+    for (int i = 0; i < n; ++i)
+      attention_decode_at_cuda(q + (size_t)i * hs, kvl.k_dev_fp32, kvl.v_dev_fp32, attn + (size_t)i * hs, n_heads,
+                               pos + i + 1, head_dim, scale, kv_cache->allocated_max_seq_len, n_kv, st);
+    gemm_rm_f32_cuda(cublas_handle_, attn, w_o_f32_dev_ + (size_t)l * hs * hs, o, n, hs, hs, st);
+    add_residual_batch_cuda(x, o, resid, n, hs, st);
+    gpuErrchk(cudaMemcpyAsync(resid, x, (size_t)n * hs * sizeof(float), cudaMemcpyDeviceToDevice, st));
+    rmsnorm_batch_cuda(xn, x, layers[l].post_attention_layernorm_dev, n, hs, eps, st);
+    if (config_.num_experts > 0) {
+      moe_ffn_layer_cuda(l, xn, n, down, st);
+    } else {
+      gemm_rm_f32_cuda(cublas_handle_, xn, w_gate_f32_dev_ + (size_t)l * is * hs, gate, n, is, hs, st);
+      gemm_rm_f32_cuda(cublas_handle_, xn, w_up_f32_dev_ + (size_t)l * is * hs, up, n, is, hs, st);
+      swiglu_batch_cuda(gate, gate, up, n, is, st);
+      gemm_rm_f32_cuda(cublas_handle_, gate, w_down_f32_dev_ + (size_t)l * hs * is, down, n, hs, is, st);
+    }
+    add_residual_batch_cuda(x, down, resid, n, hs, st);
+  }
+  rmsnorm_batch_cuda(xn, x, final_norm_dev, n, hs, eps, st);
+  gemm_rm_f32_cuda(cublas_handle_, xn, lm_head_f32_dev_, logits, n, vs, hs, st);
+  std::vector<float> out((size_t)n * vs);
+  gpuErrchk(cudaMemcpyAsync(out.data(), logits, out.size() * sizeof(float), cudaMemcpyDeviceToHost, st));
+  gpuErrchk(cudaStreamSynchronize(st));
+  cublasSetStream(cublas_handle_, 0);
+  return out;
 }
 #endif

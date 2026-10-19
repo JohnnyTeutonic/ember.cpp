@@ -288,6 +288,7 @@ add_library(tinyllama_core STATIC
     gguf_parser.cpp
     quantization.cpp
     graph_ir.cpp
+    parallel_for.cpp
     model_constants.h
     ${CUDA_SOURCES} # Conditionally include CUDA source file
     ${MPI_SOURCES}  # Conditionally include MPI source files

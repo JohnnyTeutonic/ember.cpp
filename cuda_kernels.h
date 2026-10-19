@@ -666,6 +666,18 @@ void attention_devpos_cuda(const float* Q_current_dev, const float* K_layer_cach
 // in ascending index. EMBER_MOE_DENSE=1 forces the dense path.
 // scratch: moe_ffn_scratch_floats(T, d, d_ff, E, k).
 size_t moe_ffn_scratch_floats(int T, int d, int d_ff, int E, int k);
+
+// Row-major Y[T][O] = X[T][I] W[O][I]^T in FP32 (the handle's math mode).
+void gemm_rm_f32_cuda(cublasHandle_t handle, const float* X, const float* W, float* Y, int T, int O, int I,
+                      cudaStream_t stream);
+
+// Decode attention for one query row at a host-known length, chunked for a
+// cache of cache_max_seq_len positions exactly as attention_devpos_cuda (the
+// graph decode), so both give identical results for the same inputs.
+void attention_decode_at_cuda(const float* Q_current_dev, const float* K_layer_cache_base,
+                              const float* V_layer_cache_base, float* out_dev, int num_heads, int seq_len,
+                              int head_dim, float scale, int cache_max_seq_len, int cache_num_kv_heads,
+                              cudaStream_t stream);
 void moe_ffn_cuda(cublasHandle_t handle, const float* x, int T, int d, int d_ff, int E, int k, bool renorm,
                   const float* router, const float* gate_exps, const float* up_exps, const float* down_exps,
                   float* scratch, float* out, cudaStream_t stream);

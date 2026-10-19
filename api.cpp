@@ -977,11 +977,16 @@ if (prefill_enabled) {
               model_->forward_cpu_batch(emb, n, config_.num_hidden_layers, pos, &kv_cache_), n);
         } else {
 #ifdef HAS_CUDA
+          // The graph-like verification path (about one decode step per pass);
+          // the batched prefill when it does not apply.
+          if (config_.num_cpu_offload_layers == 0) all = model_->forward_device_verify(batch, pos, &kv_cache_);
+          if (all.empty()) {
           float* d_emb = nullptr;
           gpuErrchk(cudaMalloc(&d_emb, emb.size() * sizeof(float)));
           gpuErrchk(cudaMemcpy(d_emb, emb.data(), emb.size() * sizeof(float), cudaMemcpyHostToDevice));
           all = model_->forward_device_batch_prefill(d_emb, n, pos, &kv_cache_, 0, /*all_logits=*/true);
           gpuErrchk(cudaFree(d_emb));
+          }
 #endif
         }
         if (all.size() != (size_t)n * vs) {

@@ -18,15 +18,21 @@ ln -s "$JSON_INC/nlohmann" "$INC/nlohmann"
 mkdir -p "$OUT"
 SRC="model.cpp model_config.cpp kv_cache.cpp weight_management.cpp cpu_attention.cpp model_utils.cpp
      gpu_initialization.cpp gpu_memory_optimization.cpp cpu_batch_processor.cpp utils.cpp safetensors_loader.cpp
-     tokenizer.cpp logger.cpp api.cpp gguf_parser.cpp quantization.cpp graph_ir.cpp"
+     tokenizer.cpp logger.cpp api.cpp gguf_parser.cpp quantization.cpp graph_ir.cpp parallel_for.cpp"
 SIMD=-msimd128
 [ "${EMBER_WASM_SIMD:-1}" = 0 ] && SIMD=
+# EMBER_WASM_THREADS=N: a pthreads build (ember::parallel_for on N threads,
+# workers pre-spawned); it needs a cross-origin-isolated page (COOP/COEP).
+# EMBER_WASM_NAME=ember-mt names the outputs (pthread workers load the main
+# script by its own name, so a threaded build is built under its final name).
+THREADS=
+[ -n "${EMBER_WASM_THREADS:-}" ] && THREADS="-pthread -sPTHREAD_POOL_SIZE=$EMBER_WASM_THREADS -DEMBER_WASM_THREADS=$EMBER_WASM_THREADS"
 cd "$REPO"
-em++ -O3 $SIMD -std=c++17 -DNDEBUG -I"$REPO" -I"$INC" -Wno-unknown-pragmas \
+em++ -O3 $SIMD $THREADS -std=c++17 -DNDEBUG -I"$REPO" -I"$INC" -Wno-unknown-pragmas \
     $SRC deploy/wasm/ember_wasm.cpp \
     -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=1gb -sMODULARIZE=1 -sEXPORT_NAME=createEmber \
     -sEXPORTED_FUNCTIONS=_ember_load,_ember_chat -sEXPORTED_RUNTIME_METHODS=ccall,FS \
     -sFORCE_FILESYSTEM=1 -sENVIRONMENT=web,worker,node -sUSE_BOOST_HEADERS=1 -fexceptions \
-    -o "$OUT/ember.js"
+    -o "$OUT/${EMBER_WASM_NAME:-ember}.js"
 rm -rf "$INC"
 ls -la "$OUT"
