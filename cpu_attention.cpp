@@ -110,8 +110,9 @@ void attention_batch_cpu(
     size_t expected_output_size = (size_t)num_tokens_in_batch * num_q_heads * head_dim;
     batch_attn_output.assign(expected_output_size, 0.0f);
 
-
-
+    // Tokens are independent (each writes its own output rows; scores are
+    // per-iteration), so they run in parallel with unchanged arithmetic.
+#pragma omp parallel for schedule(dynamic)
     for (int token_idx = 0; token_idx < num_tokens_in_batch; ++token_idx) {
         size_t q_token_offset = (size_t)token_idx * num_q_heads * head_dim;
         size_t attn_out_token_offset = (size_t)token_idx * num_q_heads * head_dim;

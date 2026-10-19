@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ember chat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>ember chat</h1>
+    <p id="model-info" style="text-align:center;color:#666;font-size:0.9em;margin-top:-0.5em"></p>
+    <p class="intro">
+        A 14.6M-parameter chat model trained from scratch in
+        <a href="https://github.com/JohnnyTeutonic/paperkiln" target="_blank" rel="noopener">paperkiln</a>
+        and served on CPU by
+        <a href="https://github.com/JohnnyTeutonic/ember.cpp" target="_blank" rel="noopener">ember.cpp</a>,
+        both written by <a href="https://johnnyteutonic.github.io" target="_blank" rel="noopener">Jonathan Reich</a>.
+        It is good at small talk and knows no facts. Conversations are not stored.
+    </p>
+    <div id="chatbox">
+        <div id="history">
+            <p class="server-message">AI: Hello! How are you today?</p>
+        </div>
+        <div id="input-area">
+            <input type="text" id="message" maxlength="600" placeholder="Say something...">
+            <button id="send">Send</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

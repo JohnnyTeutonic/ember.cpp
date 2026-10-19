@@ -346,6 +346,21 @@ void matvec_q8_0_f32_vector_cpu(const std::vector<block_q8_0>& mat_q8_0,
   }
 }
 
+// Dot product of two float rows, accumulated in double in eight independent
+// lanes summed in a fixed order: deterministic, and vectorisable (a single
+// running sum, or the Kahan-compensated one these loops used before, is a
+// serial dependency chain the compiler cannot vectorise). Double over at most
+// a few thousand terms is accurate to ~1e-16 before the cast to float.
+static inline double dot_f32_as_f64(const float* a, const float* b, int n) {
+  double acc[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  int i = 0;
+  for (; i + 8 <= n; i += 8)
+    for (int k = 0; k < 8; ++k) acc[k] += static_cast<double>(a[i + k]) * static_cast<double>(b[i + k]);
+  double tail = 0.0;
+  for (; i < n; ++i) tail += static_cast<double>(a[i]) * static_cast<double>(b[i]);
+  return ((acc[0] + acc[1]) + (acc[2] + acc[3])) + ((acc[4] + acc[5]) + (acc[6] + acc[7])) + tail;
+}
+
 void matvec_f32_f32_vector_cpu(const std::vector<float>& mat_f32,
                               const std::vector<float>& vec_f32,
                               std::vector<float>& out_f32, int rows,
@@ -376,23 +391,8 @@ void matvec_f32_f32_vector_cpu(const std::vector<float>& mat_f32,
 
 #pragma omp parallel for schedule(static)
   for (int64_t r = 0; r < static_cast<int64_t>(rows); ++r) {
-    float sum = 0.0f;
-    size_t row_offset = static_cast<size_t>(r) * cols;
-
-    const float* mat_row_ptr = mat_f32.data() + row_offset;
-    const float* vec_ptr = vec_f32.data();
-
-    double k_sum = 0.0;
-    double k_c = 0.0;
-
-    for (int c = 0; c < cols; ++c) {
-      double term = static_cast<double>(mat_row_ptr[c]) * static_cast<double>(vec_ptr[c]);
-      double y = term - k_c;
-      double t_sum = k_sum + y;
-      k_c = (t_sum - k_sum) - y;
-      k_sum = t_sum;
-    }
-    out_f32[r] = static_cast<float>(k_sum);
+    const float* mat_row_ptr = mat_f32.data() + static_cast<size_t>(r) * cols;
+    out_f32[r] = static_cast<float>(dot_f32_as_f64(mat_row_ptr, vec_f32.data(), cols));
   }
 }
 
@@ -758,25 +758,16 @@ void matmul_f32_f32_batch_cpu(
 
   batch_output_activations.resize((size_t)num_tokens * output_dim);
 
+  // Weight rows outermost: each row (input_dim floats, a few KB) stays in L1
+  // while every token uses it, so the weights stream from memory once per
+  // call instead of once per token. The same dot products as token-major
+  // order, so the same results.
 #pragma omp parallel for schedule(static)
-  for (int t = 0; t < num_tokens; ++t) {
-    size_t input_token_offset = (size_t)t * input_dim;
-    size_t output_token_offset = (size_t)t * output_dim;
-
-    for (int o = 0; o < output_dim; ++o) {
-      double k_sum = 0.0;
-      double k_c = 0.0;
-      size_t weight_row_offset = (size_t)o * input_dim;
-
-      for (int i = 0; i < input_dim; ++i) {
-        double term = static_cast<double>(mat_weights[weight_row_offset + i]) *
-                      static_cast<double>(batch_input_activations[input_token_offset + i]);
-        double y = term - k_c;
-        double t_sum = k_sum + y;
-        k_c = (t_sum - k_sum) - y;
-        k_sum = t_sum;
-      }
-      batch_output_activations[output_token_offset + o] = static_cast<float>(k_sum);
+  for (int o = 0; o < output_dim; ++o) {
+    const float* w_row = mat_weights.data() + (size_t)o * input_dim;
+    for (int t = 0; t < num_tokens; ++t) {
+      batch_output_activations[(size_t)t * output_dim + o] = static_cast<float>(
+          dot_f32_as_f64(w_row, batch_input_activations.data() + (size_t)t * input_dim, input_dim));
     }
   }
 }

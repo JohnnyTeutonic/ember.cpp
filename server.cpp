@@ -41,6 +41,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <atomic>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -107,6 +108,20 @@ int main(int argc, char** argv) {
   }
   
   httplib::Server svr;
+  // EMBER_PUBLIC=1: settings for serving strangers on the open internet.
+  // Warnings-only logging (nothing a visitor types reaches the log), a small
+  // request size cap, socket timeouts, a bounded wait queue, and per-request
+  // caps on input, history and generation (applied in /chat below).
+  static const bool public_mode = [] {
+    const char* v = std::getenv("EMBER_PUBLIC");
+    return v && std::string(v) == "1";
+  }();
+  if (public_mode) {
+    Logger::set_level(Logger::Level::WARNING);
+    svr.set_payload_max_length(64 * 1024);
+    svr.set_read_timeout(10, 0);
+    svr.set_write_timeout(30, 0);
+  }
   
   if (std::filesystem::exists(www_path) &&
       std::filesystem::is_directory(www_path)) {
@@ -127,10 +142,26 @@ int main(int argc, char** argv) {
   // session and returned HTTP 500s or each other's state (19 Oct 2026,
   // tools/chat_concurrency_check.py).
   static std::mutex session_mu;
+  // Requests in a handler or a stream provider (waiting or generating).
+  static std::atomic<int> waiting{0};
+  struct Waiting {
+    Waiting() { ++waiting; }
+    ~Waiting() { --waiting; }
+  };
   svr.Post("/chat", [&session](const httplib::Request& req,
                                httplib::Response& res) {
         // TTFT clock starts here: the earliest point the server owns the request.
         const auto t_request = std::chrono::steady_clock::now();
+        // Public mode: refuse rather than queue without bound.
+        Waiting waiting_guard;
+        if (public_mode && waiting.load() > 8) {
+          res.status = 503;
+          res.set_header("Access-Control-Allow-Origin", "*");
+          res.set_header("Retry-After", "2");
+          res.set_content(json{{"error", "busy: too many people chatting at once, try again in a moment"}}.dump(),
+                          "application/json");
+          return;
+        }
         std::lock_guard<std::mutex> session_lock(session_mu);
         const double queue_ms =
             std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_request).count();
@@ -162,6 +193,30 @@ int main(int argc, char** argv) {
         top_k = req_json["top_k"].get<int>();
       if (req_json.contains("top_p"))
         top_p = req_json["top_p"].get<float>();
+
+          if (public_mode) {
+            constexpr size_t kMaxText = 600;  // bytes per message
+            if (user_input_from_client.size() > kMaxText) {
+              res.status = 400;
+              res.set_header("Access-Control-Allow-Origin", "*");
+              res.set_content(json{{"error", "message too long (600 characters at most)"}}.dump(), "application/json");
+              return;
+            }
+            max_new_tokens = std::min(std::max(max_new_tokens, 1), 64);
+            temperature = std::min(std::max(temperature, 0.0f), 1.5f);
+            top_k = std::min(std::max(top_k, 0), 200);
+            top_p = std::min(std::max(top_p, 0.05f), 1.0f);
+            req_json.erase("return_ids");
+            if (req_json.contains("history") && req_json["history"].is_array()) {
+              json& hist = req_json["history"];
+              while (hist.size() > 16) hist.erase(hist.begin());  // the context holds ~5 turns anyway
+              for (auto& h : hist)
+                for (const char* key : {"content", "user", "assistant"})
+                  if (h.is_object() && h.contains(key) && h[key].is_string() &&
+                      h[key].get<std::string>().size() > kMaxText)
+                    h[key] = h[key].get<std::string>().substr(0, kMaxText);
+            }
+          }
 
           // paperkiln byte-level BPE chat models: the same /chat contract as
           // mtstudio chat. The prompt is exactly the SFT template: each past
@@ -260,6 +315,7 @@ int main(int argc, char** argv) {
             res.set_header("Cache-Control", "no-cache");
             res.set_chunked_content_provider(
                 "text/event-stream", [run, t_request, sess](size_t, httplib::DataSink& sink) {
+                  Waiting stream_waiting;
                   std::lock_guard<std::mutex> stream_lock(session_mu);
                   const double waited = std::chrono::duration<double, std::milli>(
                                             std::chrono::steady_clock::now() - t_request).count();

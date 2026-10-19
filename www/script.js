@@ -181,8 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const initialAIMessage = historyDiv.querySelector('.server-message');
-    if(initialAIMessage) initialAIMessage.textContent = "AI: Hello! How can I help you today?";
+    // The greeting is the page's own (index.html).
     
     messageInput.focus();
 }); 
