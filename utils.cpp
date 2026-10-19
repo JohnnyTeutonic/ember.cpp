@@ -826,6 +826,20 @@ void matmul_f32_f32_batch_cpu(
   });
 }
 
+void matmul_rows_f32_batch_cpu(const std::function<void(int64_t, float*)>& row_fn,
+                               const float* batch_input_activations, float* batch_output_activations,
+                               int num_tokens, int output_dim, int input_dim) {
+  ember::parallel_for(output_dim, [&](int64_t o) {
+    thread_local std::vector<float> w_row;
+    if (w_row.size() < static_cast<size_t>(input_dim)) w_row.resize(input_dim);
+    row_fn(o, w_row.data());
+    for (int t = 0; t < num_tokens; ++t) {
+      batch_output_activations[(size_t)t * output_dim + o] = static_cast<float>(
+          dot_f32_as_f64(w_row.data(), batch_input_activations + (size_t)t * input_dim, input_dim));
+    }
+  });
+}
+
 void matvec_q6k_f32_vector_cpu(const std::vector<block_q6_K>& mat_q6k,
                                const std::vector<float>& vec_f32,
                                std::vector<float>& out_f32, int rows,

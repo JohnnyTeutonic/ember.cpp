@@ -322,7 +322,9 @@ TinyLlamaModel::TinyLlamaModel(const ModelConfig& initial_config,
   }
   // --- END GGUFData Integrity Check ---
   if (this->ir_only_) {
-    this->config_.num_cpu_offload_layers = this->config_.num_hidden_layers;  // the interpreter is CPU-only
+    // No llama layers to place: the interpreter owns the weights and picks its
+    // own device from the CLI request (api.cpp).
+    this->config_.num_cpu_offload_layers = this->config_.num_hidden_layers;
     Logger::info("TinyLlamaModel: IR-only GGUF, weights left to the interpreter.");
     return;
   }

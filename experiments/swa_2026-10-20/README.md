@@ -27,5 +27,16 @@ In the end-to-end runs the windowed replies differ from the window-0 replies in 
 side files, specs, logs) are the receipts; the kernel test is `tools/swa_attention_test.cpp`,
 the paperkiln-op dumper `tools/swa_reference_dump.cpp` (build lines in their headers).
 
-Not yet: paperkiln's trained swa_tiny with its exported IR; a CUDA kernel; a ring-buffer cache
-(the cache keeps every position up to max_len).
+## swa_tiny (`swa_tiny_gate.log`)
+
+paperkiln's trained sliding-window model (paperkiln 24620029; swa_tiny.gguf f4a3392f; gpt2-shaped,
+d128 L2 H2, ctx 256, window 32, sinks 4; family_hint gpt2_swa; window and sinks in its exported
+IR) against mtstudio's greedy reference (db3c144a, 40 prompts, up to 200 new tokens):
+
+| Run | replies = mtstudio |
+|---|---|
+| CPU build | 40/40 (36 of 40 replies longer than the window) |
+| CUDA build (runs the CPU interpreter, as designed) | 40/40 |
+| WASM, max_new capped at 64 by ember_chat, vs native at 64 | 40/40 identical (36 past the window) |
+
+Not yet: a CUDA windowed kernel; a ring-buffer cache (the cache keeps every position up to max_len).
