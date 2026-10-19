@@ -1,0 +1,20 @@
+1fc4ec395183858b
+== v2 build_cuda
+n=40 reply identical 40, token count 40, stop reason 40, prompt tokens == bpe.py 40
+== v2 build_cpu
+n=40 reply identical 40, token count 40, stop reason 40, prompt tokens == bpe.py 40
+== v2 WASM (node)
+n=40: WASM reply == mtstudio 40, token count 40 (943 ms per reply in node)
+== Q8_0 references from v2 (ggml order)
+chat_sftfinal_v2_q8.gguf: 42 tensors quantised to Q8_0
+chat_sftfinal_v2_q8out.gguf: 43 tensors quantised to Q8_0
+chat_sftfinal_v2_q8all.gguf: 44 tensors quantised to Q8_0
+v2_q8: tensor bytes identical to old-order q8: True; token_embd dims [384, 8192] F32
+v2_q8out: tensor bytes identical to old-order q8out: True; token_embd dims [384, 8192] F32
+v2_q8all: tensor bytes identical to old-order q8all: True; token_embd dims [384, 8192] Q8_0
+5301b3e90fe068c9bf5309e0ab806e8363a88bae0d0c284ea1b94ee29c79eee2 chat_sftfinal_v2_q8.gguf
+c68ab7d75314ee0e64661b0f9e29a5add052caf959be79c18af1ac50775ea190 chat_sftfinal_v2_q8all.gguf
+c9884cccdb2856b001a6d97525c57b9519ad32ab2934ccf30dfd0eb385a88bff chat_sftfinal_v2_q8out.gguf
+37684480 chat_sftfinal_v2_q8.gguf
+19203328 chat_sftfinal_v2_q8all.gguf
+28443904 chat_sftfinal_v2_q8out.gguf

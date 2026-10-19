@@ -459,6 +459,14 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
   }
 
   eos_token_id_ = config_.eos_token_id; // Use the session's config_ which is now model's config
+  // Small quantised models (a Q8_0 download for the browser): dequantise
+  // once, so the CPU path runs at f32 speed on the quantised values.
+  // EMBER_DEQUANT_AT_LOAD=0 keeps the per-call quantised kernels.
+  {
+    const char* dq = std::getenv("EMBER_DEQUANT_AT_LOAD");
+    if (!(dq && std::string(dq) == "0") && model_->dequantize_all_if_small(64u * 1000 * 1000))
+      Logger::info("Dequantised all weights to f32 at load (small model).");
+  }
 
   // paperkiln byte-level BPE (tokenizer.ggml.model == "bpe"): ember's own
   // Tokenizer cannot read its id-pair merges, so encode/decode go through

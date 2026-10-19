@@ -454,6 +454,11 @@ class TinyLlamaModel {
 #endif // HAS_CUDA
 
   const ModelConfig& get_config() const { return config_; }
+  // Dequantise every quantised weight to its f32 copy once, if the model
+  // has at most max_params parameters. The CPU forward prefers the f32
+  // copies, so a quantised file then runs at f32 speed on the quantised
+  // values (the download stays small). Returns true if it dequantised.
+  bool dequantize_all_if_small(size_t max_params);
 
   const std::vector<uint16_t>& get_lm_head() const { return lm_head; }
 
