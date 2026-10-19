@@ -668,8 +668,18 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
         static_cast<int>(std::min(lcp, tokens.size() - 1));
     last_ttft_.prefix_hit_rate =
         static_cast<double>(last_ttft_.prefix_reusable_tokens) / num_prompt_tokens;
-    kv_token_history_.clear();  // refilled only if this request completes
   }
+  // Prefix reuse (EMBER_PREFIX_REUSE, on by default): the KV cache still
+  // holds the previous request's prompt and reply, so the shared leading
+  // tokens are kept and only the rest is prefilled, from that offset. At
+  // least the last prompt token is always recomputed, for its logits. Only
+  // the batched prefill path reuses; the token-by-token path starts over.
+  static const bool prefix_reuse_on = [] {
+    const char* v = std::getenv("EMBER_PREFIX_REUSE");
+    return !(v && std::string(v) == "0");
+  }();
+  const int reuse = prefix_reuse_on ? last_ttft_.prefix_reusable_tokens : 0;
+  kv_token_history_.clear();  // refilled only if this request completes
 
   int total_steps = num_prompt_tokens + steps -1; // Max total tokens including prompt
   int generated_count = 0;
@@ -679,8 +689,14 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   std::vector<int> generated_token_ids; // Track generated tokens separately
   
   auto t_kv_reset = ttft_clock::now();
-  kv_cache_.clear_data(); // Clear K/V vector data for all layers
-  kv_cache_.seq_len = 0;  // Reset KVCache logical sequence length for new sequence
+  if (reuse > 0) {
+    // Keep positions [0, reuse); every later position is rewritten before
+    // attention reads it (attention reads only positions <= the current one).
+    kv_cache_.seq_len = reuse;
+  } else {
+    kv_cache_.clear_data(); // Clear K/V vector data for all layers
+    kv_cache_.seq_len = 0;  // Reset KVCache logical sequence length for new sequence
+  }
   last_ttft_.kv_reset_ms = ms_between(t_kv_reset, ttft_clock::now());
 
   std::vector<float> current_data_host; // To hold embedding or output of CPU layers
@@ -696,6 +712,10 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
     return v && *v ? std::max(1, std::atoi(v)) : 1;
   }();
   bool prefill_enabled = num_prompt_tokens >= prefill_min;
+  // Reused positions: [0, prefill_from) stay in the cache untouched.
+  const int prefill_from = prefill_enabled ? reuse : 0;
+  const int prefill_count = num_prompt_tokens - prefill_from;
+  last_ttft_.prefix_reused_tokens = prefill_from;
 
 if (prefill_enabled) {
       Logger::info("[Generate API] Prefill enabled. num_prompt_tokens: " + std::to_string(num_prompt_tokens) + 
@@ -704,9 +724,9 @@ if (prefill_enabled) {
       last_ttft_.batch_prefill = true;
       auto t_embed = ttft_clock::now();
 
-      std::vector<float> batch_initial_embeddings(num_prompt_tokens * config_.hidden_size);
-      for (int i = 0; i < num_prompt_tokens; ++i) {
-          std::vector<float> token_embedding = model_->lookup_embedding(tokens[i]);
+      std::vector<float> batch_initial_embeddings(prefill_count * config_.hidden_size);
+      for (int i = 0; i < prefill_count; ++i) {
+          std::vector<float> token_embedding = model_->lookup_embedding(tokens[prefill_from + i]);
           if (token_embedding.empty()) {
               Logger::error("Prefill: Embedding lookup returned empty vector for token ID: " + std::to_string(tokens[i]) + " at prompt pos " + std::to_string(i));
               return ""; // Or handle error appropriately
@@ -720,7 +740,7 @@ if (prefill_enabled) {
       std::vector<float> cpu_processed_embeddings;
       if (config_.num_cpu_offload_layers > 0) {
           Logger::info("[Generate API] Prefill: Processing " + std::to_string(config_.num_cpu_offload_layers) + " CPU layers for the batch.");
-          cpu_processed_embeddings = model_->forward_cpu_batch(batch_initial_embeddings, num_prompt_tokens, config_.num_cpu_offload_layers, 0, &kv_cache_);
+          cpu_processed_embeddings = model_->forward_cpu_batch(batch_initial_embeddings, prefill_count, config_.num_cpu_offload_layers, prefill_from, &kv_cache_);
           if (cpu_processed_embeddings.empty()) {
                Logger::error("Prefill: forward_cpu_batch returned empty or failed.");
                return "";
@@ -732,14 +752,14 @@ if (prefill_enabled) {
       // If all layers are CPU layers (i.e., num_gpu_layers == 0)
       if (config_.num_cpu_offload_layers == config_.num_hidden_layers) {
           Logger::info("[Generate API] Prefill: All layers are on CPU. Getting logits from final CPU layer output.");
-          std::vector<float> batch_logits = model_->forward_cpu_logits_batch(cpu_processed_embeddings, num_prompt_tokens);
+          std::vector<float> batch_logits = model_->forward_cpu_logits_batch(cpu_processed_embeddings, prefill_count);
           if (batch_logits.empty() || batch_logits.size() % config_.vocab_size != 0) {
               Logger::error("Prefill: forward_cpu_logits_batch returned invalid logits.");
               return "";
           }
           // Extract logits for the last token of the prompt
-          logits.assign(batch_logits.begin() + (num_prompt_tokens - 1) * config_.vocab_size,
-                        batch_logits.begin() + num_prompt_tokens * config_.vocab_size);
+          logits.assign(batch_logits.begin() + (prefill_count - 1) * config_.vocab_size,
+                        batch_logits.begin() + prefill_count * config_.vocab_size);
       } else { // GPU layers exist and need to be processed
 #ifdef HAS_CUDA
           Logger::info("[Generate API] Prefill: Processing GPU layers for the batch.");
@@ -767,7 +787,7 @@ if (prefill_enabled) {
           gpuErrchk(cudaEventCreate(&ev_fwd_end));
           gpuErrchk(cudaEventRecord(ev_fwd_start, 0));
           nvtxRangePushA("ttft_prefill_forward");
-          logits = model_->forward_device_batch_prefill(d_temp_batch_embeddings, num_prompt_tokens, start_pos_for_loop, &kv_cache_, 0);
+          logits = model_->forward_device_batch_prefill(d_temp_batch_embeddings, prefill_count, prefill_from, &kv_cache_, 0);
           nvtxRangePop();
           gpuErrchk(cudaEventRecord(ev_fwd_end, 0));
           gpuErrchk(cudaEventSynchronize(ev_fwd_end));
@@ -1126,6 +1146,7 @@ std::vector<std::string> TinyLlamaSession::generate_batch(const std::vector<std:
   // Initialize batch mode
   kv_cache_.initialize_batch(static_cast<int>(prompts.size()));
   kv_cache_.clear_data();
+  kv_token_history_.clear();  // the cache no longer holds the last generate()'s tokens
 
   std::vector<std::string> results(prompts.size());
   
@@ -1139,6 +1160,7 @@ std::vector<std::string> TinyLlamaSession::generate_batch(const std::vector<std:
     
     Logger::info("[DEBUG] Clearing KV cache data");
     kv_cache_.clear_data();
+    kv_token_history_.clear();  // the cache no longer holds the last generate()'s tokens
     Logger::info("[DEBUG] KV cache clear completed");
     
     // Phase 1: Parallel Batch Prefill
@@ -1324,6 +1346,7 @@ std::vector<std::string> TinyLlamaSession::generate_batch(const std::vector<std:
       
       // Reset to single-sequence mode for this prompt
       kv_cache_.seq_len = 0;
+      kv_token_history_.clear();  // the cache no longer holds the last generate()'s tokens
       
       // Use existing single-sequence generation logic
       std::string result = generate(prompts[i], steps, temperature, top_k, top_p, 

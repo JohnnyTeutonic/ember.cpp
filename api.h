@@ -55,6 +55,7 @@ struct TtftBreakdown {
   int prefix_prev_cached_tokens = 0;
   int prefix_reusable_tokens = 0;
   double prefix_hit_rate = 0.0;
+  int prefix_reused_tokens = 0;  // actually reused from the KV cache (not recomputed)
 
   // Per-op GPU time of the batched prefill (EMBER_OP_TIMING=1 only; empty
   // otherwise): op name -> ms over all layers, plus gpu_busy_in_ops,
