@@ -386,6 +386,12 @@ class TinyLlamaModel {
     cudaStream_t stream = 0);
   
   float* get_x_dev() { return x_dev_; }
+  // Graph decode (EMBER_DECODE_GRAPH, on by default): one decode step
+  // captured once as a CUDA graph and replayed per token. Returns the logits,
+  // or an empty vector when the graph path does not apply (CPU layers,
+  // quantized KV cache, no FP32 LM head, capture failure); the caller then
+  // uses forward_device().
+  std::vector<float> forward_device_graph(int token_id, int pos, KVCache* kv_cache);
   // Per-op GPU time of the last batched prefill, filled only when
   // EMBER_OP_TIMING=1 (docs/TTFT.md); empty otherwise.
   const std::map<std::string, double>& last_prefill_op_ms() const { return last_prefill_op_ms_; }
@@ -538,6 +544,16 @@ class TinyLlamaModel {
   float* w_down_f32_dev_ = nullptr;
   float* lm_head_f32_dev_ = nullptr;
   cublasHandle_t cublas_handle_ = nullptr;
+  // Graph decode state (see forward_device_graph).
+  cudaStream_t decode_stream_ = nullptr;
+  cudaGraphExec_t decode_graph_exec_ = nullptr;
+  const void* decode_graph_key_ = nullptr;  // KV cache base the graph was captured for
+  int* decode_step_dev_ = nullptr;          // [token id, pos]
+  int* decode_step_host_ = nullptr;         // pinned
+  float* decode_logits_host_ = nullptr;     // pinned, vocab_size
+  float* decode_embed_f32_dev_ = nullptr;   // FP32 embedding table (host lookup values)
+  void* decode_cublas_ws_ = nullptr;
+  bool decode_graph_disabled_ = false;
 
   float* x_dev_ = nullptr;
   float* x_norm_dev_ = nullptr;

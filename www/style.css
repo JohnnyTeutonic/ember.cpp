@@ -71,3 +71,12 @@ body {
 #send:hover {
     background-color: #0056b3;
 } 
+.timing {
+    font-size: 0.75em;
+    color: #888;
+    margin: -4px 0 8px 4px;
+}
+
+.error-message {
+    color: #a33;
+}

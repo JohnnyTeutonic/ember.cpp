@@ -42,6 +42,7 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <nlohmann/json.hpp>
@@ -56,8 +57,22 @@
 
 using json = nlohmann::json;
 
+// Length of the longest prefix of s that ends on a whole UTF-8 character, so
+// a streamed piece never splits a multi-byte character (a BPE token can end
+// inside one).
+static size_t utf8_complete_prefix(const std::string& s) {
+  size_t n = s.size();
+  for (size_t back = 1; back <= 3 && back <= n; ++back) {
+    const unsigned char c = static_cast<unsigned char>(s[n - back]);
+    if ((c & 0xC0) == 0x80) continue;  // continuation byte: keep looking for the lead
+    const size_t need = (c & 0x80) == 0 ? 1 : (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3 : 4;
+    return need > back ? n - back : n;
+  }
+  return n;
+}
+
 int main(int argc, char** argv) {
-  std::string model_dir = "data";  
+  std::string model_dir = "data";
   std::string host = "localhost";
   int port = 8080;
   std::string www_path = "./www";  
@@ -154,7 +169,6 @@ int main(int argc, char** argv) {
           // <|user|>U<|assistant|> (no BOS, no separators), with the oldest
           // turns dropped until prompt + max_new_tokens fits the context.
           if (session->is_bpe()) {
-            if (req_json.contains("seed")) session->set_seed(req_json["seed"].get<unsigned>());
             std::vector<std::pair<std::string, std::string>> turns;
             if (req_json.contains("history") && req_json["history"].is_array()) {
               std::string pending_user;
@@ -196,32 +210,84 @@ int main(int argc, char** argv) {
               res.set_content(err.dump(), "application/json");
               return;
             }
-            const std::string reply = session->generate(prompt, max_new_tokens, temperature, top_k, top_p, "", false);
-            const tinyllama::TtftBreakdown& tb = session->last_ttft();
-            auto ms = [](auto a, auto b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
-            json res_json;
-            res_json["reply"] = reply;
-            res_json["stop_reason"] = session->last_stop_reason();
-            res_json["tokens"] = session->last_generated_tokens();
-            res_json["prompt_tokens"] = prompt_tokens;
-            res_json["history_turns_used"] = static_cast<int>(turns.size() - from);
-            // Opt-in exact ids (preference data needs the sampled ids, not a
-            // re-encoding of the stripped reply text).
-            if (req_json.value("return_ids", false)) {
-              res_json["prompt_ids"] = session->last_prompt_ids();
-              res_json["ids"] = session->last_generated_ids();
-              res_json["stop_id"] = session->last_stop_id();
+            const bool has_seed = req_json.contains("seed");
+            const unsigned seed = has_seed ? req_json["seed"].get<unsigned>() : 0u;
+            const bool want_ids = req_json.value("return_ids", false);
+            const int turns_used = static_cast<int>(turns.size() - from);
+            tinyllama::TinyLlamaSession* sess = session.get();
+            // Generate under the session lock (held by the caller) and build
+            // the reply object; cb, if set, sees each token as it is made.
+            auto run = [=](std::function<void(int)> cb, double waited_ms) {
+              if (has_seed) sess->set_seed(seed);
+              sess->set_token_callback(std::move(cb));
+              const std::string reply = sess->generate(prompt, max_new_tokens, temperature, top_k, top_p, "", false);
+              sess->set_token_callback(nullptr);
+              const tinyllama::TtftBreakdown& tb = sess->last_ttft();
+              auto ms = [](auto a, auto b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
+              json res_json;
+              res_json["reply"] = reply;
+              res_json["stop_reason"] = sess->last_stop_reason();
+              res_json["tokens"] = sess->last_generated_tokens();
+              res_json["prompt_tokens"] = prompt_tokens;
+              res_json["history_turns_used"] = turns_used;
+              // Opt-in exact ids (preference data needs the sampled ids, not a
+              // re-encoding of the stripped reply text).
+              if (want_ids) {
+                res_json["prompt_ids"] = sess->last_prompt_ids();
+                res_json["ids"] = sess->last_generated_ids();
+                res_json["stop_id"] = sess->last_stop_id();
+              }
+              res_json["ttft"] = {
+                  {"first_token", tb.first_token},
+                  {"queue_ms", waited_ms},
+                  {"request_to_first_token_ms", tb.first_token ? ms(t_request, tb.t_first_token) : -1.0},
+                  {"ttft_ms", tb.ttft_ms},
+                  {"num_prompt_tokens", tb.num_prompt_tokens},
+                  {"batch_prefill", tb.batch_prefill},
+                  {"prefill_wall_ms", tb.prefill_wall_ms},
+                  {"prefill_gpu_span_ms", tb.prefill_gpu_span_ms}};
+              return res_json;
+            };
+            if (!req_json.value("stream", false)) {
+              res.set_content(run(nullptr, queue_ms).dump(), "application/json");
+              return;
             }
-            res_json["ttft"] = {
-                {"first_token", tb.first_token},
-                {"queue_ms", queue_ms},
-                {"request_to_first_token_ms", tb.first_token ? ms(t_request, tb.t_first_token) : -1.0},
-                {"ttft_ms", tb.ttft_ms},
-                {"num_prompt_tokens", tb.num_prompt_tokens},
-                {"batch_prefill", tb.batch_prefill},
-                {"prefill_wall_ms", tb.prefill_wall_ms},
-                {"prefill_gpu_span_ms", tb.prefill_gpu_span_ms}};
-            res.set_content(res_json.dump(), "application/json");
+            // "stream": true -> server-sent events: {"token": text} as the
+            // reply is generated (leading whitespace skipped, never a split
+            // UTF-8 character), then the full reply object with "done": true.
+            // The provider runs after this handler returns, so it takes the
+            // session lock itself.
+            res.set_header("Cache-Control", "no-cache");
+            res.set_chunked_content_provider(
+                "text/event-stream", [run, t_request, sess](size_t, httplib::DataSink& sink) {
+                  std::lock_guard<std::mutex> stream_lock(session_mu);
+                  const double waited = std::chrono::duration<double, std::milli>(
+                                            std::chrono::steady_clock::now() - t_request).count();
+                  std::vector<int> ids;
+                  size_t sent = 0;
+                  auto send = [&sink](const json& j) {
+                    const std::string ev = "data: " + j.dump() + "\n\n";
+                    sink.write(ev.data(), ev.size());
+                  };
+                  json final_json = run(
+                      [&](int id) {
+                        ids.push_back(id);
+                        const std::string full = sess->bpe_decode(ids);
+                        const size_t end = utf8_complete_prefix(full);
+                        const size_t start = full.find_first_not_of(" \t\n\v\f\r");
+                        if (start == std::string::npos || start >= end) return;
+                        if (sent < start) sent = start;
+                        if (end > sent) {
+                          send(json{{"token", full.substr(sent, end - sent)}});
+                          sent = end;
+                        }
+                      },
+                      waited);
+                  final_json["done"] = true;
+                  send(final_json);
+                  sink.done();
+                  return true;
+                });
             return;
           }
 
