@@ -1,6 +1,7 @@
 #include "weight_management.h"
 
 #include <algorithm>
+#include <mutex>
 #include "ggml_types.h"
 #include "logger.h"
 #include "quantization.h"
@@ -34,6 +35,14 @@ bool TinyLlamaModel::dequantize_all_if_small(size_t max_params) {
     if (params > max_params) return false;
     ensure_embed_tokens_dequantized();
     ensure_lm_head_dequantized();
+    for (auto& lw : layers) {  // MoE router (Q8_0 in paperkiln's Q8_0 exports)
+        if (lw.moe_router_f32.empty() && !lw.moe_router_q8_0.empty()) {
+            const size_t n = lw.moe_router_q8_0.size() * GGML_QK8_0;
+            dequantize_vector_q8_0_to_f32(lw.moe_router_q8_0, lw.moe_router_f32, n, 0);
+            lw.moe_router_q8_0.clear();
+            lw.moe_router_q8_0.shrink_to_fit();
+        }
+    }
     for (int l = 0; l < static_cast<int>(layers.size()); ++l) {
         ensure_q_proj_dequantized(l);
         ensure_k_proj_dequantized(l);
@@ -714,6 +723,58 @@ void TinyLlamaModel::free_layer_gpu_weights(int layer_idx) {
 // NOTE: map_gguf_weights is required by BOTH CUDA and CPU builds (it maps
 // GGUF tensors into host-side model fields). It was previously trapped inside
 // the HAS_CUDA block opened far above, which broke CPU-only linking.
+// Load-time dequantisation of the formats ember has no kernels for: ggml's
+// legacy 32-wide blocks (Q4_0, Q4_1, Q5_0, Q5_1) and F16, written straight
+// into the f32 vector in the tensor's own element order. Block layouts as in
+// ggml-common.h: Q4_0 {d, qs[16]}, Q4_1 {d, m, qs[16]}, Q5_0 {d, qh[4], qs[16]},
+// Q5_1 {d, m, qh[4], qs[16]}; element j of a block uses the low nibble of qs[j],
+// element j+16 the high nibble, and the Q5 formats take bit j (resp. j+16) of qh
+// as the fifth bit. x = (q - 8) d, q d + m, (q - 16) d, q d + m respectively.
+// Returns false for any other type.
+static bool dequant_legacy_to_f32(const GGUFTensorInfo& info, const uint8_t* src, std::vector<float>& out) {
+  const GGMLType t = info.type;
+  const size_t n = info.num_elements;
+  if (t == GGMLType::GGML_TYPE_F16) {
+    out.resize(n);
+    for (size_t i = 0; i < n; ++i) {
+      uint16_t h;
+      std::memcpy(&h, src + 2 * i, 2);
+      out[i] = fp16_to_fp32(h, false);
+    }
+    return true;
+  }
+  const bool q4_0 = t == GGMLType::GGML_TYPE_Q4_0, q4_1 = t == GGMLType::GGML_TYPE_Q4_1;
+  const bool q5_0 = t == GGMLType::GGML_TYPE_Q5_0, q5_1 = t == GGMLType::GGML_TYPE_Q5_1;
+  if (!(q4_0 || q4_1 || q5_0 || q5_1)) return false;
+  if (n % 32 != 0) throw std::runtime_error("legacy-quantised tensor with " + std::to_string(n) + " elements (not a multiple of 32)");
+  const bool has_min = q4_1 || q5_1, five_bit = q5_0 || q5_1;
+  const size_t bsz = ggml_type_size(t), nb = n / 32;
+  if (info.size_in_bytes < nb * bsz) throw std::runtime_error("legacy-quantised tensor is shorter than its element count implies");
+  out.resize(n);
+  for (size_t b = 0; b < nb; ++b) {
+    const uint8_t* p = src + b * bsz;
+    uint16_t dh, mh = 0;
+    std::memcpy(&dh, p, 2);
+    p += 2;
+    if (has_min) { std::memcpy(&mh, p, 2); p += 2; }
+    uint32_t qh = 0;
+    if (five_bit) { std::memcpy(&qh, p, 4); p += 4; }
+    const float d = fp16_to_fp32(dh, false), m = has_min ? fp16_to_fp32(mh, false) : 0.0f;
+    const int offset = has_min ? 0 : (five_bit ? 16 : 8);
+    float* y = out.data() + b * 32;
+    for (int j = 0; j < 16; ++j) {
+      int lo = p[j] & 0x0F, hi = p[j] >> 4;
+      if (five_bit) {
+        lo |= ((qh >> j) & 1) << 4;
+        hi |= ((qh >> (j + 16)) & 1) << 4;
+      }
+      y[j] = static_cast<float>(lo - offset) * d + m;
+      y[j + 16] = static_cast<float>(hi - offset) * d + m;
+    }
+  }
+  return true;
+}
+
 void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
   Logger::info("Mapping GGUF weights to model fields (ULTRA-OPTIMIZED VERSION)...");
 
@@ -791,6 +852,8 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
   
   std::atomic<int> processed_count{0};
   std::atomic<int> error_count{0};
+  std::mutex first_error_mu;
+  std::string first_error;  // reported if any tensor fails to map
 
   // Process global tensors sequentially (small count, avoid overhead)
   for (size_t idx : global_tensor_indices) {
@@ -832,6 +895,9 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
         std::memcpy(model.lm_head_f32.data(), tensor_data_ptr, info.size_in_bytes);
             break;
           }
+          default:
+            if (!dequant_legacy_to_f32(info, tensor_data_ptr, model.lm_head_f32)) throw std::runtime_error(target_field_key + ": unsupported tensor type " + ggml_type_name(info.type));
+            break;
         }
         processed_count++;
       continue;
@@ -869,6 +935,9 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
         std::memcpy(model.embed_tokens_f32.data(), tensor_data_ptr, info.size_in_bytes);
             break;
           }
+          default:
+            if (!dequant_legacy_to_f32(info, tensor_data_ptr, model.embed_tokens_f32)) throw std::runtime_error(target_field_key + ": unsupported tensor type " + ggml_type_name(info.type));
+            break;
         }
         processed_count++;
       continue;
@@ -879,13 +948,15 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
         size_t num_elements = info.size_in_bytes / sizeof(float);
         model.final_norm_f32.resize(num_elements);
         std::memcpy(model.final_norm_f32.data(), tensor_data_ptr, info.size_in_bytes);
-      }
+      } else if (!dequant_legacy_to_f32(info, tensor_data_ptr, model.final_norm_f32)) throw std::runtime_error(target_field_key + ": unsupported tensor type " + ggml_type_name(info.type));
         processed_count++;
       continue;
     }
 
     } catch (const std::exception& e) {
       error_count++;
+      std::lock_guard<std::mutex> lk(first_error_mu);
+      if (first_error.empty()) first_error = e.what();
     }
   }
   
@@ -910,6 +981,11 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
         const char* field = name.c_str() + name.find('.', 4) + 1;
         
                 // BLAZING FAST: Direct character-based dispatch without string operations
+        #define LEGACY_OR_THROW(target_f32) \
+          default: \
+            if (!dequant_legacy_to_f32(info, tensor_data_ptr, target_f32)) \
+              throw std::runtime_error(name + ": unsupported tensor type " + ggml_type_name(info.type)); \
+            break;
         #define FAST_COPY_WEIGHT(target_vec, block_type) \
           target_vec.resize(info.size_in_bytes / sizeof(block_type)); \
           std::memcpy(target_vec.data(), tensor_data_ptr, info.size_in_bytes);
@@ -931,10 +1007,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
                              std::to_string(layer.q_proj_f32.size()) +
                              " into layer_idx=" + std::to_string(layer_idx));
                 break; // transformer_cpp fp32 exports
-              default:
-                Logger::info("[MAP_DEBUG] " + name + " UNHANDLED type=" +
-                             std::to_string(static_cast<int>(info.type)));
-                break;
+              LEGACY_OR_THROW(layer.q_proj_f32)
             }
           } else if (name.find("attn_k.weight") != std::string::npos) {
             switch (info.type) {
@@ -944,6 +1017,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.k_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.k_proj, uint16_t); break;
               case GGMLType::GGML_TYPE_F32: FAST_COPY_WEIGHT(layer.k_proj_f32, float); break; // transformer_cpp fp32 exports
+              LEGACY_OR_THROW(layer.k_proj_f32)
             }
           } else if (name.find("attn_v.weight") != std::string::npos) {
             switch (info.type) {
@@ -953,6 +1027,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.v_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.v_proj, uint16_t); break;
               case GGMLType::GGML_TYPE_F32: FAST_COPY_WEIGHT(layer.v_proj_f32, float); break; // transformer_cpp fp32 exports
+              LEGACY_OR_THROW(layer.v_proj_f32)
             }
           } else if (name.find("attn_output.weight") != std::string::npos) {
             switch (info.type) {
@@ -962,12 +1037,28 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.o_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.o_proj, uint16_t); break;
               case GGMLType::GGML_TYPE_F32: FAST_COPY_WEIGHT(layer.o_proj_f32, float); break; // transformer_cpp fp32 exports
+              LEGACY_OR_THROW(layer.o_proj_f32)
             }
-          } else if (name.find("attn_norm.weight") != std::string::npos && info.type == GGMLType::GGML_TYPE_F32) {
-            FAST_COPY_WEIGHT(layer.input_layernorm_f32, float);
+          } else if (name.find("attn_norm.weight") != std::string::npos) {
+            if (info.type == GGMLType::GGML_TYPE_F32) { FAST_COPY_WEIGHT(layer.input_layernorm_f32, float); }
+            else if (!dequant_legacy_to_f32(info, tensor_data_ptr, layer.input_layernorm_f32))
+              throw std::runtime_error(name + ": unsupported tensor type " + ggml_type_name(info.type));
           }
         } else if (name_len > 10 && name.find("ffn_") != std::string::npos) {
-          if (name.find("ffn_gate.weight") != std::string::npos) {
+          if (name.find("ffn_gate_inp.weight") != std::string::npos) {  // MoE router
+            if (info.type == GGMLType::GGML_TYPE_F32) { FAST_COPY_WEIGHT(layer.moe_router_f32, float); }
+            else if (info.type == GGMLType::GGML_TYPE_Q8_0) { FAST_COPY_WEIGHT(layer.moe_router_q8_0, block_q8_0); }
+            else if (!dequant_legacy_to_f32(info, tensor_data_ptr, layer.moe_router_f32))
+              throw std::runtime_error(name + ": unsupported tensor type " + ggml_type_name(info.type));
+          } else if (name.find("_exps.weight") != std::string::npos) {  // MoE expert stacks
+            std::vector<float>& dst = name.find("ffn_gate_exps") != std::string::npos ? layer.moe_gate_exps_f32
+                                    : name.find("ffn_up_exps") != std::string::npos   ? layer.moe_up_exps_f32
+                                                                                     : layer.moe_down_exps_f32;
+            if (info.type == GGMLType::GGML_TYPE_F32) { FAST_COPY_WEIGHT(dst, float); }
+            else if (!dequant_legacy_to_f32(info, tensor_data_ptr, dst))
+              throw std::runtime_error(name + ": MoE expert stacks must be F32, F16 or Q4_0/Q4_1/Q5_0/Q5_1 (got " +
+                                       std::string(ggml_type_name(info.type)) + ")");
+          } else if (name.find("ffn_gate.weight") != std::string::npos) {
             switch (info.type) {
               case GGMLType::GGML_TYPE_Q8_0: FAST_COPY_WEIGHT(layer.gate_proj_q8_0, block_q8_0); break;
               case GGMLType::GGML_TYPE_Q4_K: FAST_COPY_WEIGHT(layer.gate_proj_q4k, block_q4_K); break;
@@ -975,6 +1066,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.gate_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.gate_proj, uint16_t); break;
               case GGMLType::GGML_TYPE_F32: FAST_COPY_WEIGHT(layer.gate_proj_f32, float); break; // transformer_cpp fp32 exports
+              LEGACY_OR_THROW(layer.gate_proj_f32)
             }
           } else if (name.find("ffn_up.weight") != std::string::npos) {
             switch (info.type) {
@@ -984,6 +1076,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.up_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.up_proj, uint16_t); break;
               case GGMLType::GGML_TYPE_F32: FAST_COPY_WEIGHT(layer.up_proj_f32, float); break; // transformer_cpp fp32 exports
+              LEGACY_OR_THROW(layer.up_proj_f32)
             }
           } else if (name.find("ffn_down.weight") != std::string::npos) {
             switch (info.type) {
@@ -993,23 +1086,33 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.down_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.down_proj, uint16_t); break;
               case GGMLType::GGML_TYPE_F32: FAST_COPY_WEIGHT(layer.down_proj_f32, float); break; // transformer_cpp fp32 exports
+              LEGACY_OR_THROW(layer.down_proj_f32)
             }
-          } else if (name.find("ffn_norm.weight") != std::string::npos && info.type == GGMLType::GGML_TYPE_F32) {
-            FAST_COPY_WEIGHT(layer.post_attention_layernorm_f32, float);
+          } else if (name.find("ffn_norm.weight") != std::string::npos) {
+            if (info.type == GGMLType::GGML_TYPE_F32) { FAST_COPY_WEIGHT(layer.post_attention_layernorm_f32, float); }
+            else if (!dequant_legacy_to_f32(info, tensor_data_ptr, layer.post_attention_layernorm_f32))
+              throw std::runtime_error(name + ": unsupported tensor type " + ggml_type_name(info.type));
           }
         }
          
          #undef FAST_COPY_WEIGHT
+         #undef LEGACY_OR_THROW
       }
       processed_count++;
     } catch (const std::exception& e) {
       error_count++;
+      std::lock_guard<std::mutex> lk(first_error_mu);
+      if (first_error.empty()) first_error = e.what();
     }
   }
 
   Logger::info("Finished mapping GGUF weights: " + std::to_string(processed_count.load()) + "/" + 
                std::to_string(num_tensors) + " tensors processed successfully (errors: " + 
                std::to_string(error_count.load()) + ") with ultra-optimized parallel mapping");
+  // A tensor that failed to map would leave the model silently incomplete.
+  if (error_count.load() > 0)
+    throw std::runtime_error("GGUF weight mapping failed for " + std::to_string(error_count.load()) +
+                             " layer(s); first error: " + first_error);
 }
 
 #ifndef HAS_CUDA

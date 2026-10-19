@@ -219,6 +219,16 @@ std::vector<float> CPUBatchProcessor::forward_cpu_batch(
         
         rmsnorm_batch_cpu(current_batch_activations, w_post_attn_norm_vec, batch_x_norm2, num_tokens_in_batch, hs, eps);
         
+        std::vector<float> batch_mlp_down_proj_out((size_t)num_tokens_in_batch * hs);
+        if (model_->config_.num_experts > 0 && !lw.moe_gate_exps_f32.empty()) {
+            // Mixture-of-experts FFN, token by token (utils.cpp moe_ffn_f32_cpu).
+            #pragma omp parallel for schedule(static)
+            for (int t = 0; t < num_tokens_in_batch; ++t)
+                moe_ffn_f32_cpu(batch_x_norm2.data() + (size_t)t * hs, hs, is, model_->config_.num_experts,
+                                model_->config_.num_experts_used, lw.moe_router_f32.data(), lw.moe_gate_exps_f32.data(),
+                                lw.moe_up_exps_f32.data(), lw.moe_down_exps_f32.data(),
+                                batch_mlp_down_proj_out.data() + (size_t)t * hs);
+        } else {
         std::vector<float> batch_gate_proj_out((size_t)num_tokens_in_batch * is);
         std::vector<float> batch_up_proj_out((size_t)num_tokens_in_batch * is);
         
@@ -255,7 +265,6 @@ std::vector<float> CPUBatchProcessor::forward_cpu_batch(
             batch_swiglu_out[i] = silu_gate_val * batch_up_proj_out[i];
         }
         
-        std::vector<float> batch_mlp_down_proj_out((size_t)num_tokens_in_batch * hs);
         if (!lw.down_proj_f32.empty()) {
             matmul_f32_f32_batch_cpu(lw.down_proj_f32, batch_swiglu_out, batch_mlp_down_proj_out, num_tokens_in_batch, hs, is);
         } else if (!lw.down_proj_q8_0.empty()) {
@@ -268,6 +277,7 @@ std::vector<float> CPUBatchProcessor::forward_cpu_batch(
             Logger::error("[CPU_BATCH_FWD] Layer " + std::to_string(l) + ": No down_proj weights found for CPU"); 
             return {};
         }
+        }  // dense FFN
         
         for(size_t i = 0; i < current_batch_activations.size(); ++i) {
             current_batch_activations[i] = residual_batch_component_mlp[i] + batch_mlp_down_proj_out[i];

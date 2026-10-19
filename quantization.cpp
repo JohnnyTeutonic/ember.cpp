@@ -661,6 +661,12 @@ size_t ggml_type_size(GGMLType type) {
       return sizeof(block_q6_K);
     case GGMLType::GGML_TYPE_Q4_0:
       return 18;
+    case GGMLType::GGML_TYPE_Q4_1:
+      return 20;
+    case GGMLType::GGML_TYPE_Q5_0:
+      return 22;
+    case GGMLType::GGML_TYPE_Q5_1:
+      return 24;
 
     case GGMLType::GGML_TYPE_Q8_0:
       return 34;
@@ -695,6 +701,9 @@ size_t ggml_type_block_size(GGMLType type) {
       return GGML_QK_K;
 
     case GGMLType::GGML_TYPE_Q4_0:
+    case GGMLType::GGML_TYPE_Q4_1:
+    case GGMLType::GGML_TYPE_Q5_0:
+    case GGMLType::GGML_TYPE_Q5_1:
     case GGMLType::GGML_TYPE_Q8_0:
 
       return 32;
