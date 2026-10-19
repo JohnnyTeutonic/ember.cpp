@@ -1780,7 +1780,8 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
     int num_tokens_in_batch,
     int current_model_pos, // This should be the starting position *within the KV cache* for the batch
     KVCache* kv_cache,
-    cudaStream_t stream) {
+    cudaStream_t stream,
+    bool all_logits) {
 
     Logger::info("[FWD_DEV_BATCH_PREFILL_ENTRY] num_tokens_in_batch: " + std::to_string(num_tokens_in_batch) +
                  ", current_model_pos: " + std::to_string(current_model_pos) +
@@ -2090,6 +2091,22 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
     op_timer.end();
     
     if (config_.num_cpu_offload_layers < config_.num_hidden_layers && num_tokens_in_batch > 0 && hidden_size > 0) { /* ... */ }
+    if (all_logits) {
+      // Speculative verification: the LM head on every row, with the same
+      // FP32 matvec as decode's LM head.
+      float* d_rows_logits;
+      gpuErrchk(cudaMalloc(&d_rows_logits, (size_t)num_tokens_in_batch * vocab_size * sizeof(float)));
+      for (int t = 0; t < num_tokens_in_batch; ++t)
+        matvec_f32_f32_cuda(cublas_handle_, lm_head_f32_dev_, d_batch_x_norm_out_attn + (size_t)t * hidden_size,
+                            d_rows_logits + (size_t)t * vocab_size, vocab_size, hidden_size, stream);
+      std::vector<float> h_rows((size_t)num_tokens_in_batch * vocab_size);
+      gpuErrchk(cudaMemcpyAsync(h_rows.data(), d_rows_logits, h_rows.size() * sizeof(float), cudaMemcpyDeviceToHost,
+                                stream));
+      gpuErrchk(cudaStreamSynchronize(stream));
+      gpuErrchk(cudaFree(d_rows_logits));
+      last_prefill_op_ms_ = op_timer.collect();
+      return h_rows;
+    }
     float* d_logits_last_token;
     gpuErrchk(cudaMalloc(&d_logits_last_token, (size_t)vocab_size * sizeof(float)));
     

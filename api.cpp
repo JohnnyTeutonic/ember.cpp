@@ -82,6 +82,20 @@ static int argmax(const std::vector<float>& v) {
   return std::distance(v.begin(), std::max_element(v.begin(), v.end()));
 }
 
+// Prompt-lookup drafting for speculative decoding: the most recent earlier
+// occurrence of the last 3 (then 2) tokens of the history, and up to k of
+// the tokens that followed it. Empty if there is no such match.
+static std::vector<int> prompt_lookup_draft(const std::vector<int>& h, int k) {
+  const int n = static_cast<int>(h.size());
+  for (int g = std::min(3, n - 1); g >= 2; --g) {
+    for (int s = n - g - 1; s >= 0; --s) {
+      if (std::equal(h.begin() + s, h.begin() + s + g, h.end() - g))
+        return std::vector<int>(h.begin() + s + g, h.begin() + std::min(n, s + g + k));
+    }
+  }
+  return {};
+}
+
 // CTRL-style repetition penalty over recently generated tokens. Tiny
 // word-level models fall into short degenerate cycles ("you are very kind."
 // x12, 2026-07-19); penalizing the last window of generated ids breaks the
@@ -865,6 +879,15 @@ if (prefill_enabled) {
   if (decode_timing) model_->decode_phase_ms().clear();
 #endif
   const auto t_decode_start = ttft_clock::now();
+  // EMBER_SPEC=k: speculative decoding with prompt-lookup drafts of up to k
+  // tokens, greedy (top_k == 1) only, all-GPU or all-CPU layers.
+  static const int spec_k = [] {
+    const char* e = std::getenv("EMBER_SPEC");
+    return e ? std::max(0, std::atoi(e)) : 0;
+  }();
+  const bool spec_on = spec_k > 0 && top_k == 1 &&
+                       (config_.num_cpu_offload_layers == 0 ||
+                        config_.num_cpu_offload_layers == config_.num_hidden_layers);
 
   for (int pos = start_pos_for_loop; pos < total_steps; ++pos) {
     t_phase = ttft_clock::now();
@@ -899,6 +922,71 @@ if (prefill_enabled) {
         }
     }
     
+    // Speculative step: one batched forward over [input, draft...] from pos
+    // gives the logits at every position; tokens are taken greedily while
+    // they equal the draft, plus the first one that does not (or a stop).
+    // KV entries written for rejected draft positions lie past the valid
+    // length and are overwritten by the next steps.
+    if (spec_on && pos >= num_prompt_tokens) {
+      const int room = std::min({spec_k, steps - generated_count, total_steps - pos - 1,
+                                 config_.max_position_embeddings - pos - 1});
+      std::vector<int> hist(tokens.begin(), tokens.begin() + num_prompt_tokens);
+      hist.insert(hist.end(), generated_token_ids.begin(), generated_token_ids.end());
+      const std::vector<int> draft = room > 0 ? prompt_lookup_draft(hist, room) : std::vector<int>{};
+      if (!draft.empty()) {
+        std::vector<int> batch = {input_token_id};
+        batch.insert(batch.end(), draft.begin(), draft.end());
+        const int n = static_cast<int>(batch.size());
+        const int hs = config_.hidden_size, vs = config_.vocab_size;
+        std::vector<float> emb((size_t)n * hs);
+        for (int i = 0; i < n; ++i) {
+          const std::vector<float> e = model_->lookup_embedding(batch[i]);
+          std::copy(e.begin(), e.end(), emb.begin() + (size_t)i * hs);
+        }
+        std::vector<float> all;
+        if (config_.num_cpu_offload_layers == config_.num_hidden_layers) {
+          all = model_->forward_cpu_logits_batch(
+              model_->forward_cpu_batch(emb, n, config_.num_hidden_layers, pos, &kv_cache_), n);
+        } else {
+#ifdef HAS_CUDA
+          float* d_emb = nullptr;
+          gpuErrchk(cudaMalloc(&d_emb, emb.size() * sizeof(float)));
+          gpuErrchk(cudaMemcpy(d_emb, emb.data(), emb.size() * sizeof(float), cudaMemcpyHostToDevice));
+          all = model_->forward_device_batch_prefill(d_emb, n, pos, &kv_cache_, 0, /*all_logits=*/true);
+          gpuErrchk(cudaFree(d_emb));
+#endif
+        }
+        if (all.size() != (size_t)n * vs) {
+          Logger::error("Speculative verification returned " + std::to_string(all.size()) + " logits; stopping.");
+          break;
+        }
+        int accepted = 0;
+        bool stop = false;
+        for (int i = 0; i < n; ++i) {
+          std::vector<float> lg(all.begin() + (size_t)i * vs, all.begin() + (size_t)(i + 1) * vs);
+          apply_repetition_penalty(lg, generated_token_ids, repetition_penalty_);
+          const int t = sample_top_k_top_p_temperature(lg, temperature, top_k, top_p, rng_);
+          generated_token_ids.push_back(t);
+          generated_count++;
+          emit_token(t);
+          generated_stream_ << decode_one(t);
+          generated_text_for_api_return_ += decode_one(t);
+          next_token_id = t;
+          if (is_stop(t) || generated_count >= steps) { stop = true; break; }
+          if (i + 1 < n && t == batch[i + 1]) { ++accepted; continue; }
+          break;
+        }
+        last_ttft_.spec_drafted += static_cast<int>(draft.size());
+        last_ttft_.spec_accepted += accepted;
+        last_ttft_.spec_passes += 1;
+        kv_cache_.seq_len = pos + accepted + 1;  // input + accepted drafts are now cached
+        host_phase("host.spec_step");
+        if (stop) break;
+        pos += accepted;  // the loop's ++pos then moves to the next input position
+        continue;
+      }
+    }
+
     host_phase("host.loop_head");
     current_data_host = model_->lookup_embedding(input_token_id);
     if (pos == 14 || pos == 15 || pos == 16) {

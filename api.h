@@ -56,6 +56,11 @@ struct TtftBreakdown {
   int prefix_reusable_tokens = 0;
   double prefix_hit_rate = 0.0;
   int prefix_reused_tokens = 0;  // actually reused from the KV cache (not recomputed)
+  // Speculative decoding (EMBER_SPEC=k): draft tokens proposed, accepted, and
+  // verification passes run (each pass replaces 1 + accepted decode steps).
+  int spec_drafted = 0;
+  int spec_accepted = 0;
+  int spec_passes = 0;
 
   // Per-op GPU time of the batched prefill (EMBER_OP_TIMING=1 only; empty
   // otherwise): op name -> ms over all layers, plus gpu_busy_in_ops,
