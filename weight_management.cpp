@@ -731,7 +731,7 @@ void TinyLlamaModel::free_layer_gpu_weights(int layer_idx) {
 // element j+16 the high nibble, and the Q5 formats take bit j (resp. j+16) of qh
 // as the fifth bit. x = (q - 8) d, q d + m, (q - 16) d, q d + m respectively.
 // Returns false for any other type.
-static bool dequant_legacy_to_f32(const GGUFTensorInfo& info, const uint8_t* src, std::vector<float>& out) {
+bool dequant_legacy_to_f32(const GGUFTensorInfo& info, const uint8_t* src, std::vector<float>& out) {
   const GGMLType t = info.type;
   const size_t n = info.num_elements;
   if (t == GGMLType::GGML_TYPE_F16) {

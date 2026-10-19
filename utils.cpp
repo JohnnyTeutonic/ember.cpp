@@ -697,39 +697,48 @@ void softmax_vector_cpu(const std::vector<float>& x,
   }
 }
 
-// Mixture-of-experts FFN for one token (llama.cpp's routing, paperkiln's
-// moe_ffn): router logits r = W_router x over E experts, softmax, the top-k
-// experts by probability (ties to the lower index), their probabilities
-// renormalised to sum to 1, and out = sum over the k of p_e * SwiGLU_e(x),
+// Mixture-of-experts FFN for one token, as paperkiln's IR op moe_ffn
+// (microtorch/include/microtorch/ir.hpp): router logits r = R x over E
+// experts; the top-k by logit (ties to the lower index); gates: with renorm,
+// a softmax over the k selected logits (= the E-way softmax renormalised over
+// them), else the E-way softmax's selected entries; out = sum over the
+// selected experts in ascending index of gate_e * SwiGLU_e(x),
 // SwiGLU_e(x) = W_down_e (silu(W_gate_e x) * (W_up_e x)). Layouts: router
 // [E][d]; per expert a contiguous [d_ff][d] gate/up block and [d][d_ff] down
 // block (llama.cpp's ffn_*_exps).
 void moe_ffn_f32_cpu(const float* x, int d, int d_ff, int E, int k, const float* router, const float* gate_exps,
-                     const float* up_exps, const float* down_exps, float* out) {
-  std::vector<float> p(E);
-  float mx = -std::numeric_limits<float>::infinity();
-  for (int e = 0; e < E; ++e) {
-    p[e] = static_cast<float>(dot_f32_as_f64(router + static_cast<size_t>(e) * d, x, d));
-    mx = std::max(mx, p[e]);
-  }
-  double z = 0.0;
-  for (int e = 0; e < E; ++e) z += (p[e] = std::exp(p[e] - mx));
-  for (int e = 0; e < E; ++e) p[e] = static_cast<float>(p[e] / z);
+                     const float* up_exps, const float* down_exps, float* out, bool renorm) {
+  std::vector<float> r(E);
+  for (int e = 0; e < E; ++e) r[e] = static_cast<float>(dot_f32_as_f64(router + static_cast<size_t>(e) * d, x, d));
   std::vector<int> sel;
   std::vector<char> taken(E, 0);
   for (int j = 0; j < k && j < E; ++j) {
     int best = -1;
     for (int e = 0; e < E; ++e)
-      if (!taken[e] && (best < 0 || p[e] > p[best])) best = e;  // strict >: ties keep the lower index
+      if (!taken[e] && (best < 0 || r[e] > r[best])) best = e;  // strict >: ties keep the lower index
     taken[best] = 1;
     sel.push_back(best);
   }
-  double psum = 0.0;
-  for (int e : sel) psum += p[e];
+  std::sort(sel.begin(), sel.end());  // accumulate in ascending expert index
+  std::vector<float> gate(E, 0.0f);
+  {
+    float mx = -std::numeric_limits<float>::infinity();
+    if (renorm) {
+      for (int e : sel) mx = std::max(mx, r[e]);
+      double z = 0.0;
+      for (int e : sel) z += std::exp(static_cast<double>(r[e] - mx));
+      for (int e : sel) gate[e] = static_cast<float>(std::exp(static_cast<double>(r[e] - mx)) / z);
+    } else {
+      for (int e = 0; e < E; ++e) mx = std::max(mx, r[e]);
+      double z = 0.0;
+      for (int e = 0; e < E; ++e) z += std::exp(static_cast<double>(r[e] - mx));
+      for (int e : sel) gate[e] = static_cast<float>(std::exp(static_cast<double>(r[e] - mx)) / z);
+    }
+  }
   std::fill(out, out + d, 0.0f);
   std::vector<float> h(d_ff);
   for (int e : sel) {
-    const float w = static_cast<float>(p[e] / psum);
+    const float w = gate[e];
     const float* g = gate_exps + static_cast<size_t>(e) * d_ff * d;
     const float* u = up_exps + static_cast<size_t>(e) * d_ff * d;
     const float* dn = down_exps + static_cast<size_t>(e) * d * d_ff;
