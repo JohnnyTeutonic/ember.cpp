@@ -40,6 +40,9 @@
 #endif
 
 #include <algorithm>
+#include <cstdio>
+#include <random>
+#include <ctime>
 #include <chrono>
 #include <atomic>
 #include <filesystem>
@@ -70,6 +73,103 @@ static size_t utf8_complete_prefix(const std::string& s) {
     return need > back ? n - back : n;
   }
   return n;
+}
+
+// ---- BPE chat core, shared by /chat and /v1/chat/completions ------------
+// paperkiln byte-level BPE chat models: the prompt is exactly the SFT
+// template, each past turn <|user|>U<|assistant|>A<|endoftext|> then
+// <|user|>U<|assistant|> (no BOS, no separators), with the oldest turns
+// dropped until prompt + max_new_tokens fits the context.
+struct BpeChatRequest {
+  std::string user_input;
+  std::vector<std::pair<std::string, std::string>> turns;  // (user, assistant), oldest first
+  int max_new_tokens = 60;
+  float temperature = 0.1f;
+  int top_k = 40;
+  float top_p = 0.9f;
+  bool has_seed = false;
+  unsigned seed = 0;
+  bool want_ids = false;
+};
+
+struct BpePrompt {
+  std::string prompt;
+  int prompt_tokens = 0;
+  int turns_used = 0;
+  std::string error;  // non-empty: the newest message alone does not fit
+};
+
+static BpePrompt bpe_build_prompt(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r) {
+  const std::string tail = "<|user|>" + r.user_input + "<|assistant|>";
+  auto build = [&](size_t from) {
+    std::string p;
+    for (size_t i = from; i < r.turns.size(); ++i)
+      p += "<|user|>" + r.turns[i].first + "<|assistant|>" + r.turns[i].second + "<|endoftext|>";
+    return p + tail;
+  };
+  const int ctx = sess.get_config().max_position_embeddings;
+  size_t from = 0;
+  BpePrompt out;
+  out.prompt = build(from);
+  while (from < r.turns.size() && sess.bpe_token_count(out.prompt) + r.max_new_tokens > ctx)
+    out.prompt = build(++from);
+  out.prompt_tokens = sess.bpe_token_count(out.prompt);
+  out.turns_used = static_cast<int>(r.turns.size() - from);
+  if (out.prompt_tokens >= ctx)
+    out.error = "message is " + std::to_string(out.prompt_tokens) + " tokens; the model's context is " +
+                std::to_string(ctx);
+  return out;
+}
+
+// Generate (the caller holds the session lock) and return the /chat reply
+// object. on_piece, if set, receives the reply text as it is produced:
+// leading whitespace skipped, never a split UTF-8 character.
+static json bpe_run(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r, const BpePrompt& p,
+                    std::chrono::steady_clock::time_point t_request, double waited_ms,
+                    const std::function<void(const std::string&)>& on_piece) {
+  if (r.has_seed) sess.set_seed(r.seed);
+  std::vector<int> ids;
+  size_t sent = 0;
+  if (on_piece) {
+    sess.set_token_callback([&](int id) {
+      ids.push_back(id);
+      const std::string full = sess.bpe_decode(ids);
+      const size_t end = utf8_complete_prefix(full);
+      const size_t start = full.find_first_not_of(" \t\n\v\f\r");
+      if (start == std::string::npos || start >= end) return;
+      if (sent < start) sent = start;
+      if (end > sent) {
+        on_piece(full.substr(sent, end - sent));
+        sent = end;
+      }
+    });
+  }
+  const std::string reply = sess.generate(p.prompt, r.max_new_tokens, r.temperature, r.top_k, r.top_p, "", false);
+  sess.set_token_callback(nullptr);
+  const tinyllama::TtftBreakdown& tb = sess.last_ttft();
+  auto ms = [](auto a, auto b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
+  json res_json;
+  res_json["reply"] = reply;
+  res_json["stop_reason"] = sess.last_stop_reason();
+  res_json["tokens"] = sess.last_generated_tokens();
+  res_json["prompt_tokens"] = p.prompt_tokens;
+  res_json["history_turns_used"] = p.turns_used;
+  // Opt-in exact ids (preference data needs the sampled ids, not a
+  // re-encoding of the stripped reply text).
+  if (r.want_ids) {
+    res_json["prompt_ids"] = sess.last_prompt_ids();
+    res_json["ids"] = sess.last_generated_ids();
+    res_json["stop_id"] = sess.last_stop_id();
+  }
+  res_json["ttft"] = {{"first_token", tb.first_token},
+                      {"queue_ms", waited_ms},
+                      {"request_to_first_token_ms", tb.first_token ? ms(t_request, tb.t_first_token) : -1.0},
+                      {"ttft_ms", tb.ttft_ms},
+                      {"num_prompt_tokens", tb.num_prompt_tokens},
+                      {"batch_prefill", tb.batch_prefill},
+                      {"prefill_wall_ms", tb.prefill_wall_ms},
+                      {"prefill_gpu_span_ms", tb.prefill_gpu_span_ms}};
+  return res_json;
 }
 
 int main(int argc, char** argv) {
@@ -224,7 +324,15 @@ int main(int argc, char** argv) {
           // <|user|>U<|assistant|> (no BOS, no separators), with the oldest
           // turns dropped until prompt + max_new_tokens fits the context.
           if (session->is_bpe()) {
-            std::vector<std::pair<std::string, std::string>> turns;
+            BpeChatRequest r;
+            r.user_input = user_input_from_client;
+            r.max_new_tokens = max_new_tokens;
+            r.temperature = temperature;
+            r.top_k = top_k;
+            r.top_p = top_p;
+            r.has_seed = req_json.contains("seed");
+            r.seed = r.has_seed ? req_json["seed"].get<unsigned>() : 0u;
+            r.want_ids = req_json.value("return_ids", false);
             if (req_json.contains("history") && req_json["history"].is_array()) {
               std::string pending_user;
               bool have_user = false;
@@ -236,109 +344,42 @@ int main(int argc, char** argv) {
                     pending_user = content;
                     have_user = true;
                   } else if (role == "assistant" && have_user) {
-                    turns.emplace_back(pending_user, content);
+                    r.turns.emplace_back(pending_user, content);
                     have_user = false;
                   }
                 } else {                    // [{"user": ..., "assistant": ...}]
-                  turns.emplace_back(h.value("user", ""), h.value("assistant", ""));
+                  r.turns.emplace_back(h.value("user", ""), h.value("assistant", ""));
                 }
               }
             }
-            const std::string tail = "<|user|>" + user_input_from_client + "<|assistant|>";
-            auto build = [&](size_t from) {
-              std::string p;
-              for (size_t i = from; i < turns.size(); ++i)
-                p += "<|user|>" + turns[i].first + "<|assistant|>" + turns[i].second + "<|endoftext|>";
-              return p + tail;
-            };
-            const int ctx = session->get_config().max_position_embeddings;
-            size_t from = 0;
-            std::string prompt = build(from);
-            while (from < turns.size() && session->bpe_token_count(prompt) + max_new_tokens > ctx)
-              prompt = build(++from);
-            const int prompt_tokens = session->bpe_token_count(prompt);
-            if (prompt_tokens >= ctx) {
+            tinyllama::TinyLlamaSession* sess = session.get();
+            const BpePrompt bp = bpe_build_prompt(*sess, r);
+            if (!bp.error.empty()) {
               res.status = 400;
-              json err;
-              err["error"] = "message is " + std::to_string(prompt_tokens) + " tokens; the model's context is " +
-                             std::to_string(ctx);
-              res.set_content(err.dump(), "application/json");
+              res.set_content(json{{"error", bp.error}}.dump(), "application/json");
               return;
             }
-            const bool has_seed = req_json.contains("seed");
-            const unsigned seed = has_seed ? req_json["seed"].get<unsigned>() : 0u;
-            const bool want_ids = req_json.value("return_ids", false);
-            const int turns_used = static_cast<int>(turns.size() - from);
-            tinyllama::TinyLlamaSession* sess = session.get();
-            // Generate under the session lock (held by the caller) and build
-            // the reply object; cb, if set, sees each token as it is made.
-            auto run = [=](std::function<void(int)> cb, double waited_ms) {
-              if (has_seed) sess->set_seed(seed);
-              sess->set_token_callback(std::move(cb));
-              const std::string reply = sess->generate(prompt, max_new_tokens, temperature, top_k, top_p, "", false);
-              sess->set_token_callback(nullptr);
-              const tinyllama::TtftBreakdown& tb = sess->last_ttft();
-              auto ms = [](auto a, auto b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
-              json res_json;
-              res_json["reply"] = reply;
-              res_json["stop_reason"] = sess->last_stop_reason();
-              res_json["tokens"] = sess->last_generated_tokens();
-              res_json["prompt_tokens"] = prompt_tokens;
-              res_json["history_turns_used"] = turns_used;
-              // Opt-in exact ids (preference data needs the sampled ids, not a
-              // re-encoding of the stripped reply text).
-              if (want_ids) {
-                res_json["prompt_ids"] = sess->last_prompt_ids();
-                res_json["ids"] = sess->last_generated_ids();
-                res_json["stop_id"] = sess->last_stop_id();
-              }
-              res_json["ttft"] = {
-                  {"first_token", tb.first_token},
-                  {"queue_ms", waited_ms},
-                  {"request_to_first_token_ms", tb.first_token ? ms(t_request, tb.t_first_token) : -1.0},
-                  {"ttft_ms", tb.ttft_ms},
-                  {"num_prompt_tokens", tb.num_prompt_tokens},
-                  {"batch_prefill", tb.batch_prefill},
-                  {"prefill_wall_ms", tb.prefill_wall_ms},
-                  {"prefill_gpu_span_ms", tb.prefill_gpu_span_ms}};
-              return res_json;
-            };
             if (!req_json.value("stream", false)) {
-              res.set_content(run(nullptr, queue_ms).dump(), "application/json");
+              res.set_content(bpe_run(*sess, r, bp, t_request, queue_ms, nullptr).dump(), "application/json");
               return;
             }
             // "stream": true -> server-sent events: {"token": text} as the
-            // reply is generated (leading whitespace skipped, never a split
-            // UTF-8 character), then the full reply object with "done": true.
-            // The provider runs after this handler returns, so it takes the
-            // session lock itself.
+            // reply is generated, then the full reply object with
+            // "done": true. The provider runs after this handler returns, so
+            // it takes the session lock itself.
             res.set_header("Cache-Control", "no-cache");
             res.set_chunked_content_provider(
-                "text/event-stream", [run, t_request, sess](size_t, httplib::DataSink& sink) {
+                "text/event-stream", [r, bp, t_request, sess](size_t, httplib::DataSink& sink) {
                   Waiting stream_waiting;
                   std::lock_guard<std::mutex> stream_lock(session_mu);
                   const double waited = std::chrono::duration<double, std::milli>(
                                             std::chrono::steady_clock::now() - t_request).count();
-                  std::vector<int> ids;
-                  size_t sent = 0;
                   auto send = [&sink](const json& j) {
                     const std::string ev = "data: " + j.dump() + "\n\n";
                     sink.write(ev.data(), ev.size());
                   };
-                  json final_json = run(
-                      [&](int id) {
-                        ids.push_back(id);
-                        const std::string full = sess->bpe_decode(ids);
-                        const size_t end = utf8_complete_prefix(full);
-                        const size_t start = full.find_first_not_of(" \t\n\v\f\r");
-                        if (start == std::string::npos || start >= end) return;
-                        if (sent < start) sent = start;
-                        if (end > sent) {
-                          send(json{{"token", full.substr(sent, end - sent)}});
-                          sent = end;
-                        }
-                      },
-                      waited);
+                  json final_json = bpe_run(*sess, r, bp, t_request, waited,
+                                            [&](const std::string& piece) { send(json{{"token", piece}}); });
                   final_json["done"] = true;
                   send(final_json);
                   sink.done();
@@ -493,6 +534,211 @@ int main(int argc, char** argv) {
     h["layers"] = c.num_hidden_layers;
     res.set_header("Access-Control-Allow-Origin", "*");
     res.set_content(h.dump(), "application/json");
+  });
+
+  // ---- OpenAI-compatible API (paperkiln BPE chat models) ----------------
+  // POST /v1/chat/completions and GET /v1/models, so standard clients (the
+  // openai SDKs, chat front ends) can talk to ember. `messages` map onto the
+  // chat template: the last message must be from the user; earlier
+  // user/assistant pairs become history; system messages are ignored (the
+  // models are not trained with one). Defaults follow OpenAI's (temperature
+  // 1, top_p 1); top_k is accepted as an extension (0 = whole vocabulary).
+  const std::string model_id = std::filesystem::path(model_dir).filename().string();
+  auto openai_error = [](httplib::Response& res, int status, const std::string& msg) {
+    res.status = status;
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_content(json{{"error", {{"message", msg}, {"type", "invalid_request_error"}}}}.dump(),
+                    "application/json");
+  };
+  svr.Get("/v1/models", [model_id](const httplib::Request&, httplib::Response& res) {
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_content(json{{"object", "list"},
+                         {"data", json::array({json{{"id", model_id},
+                                                    {"object", "model"},
+                                                    {"created", 0},
+                                                    {"owned_by", "ember.cpp"}}})}}
+                        .dump(),
+                    "application/json");
+  });
+  svr.Options("/v1/chat/completions", [](const httplib::Request&, httplib::Response& res) {
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set_header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.status = 204;
+  });
+  svr.Post("/v1/chat/completions", [&session, model_id, openai_error](const httplib::Request& req,
+                                                                     httplib::Response& res) {
+    const auto t_request = std::chrono::steady_clock::now();
+    Waiting waiting_guard;
+    if (public_mode && waiting.load() > 8) {
+      res.set_header("Retry-After", "2");
+      openai_error(res, 503, "busy: too many requests at once, try again in a moment");
+      return;
+    }
+    if (!session->is_bpe()) {
+      openai_error(res, 400, "this model has no chat template ember can apply; use POST /chat");
+      return;
+    }
+    json body = json::parse(req.body, nullptr, false);
+    if (body.is_discarded() || !body.is_object() || !body.contains("messages") || !body["messages"].is_array() ||
+        body["messages"].empty()) {
+      openai_error(res, 400, "body must be JSON with a non-empty 'messages' array");
+      return;
+    }
+    BpeChatRequest r;
+    r.temperature = 1.0f;
+    r.top_p = 1.0f;
+    r.top_k = 0;
+    r.max_new_tokens = 64;
+    bool include_usage = false;
+    bool stream = false;
+    try {
+      std::string pending_user;
+      bool have_user = false;
+      const json& msgs = body["messages"];
+      for (size_t i = 0; i < msgs.size(); ++i) {
+        const json& m = msgs[i];
+        const std::string role = m.value("role", "");
+        std::string content;
+        if (m.contains("content") && m["content"].is_string()) {
+          content = m["content"].get<std::string>();
+        } else if (m.contains("content") && m["content"].is_array()) {  // [{"type": "text", "text": ...}]
+          for (const auto& part : m["content"])
+            if (part.is_object() && part.value("type", "") == "text") content += part.value("text", "");
+        }
+        const bool last = i + 1 == msgs.size();
+        if (role == "user") {
+          if (last) {
+            r.user_input = content;
+          } else {
+            pending_user = content;
+            have_user = true;
+          }
+        } else if (role == "assistant") {
+          if (last) {
+            openai_error(res, 400, "the last message must be from the user");
+            return;
+          }
+          if (have_user) r.turns.emplace_back(pending_user, content);
+          have_user = false;
+        }
+        // "system", "developer", "tool": ignored.
+      }
+      if (msgs.back().value("role", "") != "user") {
+        openai_error(res, 400, "the last message must be from the user");
+        return;
+      }
+      if (body.contains("temperature") && body["temperature"].is_number()) r.temperature = body["temperature"].get<float>();
+      if (body.contains("top_p") && body["top_p"].is_number()) r.top_p = body["top_p"].get<float>();
+      if (body.contains("top_k") && body["top_k"].is_number()) r.top_k = body["top_k"].get<int>();
+      for (const char* key : {"max_completion_tokens", "max_tokens"})
+        if (body.contains(key) && body[key].is_number()) {
+          r.max_new_tokens = body[key].get<int>();
+          break;
+        }
+      if (body.contains("seed") && body["seed"].is_number()) {
+        r.has_seed = true;
+        r.seed = static_cast<unsigned>(body["seed"].get<long long>());
+      }
+      stream = body.value("stream", false);
+      if (body.contains("stream_options") && body["stream_options"].is_object())
+        include_usage = body["stream_options"].value("include_usage", false);
+    } catch (const json::exception& e) {
+      openai_error(res, 400, std::string("bad request field: ") + e.what());
+      return;
+    }
+    r.max_new_tokens = std::max(r.max_new_tokens, 1);
+    if (public_mode) {
+      constexpr size_t kMaxText = 600;
+      if (r.user_input.size() > kMaxText) {
+        openai_error(res, 400, "message too long (600 characters at most)");
+        return;
+      }
+      r.max_new_tokens = std::min(r.max_new_tokens, 64);
+      r.temperature = std::min(std::max(r.temperature, 0.0f), 1.5f);
+      r.top_k = std::min(std::max(r.top_k, 0), 200);
+      r.top_p = std::min(std::max(r.top_p, 0.05f), 1.0f);
+      while (r.turns.size() > 8) r.turns.erase(r.turns.begin());
+      for (auto& t : r.turns) {
+        if (t.first.size() > kMaxText) t.first.resize(kMaxText);
+        if (t.second.size() > kMaxText) t.second.resize(kMaxText);
+      }
+    }
+    std::lock_guard<std::mutex> session_lock(session_mu);
+    const double queue_ms =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_request).count();
+    tinyllama::TinyLlamaSession* sess = session.get();
+    const BpePrompt bp = bpe_build_prompt(*sess, r);
+    if (!bp.error.empty()) {
+      openai_error(res, 400, bp.error);
+      return;
+    }
+    static std::mt19937_64 id_rng{std::random_device{}()};
+    char idbuf[32];
+    std::snprintf(idbuf, sizeof idbuf, "chatcmpl-%016llx", static_cast<unsigned long long>(id_rng()));
+    const std::string id = idbuf;
+    const long long created = static_cast<long long>(std::time(nullptr));
+    res.set_header("Access-Control-Allow-Origin", "*");
+    auto usage_of = [&bp](const json& result) {
+      const int completion = result.value("tokens", 0);
+      return json{{"prompt_tokens", bp.prompt_tokens},
+                  {"completion_tokens", completion},
+                  {"total_tokens", bp.prompt_tokens + completion}};
+    };
+    auto finish_of = [](const json& result) {
+      return result.value("stop_reason", std::string("eos")) == "length" ? "length" : "stop";
+    };
+    if (!stream) {
+      const json result = bpe_run(*sess, r, bp, t_request, queue_ms, nullptr);
+      json out = {{"id", id},
+                  {"object", "chat.completion"},
+                  {"created", created},
+                  {"model", model_id},
+                  {"choices", json::array({json{{"index", 0},
+                                                {"message", {{"role", "assistant"}, {"content", result["reply"]}}},
+                                                {"logprobs", nullptr},
+                                                {"finish_reason", finish_of(result)}}})},
+                  {"usage", usage_of(result)}};
+      res.set_content(out.dump(), "application/json");
+      return;
+    }
+    res.set_header("Cache-Control", "no-cache");
+    res.set_chunked_content_provider(
+        "text/event-stream",
+        [r, bp, t_request, sess, id, created, model_id, include_usage, usage_of, finish_of](
+            size_t, httplib::DataSink& sink) {
+          Waiting stream_waiting;
+          std::lock_guard<std::mutex> stream_lock(session_mu);
+          const double waited =
+              std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_request).count();
+          auto chunk = [&](const json& delta, const json& finish) {
+            json c = {{"id", id},
+                      {"object", "chat.completion.chunk"},
+                      {"created", created},
+                      {"model", model_id},
+                      {"choices", json::array({json{{"index", 0}, {"delta", delta}, {"finish_reason", finish}}})}};
+            const std::string ev = "data: " + c.dump() + "\n\n";
+            sink.write(ev.data(), ev.size());
+          };
+          chunk(json{{"role", "assistant"}, {"content", ""}}, nullptr);
+          const json result = bpe_run(*sess, r, bp, t_request, waited,
+                                      [&](const std::string& piece) { chunk(json{{"content", piece}}, nullptr); });
+          chunk(json::object(), finish_of(result));
+          if (include_usage) {
+            json u = {{"id", id},
+                      {"object", "chat.completion.chunk"},
+                      {"created", created},
+                      {"model", model_id},
+                      {"choices", json::array()},
+                      {"usage", usage_of(result)}};
+            const std::string ev = "data: " + u.dump() + "\n\n";
+            sink.write(ev.data(), ev.size());
+          }
+          const std::string done = "data: [DONE]\n\n";
+          sink.write(done.data(), done.size());
+          sink.done();
+          return true;
+        });
   });
 
   svr.Options("/chat", [](const httplib::Request& req, httplib::Response& res) {
