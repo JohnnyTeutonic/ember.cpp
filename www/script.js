@@ -84,7 +84,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            addMessageToHistory('assistant', data.reply);
+            if (data.reply) {
+                addMessageToHistory('assistant', data.reply);
+            } else {
+                // The model ended its turn at once: show it, keep it out of the prompt.
+                addMessageToHistory('assistant', '(no reply: the model ended its turn at once; try rephrasing)', true);
+            }
 
         } catch (error) {
             console.error('Error sending message:', error);

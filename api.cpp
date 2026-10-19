@@ -186,11 +186,15 @@ static int sample_top_k_top_p_temperature(const std::vector<float>& logits,
     prob_idx[i] = {static_cast<float>(probs_double[i]), i};
   }
 
-  std::sort(prob_idx.begin(), prob_idx.end(),
-            std::greater<std::pair<float, int>>());
-
+  // Only the top_k head is used, so sort just that head: the same elements
+  // in the same order as a full sort (pairs are distinct, so the order is
+  // total), without sorting the whole vocabulary on every token.
   if (top_k < vocab_size) {
+    std::partial_sort(prob_idx.begin(), prob_idx.begin() + top_k, prob_idx.end(),
+                      std::greater<std::pair<float, int>>());
     prob_idx.resize(top_k);
+  } else {
+    std::sort(prob_idx.begin(), prob_idx.end(), std::greater<std::pair<float, int>>());
   }
 
   float cumulative_prob = 0.0f;
@@ -810,7 +814,25 @@ if (prefill_enabled) {
                    ", start_pos_for_loop set to: " + std::to_string(start_pos_for_loop));
   }
 
+  // EMBER_DECODE_TIMING=1: wall time per decode phase, host side here and
+  // GPU-forward side in TinyLlamaModel::forward_device, summarised on stderr
+  // after the loop (per decode step).
+  static const bool decode_timing = std::getenv("EMBER_DECODE_TIMING") != nullptr;
+  std::map<std::string, double> host_phase_ms;
+  int decode_steps = 0;
+  auto t_phase = ttft_clock::now();
+  auto host_phase = [&](const char* name) {
+    if (!decode_timing) return;
+    const auto now = ttft_clock::now();
+    host_phase_ms[name] += ms_between(t_phase, now);
+    t_phase = now;
+  };
+  if (decode_timing) model_->decode_phase_ms().clear();
+  const auto t_decode_start = ttft_clock::now();
+
   for (int pos = start_pos_for_loop; pos < total_steps; ++pos) {
+    t_phase = ttft_clock::now();
+    ++decode_steps;
     if (pos >= config_.max_position_embeddings) {
       Logger::warning("Reached max sequence length (" +
                       std::to_string(config_.max_position_embeddings) +
@@ -841,11 +863,13 @@ if (prefill_enabled) {
         }
     }
     
+    host_phase("host.loop_head");
     current_data_host = model_->lookup_embedding(input_token_id);
     if (pos == 14 || pos == 15 || pos == 16) {
         log_vector_summary_detailed("[API_CPP GenLoop] current_data_host after lookup_embedding for input_token_id=" + std::to_string(input_token_id),
                                     current_data_host, pos, -100, 8);
     }
+    host_phase("host.embed_lookup");
 
     if (current_data_host.empty()) {
         Logger::error("Embedding lookup returned empty vector for token ID: " + std::to_string(input_token_id) + " at pos " + std::to_string(pos));
@@ -870,7 +894,9 @@ if (prefill_enabled) {
 #ifdef HAS_CUDA
       // GPU-only mode
       gpuErrchk(cudaMemcpy(model_->get_x_dev(), current_data_host.data(), current_data_host.size() * sizeof(float), cudaMemcpyHostToDevice));
+      host_phase("host.embed_h2d");
       logits = model_->forward_device(model_->get_x_dev(), pos, &kv_cache_, nullptr);
+      host_phase("host.forward_device(total)");
 #else
       Logger::error("[GPU-only Mode] GPU-only mode requested but CUDA not available. Cannot proceed.");
       break;
@@ -885,7 +911,8 @@ if (prefill_enabled) {
       apply_repetition_penalty(logits, generated_token_ids, repetition_penalty_);
       debug_dump_topk(logits);
       next_token_id = sample_top_k_top_p_temperature(logits, temperature, top_k, top_p, rng_);
-      
+      host_phase("host.sample");
+
       // Only add to generated tokens if we're actually generating (not just finishing prompt)
       if (pos >= num_prompt_tokens) {
         generated_token_ids.push_back(next_token_id);
@@ -928,9 +955,21 @@ if (prefill_enabled) {
     // So, after processing 'pos', the cache now contains information up to and including 'pos'.
     // The length of the sequence in the cache is pos + 1.
     if (!prefill_enabled || pos >= num_prompt_tokens) { // only update if not prefill, or if we are past prompt token processing in prefill case
-        kv_cache_.seq_len = pos + 1; 
+        kv_cache_.seq_len = pos + 1;
         // Logger::debug("[Generate Loop] KVCache seq_len updated to: " + std::to_string(kv_cache_.seq_len) + " after processing pos " + std::to_string(pos));
     }
+    host_phase("host.decode_text_and_rest");
+  }
+  if (decode_timing && decode_steps > 0) {
+    const double total = ms_between(t_decode_start, ttft_clock::now());
+    std::fprintf(stderr, "[decode timing] %d steps, %.3f ms/step wall (timed run, phases sync)\n", decode_steps,
+                 total / decode_steps);
+    for (const auto& kv : host_phase_ms)
+      std::fprintf(stderr, "  %-34s %8.3f ms/step\n", kv.first.c_str(), kv.second / decode_steps);
+#ifdef HAS_CUDA
+    for (const auto& kv : model_->decode_phase_ms())
+      std::fprintf(stderr, "    gpu.%-30s %8.3f ms/step\n", kv.first.c_str(), kv.second / decode_steps);
+#endif
   }
 
   // Log all generated IDs before decoding

@@ -389,6 +389,11 @@ class TinyLlamaModel {
   // Per-op GPU time of the last batched prefill, filled only when
   // EMBER_OP_TIMING=1 (docs/TTFT.md); empty otherwise.
   const std::map<std::string, double>& last_prefill_op_ms() const { return last_prefill_op_ms_; }
+  // Wall time per phase of the single-token GPU forward, summed over the
+  // decode steps since the last reset, filled only when
+  // EMBER_DECODE_TIMING=1 (each phase boundary syncs the stream, so the
+  // timed run is slower than an untimed one; read the shares, not the sum).
+  std::map<std::string, double>& decode_phase_ms() { return decode_phase_ms_; }
 
   void forward_device(int token_id, int pos, KVCache* kv_cache,
                       cudaStream_t stream = 0);
@@ -417,6 +422,7 @@ class TinyLlamaModel {
   
   // Persistent batch processing buffers to eliminate per-forward-pass allocations
   std::map<std::string, double> last_prefill_op_ms_;  // see last_prefill_op_ms()
+  std::map<std::string, double> decode_phase_ms_;     // see decode_phase_ms()
   static constexpr int MAX_BATCH_TOKENS = 2048;  // Initial capacity of the batch buffers (they grow on demand)
   int persistent_batch_capacity_ = 0;            // tokens the batch buffers currently hold
   
