@@ -1,0 +1,9 @@
+ok   window    8 sinks 2 head_dim  64 prefill   20 then 30 x T=1 (31 calls): max |d| 1.79e-06
+ok   window    4 sinks 6 head_dim  64 prefill    3 then 40 x T=1 (41 calls): max |d| 1.33e-06
+ok   window   32 sinks 4 head_dim  64 prefill   10 then 12 x T=7 (13 calls): max |d| 1.97e-06
+ok   window   16 sinks 0 head_dim  96 prefill   40 then 20 x T=1 (21 calls): max |d| 1.91e-06
+ok   window    1 sinks 1 head_dim  64 prefill    5 then 10 x T=1 (11 calls): max |d| 9.54e-07
+ok   window    3 sinks 0 head_dim  64 prefill    1 then 12 x T=1 (13 calls): max |d| 5.96e-07
+ok   window 2000 sinks 4 head_dim  64 prefill 1500 then  4 x T=1 (5 calls): max |d| 5.13e-06
+ok   window  700 sinks 3 head_dim  96 prefill 1200 then  3 x T=5 (4 calls): max |d| 5.13e-06
+PASS: max |d| 5.13e-06 over all cases (tolerance 1e-5)

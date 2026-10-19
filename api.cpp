@@ -493,12 +493,11 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
         // CUDA builds run the interpreter on the device when the CLI asked for
         // GPU layers (any nonzero count: the interpreter does not split
         // layers); EMBER_IR_DEVICE=cpu keeps it on the CPU. Sliding-window
-        // attention has no device kernel yet, so a windowed IR stays on the CPU.
+        // attention runs on either.
         bool ir_gpu = false;
 #ifdef HAS_CUDA
         const char* dev = std::getenv("EMBER_IR_DEVICE");
-        ir_gpu = num_gpu_layers_from_cli != 0 && !(dev && std::string(dev) == "cpu") &&
-                 !ember_ir::has_windowed_attention(ir);
+        ir_gpu = num_gpu_layers_from_cli != 0 && !(dev && std::string(dev) == "cpu");
 #endif
         ir_ = std::make_unique<ember_ir::Interpreter>(ir, *gd, ir_gpu);
         Logger::warning("Running the model through the paperkiln IR interpreter (" +

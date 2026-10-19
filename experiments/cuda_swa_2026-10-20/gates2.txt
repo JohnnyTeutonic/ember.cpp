@@ -1,0 +1,60 @@
+### rebuild Tue Oct 20 10:10:48 AEDT 2026
+[ 91%] Built target tinyllama_core
+[ 95%] Linking CXX executable tinyllama_server
+[100%] Built target tinyllama_server
+-rwxr-xr-x 1 jonat jonat 5195696 Oct 20 10:11 tinyllama_server
+./tinyllama_server
+### swa_tiny on the GPU interpreter, MAX_NEW=200
+   [swat_gpu2] health: {"context":256,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/swa_tiny/swa_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [swat_gpu2] interpreter ready: family_hint=gpt2_swa, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 256 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+   sliding-window attention (ir_window_attention_cuda): window 32, sinks 4
+   sliding-window attention: window 32, sinks 4
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+   CUDA sliding-window attention (ir_window_attention_cuda): window 32, sinks 4
+   Running the model through the paperkiln IR interpreter (CUDA
+   [e2e_w8_s2_gpu2] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [e2e_w8_s2_gpu2] interpreter ready: family_hint=gpt2, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 128 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+   sliding-window attention (ir_window_attention_cuda): window 8, sinks 2
+   sliding-window attention: window 8, sinks 2
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+   CUDA sliding-window attention (ir_window_attention_cuda): window 8, sinks 2
+   [e2e_w16_s0_gpu2] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [e2e_w16_s0_gpu2] interpreter ready: family_hint=gpt2, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 128 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+   sliding-window attention (ir_window_attention_cuda): window 16, sinks 0
+   sliding-window attention: window 16, sinks 0
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+   CUDA sliding-window attention (ir_window_attention_cuda): window 16, sinks 0
+   [e2e_w4_s6_gpu2] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [e2e_w4_s6_gpu2] interpreter ready: family_hint=gpt2, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 128 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+   sliding-window attention (ir_window_attention_cuda): window 4, sinks 6
+   sliding-window attention: window 4, sinks 6
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+   CUDA sliding-window attention (ir_window_attention_cuda): window 4, sinks 6
+   [e2e_w32_s4_gpu2] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [e2e_w32_s4_gpu2] interpreter ready: family_hint=gpt2, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 128 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+   sliding-window attention (ir_window_attention_cuda): window 32, sinks 4
+   sliding-window attention: window 32, sinks 4
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+   CUDA sliding-window attention (ir_window_attention_cuda): window 32, sinks 4
+   [gpt2_gpu2] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [gpt2_gpu2] interpreter ready: family_hint=gpt2, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 128 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+### done Tue Oct 20 10:14:02 AEDT 2026

@@ -31,6 +31,14 @@ void ir_gelu_cuda(const float* x, float* out, size_t n, bool tanh_form, cudaStre
 // positions start_pos + t, table [max_len][hd/2] of (cos, sin) pairs.
 void ir_rope_cuda(float* q, float* k, int T, int hq, int hk, int hd, int start_pos, const float* freqs,
                   cudaStream_t stream);
+// Sliding-window attention with sinks (paperkiln swa_attention; CPU form
+// cpu_attention.cpp attention_window_batch_cpu) for q [T][hq*hd] at positions
+// start_pos + t over a cache K, V [pos][hkv][hd] already holding positions <=
+// start_pos + T - 1. Query p sees [0, min(sinks, p+1, win_lo)) and [win_lo, p],
+// win_lo = max(0, p+1-window). window >= 1 (window 0 is attention_*_cuda's);
+// head_dim <= 1024. Any T, decode included.
+void ir_window_attention_cuda(const float* q, const float* K, const float* V, float* out, int T, int start_pos,
+                              int hq, int hkv, int hd, float scale, int window, int sinks, cudaStream_t stream);
 
 }  // namespace ember_ir
 #endif  // HAS_CUDA
