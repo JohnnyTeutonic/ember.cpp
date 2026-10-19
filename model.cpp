@@ -34,6 +34,7 @@
 #include "quantization.h"
 #include "safetensors_loader.h"
 #include "utils.h"
+#include "graph_ir.h"
 #include "weight_management.h"
 void TinyLlamaModel::initialize_weights(const SafeTensorsLoader* loader,
                                         const GGUFData* gguf) {
@@ -178,6 +179,32 @@ TinyLlamaModel::TinyLlamaModel(const ModelConfig& initial_config,
       this->gguf_data_ = std::make_unique<GGUFData>(load_gguf_meta(this->model_path_, force_mmap_for_gguf_load));
 
       ModelConfig config_from_gguf = parse_model_config_from_gguf(*(this->gguf_data_));
+      // A paperkiln IR for a non-llama family (or EMBER_IR_ONLY=1): the
+      // interpreter serves it, so the dimensions come from the IR and the
+      // llama loader is skipped below.
+      {
+        const std::string ir = ember_ir::find_ir(*this->gguf_data_);
+        const char* only = std::getenv("EMBER_IR_ONLY");
+        if (!ir.empty()) {
+          const auto j = nlohmann::json::parse(ir);
+          if (j.value("family_hint", "") != "llama" || (only && std::string(only) == "1")) {
+            this->ir_only_ = true;
+            const auto& m = j.at("model");
+            config_from_gguf.hidden_size = m.at("d").get<int>();
+            config_from_gguf.num_hidden_layers = j.at("block").at("repeat").get<int>();
+            config_from_gguf.vocab_size = m.at("vocab").get<int>();
+            config_from_gguf.max_position_embeddings = m.value("ctx", config_from_gguf.max_position_embeddings);
+            for (const auto& s : j.at("block").value("state", nlohmann::json::array()))
+              if (s.value("kind", "") == "kv") {
+                config_from_gguf.num_attention_heads = s.at("heads").get<int>();
+                config_from_gguf.num_key_value_heads = s.at("kv_heads").get<int>();
+              }
+            config_from_gguf.num_experts = 0;
+            Logger::info("GGUF served by the paperkiln IR interpreter only (family_hint '" +
+                         j.value("family_hint", "") + "'): llama weights are not loaded.");
+          }
+        }
+      }
       this->config_ = config_from_gguf; 
       this->config_.use_mmap_for_gguf = cli_mmap_preference;
       this->config_.is_gguf_file_loaded = true;
@@ -298,6 +325,11 @@ TinyLlamaModel::TinyLlamaModel(const ModelConfig& initial_config,
     Logger::info("[CTOR_GGUF_PRE_INIT_W] Not a GGUF file load context (e.g., SafeTensors). Skipping gguf_data_ check here.");
   }
   // --- END GGUFData Integrity Check ---
+  if (this->ir_only_) {
+    this->config_.num_cpu_offload_layers = this->config_.num_hidden_layers;  // the interpreter is CPU-only
+    Logger::info("TinyLlamaModel: IR-only GGUF, weights left to the interpreter.");
+    return;
+  }
   initialize_weights(loader.get(), this->gguf_data_.get()); 
   initialize_gpu_and_rope(); 
 

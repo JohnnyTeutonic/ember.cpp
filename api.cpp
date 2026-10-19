@@ -482,9 +482,12 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
   if (const GGUFData* gd = model_->get_gguf_data()) {
     const std::string ir = ember_ir::find_ir(*gd);
     const char* force = std::getenv("EMBER_INTERPRETER");
+    if (model_->ir_only() && ir.empty()) throw std::runtime_error("IR-only model but no IR found");
+    if (model_->ir_only() && force && std::string(force) == "0")
+      throw std::runtime_error("EMBER_INTERPRETER=0, but this GGUF can only run through the IR interpreter");
     if (!ir.empty() && !(force && std::string(force) == "0")) {
       const std::string family = nlohmann::json::parse(ir).value("family_hint", "");
-      if ((force && std::string(force) == "1") || std::getenv("EMBER_IR") || family != "llama") {
+      if ((force && std::string(force) == "1") || std::getenv("EMBER_IR") || family != "llama" || model_->ir_only()) {
         ir_ = std::make_unique<ember_ir::Interpreter>(ir, *gd);
         Logger::warning("Running the model through the paperkiln IR interpreter (CPU; family_hint '" + family +
                         "'). The llama path's weights stay loaded but unused.");
@@ -764,8 +767,8 @@ if (prefill_enabled) {
       last_ttft_.batch_prefill = true;
       auto t_embed = ttft_clock::now();
 
-      std::vector<float> batch_initial_embeddings(prefill_count * config_.hidden_size);
-      for (int i = 0; i < prefill_count; ++i) {
+      std::vector<float> batch_initial_embeddings(ir_ ? 0 : prefill_count * config_.hidden_size);
+      for (int i = 0; i < (ir_ ? 0 : prefill_count); ++i) {  // the interpreter embeds tokens itself
           std::vector<float> token_embedding = model_->lookup_embedding(tokens[prefill_from + i]);
           if (token_embedding.empty()) {
               Logger::error("Prefill: Embedding lookup returned empty vector for token ID: " + std::to_string(tokens[i]) + " at prompt pos " + std::to_string(i));
@@ -961,8 +964,8 @@ if (prefill_enabled) {
         batch.insert(batch.end(), draft.begin(), draft.end());
         const int n = static_cast<int>(batch.size());
         const int hs = config_.hidden_size, vs = config_.vocab_size;
-        std::vector<float> emb((size_t)n * hs);
-        for (int i = 0; i < n; ++i) {
+        std::vector<float> emb(ir_ ? 0 : (size_t)n * hs);
+        for (int i = 0; i < (ir_ ? 0 : n); ++i) {  // the interpreter embeds tokens itself
           const std::vector<float> e = model_->lookup_embedding(batch[i]);
           std::copy(e.begin(), e.end(), emb.begin() + (size_t)i * hs);
         }
@@ -1013,14 +1016,14 @@ if (prefill_enabled) {
     }
 
     host_phase("host.loop_head");
-    current_data_host = model_->lookup_embedding(input_token_id);
+    if (!ir_) current_data_host = model_->lookup_embedding(input_token_id);
     if (pos == 14 || pos == 15 || pos == 16) {
         log_vector_summary_detailed("[API_CPP GenLoop] current_data_host after lookup_embedding for input_token_id=" + std::to_string(input_token_id),
                                     current_data_host, pos, -100, 8);
     }
     host_phase("host.embed_lookup");
 
-    if (current_data_host.empty()) {
+    if (!ir_ && current_data_host.empty()) {
         Logger::error("Embedding lookup returned empty vector for token ID: " + std::to_string(input_token_id) + " at pos " + std::to_string(pos));
         break; 
     }
