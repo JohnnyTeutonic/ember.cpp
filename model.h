@@ -418,7 +418,8 @@ class TinyLlamaModel {
       int num_tokens_in_batch,
       int start_pos_in_kv_cache,         // Typically 0 for prefill
       KVCache* kv_cache,
-      cudaStream_t stream
+      cudaStream_t stream,
+      bool all_logits = false            // logits for every token ([n][vocab]), not only the last
   );
 
   std::vector<std::vector<float>> forward_device_batch_generation(
