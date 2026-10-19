@@ -166,6 +166,7 @@ static json bpe_run(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r, 
                       {"request_to_first_token_ms", tb.first_token ? ms(t_request, tb.t_first_token) : -1.0},
                       {"ttft_ms", tb.ttft_ms},
                       {"num_prompt_tokens", tb.num_prompt_tokens},
+                      {"prefix_reused_tokens", tb.prefix_reused_tokens},
                       {"batch_prefill", tb.batch_prefill},
                       {"prefill_wall_ms", tb.prefill_wall_ms},
                       {"prefill_gpu_span_ms", tb.prefill_gpu_span_ms}};
@@ -500,6 +501,7 @@ int main(int argc, char** argv) {
               {"sample_ms", tb.sample_ms},
               {"prefix_prev_cached_tokens", tb.prefix_prev_cached_tokens},
               {"prefix_reusable_tokens", tb.prefix_reusable_tokens},
+              {"prefix_reused_tokens", tb.prefix_reused_tokens},
               {"prefix_hit_rate", tb.prefix_hit_rate},
               {"op_ms", tb.op_ms}};
 
