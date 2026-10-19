@@ -16,7 +16,7 @@ A small conversational model trained from scratch with
 with its own autograd and CUDA kernels) and run by
 [ember.cpp](https://github.com/JohnnyTeutonic/ember.cpp) (a C++ inference engine), both
 written by Jonathan Reich. ember.cpp is compiled to WebAssembly, so the model runs in your
-browser: the 71 MB model downloads once, and nothing you type is sent anywhere.
+browser: the 19 MB model (8-bit) downloads once, and nothing you type is sent anywhere.
 
 - Llama-style decoder: 6 layers, width 384, 6 heads, RoPE, SwiGLU, RMSNorm; 14.65M
   parameters; byte-level BPE, 8,192 tokens; 256-token context.
