@@ -413,6 +413,7 @@ void TinyLlamaModel::ensure_f32_concatenated_weights_loaded() {
     }
   }
 
+  if (config_.num_experts == 0) {
   process_gpu_layer_weights_to_f32_concat(
     [this](const LayerWeights& lw) -> const std::vector<float>& { 
       int layer_idx = &lw - &layers[0]; 
@@ -477,6 +478,33 @@ void TinyLlamaModel::ensure_f32_concatenated_weights_loaded() {
       layers[layer_idx].down_proj_f32.clear();
       layers[layer_idx].down_proj_f32.shrink_to_fit();
     }
+  }
+
+  } else {
+    // Mixture of experts: router and expert stacks per GPU layer, f32.
+    auto upload = [&](const std::function<const std::vector<float>&(LayerWeights&)>& get, float*& dev,
+                      const char* what) {
+      std::vector<float> cat;
+      for (int g = 0; g < active_num_gpu_layers; ++g) {
+        LayerWeights& lw = layers[config_.num_cpu_offload_layers + g];
+        if (lw.moe_router_f32.empty() && !lw.moe_router_q8_0.empty())
+          dequantize_vector_q8_0_to_f32(lw.moe_router_q8_0, lw.moe_router_f32, lw.moe_router_q8_0.size() * GGML_QK8_0, 0);
+        const std::vector<float>& v = get(lw);
+        if (v.empty())
+          throw std::runtime_error("MoE layer " + std::to_string(config_.num_cpu_offload_layers + g) + ": no " + what +
+                                   " weights for the GPU");
+        cat.insert(cat.end(), v.begin(), v.end());
+      }
+      if (dev) { cudaFree(dev); dev = nullptr; }
+      gpuErrchk(cudaMalloc(&dev, cat.size() * sizeof(float)));
+      gpuErrchk(cudaMemcpy(dev, cat.data(), cat.size() * sizeof(float), cudaMemcpyHostToDevice));
+    };
+    upload([](LayerWeights& lw) -> const std::vector<float>& { return lw.moe_router_f32; }, w_moe_router_dev_, "router");
+    upload([](LayerWeights& lw) -> const std::vector<float>& { return lw.moe_gate_exps_f32; }, w_moe_gate_dev_, "expert gate");
+    upload([](LayerWeights& lw) -> const std::vector<float>& { return lw.moe_up_exps_f32; }, w_moe_up_dev_, "expert up");
+    upload([](LayerWeights& lw) -> const std::vector<float>& { return lw.moe_down_exps_f32; }, w_moe_down_dev_, "expert down");
+    Logger::info("Loaded MoE router and expert stacks (F32) to GPU for " + std::to_string(active_num_gpu_layers) +
+                 " layers (" + std::to_string(config_.num_experts) + " experts)");
   }
 
   f32_concatenated_weights_loaded_ = true;

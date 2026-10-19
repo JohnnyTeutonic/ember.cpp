@@ -295,11 +295,6 @@ TinyLlamaModel::TinyLlamaModel(const ModelConfig& initial_config,
                       "). Clamping to " + std::to_string(this->config_.num_hidden_layers) + " (all CPU).");
       this->config_.num_cpu_offload_layers = this->config_.num_hidden_layers;
   }
-  if (this->config_.num_experts > 0 && this->config_.num_cpu_offload_layers < this->config_.num_hidden_layers) {
-      Logger::warning("Mixture-of-experts model (" + std::to_string(this->config_.num_experts) +
-                      " experts): ember's MoE FFN is CPU-only for now, so all layers run on the CPU.");
-      this->config_.num_cpu_offload_layers = this->config_.num_hidden_layers;
-  }
   Logger::info("TinyLlamaModel constructor: Final clamped num_cpu_offload_layers = " + std::to_string(this->config_.num_cpu_offload_layers));
   Logger::info("[CTOR_DEBUG_L1921] End of Model Ctor (before initialize_weights/rope call): this->config_.num_cpu_offload_layers = " + std::to_string(this->config_.num_cpu_offload_layers) +
               ", this->config_.num_hidden_layers = " + std::to_string(this->config_.num_hidden_layers));
@@ -484,6 +479,9 @@ TinyLlamaModel::~TinyLlamaModel() {
     gpuErrchk(cudaFree(w_down_f32_dev_));
     w_down_f32_dev_ = nullptr;
   }
+  for (float** p : {&w_moe_router_dev_, &w_moe_gate_dev_, &w_moe_up_dev_, &w_moe_down_dev_,
+                    &moe_scratch_decode_dev_, &moe_scratch_batch_dev_})
+    if (*p) { cudaFree(*p); *p = nullptr; }
 
   if (x_dev_) {
     gpuErrchk(cudaFree(x_dev_));
@@ -1099,6 +1097,9 @@ std::vector<float> TinyLlamaModel::forward_device(
     // second time here, recomputing identical values from unchanged inputs.)
     phase("layer.o_proj_resid_norm2");
 
+    if (config_.num_experts > 0) {
+      moe_ffn_layer_cuda(l_gpu_idx, x_norm_dev_, 1, mlp_down_dev_, stream);
+    } else {
     if (w_gate_f32_dev_ && w_up_f32_dev_) {
       const float* w_gate_layer_ptr = w_gate_f32_dev_ + (size_t)l_gpu_idx * is * hs;
       const float* w_up_layer_ptr = w_up_f32_dev_ + (size_t)l_gpu_idx * is * hs;
@@ -1122,6 +1123,7 @@ std::vector<float> TinyLlamaModel::forward_device(
       Logger::error("GPU L" + std::to_string(l_model_idx) + ": No valid Down projection weights.");
       return {};
     }
+    }  // dense FFN
     add_residual_cuda(mlp_down_dev_, x_resid2_dev_, current_x_dev, hs, stream);
     phase("layer.mlp");
 
@@ -1193,8 +1195,10 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
     return {};
   ensure_f32_concatenated_weights_loaded();
   ensure_lm_head_dequantized();
-  if (!w_q_f32_dev_ || !w_k_f32_dev_ || !w_v_f32_dev_ || !w_o_f32_dev_ || !w_gate_f32_dev_ || !w_up_f32_dev_ ||
-      !w_down_f32_dev_ || !lm_head_f32_dev_ || !final_norm_dev || !all_freqs_cis_dev) {
+  if (config_.num_experts > 0) moe_scratch(1);  // allocated before capture
+  if (!w_q_f32_dev_ || !w_k_f32_dev_ || !w_v_f32_dev_ || !w_o_f32_dev_ ||
+      (config_.num_experts > 0 ? !w_moe_gate_dev_ : (!w_gate_f32_dev_ || !w_up_f32_dev_ || !w_down_f32_dev_)) ||
+      !lm_head_f32_dev_ || !final_norm_dev || !all_freqs_cis_dev) {
     decode_graph_disabled_ = true;
     return {};
   }
@@ -1256,10 +1260,14 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
       add_residual_cuda(attn_proj_dev_, x_resid1_dev_, x_dev_, hs, st);
       cudaMemcpyAsync(x_resid2_dev_, x_dev_, hs * sizeof(float), cudaMemcpyDeviceToDevice, st);
       rmsnorm_vector_cuda_optimized(x_dev_, layers[l].post_attention_layernorm_dev, x_norm_dev_, hs, eps, st);
-      matvec_f32_f32_cuda(cublas_handle_, w_gate_f32_dev_ + (size_t)l * is * hs, x_norm_dev_, gate_vec_dev_, is, hs, st);
-      matvec_f32_f32_cuda(cublas_handle_, w_up_f32_dev_ + (size_t)l * is * hs, x_norm_dev_, up_vec_dev_, is, hs, st);
-      swiglu_cuda(gate_vec_dev_, up_vec_dev_, swiglu_vec_dev_, is, st);
-      matvec_f32_f32_cuda(cublas_handle_, w_down_f32_dev_ + (size_t)l * hs * is, swiglu_vec_dev_, mlp_down_dev_, hs, is, st);
+      if (config_.num_experts > 0) {
+        moe_ffn_layer_cuda(l, x_norm_dev_, 1, mlp_down_dev_, st);
+      } else {
+        matvec_f32_f32_cuda(cublas_handle_, w_gate_f32_dev_ + (size_t)l * is * hs, x_norm_dev_, gate_vec_dev_, is, hs, st);
+        matvec_f32_f32_cuda(cublas_handle_, w_up_f32_dev_ + (size_t)l * is * hs, x_norm_dev_, up_vec_dev_, is, hs, st);
+        swiglu_cuda(gate_vec_dev_, up_vec_dev_, swiglu_vec_dev_, is, st);
+        matvec_f32_f32_cuda(cublas_handle_, w_down_f32_dev_ + (size_t)l * hs * is, swiglu_vec_dev_, mlp_down_dev_, hs, is, st);
+      }
       add_residual_cuda(mlp_down_dev_, x_resid2_dev_, x_dev_, hs, st);
     }
     rmsnorm_vector_cuda_optimized(x_dev_, final_norm_dev, x_norm_dev_, hs, eps, st);
@@ -2055,6 +2063,11 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
         if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 1 && hidden_size > 0) { /* ... */ }
 
 
+        if (config_.num_experts > 0) {
+          op_timer.begin("moe_ffn");
+          moe_ffn_layer_cuda(l_gpu_idx, d_batch_x_norm_out_ffn, num_tokens_in_batch, d_batch_ffn_down_proj_out, stream);
+          op_timer.end();
+        } else {
         const float* w1_layer_ptr = w_gate_f32_dev_ + (size_t)l_gpu_idx * hidden_size * ffn_intermediate_dim;
         op_timer.begin("ffn_gemm");
         smart_gemm_batch_cuda(false, true, num_tokens_in_batch, ffn_intermediate_dim, hidden_size, &alpha,
@@ -2093,6 +2106,7 @@ std::vector<float> TinyLlamaModel::forward_device_batch_prefill(
         if (l_model_idx == config_.num_cpu_offload_layers && num_tokens_in_batch > 1 && hidden_size > 0) { /* ... */ }
         
 
+        }  // dense FFN
         op_timer.begin("residual");
         add_residual_batch_cuda(d_batch_layer_output, d_batch_ffn_down_proj_out, d_batch_residual_ffn_in,
                                 num_tokens_in_batch, hidden_size, stream);
@@ -2208,6 +2222,8 @@ std::vector<std::vector<float>> TinyLlamaModel::forward_device_batch_generation(
     int num_tokens_in_batch,
     KVCache* kv_cache,
     cudaStream_t stream) {
+    if (config_.num_experts > 0)
+        throw std::runtime_error("forward_device_batch_generation: mixture-of-experts models are not supported");
     Logger::info("[FWD_DEV_BATCH_GENERATION_ENTRY] num_tokens_in_batch: " + std::to_string(num_tokens_in_batch) +
                  ", d_batch_input_embeddings: " + Logger::ptrToString(d_batch_input_embeddings));
 
@@ -2620,3 +2636,28 @@ void TinyLlamaModel::smart_gemm_batch_cuda(bool transa_user, bool transb_user,
 }
 #endif // HAS_CUDA
 
+#ifdef HAS_CUDA
+float* TinyLlamaModel::moe_scratch(int T) {
+  const int E = config_.num_experts, d = config_.hidden_size, d_ff = config_.intermediate_size;
+  if (T == 1) {
+    if (!moe_scratch_decode_dev_)
+      gpuErrchk(cudaMalloc(&moe_scratch_decode_dev_, moe_ffn_scratch_floats(1, d, d_ff, E) * sizeof(float)));
+    return moe_scratch_decode_dev_;
+  }
+  const size_t need = moe_ffn_scratch_floats(T, d, d_ff, E);
+  if (need > moe_scratch_batch_floats_) {
+    if (moe_scratch_batch_dev_) gpuErrchk(cudaFree(moe_scratch_batch_dev_));
+    gpuErrchk(cudaMalloc(&moe_scratch_batch_dev_, need * sizeof(float)));
+    moe_scratch_batch_floats_ = need;
+  }
+  return moe_scratch_batch_dev_;
+}
+
+void TinyLlamaModel::moe_ffn_layer_cuda(int l_gpu_idx, const float* x, int T, float* out, cudaStream_t stream) {
+  const int E = config_.num_experts, k = config_.num_experts_used, d = config_.hidden_size,
+            d_ff = config_.intermediate_size;
+  moe_ffn_cuda(cublas_handle_, x, T, d, d_ff, E, k, /*renorm=*/true, w_moe_router_dev_ + (size_t)l_gpu_idx * E * d,
+               w_moe_gate_dev_ + (size_t)l_gpu_idx * E * d_ff * d, w_moe_up_dev_ + (size_t)l_gpu_idx * E * d_ff * d,
+               w_moe_down_dev_ + (size_t)l_gpu_idx * E * d * d_ff, moe_scratch(T), out, stream);
+}
+#endif

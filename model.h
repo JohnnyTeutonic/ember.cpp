@@ -560,6 +560,19 @@ class TinyLlamaModel {
   float* w_gate_f32_dev_ = nullptr;
   float* w_up_f32_dev_ = nullptr;
   float* w_down_f32_dev_ = nullptr;
+  // Mixture of experts on the GPU: router [L][E][d], expert stacks
+  // [L][E][d_ff][d] (gate, up) and [L][E][d][d_ff] (down), f32, and the
+  // scratch of moe_ffn_cuda (a fixed one for decode, captured in the graph,
+  // and a growable one for prefill).
+  float* w_moe_router_dev_ = nullptr;
+  float* w_moe_gate_dev_ = nullptr;
+  float* w_moe_up_dev_ = nullptr;
+  float* w_moe_down_dev_ = nullptr;
+  float* moe_scratch_decode_dev_ = nullptr;
+  float* moe_scratch_batch_dev_ = nullptr;
+  size_t moe_scratch_batch_floats_ = 0;
+  float* moe_scratch(int T);  // T == 1: the decode scratch
+  void moe_ffn_layer_cuda(int l_gpu_idx, const float* x, int T, float* out, cudaStream_t stream);
   float* lm_head_f32_dev_ = nullptr;
   cublasHandle_t cublas_handle_ = nullptr;
   // Graph decode state (see forward_device_graph).
