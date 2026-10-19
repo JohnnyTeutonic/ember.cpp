@@ -655,6 +655,17 @@ void attention_devpos_cuda(const float* Q_current_dev, const float* K_layer_cach
                            float scale, int cache_max_seq_len, int cache_num_kv_heads, const int* step_dev,
                            cudaStream_t stream);
 
+// Mixture-of-experts FFN for T tokens, the IR op moe_ffn (paperkiln ir.hpp;
+// CPU reference: utils.cpp moe_ffn_f32_cpu). x [T][d]; router [E][d]; per
+// expert gate/up [d_ff][d] and down [d][d_ff] blocks (llama.cpp's ffn_*_exps);
+// out [T][d]. Every expert runs densely over all T tokens (no host sync, so
+// it can be captured in a CUDA graph); the combine sums the top-k selected
+// experts in ascending index. scratch: moe_ffn_scratch_floats(T, d, d_ff, E).
+size_t moe_ffn_scratch_floats(int T, int d, int d_ff, int E);
+void moe_ffn_cuda(cublasHandle_t handle, const float* x, int T, int d, int d_ff, int E, int k, bool renorm,
+                  const float* router, const float* gate_exps, const float* up_exps, const float* down_exps,
+                  float* scratch, float* out, cudaStream_t stream);
+
 
 #endif // HAS_CUDA
 

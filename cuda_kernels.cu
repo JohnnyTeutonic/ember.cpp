@@ -3341,3 +3341,88 @@ void attention_devpos_cuda(const float* Q_current_dev, const float* K_layer_cach
       cache_num_kv_heads, num_heads, step_dev);
   gpuErrchk(cudaGetLastError());
 }
+
+
+// ---------------------------------------------------------------------------
+// Mixture-of-experts FFN (see cuda_kernels.h).
+namespace {
+// Row-major Y[T][O] = X[T][I] W[O][I]^T with column-major cuBLAS: Y^T = W X^T.
+void moe_gemm_rm(cublasHandle_t h, const float* X, const float* W, float* Y, int T, int O, int I) {
+  const float one = 1.0f, zero = 0.0f;
+  cublasStatus_t s = cublasSgemm(h, CUBLAS_OP_T, CUBLAS_OP_N, O, T, I, &one, W, I, X, I, &zero, Y, O);
+  if (s != CUBLAS_STATUS_SUCCESS) throw std::runtime_error("moe_ffn_cuda: cublasSgemm failed");
+}
+
+// One token per block: top-k of the E router logits (ties to the lower
+// index), then the gates exactly as moe_ffn_f32_cpu computes them.
+__global__ void moe_route_kernel(const float* __restrict__ logits, float* __restrict__ gates, float* __restrict__ sel,
+                                 int E, int k, int renorm) {
+  if (threadIdx.x != 0) return;
+  const int t = blockIdx.x;
+  const float* r = logits + (size_t)t * E;
+  float* g = gates + (size_t)t * E;
+  float* s = sel + (size_t)t * E;
+  for (int e = 0; e < E; ++e) { g[e] = 0.0f; s[e] = 0.0f; }
+  for (int j = 0; j < k && j < E; ++j) {
+    int best = -1;
+    for (int e = 0; e < E; ++e)
+      if (s[e] == 0.0f && (best < 0 || r[e] > r[best])) best = e;
+    s[best] = 1.0f;
+  }
+  float mx = -INFINITY;
+  for (int e = 0; e < E; ++e)
+    if (!renorm || s[e] != 0.0f) mx = fmaxf(mx, r[e]);
+  double z = 0.0;
+  for (int e = 0; e < E; ++e)
+    if (!renorm || s[e] != 0.0f) z += exp((double)(r[e] - mx));
+  for (int e = 0; e < E; ++e)
+    if (s[e] != 0.0f) g[e] = (float)(exp((double)(r[e] - mx)) / z);
+}
+
+__global__ void moe_swiglu_kernel(float* __restrict__ g, const float* __restrict__ u, size_t n) {
+  const size_t i = (size_t)blockIdx.x * blockDim.x + threadIdx.x;
+  if (i < n) {
+    const float gv = g[i];
+    g[i] = gv * (1.0f / (1.0f + expf(-gv))) * u[i];
+  }
+}
+
+// out[t][i] = sum over the selected experts, ascending, of gate * y[e][t][i].
+__global__ void moe_combine_kernel(const float* __restrict__ y, const float* __restrict__ gates,
+                                   const float* __restrict__ sel, float* __restrict__ out, int T, int d, int E) {
+  const int t = blockIdx.x;
+  for (int i = threadIdx.x; i < d; i += blockDim.x) {
+    float acc = 0.0f;
+    for (int e = 0; e < E; ++e)
+      if (sel[(size_t)t * E + e] != 0.0f) acc += gates[(size_t)t * E + e] * y[((size_t)e * T + t) * d + i];
+    out[(size_t)t * d + i] = acc;
+  }
+}
+}  // namespace
+
+size_t moe_ffn_scratch_floats(int T, int d, int d_ff, int E) {
+  return (size_t)T * E * 3 + (size_t)T * d_ff * 2 + (size_t)E * T * d;
+}
+
+void moe_ffn_cuda(cublasHandle_t handle, const float* x, int T, int d, int d_ff, int E, int k, bool renorm,
+                  const float* router, const float* gate_exps, const float* up_exps, const float* down_exps,
+                  float* scratch, float* out, cudaStream_t stream) {
+  float* logits = scratch;
+  float* gates = logits + (size_t)T * E;
+  float* sel = gates + (size_t)T * E;
+  float* g = sel + (size_t)T * E;
+  float* u = g + (size_t)T * d_ff;
+  float* y = u + (size_t)T * d_ff;
+  cublasSetStream(handle, stream);
+  moe_gemm_rm(handle, x, router, logits, T, E, d);
+  moe_route_kernel<<<T, 32, 0, stream>>>(logits, gates, sel, E, k, renorm ? 1 : 0);
+  const size_t n = (size_t)T * d_ff;
+  for (int e = 0; e < E; ++e) {
+    moe_gemm_rm(handle, x, gate_exps + (size_t)e * d_ff * d, g, T, d_ff, d);
+    moe_gemm_rm(handle, x, up_exps + (size_t)e * d_ff * d, u, T, d_ff, d);
+    moe_swiglu_kernel<<<(unsigned)((n + 255) / 256), 256, 0, stream>>>(g, u, n);
+    moe_gemm_rm(handle, g, down_exps + (size_t)e * d * d_ff, y + (size_t)e * T * d, T, d, d_ff);
+  }
+  moe_combine_kernel<<<T, 128, 0, stream>>>(y, gates, sel, out, T, d, E);
+  gpuErrchk(cudaGetLastError());
+}

@@ -8,7 +8,7 @@ renormalised gate), llama.cpp layout: `ffn_gate_inp` (router, ne {d, E}),
 ember's MoE FFN (`utils.cpp`, `moe_ffn_f32_cpu`): softmax over the E router logits, top-k
 by probability (ties to the lower index), probabilities renormalised over the k, output
 the weighted sum of the selected experts' SwiGLU FFNs. It runs on the CPU paths (single
-token and batch prefill); a CUDA build runs MoE models' layers on the CPU, with a warning.
+token and batch prefill), and on the GPU through `moe_ffn_cuda` (below).
 
 ## Gate
 
@@ -18,3 +18,23 @@ CUDA and WASM**, token counts and stop reasons identical.
 
 `dense_regression.log`: with MoE in, the dense `chat_sftfinal_v2` model stays 40/40 vs
 mtstudio on CUDA, CPU and WASM; `v2_q8all` stays at 36/40 (as in `../quant_2026-10-19`).
+
+## CUDA (`cuda_moe_gate.log`)
+
+`moe_ffn_cuda` (`cuda_kernels.cu`): router logits by cuBLAS, a routing kernel (top-k, ties to
+the lower index, gates as the CPU kernel computes them), every expert's SwiGLU densely over
+all T tokens (cuBLAS FP32), and a combine over the selected experts in ascending index. Dense
+experts cost E/k times the routed compute but need no host sync, so the same call runs in
+batch prefill, per-launch decode and the captured CUDA-graph decode; a gather/scatter version
+is the follow-up for large E. Router and expert stacks are uploaded per GPU layer.
+
+`moe_tiny_v3` (c9ed2a99), 40 frozen prompts vs mtstudio's greedy reference:
+
+| Run | replies = mtstudio | decode p50 |
+|---|---|---|
+| CPU | 40/40 | 10.1 ms/token |
+| CUDA, graph decode | 40/40 | 2.1 ms/token |
+| CUDA, per-launch decode | 40/40 | 6.1 ms/token |
+
+First-token logits CUDA vs CPU: max 1.2e-3 (7.8e-5 of range), top-1 40/40. Dense
+`chat_sftfinal_v3` on CUDA stays 40/40.
