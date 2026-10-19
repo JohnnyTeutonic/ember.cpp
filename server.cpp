@@ -43,7 +43,8 @@
 #include <chrono>
 #include <filesystem>
 #include <memory>
-#include <nlohmann/json.hpp>  
+#include <mutex>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <thread>  
 #include <vector>
@@ -105,10 +106,19 @@ int main(int argc, char** argv) {
                  ". Web client will not be served.");
   }
 
+  // One session (one KV cache, one set of device buffers, one RNG) serves
+  // every request, and httplib runs handlers on a thread pool: requests
+  // must take turns. Without this, parallel /chat calls raced on the
+  // session and returned HTTP 500s or each other's state (19 Oct 2026,
+  // tools/chat_concurrency_check.py).
+  static std::mutex session_mu;
   svr.Post("/chat", [&session](const httplib::Request& req,
                                httplib::Response& res) {
         // TTFT clock starts here: the earliest point the server owns the request.
         const auto t_request = std::chrono::steady_clock::now();
+        std::lock_guard<std::mutex> session_lock(session_mu);
+        const double queue_ms =
+            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_request).count();
         Logger::info("Received request for /chat");
     res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -204,6 +214,7 @@ int main(int argc, char** argv) {
             }
             res_json["ttft"] = {
                 {"first_token", tb.first_token},
+                {"queue_ms", queue_ms},
                 {"request_to_first_token_ms", tb.first_token ? ms(t_request, tb.t_first_token) : -1.0},
                 {"ttft_ms", tb.ttft_ms},
                 {"num_prompt_tokens", tb.num_prompt_tokens},
@@ -311,6 +322,7 @@ int main(int argc, char** argv) {
           };
           res_json["ttft"] = {
               {"first_token", tb.first_token},
+              {"queue_ms", queue_ms},
               {"request_to_first_token_ms",
                tb.first_token ? ms(t_request, tb.t_first_token) : -1.0},
               {"server_pre_generate_ms", ms(t_request, tb.t_entry)},
@@ -371,6 +383,7 @@ int main(int argc, char** argv) {
   unsigned int num_threads = SAFE_MAX(1u, std::thread::hardware_concurrency() / 2);
   Logger::info("Starting server on " + host + ":" + std::to_string(port) +
                " with " + std::to_string(num_threads) + " threads.");
+
 
   svr.listen(host.c_str(), port);
   
