@@ -24,18 +24,30 @@ mtstudio on CUDA, CPU and WASM; `v2_q8all` stays at 36/40 (as in `../quant_2026-
 
 `moe_ffn_cuda` (`cuda_kernels.cu`): router logits by cuBLAS, a routing kernel (top-k, ties to
 the lower index, gates as the CPU kernel computes them), every expert's SwiGLU densely over
-all T tokens (cuBLAS FP32), and a combine over the selected experts in ascending index. Dense
-experts cost E/k times the routed compute but need no host sync, so the same call runs in
-batch prefill, per-launch decode and the captured CUDA-graph decode; a gather/scatter version
-is the follow-up for large E. Router and expert stacks are uploaded per GPU layer.
+all T tokens (cuBLAS FP32), and a combine over the selected experts in ascending index. Calls
+with T * k <= 32 (decode, short prefills) are routed instead: the routing kernel writes the
+k selected experts per token in ascending order with their gates and fills device pointer
+arrays, and `cublasSgemmBatched` runs only those experts. Neither path needs a host sync, so
+both run in batch prefill, per-launch decode and the captured CUDA-graph decode.
+`EMBER_MOE_DENSE=1` forces the dense path. Router and expert stacks are uploaded per GPU layer.
+
+`tools/moe_ffn_test.cu` (`cuda_moe_routed.log`): E = 8, k = 2 (Mixtral-style, the FineWeb
+upcycle shape), renorm and raw gates, T = 1-16 routed and 17-40 dense, against a
+double-precision reference: max error <= 2.8e-5 everywhere; dense forced at every T also
+passes.
 
 `moe_tiny_v3` (c9ed2a99), 40 frozen prompts vs mtstudio's greedy reference:
 
 | Run | replies = mtstudio | decode p50 |
 |---|---|---|
 | CPU | 40/40 | 10.1 ms/token |
-| CUDA, graph decode | 40/40 | 2.1 ms/token |
+| CUDA, graph decode (dense only, 7f01834) | 40/40 | 2.1 ms/token |
 | CUDA, per-launch decode | 40/40 | 6.1 ms/token |
+| CUDA, routed, graph decode (two rounds) | 40/40 | 1.8 / 1.3 ms/token |
+| CUDA, dense forced, graph decode (two rounds) | 40/40 | 1.8 / 1.7 ms/token |
 
 First-token logits CUDA vs CPU: max 1.2e-3 (7.8e-5 of range), top-1 40/40. Dense
 `chat_sftfinal_v3` on CUDA stays 40/40.
+
+moe_tiny (E = 4, k = 2) is launch-bound, so routing gains little there; at E = 8, k = 2 the
+routed decode reads a quarter of the expert weights the dense one does.
