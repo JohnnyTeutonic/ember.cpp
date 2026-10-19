@@ -56,10 +56,9 @@ EMSCRIPTEN_KEEPALIVE const char* ember_chat(const char* request) {
         const float top_p = std::max(0.0f, std::min(r.value("top_p", 0.9f), 1.0f));
         std::vector<std::pair<std::string, std::string>> turns;
         if (r.contains("history") && r["history"].is_array())
-            for (const auto& h : r["history"]) {
-                if (turns.size() >= 16) break;
-                turns.emplace_back(h.value("user", ""), h.value("assistant", ""));
-            }
+            for (const auto& h : r["history"]) turns.emplace_back(h.value("user", ""), h.value("assistant", ""));
+        // Public-page cap: the NEWEST 16 turns (the contract drops the oldest).
+        if (turns.size() > 16) turns.erase(turns.begin(), turns.end() - 16);
         const std::string tail = "<|user|>" + user + "<|assistant|>";
         auto build = [&](size_t from) {
             std::string p;
@@ -72,7 +71,11 @@ EMSCRIPTEN_KEEPALIVE const char* ember_chat(const char* request) {
         std::string prompt = build(from);
         while (from < turns.size() && g_session->bpe_token_count(prompt) + max_new > ctx) prompt = build(++from);
         const int prompt_tokens = g_session->bpe_token_count(prompt);
-        if (prompt_tokens + max_new > ctx) throw std::runtime_error("message too long for the model's context");
+        // The context contract (LOCAL_LLM_STACK.md section 3): reject only a
+        // prompt that fills the context; generation stops at the limit.
+        if (prompt_tokens >= ctx)
+            throw std::runtime_error("message is " + std::to_string(prompt_tokens) + " tokens; the model's context is " +
+                                     std::to_string(ctx));
         if (r.contains("seed")) g_session->set_seed(r["seed"].get<unsigned>());
         out["reply"] = g_session->generate(prompt, max_new, temperature, top_k, top_p, "", false);
         out["stop_reason"] = g_session->last_stop_reason();
