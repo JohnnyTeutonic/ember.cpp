@@ -481,6 +481,10 @@ class TinyLlamaModel {
    * @return The embedding vector as a std::vector<float>.
    */
   std::vector<float> lookup_embedding(int token_id);
+  // True when the GGUF is served only by the paperkiln IR interpreter (an IR
+  // whose family is not llama, or EMBER_IR_ONLY=1): no llama weights or GPU
+  // state are loaded, and config_ comes from the IR.
+  bool ir_only() const { return ir_only_; }
 
   /**
    * @brief Get the vocabulary size for the model.
@@ -610,6 +614,7 @@ class TinyLlamaModel {
   std::vector<std::pair<float, float>> precomputed_freqs_cis_;
 
   std::unique_ptr<GGUFData> gguf_data_;
+  bool ir_only_ = false;
   std::string model_path_;
   bool f32_concatenated_weights_loaded_ = false;
 

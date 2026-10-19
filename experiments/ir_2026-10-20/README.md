@@ -39,5 +39,20 @@ spec exactly: renorm gates are a softmax over the k selected logits, and experts
 in ascending index. An IR with an unknown op (`gelu_tanh`) is refused at load:
 "IR op 'gelu_tanh' (block) has no CPU kernel in ember's interpreter".
 
+## IR-only loading (`ir_only.log`)
+
+A GGUF whose IR family is not llama, or any GGUF with `EMBER_IR_ONLY=1`, loads without the
+llama weights or GPU state: the model's dimensions come from the IR and the interpreter holds
+the only copy of the weights. `EMBER_INTERPRETER=0` on such a file is refused at load. Run on
+the llama files with `EMBER_IR_ONLY=1`:
+
+| Run | replies = mtstudio | RSS |
+|---|---|---|
+| `chat_sftfinal_v3`, CPU build, llama path | 40/40 | 156 MB |
+| `chat_sftfinal_v3`, CPU build, IR-only | 40/40 | 161 MB |
+| `chat_sftfinal_v3`, CUDA build, llama path / IR-only | 40/40 / 40/40 | 392 / 287 MB |
+| `chat_sftfinal_v3`, IR-only, `EMBER_SPEC=4` | 40/40 | |
+| `moe_tiny_v3`, IR-only | 40/40 | 39 MB |
+
 Next families, by new-op cost (section 4): gpt2 (layernorm, gelu, learned positions), then
 sliding-window attention, then gating ops, then recurrent state.
