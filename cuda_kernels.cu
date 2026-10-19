@@ -47,6 +47,7 @@ inline float bf16_to_float32_host(uint16_t bf16) {
 #include <stdint.h>
 #include <stdio.h>
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <cfloat>
@@ -3400,13 +3401,119 @@ __global__ void moe_combine_kernel(const float* __restrict__ y, const float* __r
 }
 }  // namespace
 
-size_t moe_ffn_scratch_floats(int T, int d, int d_ff, int E) {
-  return (size_t)T * E * 3 + (size_t)T * d_ff * 2 + (size_t)E * T * d;
+namespace {
+bool moe_use_routed(int T, int k) {
+  static const bool dense = [] {
+    const char* e = std::getenv("EMBER_MOE_DENSE");
+    return e && std::string(e) == "1";
+  }();
+  return !dense && T * k <= 32;
+}
+size_t moe_routed_floats(int T, int d, int d_ff, int E, int k) {
+  const size_t tk = (size_t)T * k;
+  // pointer arrays first (9 x tk pointers, 2 floats each), then logits [T][E],
+  // gates [tk], g/u [tk][d_ff], y [tk][d]
+  return 18 * tk + (size_t)T * E + tk + 2 * tk * d_ff + tk * d;
+}
+
+// Top-k per token (ties to the lower index), the selected indices in
+// ascending order with their gates (as moe_ffn_f32_cpu), and the pointer
+// arrays for the batched expert GEMMs.
+__global__ void moe_route_sel_kernel(const float* __restrict__ logits, int E, int k, int renorm, const float* x,
+                                     int d, int d_ff, const float* gate_exps, const float* up_exps,
+                                     const float* down_exps, float* gsel, float* g, float* u, float* y,
+                                     const float** Ag, const float** Au, const float** Ad, const float** Bx,
+                                     const float** Bg, float** Cg, float** Cu, float** Cy) {
+  if (threadIdx.x != 0) return;
+  const int t = blockIdx.x;
+  const float* r = logits + (size_t)t * E;
+  int idx[64];
+  bool taken[256];
+  for (int e = 0; e < E; ++e) taken[e] = false;
+  for (int j = 0; j < k; ++j) {
+    int best = -1;
+    for (int e = 0; e < E; ++e)
+      if (!taken[e] && (best < 0 || r[e] > r[best])) best = e;
+    taken[best] = true;
+    idx[j] = best;
+  }
+  for (int a = 1; a < k; ++a)  // ascending expert index
+    for (int b = a; b > 0 && idx[b - 1] > idx[b]; --b) { const int tmp = idx[b]; idx[b] = idx[b - 1]; idx[b - 1] = tmp; }
+  float mx = -INFINITY;
+  for (int e = 0; e < E; ++e)
+    if (!renorm || taken[e]) mx = fmaxf(mx, r[e]);
+  double z = 0.0;
+  for (int e = 0; e < E; ++e)
+    if (!renorm || taken[e]) z += exp((double)(r[e] - mx));
+  for (int j = 0; j < k; ++j) {
+    const int e = idx[j];
+    const size_t s = (size_t)t * k + j;
+    gsel[s] = (float)(exp((double)(r[e] - mx)) / z);
+    Ag[s] = gate_exps + (size_t)e * d_ff * d;
+    Au[s] = up_exps + (size_t)e * d_ff * d;
+    Ad[s] = down_exps + (size_t)e * d * d_ff;
+    Bx[s] = x + (size_t)t * d;
+    Bg[s] = g + s * d_ff;
+    Cg[s] = g + s * d_ff;
+    Cu[s] = u + s * d_ff;
+    Cy[s] = y + s * d;
+  }
+}
+
+__global__ void moe_combine_sel_kernel(const float* __restrict__ y, const float* __restrict__ gsel,
+                                       float* __restrict__ out, int d, int k) {
+  const int t = blockIdx.x;
+  for (int i = threadIdx.x; i < d; i += blockDim.x) {
+    float acc = 0.0f;
+    for (int j = 0; j < k; ++j) acc += gsel[(size_t)t * k + j] * y[((size_t)t * k + j) * d + i];
+    out[(size_t)t * d + i] = acc;
+  }
+}
+}  // namespace
+
+size_t moe_ffn_scratch_floats(int T, int d, int d_ff, int E, int k) {
+  const size_t dense = (size_t)T * E * 3 + (size_t)T * d_ff * 2 + (size_t)E * T * d;
+  return std::max(dense, moe_routed_floats(T, d, d_ff, E, k));
 }
 
 void moe_ffn_cuda(cublasHandle_t handle, const float* x, int T, int d, int d_ff, int E, int k, bool renorm,
                   const float* router, const float* gate_exps, const float* up_exps, const float* down_exps,
                   float* scratch, float* out, cudaStream_t stream) {
+  if (moe_use_routed(T, k) && E <= 256 && k <= 64) {
+    const int tk = T * k;
+    const float** Ag = reinterpret_cast<const float**>(scratch);
+    const float** Au = Ag + tk;
+    const float** Ad = Au + tk;
+    const float** Bx = Ad + tk;
+    const float** Bg = Bx + tk;
+    float** Cg = reinterpret_cast<float**>(scratch) + 5 * (size_t)tk;
+    float** Cu = Cg + tk;
+    float** Cy = Cu + tk;
+    float* logits = reinterpret_cast<float*>(Cy + tk);
+    float* gsel = logits + (size_t)T * E;
+    float* g = gsel + tk;
+    float* u = g + (size_t)tk * d_ff;
+    float* y = u + (size_t)tk * d_ff;
+    cublasSetStream(handle, stream);
+    moe_gemm_rm(handle, x, router, logits, T, E, d);
+    moe_route_sel_kernel<<<T, 32, 0, stream>>>(logits, E, k, renorm ? 1 : 0, x, d, d_ff, gate_exps, up_exps,
+                                               down_exps, gsel, g, u, y, Ag, Au, Ad, Bx, Bg, Cg, Cu, Cy);
+    const float one = 1.0f, zero = 0.0f;
+    // Each item: row-major [rows][cols] weight times a column vector (see moe_gemm_rm).
+    if (cublasSgemmBatched(handle, CUBLAS_OP_T, CUBLAS_OP_N, d_ff, 1, d, &one, Ag, d, Bx, d, &zero, Cg, d_ff, tk) !=
+            CUBLAS_STATUS_SUCCESS ||
+        cublasSgemmBatched(handle, CUBLAS_OP_T, CUBLAS_OP_N, d_ff, 1, d, &one, Au, d, Bx, d, &zero, Cu, d_ff, tk) !=
+            CUBLAS_STATUS_SUCCESS)
+      throw std::runtime_error("moe_ffn_cuda: cublasSgemmBatched failed");
+    const size_t n = (size_t)tk * d_ff;
+    moe_swiglu_kernel<<<(unsigned)((n + 255) / 256), 256, 0, stream>>>(g, u, n);
+    if (cublasSgemmBatched(handle, CUBLAS_OP_T, CUBLAS_OP_N, d, 1, d_ff, &one, Ad, d_ff, Bg, d_ff, &zero, Cy, d, tk) !=
+        CUBLAS_STATUS_SUCCESS)
+      throw std::runtime_error("moe_ffn_cuda: cublasSgemmBatched failed");
+    moe_combine_sel_kernel<<<T, 128, 0, stream>>>(y, gsel, out, d, k);
+    gpuErrchk(cudaGetLastError());
+    return;
+  }
   float* logits = scratch;
   float* gates = logits + (size_t)T * E;
   float* sel = gates + (size_t)T * E;

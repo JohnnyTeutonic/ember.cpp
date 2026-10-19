@@ -9,7 +9,15 @@ import os
 import sys
 import urllib.request
 
-sys.path.insert(0, "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/tools")
+# paperkiln's tools/bpe.py: PAPERKILN_TOOLS if set, else the sibling checkout
+# under either folder name (paperkiln, or microtorch before the rename).
+_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_tools = os.environ.get("PAPERKILN_TOOLS") or next(
+    (p for p in (os.path.join(_root, n, "tools") for n in ("paperkiln", "microtorch"))
+     if os.path.exists(os.path.join(p, "bpe.py"))), None)
+if _tools is None:
+    sys.exit("chat_parity.py: paperkiln's tools/bpe.py not found; set PAPERKILN_TOOLS")
+sys.path.insert(0, _tools)
 import bpe  # noqa: E402
 
 # Ports and model from the environment (PARITY_EMBER_PORT, PARITY_MTS_PORT,

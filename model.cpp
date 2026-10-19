@@ -2641,10 +2641,10 @@ float* TinyLlamaModel::moe_scratch(int T) {
   const int E = config_.num_experts, d = config_.hidden_size, d_ff = config_.intermediate_size;
   if (T == 1) {
     if (!moe_scratch_decode_dev_)
-      gpuErrchk(cudaMalloc(&moe_scratch_decode_dev_, moe_ffn_scratch_floats(1, d, d_ff, E) * sizeof(float)));
+      gpuErrchk(cudaMalloc(&moe_scratch_decode_dev_, moe_ffn_scratch_floats(1, d, d_ff, E, config_.num_experts_used) * sizeof(float)));
     return moe_scratch_decode_dev_;
   }
-  const size_t need = moe_ffn_scratch_floats(T, d, d_ff, E);
+  const size_t need = moe_ffn_scratch_floats(T, d, d_ff, E, config_.num_experts_used);
   if (need > moe_scratch_batch_floats_) {
     if (moe_scratch_batch_dev_) gpuErrchk(cudaFree(moe_scratch_batch_dev_));
     gpuErrchk(cudaMalloc(&moe_scratch_batch_dev_, need * sizeof(float)));
