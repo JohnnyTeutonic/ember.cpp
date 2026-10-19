@@ -1,0 +1,27 @@
+chat_sftfinal_q8all.gguf: 44 tensors quantised to Q8_0
+71470336 chat_sftfinal_eps1e5.gguf
+37684480 chat_sftfinal_q8.gguf
+19203328 chat_sftfinal_q8all.gguf
+28443904 chat_sftfinal_q8out.gguf
+== build_cuda eps1e5
+n=40 reply identical 40, token count 40, stop reason 40, prompt tokens == bpe.py 40
+== build_cuda q8
+n=40 reply identical 38, token count 38, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0632, mean |d| 0.01192, max |d| / logit range 2.25e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0351)
+== build_cuda q8out
+n=40 reply identical 37, token count 37, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0880, mean |d| 0.01404, max |d| / logit range 3.13e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0351)
+== build_cuda q8all
+n=40 reply identical 36, token count 36, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0999, mean |d| 0.01644, max |d| / logit range 3.56e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0351)
+== build_cpu eps1e5
+n=40 reply identical 40, token count 40, stop reason 40, prompt tokens == bpe.py 40
+== build_cpu q8
+n=40 reply identical 38, token count 38, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0663, mean |d| 0.01178, max |d| / logit range 2.36e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0359)
+== build_cpu q8out
+n=40 reply identical 37, token count 37, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0883, mean |d| 0.01394, max |d| / logit range 3.14e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0359)
+== build_cpu q8all
+n=40 reply identical 36, token count 36, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0983, mean |d| 0.01617, max |d| / logit range 3.50e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0359)

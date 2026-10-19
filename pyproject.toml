@@ -55,11 +55,11 @@ torch = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/JohnnyTeutonic/tinyllama.cpp"
-Repository = "https://github.com/JohnnyTeutonic/tinyllama.cpp"
-Documentation = "https://github.com/JohnnyTeutonic/tinyllama.cpp#readme"
-"Bug Tracker" = "https://github.com/JohnnyTeutonic/tinyllama.cpp/issues"
-Changelog = "https://github.com/JohnnyTeutonic/tinyllama.cpp/releases"
+Homepage = "https://github.com/JohnnyTeutonic/ember.cpp"
+Repository = "https://github.com/JohnnyTeutonic/ember.cpp"
+Documentation = "https://github.com/JohnnyTeutonic/ember.cpp#readme"
+"Bug Tracker" = "https://github.com/JohnnyTeutonic/ember.cpp/issues"
+Changelog = "https://github.com/JohnnyTeutonic/ember.cpp/releases"
 
 [tool.scikit-build]
 cmake.build-type = "Release"

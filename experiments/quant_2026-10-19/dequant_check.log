@@ -1,0 +1,33 @@
+BUILD_SCRIPT_DONE
+BUILD_SCRIPT_DONE
+wasm built
+== build_cuda v2
+n=40 reply identical 40, token count 40, stop reason 40, prompt tokens == bpe.py 40
+== build_cuda v2_q8
+n=40 reply identical 38, token count 38, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0632, mean |d| 0.01192, max |d| / logit range 2.25e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0351)
+== build_cuda v2_q8out
+n=40 reply identical 37, token count 37, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0880, mean |d| 0.01404, max |d| / logit range 3.13e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0351)
+== build_cuda v2_q8all
+n=40 reply identical 36, token count 36, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0999, mean |d| 0.01644, max |d| / logit range 3.56e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0351)
+== build_cpu v2
+n=40 reply identical 40, token count 40, stop reason 40, prompt tokens == bpe.py 40
+== build_cpu v2_q8
+n=40 reply identical 38, token count 38, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0663, mean |d| 0.01178, max |d| / logit range 2.36e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0359)
+== build_cpu v2_q8out
+n=40 reply identical 37, token count 37, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0883, mean |d| 0.01394, max |d| / logit range 3.14e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0359)
+== build_cpu v2_q8all
+n=40 reply identical 36, token count 36, stop reason 40, prompt tokens == bpe.py 40
+logits vs f32 over 40 prompts: max |d| 0.0983, mean |d| 0.01617, max |d| / logit range 3.50e-03; top-1 agree 40/40 (smallest f32 top-1 margin 0.0359)
+== WASM v2
+n=40: WASM reply == mtstudio 40, token count 40 (885 ms per reply in node)
+== WASM v2_q8
+n=40: WASM reply == mtstudio 38, token count 38 (1059 ms per reply in node)
+== WASM v2_q8out
+n=40: WASM reply == mtstudio 37, token count 37 (1205 ms per reply in node)
+== WASM v2_q8all
+n=40: WASM reply == mtstudio 36, token count 36 (1144 ms per reply in node)

@@ -187,16 +187,16 @@ For detailed operational logs, inspect `debugging.log` in the application's runt
 
 **Development Installation (CPU-only):**
 ```bash
-git clone https://github.com/JohnnyTeutonic/tinyllama.cpp.git
-cd tinyllama.cpp
+git clone https://github.com/JohnnyTeutonic/ember.cpp.git
+cd ember.cpp
 # Install from the project directory
 pip install .
 ```
 
 **Development Installation with CUDA Support:**
 ```bash
-git clone https://github.com/JohnnyTeutonic/tinyllama.cpp.git
-cd tinyllama.cpp
+git clone https://github.com/JohnnyTeutonic/ember.cpp.git
+cd ember.cpp
 # Set environment variable to enable CUDA build
 export TINYLLAMA_CPP_BUILD_CUDA=1  # Linux/macOS
 # or
@@ -210,16 +210,16 @@ pip install .
 
 **Development Installation with PyTorch Dependencies:**
 ```bash
-git clone https://github.com/JohnnyTeutonic/tinyllama.cpp.git
-cd tinyllama.cpp
+git clone https://github.com/JohnnyTeutonic/ember.cpp.git
+cd ember.cpp
 # Install from the project directory with PyTorch extras
 pip install .[torch]
 ```
 
 **Editable Development Installation:**
 ```bash
-git clone https://github.com/JohnnyTeutonic/tinyllama.cpp.git
-cd tinyllama.cpp
+git clone https://github.com/JohnnyTeutonic/ember.cpp.git
+cd ember.cpp
 # Editable install from the project directory (CPU-only)
 pip install -e .
 

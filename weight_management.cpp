@@ -1,4 +1,6 @@
 #include "weight_management.h"
+
+#include <algorithm>
 #include "ggml_types.h"
 #include "logger.h"
 #include "quantization.h"
@@ -22,6 +24,43 @@ void TinyLlamaModel::ensure_embed_tokens_dequantized() {
     } else if (!this->embed_tokens.empty()) { 
         this->embed_tokens_f32 = bf16vec_to_float_vec(this->embed_tokens);
     }
+}
+
+bool TinyLlamaModel::dequantize_all_if_small(size_t max_params) {
+    const size_t hs = config_.hidden_size, is = config_.intermediate_size, vs = config_.vocab_size;
+    const size_t kv = hs / std::max(config_.num_attention_heads, 1) * config_.num_key_value_heads;
+    const size_t per_layer = hs * hs * 2 + hs * kv * 2 + hs * is * 3;
+    const size_t params = vs * hs * 2 + per_layer * config_.num_hidden_layers;
+    if (params > max_params) return false;
+    ensure_embed_tokens_dequantized();
+    ensure_lm_head_dequantized();
+    for (int l = 0; l < static_cast<int>(layers.size()); ++l) {
+        ensure_q_proj_dequantized(l);
+        ensure_k_proj_dequantized(l);
+        ensure_v_proj_dequantized(l);
+        ensure_o_proj_dequantized(l);
+        ensure_gate_proj_dequantized(l);
+        ensure_up_proj_dequantized(l);
+        ensure_down_proj_dequantized(l);
+    }
+    // Free the quantised copies whose f32 copy now exists: nothing can then
+    // take a quantised kernel, and the model is not held twice (WASM memory).
+    auto drop = [](const std::vector<float>& f32, auto&... quant) {
+        if (f32.empty()) return;
+        ((quant.clear(), quant.shrink_to_fit()), ...);
+    };
+    drop(embed_tokens_f32, embed_tokens_q4k, embed_tokens_q6k, embed_tokens_q8_0, embed_tokens_q8k);
+    drop(lm_head_f32, lm_head_q4k, lm_head_q6k, lm_head_q8_0, lm_head_q8k);
+    for (auto& lw : layers) {
+        drop(lw.q_proj_f32, lw.q_proj_q4k, lw.q_proj_q6k, lw.q_proj_q8_0, lw.q_proj_q8k);
+        drop(lw.k_proj_f32, lw.k_proj_q4k, lw.k_proj_q6k, lw.k_proj_q8_0, lw.k_proj_q8k);
+        drop(lw.v_proj_f32, lw.v_proj_q4k, lw.v_proj_q6k, lw.v_proj_q8_0, lw.v_proj_q8k);
+        drop(lw.o_proj_f32, lw.o_proj_q4k, lw.o_proj_q6k, lw.o_proj_q8_0, lw.o_proj_q8k);
+        drop(lw.gate_proj_f32, lw.gate_proj_q4k, lw.gate_proj_q6k, lw.gate_proj_q8_0, lw.gate_proj_q8k);
+        drop(lw.up_proj_f32, lw.up_proj_q4k, lw.up_proj_q6k, lw.up_proj_q8_0, lw.up_proj_q8k);
+        drop(lw.down_proj_f32, lw.down_proj_q4k, lw.down_proj_q6k, lw.down_proj_q8_0, lw.down_proj_q8k);
+    }
+    return true;
 }
 
 void TinyLlamaModel::ensure_lm_head_dequantized() {
