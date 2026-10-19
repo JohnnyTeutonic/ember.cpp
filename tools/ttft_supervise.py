@@ -39,7 +39,7 @@ REPO = "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete"
 sys.path.insert(0, f"{REPO}/tools/colab_supervisor")
 import supervisor as sup  # noqa: E402
 
-EMBER = f"{REPO}/tinyllama.cpp"
+EMBER = f"{REPO}/ember.cpp"
 PK = f"{REPO}/microtorch"
 ART = "/mnt/c/ml_artifacts/ttft"
 

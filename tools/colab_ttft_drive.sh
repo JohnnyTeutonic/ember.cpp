@@ -18,7 +18,7 @@ VM_ENV=$(printf '%q ' "$@")   # shell-quoted: values may hold spaces (LONG_LENGT
 COL=~/.local/bin/colab
 COLAB_PY=~/.local/share/uv/tools/google-colab-cli/bin/python
 ROOT=/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete
-EMBER=$ROOT/tinyllama.cpp; PK=$ROOT/microtorch
+EMBER=$ROOT/ember.cpp; PK=$ROOT/microtorch
 STAGE=~/ttft_stage/$S; OUT=/mnt/c/ml_artifacts/ttft/$S
 log() { echo "$(date +%H:%M:%S) $*"; }
 
