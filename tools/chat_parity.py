@@ -5,15 +5,18 @@ samplers). Compares reply text, generated token count and stop reason, and
 checks ember's prompt token count against tools/bpe.py on the same template.
 """
 import json
+import os
 import sys
 import urllib.request
 
 sys.path.insert(0, "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/tools")
 import bpe  # noqa: E402
 
-EMBER = "http://127.0.0.1:8090/chat"
-MTS = "http://127.0.0.1:8091/chat"
-GGUF = "/home/jonat/ember_ttft/chat/chat_sft_bpe.gguf"
+# Ports and model from the environment (PARITY_EMBER_PORT, PARITY_MTS_PORT,
+# PARITY_GGUF); the defaults are the 18 Oct 2026 receipts' setup.
+EMBER = f"http://127.0.0.1:{os.environ.get('PARITY_EMBER_PORT', '8090')}/chat"
+MTS = f"http://127.0.0.1:{os.environ.get('PARITY_MTS_PORT', '8091')}/chat"
+GGUF = os.environ.get("PARITY_GGUF", "/home/jonat/ember_ttft/chat/chat_sft_bpe.gguf")
 PROMPTS = "/mnt/c/ml_artifacts/chat_base/sft/tinychat_hf_prompts_v1.jsonl"
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 40
 OUT = sys.argv[2] if len(sys.argv) > 2 else None

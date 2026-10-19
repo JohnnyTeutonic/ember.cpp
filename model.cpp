@@ -840,12 +840,29 @@ std::vector<float> TinyLlamaModel::forward_device(
 
   int is = config_.intermediate_size;
   float eps = config_.rms_norm_eps;
-  std::vector<float> h_x_input_dev(config_.hidden_size);
 
-  cublasStatus_t stream_status = cublasSetStream(cublas_handle_, stream);
-    gpuErrchk(cudaMemcpyAsync(h_x_input_dev.data(), x_input_dev, config_.hidden_size * sizeof(float), cudaMemcpyDeviceToHost, stream));
+  // EMBER_DECODE_TIMING=1: sync and charge the elapsed wall time to a phase.
+  static const bool decode_timing = std::getenv("EMBER_DECODE_TIMING") != nullptr;
+  auto t_mark = std::chrono::steady_clock::now();
+  auto phase = [&](const char* name) {
+    if (!decode_timing) return;
     gpuErrchk(cudaStreamSynchronize(stream));
-    
+    const auto now = std::chrono::steady_clock::now();
+    decode_phase_ms_[name] += std::chrono::duration<double, std::milli>(now - t_mark).count();
+    t_mark = now;
+  };
+
+  // (A debug copy of the input back to the host, plus a stream sync, used
+  // to run here on every decode step; nothing read it.)
+  cublasStatus_t stream_status = cublasSetStream(cublas_handle_, stream);
+  phase("entry");
+  // EMBER_DECODE_OPT=0 selects the standard rmsnorm/attention kernels for
+  // decode (measurement knob; the optimized ones are the default).
+  static const bool use_opt_kernels = [&] {
+    const char* v = std::getenv("EMBER_DECODE_OPT");
+    return config_.use_optimized_cuda_kernels && !(v && std::string(v) == "0");
+  }();
+
   if (stream_status != CUBLAS_STATUS_SUCCESS) {
     Logger::error("cublasSetStream failed in forward_device");
     return {};
@@ -866,14 +883,16 @@ std::vector<float> TinyLlamaModel::forward_device(
     }
     
     // Use optimized kernels if enabled, fallback to standard if needed
-    if (config_.use_optimized_cuda_kernels) {
+    if (use_opt_kernels) {
         rmsnorm_vector_cuda_optimized(x_dev_, lw_in_norm_dev, x_norm_dev_, hs, eps, stream);
     } else {
         rmsnorm_vector_cuda(x_dev_, lw_in_norm_dev, x_norm_dev_, hs, eps, stream);
     }
+    phase("layer.norm1");
     // Use concatenated weights for optimal performance
     ensure_f32_concatenated_weights_loaded();
-    
+    phase("layer.ensure_weights");
+
     if (w_q_f32_dev_ && w_k_f32_dev_ && w_v_f32_dev_) {
       const float* w_q_layer_ptr = w_q_f32_dev_ + (size_t)l_gpu_idx * hs * hs;
       const float* w_k_layer_ptr = w_k_f32_dev_ + (size_t)l_gpu_idx * n_kv_heads * head_dim * hs;
@@ -888,6 +907,7 @@ std::vector<float> TinyLlamaModel::forward_device(
     } else {
       Logger::error("GPU L" + std::to_string(l_model_idx) + " (gpu_idx " + std::to_string(l_gpu_idx) + "): No valid concatenated QKV weights."); return {};
     }
+    phase("layer.qkv");
     rope_cuda(q_dev_, n_heads, head_dim, all_freqs_cis_dev, pos, config_.is_gguf_file_loaded, stream);
     rope_cuda(k_dev_, n_kv_heads, head_dim, all_freqs_cis_dev, pos, config_.is_gguf_file_loaded, stream);
 
@@ -912,6 +932,16 @@ std::vector<float> TinyLlamaModel::forward_device(
                 quantize_fp32_to_int8_symmetric_per_tensor_cuda(
                     current_v_head_ptr_fp32, v_quant_target_ptr, v_scale_target_ptr, head_dim, stream);
             }
+        } else if (kv_cache->allocated_num_kv_heads == n_kv_heads &&
+                   kv_cache->allocated_head_dim == head_dim && pos < kv_cache->allocated_max_seq_len) {
+            // The cache is [pos][kv_head][dim], so position pos's heads are one
+            // contiguous run laid out exactly as k_dev_ / v_dev_: one copy each
+            // instead of a kernel launch per head per tensor.
+            const size_t row = static_cast<size_t>(n_kv_heads) * head_dim;
+            gpuErrchk(cudaMemcpyAsync(current_kv_layer.k_dev_fp32 + static_cast<size_t>(pos) * row, k_dev_,
+                                      row * sizeof(float), cudaMemcpyDeviceToDevice, stream));
+            gpuErrchk(cudaMemcpyAsync(current_kv_layer.v_dev_fp32 + static_cast<size_t>(pos) * row, v_dev_,
+                                      row * sizeof(float), cudaMemcpyDeviceToDevice, stream));
         } else {
             for (int kvh = 0; kvh < n_kv_heads; ++kvh) {
                 const float* current_k_head_ptr = k_dev_ + kvh * head_dim;
@@ -919,8 +949,8 @@ std::vector<float> TinyLlamaModel::forward_device(
 
                 update_kv_cache_cuda(current_kv_layer.k_dev_fp32, current_k_head_ptr, pos,
                                    kvh, kv_cache->allocated_max_seq_len,
-                                   kv_cache->allocated_num_kv_heads, 
-                                   kv_cache->allocated_head_dim, stream); 
+                                   kv_cache->allocated_num_kv_heads,
+                                   kv_cache->allocated_head_dim, stream);
 
                 update_kv_cache_cuda(current_kv_layer.v_dev_fp32, current_v_head_ptr, pos,
                                    kvh, kv_cache->allocated_max_seq_len,
@@ -934,6 +964,7 @@ std::vector<float> TinyLlamaModel::forward_device(
         return {};
     }
 
+    phase("layer.rope_kv");
     float scale = 1.0f / SAFE_SQRT(static_cast<float>(head_dim));
     const float* attention_k_cache_ptr_dev = nullptr;
     const float* attention_v_cache_ptr_dev = nullptr;
@@ -969,7 +1000,7 @@ std::vector<float> TinyLlamaModel::forward_device(
         );
     } else {
     // Use optimized kernels if enabled, fallback to standard if needed
-    if (config_.use_optimized_cuda_kernels) {
+    if (use_opt_kernels) {
         attention_cuda_optimized(
             q_dev_,                            
             attention_k_cache_ptr_dev,       
@@ -999,6 +1030,7 @@ std::vector<float> TinyLlamaModel::forward_device(
         );
     }
     }
+    phase("layer.attention");
 
     if (w_o_f32_dev_) {
       const float* lw_o_proj_f32_dev = w_o_f32_dev_ + (size_t)l_gpu_idx * hs * hs;
@@ -1014,32 +1046,14 @@ std::vector<float> TinyLlamaModel::forward_device(
     if (!lw_post_norm_dev) { Logger::error("Missing post_attention_layernorm_dev for GPU layer model_idx=" + std::to_string(l_model_idx)); return {}; }
     
     // Use optimized kernels if enabled, fallback to standard if needed
-    if (config_.use_optimized_cuda_kernels) {
+    if (use_opt_kernels) {
         rmsnorm_vector_cuda_optimized(current_x_dev, lw_post_norm_dev, x_norm_dev_, hs, eps, stream);
     } else {
         rmsnorm_vector_cuda(current_x_dev, lw_post_norm_dev, x_norm_dev_, hs, eps, stream);
     }
-
-    if (w_o_f32_dev_) {
-      const float* w_o_layer_ptr = w_o_f32_dev_ + (size_t)l_gpu_idx * hs * hs;
-      matvec_f32_f32_cuda(cublas_handle_, w_o_layer_ptr, attn_out_dev_, attn_proj_dev_, hs, hs, stream);
-    } else {
-      Logger::error("GPU L" + std::to_string(l_model_idx) + ": No valid O projection weights."); return {};
-    }
-
-    add_residual_cuda(attn_proj_dev_, x_resid1_dev_, current_x_dev, hs, stream);
-    gpuErrchk(cudaMemcpyAsync(x_resid2_dev_, current_x_dev, hs * sizeof(float), cudaMemcpyDeviceToDevice, stream));
-
-    if (!lw_post_norm_dev) { 
-      Logger::error("Missing post_attention_layernorm_dev for GPU layer model_idx=" + std::to_string(l_model_idx)); return {}; 
-    }
-    
-    // Use optimized kernels if enabled, fallback to standard if needed
-    if (config_.use_optimized_cuda_kernels) {
-        rmsnorm_vector_cuda_optimized(current_x_dev, lw_post_norm_dev, x_norm_dev_, hs, eps, stream);
-    } else {
-        rmsnorm_vector_cuda(current_x_dev, lw_post_norm_dev, x_norm_dev_, hs, eps, stream);
-    }
+    // (This O-projection / residual / copy / post-norm sequence used to run a
+    // second time here, recomputing identical values from unchanged inputs.)
+    phase("layer.o_proj_resid_norm2");
 
     if (w_gate_f32_dev_ && w_up_f32_dev_) {
       const float* w_gate_layer_ptr = w_gate_f32_dev_ + (size_t)l_gpu_idx * is * hs;
@@ -1064,28 +1078,43 @@ std::vector<float> TinyLlamaModel::forward_device(
       Logger::error("GPU L" + std::to_string(l_model_idx) + ": No valid Down projection weights.");
       return {};
     }
-    add_residual_cuda(mlp_down_dev_, x_resid2_dev_, current_x_dev, hs, stream); 
+    add_residual_cuda(mlp_down_dev_, x_resid2_dev_, current_x_dev, hs, stream);
+    phase("layer.mlp");
 
   }
   // Use optimized kernels if enabled, fallback to standard if needed
-  if (config_.use_optimized_cuda_kernels) {
+  if (use_opt_kernels) {
       rmsnorm_vector_cuda_optimized(x_dev_, final_norm_dev, x_norm_dev_, hs, eps, stream);
   } else {
       rmsnorm_vector_cuda(x_dev_, final_norm_dev, x_norm_dev_, hs, eps, stream);
   }
+  phase("final_norm");
   ensure_lm_head_dequantized();
-  if (lm_head_dev_) { 
+  // EMBER_DECODE_LMHEAD=bf16 restores the old BF16 path (measurement knob).
+  static const bool lmhead_bf16 = [] {
+    const char* v = std::getenv("EMBER_DECODE_LMHEAD");
+    return v && std::string(v) == "bf16";
+  }();
+  if (lm_head_f32_dev_ && !(lmhead_bf16 && lm_head_dev_)) {
+    // FP32 LM head, as the batched prefill uses. The BF16 path below
+    // allocated, converted and freed a full FP32 copy of the head on every
+    // decode step (a 12.6 MB cudaMalloc/cudaFree pair at vocab 8192, d384),
+    // and its logits came from BF16-rounded weights.
+    matvec_f32_f32_cuda(cublas_handle_, lm_head_f32_dev_, x_norm_dev_, logits_dev_, vs, hs, stream);
+  } else if (lm_head_dev_) {
     matvec_bf16_f32_cuda(cublas_handle_, lm_head_dev_, x_norm_dev_, logits_dev_,
                          vs, hs, this->use_bf16_tensor_cores_, stream);
   } else {
     Logger::error("LM head (lm_head_dev_ for BF16) is null. Cannot calculate logits on GPU.");
     return {};
   }
+  phase("lm_head");
 
   gpuErrchk(cudaStreamSynchronize(stream));
   std::vector<float> logits(vs);
   gpuErrchk(cudaMemcpy(logits.data(), logits_dev_, vs * sizeof(float),
                        cudaMemcpyDeviceToHost));
+  phase("logits_d2h");
   return logits;
 }
 
