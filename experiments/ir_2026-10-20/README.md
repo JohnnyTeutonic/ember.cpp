@@ -54,5 +54,22 @@ the llama files with `EMBER_IR_ONLY=1`:
 | `chat_sftfinal_v3`, IR-only, `EMBER_SPEC=4` | 40/40 | |
 | `moe_tiny_v3`, IR-only | 40/40 | 39 MB |
 
-Next families, by new-op cost (section 4): gpt2 (layernorm, gelu, learned positions), then
-sliding-window attention, then gating ops, then recurrent state.
+## gpt2 (`gpt2_gate.log`)
+
+`gpt2_tiny.gguf` (paperkiln 79b023ca, sha256 37a30e0a; d128 L2 H2, ctx 128, llama.cpp's gpt2
+tensor layout) loads IR-only (family_hint gpt2). New ops, with paperkiln's numerics from
+`ir.hpp`: `pos_embedding` (x + position_embd[pos], EXACT), `layernorm` (mean and biased
+variance, affine with bias, eps 1e-5), `split` (fused qkv columns, EXACT), `gelu` (approx
+`tanh`, or `none` for the erf form); `linear` biases throughout.
+
+| Run | replies = mtstudio | first-token logits vs llama.cpp (gpt2 arch) |
+|---|---|---|
+| CPU build | 40/40 | max 1.1e-3 (6.6e-5 of range), top-1 40/40 |
+| CUDA build | 40/40 | same |
+| WASM (node) | 40/40 | - |
+
+After the gpt2 change, llama via the IR (`chat_sftfinal_v3`, `EMBER_INTERPRETER=1`) and
+`moe_tiny_v3` via the IR stay 40/40.
+
+Next families, by new-op cost (section 4): sliding-window attention (windowed KV + sinks),
+then gating ops (flex/highway/SRD), then recurrent state (Mamba, Kimi linear).

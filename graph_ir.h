@@ -9,9 +9,10 @@
 // to f32 at load. State is owned here: one KV slot per block.
 //
 // CPU kernels, built from the same primitives as ember's llama CPU path so
-// the arithmetic matches it: embedding, rmsnorm, linear, rope (interleaved
-// pairs), attention (causal, KV state), add, mul, silu, moe_ffn (llama.cpp's
-// expert layout). Any other op fails at load, naming the op and the backend.
+// the arithmetic matches it: embedding, pos_embedding, rmsnorm, layernorm,
+// linear (+ bias), split, rope (interleaved pairs), attention (causal, KV
+// state), add, mul, silu, gelu (tanh or erf), moe_ffn (llama.cpp's expert
+// layout). Any other op fails at load, naming the op and the backend.
 #include <memory>
 #include <string>
 #include <unordered_map>
