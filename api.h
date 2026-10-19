@@ -16,6 +16,7 @@
 #include "tokenizer.h"
 
 struct KVCache;
+namespace ember_ir { class Interpreter; }
 
 namespace tinyllama {
 
@@ -212,6 +213,9 @@ class TinyLlamaSession {
                                  std::vector<std::vector<float>>& batch_logits);
 
   std::unique_ptr<TinyLlamaModel> model_;
+  // paperkiln IR interpreter (graph_ir.h); when set, prefill and decode run
+  // through it on the CPU instead of the llama path.
+  std::unique_ptr<ember_ir::Interpreter> ir_;
   std::unique_ptr<Tokenizer> tokenizer_;
   ModelConfig config_;
   KVCache kv_cache_;

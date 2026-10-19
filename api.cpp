@@ -13,6 +13,8 @@
 #include <map>
 #include <memory>
 #include <nlohmann/json.hpp>
+
+#include "graph_ir.h"
 #include <numeric>
 #include <random>
 #include <stdexcept>
@@ -473,6 +475,22 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
   }
 
   eos_token_id_ = config_.eos_token_id; // Use the session's config_ which is now model's config
+  // paperkiln IR (LOCAL_LLM_STACK.md section 4): EMBER_IR=path runs the
+  // interpreter; an IR embedded in the GGUF (`paperkiln.ir`) runs it when its
+  // family is not llama (llama keeps the tuned path). EMBER_INTERPRETER=1/0
+  // forces it on or off.
+  if (const GGUFData* gd = model_->get_gguf_data()) {
+    const std::string ir = ember_ir::find_ir(*gd);
+    const char* force = std::getenv("EMBER_INTERPRETER");
+    if (!ir.empty() && !(force && std::string(force) == "0")) {
+      const std::string family = nlohmann::json::parse(ir).value("family_hint", "");
+      if ((force && std::string(force) == "1") || std::getenv("EMBER_IR") || family != "llama") {
+        ir_ = std::make_unique<ember_ir::Interpreter>(ir, *gd);
+        Logger::warning("Running the model through the paperkiln IR interpreter (CPU; family_hint '" + family +
+                        "'). The llama path's weights stay loaded but unused.");
+      }
+    }
+  }
   // Small quantised models (a Q8_0 download for the browser): dequantise
   // once, so the CPU path runs at f32 speed on the quantised values.
   // EMBER_DEQUANT_AT_LOAD=0 keeps the per-call quantised kernels.
@@ -758,6 +776,10 @@ if (prefill_enabled) {
       auto t_prefill = ttft_clock::now();
       last_ttft_.embed_ms = ms_between(t_embed, t_prefill);
 
+      if (ir_) {
+        const std::vector<int> slice(tokens.begin() + prefill_from, tokens.begin() + prefill_from + prefill_count);
+        logits = ir_->forward(slice, prefill_from);
+      } else {
       // If there are CPU layers to process for prefill
       std::vector<float> cpu_processed_embeddings;
       if (config_.num_cpu_offload_layers > 0) {
@@ -828,6 +850,7 @@ if (prefill_enabled) {
           return "";
 #endif
       }
+      }  // llama path
       
       if (logits.empty()) {
           Logger::error("Prefill: Logits are empty after prefill processing.");
@@ -944,7 +967,9 @@ if (prefill_enabled) {
           std::copy(e.begin(), e.end(), emb.begin() + (size_t)i * hs);
         }
         std::vector<float> all;
-        if (config_.num_cpu_offload_layers == config_.num_hidden_layers) {
+        if (ir_) {
+          all = ir_->forward(batch, pos, /*all_rows=*/true);
+        } else if (config_.num_cpu_offload_layers == config_.num_hidden_layers) {
           all = model_->forward_cpu_logits_batch(
               model_->forward_cpu_batch(emb, n, config_.num_hidden_layers, pos, &kv_cache_), n);
         } else {
@@ -1001,7 +1026,9 @@ if (prefill_enabled) {
     }
 
     // Mixed-mode forward pass logic
-    if (config_.num_cpu_offload_layers > 0 && config_.num_cpu_offload_layers < config_.num_hidden_layers) {
+    if (ir_) {
+      logits = ir_->forward({input_token_id}, pos);
+    } else if (config_.num_cpu_offload_layers > 0 && config_.num_cpu_offload_layers < config_.num_hidden_layers) {
 #ifdef HAS_CUDA
       // Mixed CPU/GPU mode: First process CPU layers, then GPU layers
       Logger::debug("[Mixed Mode] Processing " + std::to_string(config_.num_cpu_offload_layers) + " CPU layers first");
