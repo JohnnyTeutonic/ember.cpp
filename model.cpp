@@ -187,7 +187,8 @@ TinyLlamaModel::TinyLlamaModel(const ModelConfig& initial_config,
         const char* only = std::getenv("EMBER_IR_ONLY");
         if (!ir.empty()) {
           const auto j = nlohmann::json::parse(ir);
-          if (j.value("family_hint", "") != "llama" || (only && std::string(only) == "1")) {
+          if (j.value("family_hint", "") != "llama" || (only && std::string(only) == "1") ||
+              ember_ir::has_windowed_attention(ir)) {
             this->ir_only_ = true;
             const auto& m = j.at("model");
             config_from_gguf.hidden_size = m.at("d").get<int>();

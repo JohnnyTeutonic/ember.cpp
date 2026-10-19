@@ -1,0 +1,28 @@
+A. T=16 window= 4 sinks=1: |ember-paperkiln| prefill 1.79e-07, decode 1.79e-07, chunks 1.79e-07; |independent-paperkiln| 1.19e-07
+A. T=16 window= 4 sinks=0: |ember-paperkiln| prefill 2.38e-07, decode 2.38e-07, chunks 2.38e-07; |independent-paperkiln| 2.38e-07
+A. T=16 window= 1 sinks=3: |ember-paperkiln| prefill 1.79e-07, decode 1.79e-07, chunks 1.79e-07; |independent-paperkiln| 2.38e-07
+A. T=16 window= 2 sinks=5: |ember-paperkiln| prefill 1.79e-07, decode 1.79e-07, chunks 1.79e-07; |independent-paperkiln| 2.38e-07
+A. T=20 window=64 sinks=0: |ember-paperkiln| prefill 3.58e-07, decode 3.58e-07, chunks 3.58e-07; |independent-paperkiln| 2.38e-07
+A. T=20 window=64 sinks=4: |ember-paperkiln| prefill 2.38e-07, decode 2.38e-07, chunks 2.38e-07; |independent-paperkiln| 2.38e-07
+A. T=33 window= 8 sinks=4: |ember-paperkiln| prefill 3.13e-07, decode 3.13e-07, chunks 3.13e-07; |independent-paperkiln| 2.38e-07
+A. T=40 window= 5 sinks=8: |ember-paperkiln| prefill 2.98e-07, decode 2.98e-07, chunks 2.98e-07; |independent-paperkiln| 2.38e-07
+A. T=24 window=24 sinks=2: |ember-paperkiln| prefill 2.38e-07, decode 2.38e-07, chunks 2.38e-07; |independent-paperkiln| 2.38e-07
+A. T=24 window=23 sinks=1: |ember-paperkiln| prefill 2.38e-07, decode 2.38e-07, chunks 2.38e-07; |independent-paperkiln| 1.79e-07
+A. T=64 window=32 sinks=4: |ember-paperkiln| prefill 2.98e-07, decode 2.98e-07, chunks 2.98e-07; |independent-paperkiln| 2.38e-07
+A. T=48 window= 3 sinks=3: |ember-paperkiln| prefill 2.38e-07, decode 2.38e-07, chunks 2.38e-07; |independent-paperkiln| 2.38e-07
+A. 12 paperkiln cases, max |d| 3.58e-07 (tolerance 1e-05)
+B. T=40 window= 6 sinks= 2 prefill 40 step  1: max |d| 4.77e-07
+B. T=40 window= 6 sinks= 2 prefill  1 step  1: max |d| 3.58e-07
+B. T=40 window= 6 sinks= 2 prefill  9 step  1: max |d| 4.02e-07
+B. T=40 window= 2 sinks= 7 prefill  4 step  1: max |d| 2.98e-07
+B. T=40 window= 1 sinks= 1 prefill  7 step  3: max |d| 3.58e-07
+B. T=40 window= 1 sinks= 0 prefill 40 step 40: max |d| 0.00e+00
+B. T=30 window=50 sinks= 3 prefill 10 step  1: max |d| 3.43e-07
+B. T=30 window=30 sinks= 0 prefill  2 step  7: max |d| 2.98e-07
+B. T=64 window=16 sinks= 4 prefill 20 step  1: max |d| 2.68e-07
+B. T=64 window=16 sinks= 4 prefill 64 step 64: max |d| 3.58e-07
+B. T=17 window= 5 sinks= 5 prefill  6 step  2: max |d| 3.58e-07
+B. T=17 window= 3 sinks=20 prefill  5 step  1: max |d| 4.17e-07
+B. 12 cases, max |d| 4.77e-07 (tolerance 1e-05)
+C. 30 runs (window 0, and windows covering every query, sinks 0..8): bitwise equal to attention_batch_cpu
+all sliding-window attention checks passed

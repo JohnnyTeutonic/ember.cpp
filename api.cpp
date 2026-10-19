@@ -477,7 +477,8 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
   eos_token_id_ = config_.eos_token_id; // Use the session's config_ which is now model's config
   // paperkiln IR (LOCAL_LLM_STACK.md section 4): EMBER_IR=path runs the
   // interpreter; an IR embedded in the GGUF (`paperkiln.ir`) runs it when its
-  // family is not llama (llama keeps the tuned path). EMBER_INTERPRETER=1/0
+  // family is not llama (llama keeps the tuned path) or it declares sliding-
+  // window attention (only the interpreter implements it). EMBER_INTERPRETER=1/0
   // forces it on or off.
   if (const GGUFData* gd = model_->get_gguf_data()) {
     const std::string ir = ember_ir::find_ir(*gd);
@@ -487,7 +488,8 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
       throw std::runtime_error("EMBER_INTERPRETER=0, but this GGUF can only run through the IR interpreter");
     if (!ir.empty() && !(force && std::string(force) == "0")) {
       const std::string family = nlohmann::json::parse(ir).value("family_hint", "");
-      if ((force && std::string(force) == "1") || std::getenv("EMBER_IR") || family != "llama" || model_->ir_only()) {
+      if ((force && std::string(force) == "1") || std::getenv("EMBER_IR") || family != "llama" || model_->ir_only() ||
+          ember_ir::has_windowed_attention(ir)) {
         ir_ = std::make_unique<ember_ir::Interpreter>(ir, *gd);
         Logger::warning("Running the model through the paperkiln IR interpreter (CPU; family_hint '" + family +
                         "'). The llama path's weights stay loaded but unused.");

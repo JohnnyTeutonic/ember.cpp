@@ -209,6 +209,88 @@ void attention_batch_cpu(
 #endif 
 }
 
+void swa_visible_ranges(int pos, int window, int sinks, int& sink_hi, int& win_lo) {
+    // paperkiln ops.cpp swa_attention, ranges(): [0, sink_hi) then [win_lo, pos].
+    win_lo = pos + 1 > window ? pos + 1 - window : 0;
+    sink_hi = std::min(std::min(sinks, pos + 1), win_lo);
+}
+
+void attention_window_batch_cpu(
+    const std::vector<float>& q_batch_roped,
+    KVCacheLayer& current_layer_kv_cache,
+    std::vector<float>& batch_attn_output,
+    int num_tokens_in_batch,
+    int start_pos_in_sequence,
+    int num_q_heads,
+    int num_kv_heads,
+    int head_dim,
+    float attention_scale,
+    int window,
+    int sinks
+) {
+    // window 0 is unbounded attention: today's kernel, untouched.
+    if (window <= 0) {
+        attention_batch_cpu(q_batch_roped, current_layer_kv_cache, batch_attn_output, num_tokens_in_batch,
+                            start_pos_in_sequence, num_q_heads, num_kv_heads, head_dim, attention_scale);
+        return;
+    }
+    const size_t expected_size = (size_t)num_tokens_in_batch * num_q_heads * head_dim;
+    batch_attn_output.assign(expected_size, 0.0f);
+    if (q_batch_roped.size() != expected_size) {
+        Logger::error("[ATTN_WINDOW_CPU] q_batch_roped size mismatch. Expected: " + std::to_string(expected_size) +
+                      ", Got: " + std::to_string(q_batch_roped.size()));
+        return;
+    }
+    const size_t needed = (size_t)(start_pos_in_sequence + num_tokens_in_batch) * num_kv_heads * head_dim;
+    if (needed > current_layer_kv_cache.k.size() || needed > current_layer_kv_cache.v.size()) {
+        Logger::error("[ATTN_WINDOW_CPU] KV cache holds fewer than " +
+                      std::to_string(start_pos_in_sequence + num_tokens_in_batch) + " positions");
+        return;
+    }
+
+    // The visible keys in ascending position (sinks, then the window), each
+    // scored, softmaxed and accumulated exactly as attention_batch_cpu does
+    // over its full history: when the window covers [0, pos] the two kernels
+    // perform the same operations in the same order.
+#if defined(__EMSCRIPTEN_PTHREADS__)
+    ember::parallel_for(num_tokens_in_batch, [&](int64_t token_idx) {
+#else
+#pragma omp parallel for schedule(dynamic)
+    for (int token_idx = 0; token_idx < num_tokens_in_batch; ++token_idx) {
+#endif
+        const size_t token_offset = (size_t)token_idx * num_q_heads * head_dim;
+        const int pos = start_pos_in_sequence + (int)token_idx;
+        int sink_hi = 0, win_lo = 0;
+        swa_visible_ranges(pos, window, sinks, sink_hi, win_lo);
+        std::vector<int> visible;
+        visible.reserve((size_t)sink_hi + (pos + 1 - win_lo));
+        for (int t = 0; t < sink_hi; ++t) visible.push_back(t);
+        for (int t = win_lo; t <= pos; ++t) visible.push_back(t);
+        std::vector<float> scores(visible.size());
+
+        for (int h_q = 0; h_q < num_q_heads; ++h_q) {
+            const float* q_head = q_batch_roped.data() + token_offset + (h_q * head_dim);
+            const int kv_head = h_q / (num_q_heads / num_kv_heads);
+            for (size_t i = 0; i < visible.size(); ++i) {
+                const size_t k_off = ((size_t)visible[i] * num_kv_heads + kv_head) * head_dim;
+                float dot = 0.0f;
+                for (int d = 0; d < head_dim; ++d) dot += q_head[d] * current_layer_kv_cache.k[k_off + d];
+                scores[i] = dot * attention_scale;
+            }
+            softmax_vector_cpu(scores, scores);
+            float* out_head = batch_attn_output.data() + token_offset + (h_q * head_dim);
+            for (size_t i = 0; i < visible.size(); ++i) {
+                if (scores[i] == -std::numeric_limits<float>::infinity() || scores[i] == 0.0f) continue;
+                const size_t v_off = ((size_t)visible[i] * num_kv_heads + kv_head) * head_dim;
+                for (int d = 0; d < head_dim; ++d) out_head[d] += scores[i] * current_layer_kv_cache.v[v_off + d];
+            }
+        }
+    }
+#if defined(__EMSCRIPTEN_PTHREADS__)
+    );
+#endif
+}
+
 void update_kv_cache_batch_cpu_sequence_aware(
     KVCache* kv_cache,
     int layer_idx,

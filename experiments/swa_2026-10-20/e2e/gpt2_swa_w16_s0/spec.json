@@ -1,0 +1,37 @@
+{
+ "name": "gpt2_tiny",
+ "arch": {
+  "preset": "gpt2-nano",
+  "custom": {
+   "d": 128,
+   "layers": 2,
+   "heads": 2,
+   "attention": "swa",
+   "window": 16,
+   "sinks": 0
+  }
+ },
+ "data": {
+  "corpus": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/corpus/data/tinychat_hf_sample_v1/pretrain_train.txt",
+  "vocab": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/corpus/data/vocab_tinychat_bpe8k_v1/tinychat_bpe8k.gguf",
+  "vocab_cap": 8192,
+  "T": 128,
+  "max_tokens": 3000000
+ },
+ "train": {
+  "steps": 600,
+  "lr": 0.002,
+  "batch": 8,
+  "eval_every": 200,
+  "checkpoint_every": 200,
+  "gradmap_every": 0,
+  "seed": 1
+ },
+ "export": {
+  "formats": [
+   "safetensors",
+   "gguf"
+  ]
+ },
+ "out_dir": "/home/jonat/agents/swa/e2e/gpt2_swa_w16_s0"
+}
