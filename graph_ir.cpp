@@ -47,6 +47,17 @@ bool has(const json& n, const char* key) { return n.contains(key) && !n.at(key).
 
 }  // namespace
 
+bool has_windowed_attention(const std::string& ir_json) {
+  const json j = json::parse(ir_json);
+  if (!j.contains("block")) return false;
+  const json& blk = j.at("block");
+  for (const auto& s : blk.value("state", json::array()))
+    if (s.value("window", 0) != 0) return true;
+  for (const auto& n : blk.value("nodes", json::array()))
+    if (n.value("op", "") == "attention" && n.value("window", 0) != 0) return true;
+  return false;
+}
+
 std::string find_ir(const GGUFData& gguf) {
   if (const char* path = std::getenv("EMBER_IR")) {
     std::ifstream f(path);
@@ -79,11 +90,30 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf) {
   for (const auto& s : j.at("block").value("state", json::array())) {
     const std::string kind = s.at("kind").get<std::string>();
     if (kind != "kv") throw std::runtime_error("IR state kind '" + kind + "' has no CPU implementation in ember");
-    if (s.value("window", 0) != 0 || s.value("sinks", 0) != 0)
-      throw std::runtime_error("IR kv state with window/sinks is not implemented in ember yet");
     kv_heads_ = s.at("kv_heads").get<int>();
     head_dim_ = s.at("head_dim").get<int>();
     max_len_ = s.at("max_len").get<int>();
+    // Sliding window + sinks (paperkiln swa_attention). The cache keeps every
+    // position up to max_len, which holds the first `sinks` and the last
+    // `window` rows the rule needs.
+    window_ = s.value("window", 0);
+    sinks_ = s.value("sinks", 0);
+  }
+  for (const auto& n : block_) {
+    if (n.op != "attention") continue;
+    if (!n.attrs.value("causal", true))
+      throw std::runtime_error("IR attention with causal=false is not implemented in ember");
+    int w = 0, s = 0;
+    attention_window(n, w, s);
+    if (w < 0 || s < 0) throw std::runtime_error("IR attention window/sinks must be non-negative");
+    // A windowed kv state declares what its cache holds; an attention node
+    // reading it with another window or sink count is an exporter error.
+    if (window_ > 0 && (w != window_ || s != sinks_))
+      throw std::runtime_error("IR attention window/sinks (" + std::to_string(w) + ", " + std::to_string(s) +
+                               ") differ from its kv state's (" + std::to_string(window_) + ", " +
+                               std::to_string(sinks_) + ")");
+    if (w > 0)
+      Logger::info("[IR] sliding-window attention: window " + std::to_string(w) + ", sinks " + std::to_string(s));
   }
   for (const auto* sub : {&embed_, &block_, &head_})
     for (const auto& n : *sub)
@@ -121,6 +151,11 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf) {
   }
   Logger::info("[IR] interpreter ready: family_hint=" + family_hint_ + ", " + std::to_string(n_layers_) + " blocks of " +
                std::to_string(block_.size()) + " ops, " + std::to_string(weights_.size()) + " weights bound");
+}
+
+void Interpreter::attention_window(const Node& n, int& window, int& sinks) const {
+  window = has(n.attrs, "window") ? n.attrs.at("window").get<int>() : window_;
+  sinks = has(n.attrs, "sinks") ? n.attrs.at("sinks").get<int>() : sinks_;
 }
 
 std::string Interpreter::layer_name(const std::string& pattern, int layer) const {
@@ -311,7 +346,12 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       std::memcpy(cache.v.data() + start_pos * row, v.v.data(), static_cast<size_t>(T) * row * sizeof(float));
       const float scale = n.attrs.contains("scale") ? n.attrs.at("scale").get<float>() : 1.0f / std::sqrt(float(hd));
       Buf out{{}, hq * hd};
-      attention_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale);
+      int window = 0, sinks = 0;
+      attention_window(n, window, sinks);
+      if (window > 0)
+        attention_window_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale, window, sinks);
+      else
+        attention_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale);
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "add" || n.op == "mul") {
       const Buf &a = in(n, 0), &b = in(n, 1);

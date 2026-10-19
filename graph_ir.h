@@ -11,7 +11,7 @@
 // CPU kernels, built from the same primitives as ember's llama CPU path so
 // the arithmetic matches it: embedding, pos_embedding, rmsnorm, layernorm,
 // linear (+ bias), split, rope (interleaved pairs), attention (causal, KV
-// state), add, mul, silu, gelu (tanh or erf), moe_ffn (llama.cpp's expert
+// state, optional sliding window + sinks as paperkiln's swa_attention), add, mul, silu, gelu (tanh or erf), moe_ffn (llama.cpp's expert
 // layout). Any other op fails at load, naming the op and the backend.
 #include <memory>
 #include <string>
@@ -57,6 +57,8 @@ class Interpreter {
   using Env = std::unordered_map<std::string, Buf>;
 
   void run_nodes(const std::vector<Node>& nodes, int layer, Env& env, int T, int start_pos, bool head_last_only);
+  // The attention node's own window/sinks when it names them, else its kv state's.
+  void attention_window(const Node& n, int& window, int& sinks) const;
   const std::vector<float>& weight(const std::string& name) const;
   std::string layer_name(const std::string& pattern, int layer) const;
   void bind(const std::vector<Node>& nodes, int layer, const GGUFData& gguf);
@@ -69,6 +71,7 @@ class Interpreter {
   std::unordered_map<std::string, std::vector<int64_t>> shapes_;  // ggml order (ne0 first)
   std::vector<KVCacheLayer> kv_;  // per block: [max_len][kv_heads][head_dim]
   int kv_heads_ = 0, head_dim_ = 0;
+  int window_ = 0, sinks_ = 0;  // kv state's sliding window (0 = unbounded) and sinks
   std::vector<std::pair<float, float>> rope_freqs_;
   float rope_theta_ = 0.0f;
 };
@@ -76,5 +79,10 @@ class Interpreter {
 // The IR for a GGUF: the EMBER_IR side file if set, else the `paperkiln.ir`
 // key, else empty.
 std::string find_ir(const GGUFData& gguf);
+
+// True when the IR declares sliding-window attention (a kv state or an
+// attention node with window != 0). Only the interpreter implements it, so
+// such a GGUF never runs on the llama path, whatever its family_hint.
+bool has_windowed_attention(const std::string& ir_json);
 
 }  // namespace ember_ir
