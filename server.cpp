@@ -477,6 +477,8 @@ int main(int argc, char** argv) {
 
           json res_json;
           res_json["reply"] = reply;
+          res_json["stop_reason"] = session->last_stop_reason();
+          res_json["tokens"] = session->last_generated_tokens();
 
           // TTFT receipt (docs/TTFT.md). request_to_first_token_ms adds the
           // server's own parsing/templating before generate() to ttft_ms.

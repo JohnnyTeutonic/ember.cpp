@@ -1040,6 +1040,9 @@ if (prefill_enabled) {
     result = first == std::string::npos ? std::string() : result.substr(first, last - first + 1);
     (void)stopped_at_first;
   } else {
+    const bool stopped = !generated_token_ids.empty() && is_stop(generated_token_ids.back());
+    if (stopped) last_stop_reason_ = "eos";
+    last_generated_tokens_ = static_cast<int>(generated_token_ids.size()) - (stopped ? 1 : 0);
     result = tokenizer_->decode(generated_token_ids, true);
   }
   Logger::info("Generated response: " + result);

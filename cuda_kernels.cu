@@ -1086,8 +1086,10 @@ void attention_cuda(const float* Q_current_dev, const float* K_layer_cache_base,
   // Block: head_dim threads, each thread handles one output dimension
   dim3 grid_dim(num_heads);
   dim3 block_dim(head_dim);
+  // scores[current_seq_len] + dot_product_terms[head_dim] (the kernel's extern shared layout)
+  const size_t shm = (size_t)(current_seq_len + head_dim) * sizeof(float);
 
-  attention_kernel<<<grid_dim, block_dim, 0, stream>>>(
+  attention_kernel<<<grid_dim, block_dim, shm, stream>>>(
       Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev,
       current_seq_len, head_dim, scale, cache_num_kv_heads, num_heads);
   gpuErrchk(cudaGetLastError());
@@ -2855,6 +2857,7 @@ __global__ void attention_optimized_kernel(const float* __restrict__ Q_current, 
     if ((tid_in_block % warpSize) == 0) atomicMaxFloat(s_reduction_val, thread_max_score);
     __syncthreads();
     float max_score = *s_reduction_val;
+    __syncthreads();  // every thread has read the max before thread 0 reuses the slot
 
     // b. Subtract max, compute exp, and sum exp (block-wide reduction for sum)
     if (tid_in_block == 0) *s_reduction_val = 0.0f;
@@ -2920,12 +2923,146 @@ void softmax_vector_cuda_optimized(const float* x_dev, float* out_dev, int n,
     gpuErrchk(cudaGetLastError());
 }
 
+// ---------------------------------------------------------------------------
+// Split-K decode attention ("flash decoding") for one new token.
+// Phase 1: grid (heads, chunks); each block takes CHUNK consecutive keys of
+// one head: warps compute q.k with lanes striding head_dim (coalesced K rows)
+// and a warp reduction, then a chunk-local softmax, and write a partial
+// (max m, sum l, unnormalised sum_k p_k v_k) to a static scratch array.
+// Phase 2: one block per head merges the chunks:
+//   out = sum_c e^{m_c - M} acc_c / sum_c e^{m_c - M} l_c.
+// Chunks past the current length write l = 0 and are skipped, so a CUDA
+// graph can capture the grid for the cache's full length while the length
+// itself comes from device memory (step_dev[1] = pos). The scratch is a
+// static __device__ array (nothing allocated, graph-safe; one decode stream
+// at a time). EMBER_DECODE_ATTN=legacy selects the one-block-per-head kernel.
+namespace {
+constexpr int kDecChunkMax = 2048;   // keys per chunk at most (shared memory)
+constexpr int kDecChunksMax = 64;    // chunks per head at most
+constexpr int kDecHeadsMax = 128;
+constexpr int kDecHeadDimMax = 256;
+constexpr int kDecThreads = 128;
+__device__ float g_dec_partial[(size_t)kDecHeadsMax * kDecChunksMax * (kDecHeadDimMax + 2)];
+
+__global__ void decode_attn_split_kernel(const float* __restrict__ Q, const float* __restrict__ K,
+                                         const float* __restrict__ V, int seq_len, int head_dim, float scale,
+                                         int num_kv_heads, int num_heads, int chunk, const int* step_dev) {
+    if (step_dev) seq_len = step_dev[1] + 1;
+    const int h = blockIdx.x, c = blockIdx.y, nc = gridDim.y;
+    float* part = g_dec_partial + ((size_t)h * nc + c) * (head_dim + 2);  // [m, l, acc[head_dim]]
+    const int k0 = c * chunk;
+    const int k1 = min(seq_len, k0 + chunk);
+    if (k0 >= k1) {
+        if (threadIdx.x == 0) { part[0] = -INFINITY; part[1] = 0.0f; }
+        return;
+    }
+    const int kvh = h / (num_heads / num_kv_heads);
+    extern __shared__ float sm[];
+    float* q = sm;                   // [head_dim]
+    float* s = sm + head_dim;        // [chunk]
+    __shared__ float red[kDecThreads / 32];
+    for (int d = threadIdx.x; d < head_dim; d += blockDim.x) q[d] = Q[h * head_dim + d];
+    __syncthreads();
+    const int lane = threadIdx.x & 31, warp = threadIdx.x >> 5, nwarps = blockDim.x >> 5;
+    for (int k = k0 + warp; k < k1; k += nwarps) {
+        const float* kv = K + ((size_t)k * num_kv_heads + kvh) * head_dim;
+        float dot = 0.0f;
+        for (int d = lane; d < head_dim; d += 32) dot += q[d] * kv[d];
+        for (int o = 16; o > 0; o >>= 1) dot += __shfl_xor_sync(0xffffffff, dot, o);
+        if (lane == 0) s[k - k0] = dot * scale;
+    }
+    __syncthreads();
+    const int n = k1 - k0;
+    float mx = -INFINITY;
+    for (int i = threadIdx.x; i < n; i += blockDim.x) mx = fmaxf(mx, s[i]);
+    for (int o = 16; o > 0; o >>= 1) mx = fmaxf(mx, __shfl_xor_sync(0xffffffff, mx, o));
+    if (lane == 0) red[warp] = mx;
+    __syncthreads();
+    mx = red[0];
+    for (int w = 1; w < nwarps; ++w) mx = fmaxf(mx, red[w]);
+    __syncthreads();
+    float sum = 0.0f;
+    for (int i = threadIdx.x; i < n; i += blockDim.x) {
+        const float e = expf(s[i] - mx);
+        s[i] = e;
+        sum += e;
+    }
+    for (int o = 16; o > 0; o >>= 1) sum += __shfl_xor_sync(0xffffffff, sum, o);
+    if (lane == 0) red[warp] = sum;
+    __syncthreads();
+    if (threadIdx.x == 0) {
+        float l = 0.0f;
+        for (int w = 0; w < nwarps; ++w) l += red[w];
+        part[0] = mx;
+        part[1] = l;
+    }
+    for (int d = threadIdx.x; d < head_dim; d += blockDim.x) {
+        float acc = 0.0f;
+        for (int i = 0; i < n; ++i) acc += s[i] * V[((size_t)(k0 + i) * num_kv_heads + kvh) * head_dim + d];
+        part[2 + d] = acc;
+    }
+}
+
+__global__ void decode_attn_merge_kernel(float* __restrict__ out, int head_dim, int nc) {
+    const int h = blockIdx.x;
+    const float* base = g_dec_partial + (size_t)h * nc * (head_dim + 2);
+    float M = -INFINITY;
+    for (int c = 0; c < nc; ++c) {
+        const float* p = base + (size_t)c * (head_dim + 2);
+        if (p[1] > 0.0f) M = fmaxf(M, p[0]);
+    }
+    float L = 0.0f;
+    for (int c = 0; c < nc; ++c) {
+        const float* p = base + (size_t)c * (head_dim + 2);
+        if (p[1] > 0.0f) L += expf(p[0] - M) * p[1];
+    }
+    const float inv = L > 0.0f ? 1.0f / L : 0.0f;
+    for (int d = threadIdx.x; d < head_dim; d += blockDim.x) {
+        float acc = 0.0f;
+        for (int c = 0; c < nc; ++c) {
+            const float* p = base + (size_t)c * (head_dim + 2);
+            if (p[1] > 0.0f) acc += expf(p[0] - M) * p[2 + d];
+        }
+        out[h * head_dim + d] = acc * inv;
+    }
+}
+
+bool decode_attn_legacy() {
+    static const bool legacy = [] {
+        const char* e = std::getenv("EMBER_DECODE_ATTN");
+        return e && std::string(e) == "legacy";
+    }();
+    return legacy;
+}
+
+// Launches the split kernel for a cache of max_len positions; false if the
+// shape does not fit the scratch (the caller then uses the legacy kernel).
+bool decode_attn_split(const float* Q, const float* K, const float* V, float* out, int num_heads, int seq_len,
+                       int head_dim, float scale, int max_len, int num_kv_heads, const int* step_dev,
+                       cudaStream_t stream) {
+    if (decode_attn_legacy() || num_heads > kDecHeadsMax || head_dim > kDecHeadDimMax || max_len <= 0) return false;
+    int nc = (max_len + 255) / 256;
+    if (nc > kDecChunksMax) nc = kDecChunksMax;
+    const int chunk = (max_len + nc - 1) / nc;
+    if (chunk > kDecChunkMax) return false;
+    const size_t shm = (size_t)(head_dim + chunk) * sizeof(float);
+    decode_attn_split_kernel<<<dim3(num_heads, nc), kDecThreads, shm, stream>>>(
+        Q, K, V, seq_len, head_dim, scale, num_kv_heads, num_heads, chunk, step_dev);
+    decode_attn_merge_kernel<<<num_heads, kDecThreads, 0, stream>>>(out, head_dim, nc);
+    gpuErrchk(cudaGetLastError());
+    return true;
+}
+}  // namespace
+
 void attention_cuda_optimized(const float* Q_current_dev, const float* K_layer_cache_base,
                              const float* V_layer_cache_base, float* out_dev,
                              int num_heads, int current_seq_len, int head_dim,
                              float scale, int cache_max_seq_len, int cache_num_kv_heads,
                              cudaStream_t stream) {
     if (current_seq_len == 0) return;
+    if (decode_attn_split(Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, num_heads,
+                          current_seq_len, head_dim, scale, current_seq_len, cache_num_kv_heads, nullptr, stream))
+        return;
     const int threads_per_block = 256;
     size_t shared_mem_size = (cache_max_seq_len + 1) * sizeof(float);
 
@@ -3195,6 +3332,9 @@ void attention_devpos_cuda(const float* Q_current_dev, const float* K_layer_cach
                            const float* V_layer_cache_base, float* out_dev, int num_heads, int head_dim,
                            float scale, int cache_max_seq_len, int cache_num_kv_heads, const int* step_dev,
                            cudaStream_t stream) {
+  if (decode_attn_split(Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, num_heads,
+                        /*seq_len=*/0, head_dim, scale, cache_max_seq_len, cache_num_kv_heads, step_dev, stream))
+    return;
   const size_t shared_mem_size = (cache_max_seq_len + 1) * sizeof(float);
   attention_optimized_kernel<<<num_heads, 256, shared_mem_size, stream>>>(
       Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, /*current_seq_len=*/0, head_dim, scale,
