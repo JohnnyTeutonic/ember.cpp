@@ -20,9 +20,9 @@ using nlohmann::json;
 namespace ember_ir {
 namespace {
 
-const std::set<std::string> kCpuOps = {"embedding", "rmsnorm", "linear", "rope", "attention", "add", "mul", "silu",
-                                       "moe_ffn"};
-const std::set<std::string> kRowWiseOps = {"rmsnorm", "linear", "add", "mul", "silu"};
+const std::set<std::string> kCpuOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
+                                       "attention", "add", "mul", "silu", "gelu", "moe_ffn"};
+const std::set<std::string> kRowWiseOps = {"rmsnorm", "layernorm", "linear", "add", "mul", "silu", "gelu"};
 
 std::vector<std::string> names(const json& j) {
   if (j.is_string()) return {j.get<std::string>()};
@@ -85,6 +85,10 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf) {
     head_dim_ = s.at("head_dim").get<int>();
     max_len_ = s.at("max_len").get<int>();
   }
+  for (const auto* sub : {&embed_, &block_, &head_})
+    for (const auto& n : *sub)
+      if (n.op == "gelu" && n.attrs.value("approx", "none") != "tanh" && n.attrs.value("approx", "none") != "none")
+        throw std::runtime_error("IR gelu approx '" + n.attrs.value("approx", "") + "' is not implemented in ember");
   for (const auto& n : block_) {
     if (n.op == "rope") {
       if (n.attrs.value("pairing", "interleaved") != "interleaved")
@@ -102,8 +106,8 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf) {
   bind(head_, -1, gguf);
 
   // RoPE table, computed exactly as TinyLlamaModel::initialize_rope_freqs.
-  rope_freqs_.resize(static_cast<size_t>(max_len_) * head_dim_ / 2);
-  for (int pos = 0; pos < max_len_; ++pos) {
+  if (rope_theta_ > 0.0f) rope_freqs_.resize(static_cast<size_t>(max_len_) * head_dim_ / 2);
+  for (int pos = 0; rope_theta_ > 0.0f && pos < max_len_; ++pos) {
     for (int i = 0; i < head_dim_; i += 2) {
       float freq = 1.0f / std::pow(rope_theta_, float(i) / head_dim_);
       float val = static_cast<float>(pos) * freq;
@@ -205,6 +209,63 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
         if (id < 0 || static_cast<size_t>(id + 1) * d > W.size())
           throw std::runtime_error("IR embedding: token id " + std::to_string(id) + " out of range");
         std::memcpy(out.v.data() + static_cast<size_t>(t) * d, W.data() + static_cast<size_t>(id) * d, d * sizeof(float));
+      }
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "pos_embedding") {  // x + position_embd[pos], pos absolute. EXACT.
+      Buf x = in(n, 0);
+      const std::string wn = wname(n);
+      const auto& P = weight(wn);
+      const int d = x.width;
+      if (shapes_.at(wn).at(0) != d) throw std::runtime_error("IR pos_embedding '" + wn + "': width differs from x");
+      if (static_cast<size_t>(start_pos + T) * d > P.size())
+        throw std::runtime_error("IR pos_embedding: position " + std::to_string(start_pos + T - 1) + " exceeds '" + wn + "'");
+      for (int t = 0; t < T; ++t)
+        for (int i = 0; i < d; ++i) x.v[static_cast<size_t>(t) * d + i] += P[static_cast<size_t>(start_pos + t) * d + i];
+      env[n.out.at(0)] = std::move(x);
+    } else if (n.op == "layernorm") {  // (x - mean) / sqrt(biased var + eps) * w + b. ROUNDING.
+      const Buf& x = in(n, 0);
+      const auto& w = weight(wname(n));
+      const auto& b = weight(layer_name(n.attrs.at("bias").get<std::string>(), layer));
+      const float eps = n.attrs.value("eps", 1e-5f);
+      const int d = x.width;
+      Buf out{std::vector<float>(x.v.size()), d};
+      for (int t = 0; t < T; ++t) {
+        const float* r = x.v.data() + static_cast<size_t>(t) * d;
+        double mean = 0.0, var = 0.0;
+        for (int i = 0; i < d; ++i) mean += r[i];
+        mean /= d;
+        for (int i = 0; i < d; ++i) var += (r[i] - mean) * (r[i] - mean);
+        var /= d;
+        const float inv = static_cast<float>(1.0 / std::sqrt(var + eps));
+        for (int i = 0; i < d; ++i)
+          out.v[static_cast<size_t>(t) * d + i] = (r[i] - static_cast<float>(mean)) * inv * w[i] + b[i];
+      }
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "split") {  // columns of [T, sum(sizes)] into the outputs, in order. EXACT.
+      const Buf& x = in(n, 0);
+      const auto sizes = n.attrs.at("sizes").get<std::vector<int>>();
+      int total = 0;
+      for (int s : sizes) total += s;
+      if (total != x.width || sizes.size() != n.out.size())
+        throw std::runtime_error("IR split: sizes do not match the input width or the outputs");
+      int col = 0;
+      for (size_t o = 0; o < sizes.size(); ++o) {
+        Buf part{std::vector<float>(static_cast<size_t>(T) * sizes[o]), sizes[o]};
+        for (int t = 0; t < T; ++t)
+          std::memcpy(part.v.data() + static_cast<size_t>(t) * sizes[o], x.v.data() + static_cast<size_t>(t) * x.width + col,
+                      sizes[o] * sizeof(float));
+        col += sizes[o];
+        env[n.out[o]] = std::move(part);
+      }
+    } else if (n.op == "gelu") {  // tanh: 0.5x(1 + tanh(sqrt(2/pi)(x + 0.044715x^3))); none: 0.5x(1 + erf(x/sqrt2)).
+      const Buf& x = in(n, 0);
+      const bool tanh_form = n.attrs.value("approx", "none") == "tanh";
+      Buf out{std::vector<float>(x.v.size()), x.width};
+      const float c = std::sqrt(2.0f / 3.14159265358979323846f);
+      for (size_t i = 0; i < x.v.size(); ++i) {
+        const float v = x.v[i];
+        out.v[i] = tanh_form ? 0.5f * v * (1.0f + std::tanh(c * (v + 0.044715f * v * v * v)))
+                             : 0.5f * v * (1.0f + std::erf(v / std::sqrt(2.0f)));
       }
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "rmsnorm") {
