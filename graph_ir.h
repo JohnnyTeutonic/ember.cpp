@@ -23,9 +23,11 @@
 // CUDA builds add a device path, chosen at construction (use_gpu): weights
 // are uploaded once, the KV state and the named row buffers live on the
 // device, and the op sequence runs on one stream with no host sync until the
-// logits are copied back. GEMMs are FP32 cuBLAS (default math); the other
-// kernels follow the CPU forms (graph_ir_cuda.h), so the two paths agree to
-// rounding.
+// logits are copied back. The ops are compiled at load into a per-block plan
+// (enum ops, buffer slots, device weight pointers, numeric attributes), so a
+// call does no JSON or string work. GEMMs are FP32 cuBLAS (default math); the
+// other kernels follow the CPU forms (graph_ir_cuda.h), sliding-window
+// attention included, so the two paths agree to rounding.
 #include <initializer_list>
 #include <memory>
 #include <string>
@@ -108,31 +110,59 @@ class Interpreter {
   bool gpu_ = false;
 
 #ifdef HAS_CUDA
-  // Device path. A DBuf is a named [rows, width] buffer; `p` points into the
-  // owned allocation (the head runs on the last row of a prefill in place).
-  // Buffers persist across calls so steady-state decode allocates nothing; an
-  // op whose output name is also one of its inputs writes the name's spare
-  // and swaps.
+  // Device path. A DBuf is a [rows, width] buffer, one per tensor name of the
+  // IR (its slot); `p` points into the owned allocation (the head runs on the
+  // last row of a prefill in place). Buffers persist across calls so
+  // steady-state decode allocates nothing; an op whose output name is also
+  // one of its inputs writes the slot's spare and swaps.
   struct DBuf {
     float* alloc = nullptr;
     float* p = nullptr;
     size_t cap = 0;  // floats
     int width = 0, rows = 0;  // rows == 0: not defined in this call
   };
-  using DEnv = std::unordered_map<std::string, DBuf>;
+  // One op of the device plan, resolved once at load (compile_device): the op
+  // as an enum, its tensors as slots, its weights as device pointers and its
+  // attributes as numbers, so a call does no JSON, string or map work. Only
+  // the checks that depend on the call (widths, positions) remain per call.
+  enum class DOp { Embedding, PosEmbedding, LayerNorm, Split, Gelu, RmsNorm, Linear, Rope, Attention, Add, Mul, MoeFfn, Silu };
+  struct DStep {
+    DOp op = DOp::Add;
+    const Node* node = nullptr;  // names for error messages
+    std::vector<int> in, out;    // slots
+    std::string wname;           // the resolved weight (error messages)
+    const float* w = nullptr;    // weight: table, norm scale, linear [out, in], moe router
+    const float* b = nullptr;    // bias (layernorm, linear)
+    const float *gate = nullptr, *up = nullptr, *down = nullptr;  // moe_ffn expert stacks
+    size_t w_elems = 0;
+    int w_ne0 = 0;  // the weight's ne0 (rows of width ne0)
+    int hd = 0, hq = 0, hkv = 0, window = 0, sinks = 0;  // rope, attention
+    int E = 0, top_k = 0, d_ff = 0;                      // moe_ffn
+    float eps = 1e-5f, scale = 0.0f;
+    bool flag = false;  // gelu: tanh form; moe_ffn: renorm gates
+    std::vector<int> sizes;  // split
+  };
   void init_device();
+  void compile_device();
+  std::vector<DStep> compile_nodes(const std::vector<Node>& nodes, int layer);
+  int slot(const std::string& name);
   void free_device();
   const float* dweight(const std::string& name) const;
-  DBuf& dout(const std::string& name, int rows, int width, std::initializer_list<const DBuf*> inputs);
+  DBuf& dout(int slot, int rows, int width, std::initializer_list<const DBuf*> inputs);
   void commit();
-  void run_nodes_device(const std::vector<Node>& nodes, int layer, int T, int start_pos);
+  void run_nodes_device(const std::vector<DStep>& steps, int layer, int T, int start_pos);
   std::vector<float> forward_device(const std::vector<int>& tokens, int start_pos, bool all_rows);
 
   cublasHandle_t cublas_ = nullptr;
   cudaStream_t stream_ = nullptr;
   std::unordered_map<std::string, float*> dweights_;
-  DEnv denv_, dspare_;
-  std::vector<std::string> pending_;  // names written to their spare by dout, swapped by commit
+  std::unordered_map<std::string, int> slots_;  // tensor name -> slot (load time only)
+  std::vector<std::string> slot_names_;
+  std::vector<DBuf> dbufs_, dspare_;            // by slot
+  std::vector<int> pending_;  // slots written to their spare by dout, swapped by commit
+  std::vector<DStep> plan_embed_, plan_head_;
+  std::vector<std::vector<DStep>> plan_block_;  // per block
+  int logits_slot_ = -1;
   std::vector<float*> dk_, dv_;  // per block: [max_len][kv_heads][head_dim]
   float* drope_ = nullptr;
   int* dtokens_ = nullptr;

@@ -1,0 +1,103 @@
+### ports: ember 8101, mtstudio 8102; Tue Oct 20 09:34:18 AEDT 2026
+### swa_tiny (window 32, sinks 4) on the GPU interpreter, MAX_NEW=200
+   [swat_gpu] health: {"context":256,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/swa_tiny/swa_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [swat_gpu] interpreter ready: family_hint=gpt2_swa, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 256 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+   sliding-window attention: window 32, sinks 4
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+   Running the model through the paperkiln IR interpreter (CUDA
+### windowed gpt2 IR side files on the GPU, MAX_NEW=60
+   [e2e_w8_s2_gpu] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [e2e_w8_s2_gpu] interpreter ready: family_hint=gpt2, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 128 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+   sliding-window attention: window 8, sinks 2
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+   [e2e_w16_s0_gpu] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [e2e_w16_s0_gpu] interpreter ready: family_hint=gpt2, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 128 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+   sliding-window attention: window 16, sinks 0
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+   [e2e_w4_s6_gpu] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [e2e_w4_s6_gpu] interpreter ready: family_hint=gpt2, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 128 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+   sliding-window attention: window 4, sinks 6
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+   [e2e_w32_s4_gpu] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [e2e_w32_s4_gpu] interpreter ready: family_hint=gpt2, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 128 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+   sliding-window attention: window 32, sinks 4
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+### regressions on the GPU interpreter
+   [gpt2_gpu] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [gpt2_gpu] interpreter ready: family_hint=gpt2, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 128 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+   [moe_gpu] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/ir_gate2/moe_tiny_v3.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [moe_gpu] interpreter ready: family_hint=llama, 2 blocks of 11 ops, 23 weights bound (0 kept quantised, 0 MiB; f32 13 MiB; dequantised at load), device cuda
+   CUDA device path: 23 weights (13 MiB f32) and 2 kv slots of 128 positions on the device
+   device plan: 1 + 2 x 11 + 2 steps over 12 buffer slots
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+   [v3_gpu] health: {"context":256,"hidden_size":384,"layers":6,"model":"/home/jonat/ember_ttft/eps_parity/models/chat_sftfinal_v3.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [v3_gpu] interpreter ready: family_hint=llama, 6 blocks of 15 ops, 57 weights bound (0 kept quantised, 0 MiB; f32 67 MiB; dequantised at load), device cuda
+   CUDA device path: 57 weights (67 MiB f32) and 6 kv slots of 256 positions on the device
+   device plan: 1 + 6 x 15 + 2 steps over 15 buffer slots
+n=40 reply identical 40, token count 40, stop reason 40, prompt tokens == bpe.py 40
+   requests served: 40
+### decode speed: llama via the IR on the GPU, base (before) vs plan (after), two interleaved rounds
+   [v3_bench_build_base_1] health: {"context":256,"hidden_size":384,"layers":6,"model":"/home/jonat/ember_ttft/eps_parity/models/chat_sftfinal_v3.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [v3_bench_build_base_1] interpreter ready: family_hint=llama, 6 blocks of 15 ops, 57 weights bound (0 kept quantised, 0 MiB; f32 67 MiB; dequantised at load), device cuda
+   CUDA device path: 57 weights (67 MiB f32) and 6 kv slots of 256 positions on the device
+/home/jonat/agents/cudaswa/gates/v3_build_base_r1: decode p50 21.38 ms/token (min 12.33, max 43.27, n=20)
+   [v3_bench_build_cuda_1] health: {"context":256,"hidden_size":384,"layers":6,"model":"/home/jonat/ember_ttft/eps_parity/models/chat_sftfinal_v3.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [v3_bench_build_cuda_1] interpreter ready: family_hint=llama, 6 blocks of 15 ops, 57 weights bound (0 kept quantised, 0 MiB; f32 67 MiB; dequantised at load), device cuda
+   CUDA device path: 57 weights (67 MiB f32) and 6 kv slots of 256 positions on the device
+   device plan: 1 + 6 x 15 + 2 steps over 15 buffer slots
+/home/jonat/agents/cudaswa/gates/v3_build_cuda_r1: decode p50 12.43 ms/token (min 8.01, max 52.84, n=20)
+   [v3_bench_build_base_2] health: {"context":256,"hidden_size":384,"layers":6,"model":"/home/jonat/ember_ttft/eps_parity/models/chat_sftfinal_v3.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [v3_bench_build_base_2] interpreter ready: family_hint=llama, 6 blocks of 15 ops, 57 weights bound (0 kept quantised, 0 MiB; f32 67 MiB; dequantised at load), device cuda
+   CUDA device path: 57 weights (67 MiB f32) and 6 kv slots of 256 positions on the device
+/home/jonat/agents/cudaswa/gates/v3_build_base_r2: decode p50 24.71 ms/token (min 12.44, max 44.39, n=20)
+   [v3_bench_build_cuda_2] health: {"context":256,"hidden_size":384,"layers":6,"model":"/home/jonat/ember_ttft/eps_parity/models/chat_sftfinal_v3.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [v3_bench_build_cuda_2] interpreter ready: family_hint=llama, 6 blocks of 15 ops, 57 weights bound (0 kept quantised, 0 MiB; f32 67 MiB; dequantised at load), device cuda
+   CUDA device path: 57 weights (67 MiB f32) and 6 kv slots of 256 positions on the device
+   device plan: 1 + 6 x 15 + 2 steps over 15 buffer slots
+/home/jonat/agents/cudaswa/gates/v3_build_cuda_r2: decode p50 26.68 ms/token (min 22.63, max 59.70, n=20)
+### decode speed: llama tuned path (reference)
+   [v3_tuned] health: {"context":256,"hidden_size":384,"layers":6,"model":"/home/jonat/ember_ttft/eps_parity/models/chat_sftfinal_v3.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [v3_tuned] 
+/home/jonat/agents/cudaswa/gates/v3_tuned: decode p50 7.44 ms/token (min 4.90, max 23.20, n=20)
+### decode speed: swa_tiny GPU vs CPU interpreter
+   [swat_bench_gpu] health: {"context":256,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/swa_tiny/swa_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [swat_bench_gpu] interpreter ready: family_hint=gpt2_swa, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cuda
+   CUDA device path: 29 weights (9 MiB f32) and 2 kv slots of 256 positions on the device
+   device plan: 2 + 2 x 11 + 2 steps over 14 buffer slots
+   sliding-window attention: window 32, sinks 4
+/home/jonat/agents/cudaswa/gates/swat_gpu: decode p50 7.51 ms/token (min 3.32, max 26.13, n=20)
+   [swat_bench_cpu] health: {"context":256,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/swa_tiny/swa_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [swat_bench_cpu] interpreter ready: family_hint=gpt2_swa, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cpu
+   sliding-window attention: window 32, sinks 4
+/home/jonat/agents/cudaswa/gates/swat_cpu: decode p50 7.25 ms/token (min 4.63, max 14.12, n=20)
+### CPU build + gpt2 on it
+[ 95%] Building CXX object CMakeFiles/tinyllama_server.dir/server.cpp.o
+[100%] Linking CXX executable tinyllama_server
+[100%] Built target tinyllama_server
+-rwxr-xr-x 1 jonat jonat 2997896 Oct 20 09:54 tinyllama_server
+./tinyllama_server
+   [gpt2_cpubuild] health: {"context":128,"hidden_size":128,"layers":2,"model":"/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf","status":"ok","tokenizer":"bpe","vocab_size":8192}
+   [gpt2_cpubuild] interpreter ready: family_hint=gpt2, 2 blocks of 11 ops, 29 weights bound (0 kept quantised, 0 MiB; f32 9 MiB; dequantised at load), device cpu
+n=40: reply identical 40, token count 40, stop reason 40
+   requests served: 40
+### done Tue Oct 20 09:55:04 AEDT 2026

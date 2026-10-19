@@ -114,7 +114,106 @@ __global__ void rope_kernel(float* __restrict__ q, float* __restrict__ k, int hq
   }
 }
 
+// Block-wide float max / sum (every thread gets the result).
+__device__ float block_reduce(float v, bool is_max, float* red) {
+  for (int o = 16; o > 0; o >>= 1) {
+    const float u = __shfl_xor_sync(0xffffffff, v, o);
+    v = is_max ? fmaxf(v, u) : v + u;
+  }
+  const int lane = threadIdx.x & 31, warp = threadIdx.x >> 5;
+  if (lane == 0) red[warp] = v;
+  __syncthreads();
+  float r = red[0];
+  for (int w = 1; w < (int)(blockDim.x >> 5); ++w) r = is_max ? fmaxf(r, red[w]) : r + red[w];
+  __syncthreads();
+  return r;
+}
+
+constexpr int kWinChunk = 1024;   // visible keys scored per pass (shared memory)
+constexpr int kWinDimsPerThread = 4;  // head_dim <= kThreads * 4
+
+// Sliding-window attention with sinks, one block per (token, q head). The
+// visible keys of query position p (cpu_attention.cpp swa_visible_ranges) are
+// walked in ascending order, sinks then window, kWinChunk at a time: scores
+// into shared memory (a warp per key), then an online softmax (running max,
+// sum and output rescaled when a later chunk raises the max). With n <=
+// kWinChunk visible keys this is the CPU form's single max / exp / sum pass.
+// Masked keys are never read, so they contribute exactly zero.
+__global__ void window_attention_kernel(const float* __restrict__ Q, const float* __restrict__ K,
+                                        const float* __restrict__ V, float* __restrict__ out, int hq, int hkv,
+                                        int hd, int start_pos, float scale, int window, int sinks) {
+  const int t = blockIdx.x, h = blockIdx.y;
+  const int pos = start_pos + t;
+  const int win_lo = pos + 1 > window ? pos + 1 - window : 0;
+  const int sink_hi = min(min(sinks, pos + 1), win_lo);
+  const int n = sink_hi + (pos + 1 - win_lo);
+  const int kvh = h / (hq / hkv);
+  extern __shared__ float sm[];
+  float* q = sm;       // [hd]
+  float* s = sm + hd;  // [kWinChunk]
+  __shared__ float red[kThreads / 32];
+  for (int d = threadIdx.x; d < hd; d += blockDim.x) q[d] = Q[((size_t)t * hq + h) * hd + d];
+  __syncthreads();
+  const int lane = threadIdx.x & 31, warp = threadIdx.x >> 5, nwarps = blockDim.x >> 5;
+  float acc[kWinDimsPerThread] = {0.0f, 0.0f, 0.0f, 0.0f};
+  float M = -INFINITY, L = 0.0f;
+  for (int c0 = 0; c0 < n; c0 += kWinChunk) {
+    const int cn = min(kWinChunk, n - c0);
+    for (int i = warp; i < cn; i += nwarps) {
+      const int j = c0 + i;
+      const int key = j < sink_hi ? j : win_lo + (j - sink_hi);
+      const float* kr = K + ((size_t)key * hkv + kvh) * hd;
+      float dot = 0.0f;
+      for (int d = lane; d < hd; d += 32) dot += q[d] * kr[d];
+      for (int o = 16; o > 0; o >>= 1) dot += __shfl_xor_sync(0xffffffff, dot, o);
+      if (lane == 0) s[i] = dot * scale;
+    }
+    __syncthreads();
+    float mx = -INFINITY;
+    for (int i = threadIdx.x; i < cn; i += blockDim.x) mx = fmaxf(mx, s[i]);
+    const float newM = fmaxf(M, block_reduce(mx, true, red));
+    const float rescale = expf(M - newM);  // 0 on the first chunk (M = -inf)
+    float sum = 0.0f;
+    for (int i = threadIdx.x; i < cn; i += blockDim.x) {
+      const float e = expf(s[i] - newM);
+      s[i] = e;
+      sum += e;
+    }
+    L = L * rescale + block_reduce(sum, false, red);  // block_reduce syncs: s[] is complete
+    for (int r = 0; r < kWinDimsPerThread; ++r) {
+      const int d = threadIdx.x + r * blockDim.x;
+      if (d >= hd) break;
+      float a = 0.0f;
+      for (int i = 0; i < cn; ++i) {
+        const int j = c0 + i;
+        const int key = j < sink_hi ? j : win_lo + (j - sink_hi);
+        a += s[i] * V[((size_t)key * hkv + kvh) * hd + d];
+      }
+      acc[r] = acc[r] * rescale + a;
+    }
+    M = newM;
+    __syncthreads();  // s[] is rewritten by the next chunk
+  }
+  const float inv = 1.0f / (L + 1e-9f);  // softmax_vector_cpu's normaliser
+  for (int r = 0; r < kWinDimsPerThread; ++r) {
+    const int d = threadIdx.x + r * blockDim.x;
+    if (d >= hd) break;
+    out[((size_t)t * hq + h) * hd + d] = acc[r] * inv;
+  }
+}
+
 }  // namespace
+
+void ir_window_attention_cuda(const float* q, const float* K, const float* V, float* out, int T, int start_pos,
+                              int hq, int hkv, int hd, float scale, int window, int sinks, cudaStream_t stream) {
+  if (window <= 0 || sinks < 0 || hkv <= 0 || hq % hkv != 0 || hd > kThreads * kWinDimsPerThread)
+    throw std::runtime_error("IR CUDA window attention: unsupported shape (window " + std::to_string(window) +
+                             ", head_dim " + std::to_string(hd) + ")");
+  const size_t shm = (size_t)(hd + kWinChunk) * sizeof(float);
+  window_attention_kernel<<<dim3(T, hq), kThreads, shm, stream>>>(q, K, V, out, hq, hkv, hd, start_pos, scale, window,
+                                                                  sinks);
+  check_launch("window attention");
+}
 
 void ir_embedding_cuda(const float* table, const int* tokens, float* out, int T, int d, cudaStream_t stream) {
   embedding_kernel<<<T, 128, 0, stream>>>(table, tokens, out, d);

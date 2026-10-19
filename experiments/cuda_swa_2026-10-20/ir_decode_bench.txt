@@ -1,0 +1,24 @@
+In-process decode bench (tools/ir_decode_bench.cpp), v3 llama IR on the GPU, 200 steps x 5 reps per run.
+bench_base = base graph_ir.cpp (per-op JSON/string/map lookups), bench_plan = compiled plan. Same libtinyllama_core.a.
+
+Run 1 (load average 7.5-9.3):
+round 1 base: wall median 4.405 ms/step, min 2.548, p90 7.994
+round 1 plan: wall median 7.956 ms/step, min 2.694, p90 15.530
+round 2 base: wall median 12.736 ms/step, min 4.570, p90 22.241
+round 2 plan: wall median 10.097 ms/step, min 3.617, p90 17.452
+round 3 base: wall median 8.726 ms/step, min 2.595, p90 18.764
+round 3 plan: wall median 12.214 ms/step, min 3.107, p90 23.897
+swa_tiny plan gpu: wall median 3.617, min 1.004; swa_tiny plan cpu: wall median 12.310, min 0.298
+
+Run 2 (load average 10.1-16.1), with thread CPU time:
+round 1 base: wall median 9.333, min 2.623; thread cpu median 4.031, min 1.886
+round 1 plan: wall median 17.673, min 3.546; thread cpu median 7.944, min 3.026
+round 2 base: wall median 16.093, min 4.771; thread cpu median 7.228, min 2.871
+round 2 plan: wall median 16.102, min 3.757; thread cpu median 7.425, min 2.802
+round 3 base: wall median 23.866, min 3.105; thread cpu median 7.224, min 2.587
+round 3 plan: wall median 15.955, min 2.763; thread cpu median 4.335, min 1.682
+swa_tiny plan gpu: wall median 8.976, min 0.716; swa_tiny plan cpu: wall median 231.966, min 0.313
+
+nsys (cuda API trace only; WSL gives no kernel activity), 402 forwards (2 x (prefill + 200 steps)):
+54198 cudaLaunchKernel (~135 per step), 5628 cudaMemcpyAsync (14 per step: 12 KV writes, tokens H2D, logits D2H),
+72072 cudaStreamGetCaptureInfo (cuBLAS, ~180 per step), 14412 cudaEventRecord (cuBLAS). Identical counts base and plan.

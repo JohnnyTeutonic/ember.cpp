@@ -548,15 +548,127 @@ void Interpreter::init_device() {
   Logger::info("[IR] CUDA device path: " + std::to_string(dweights_.size()) + " weights (" +
                std::to_string(floats * sizeof(float) / (1024 * 1024)) + " MiB f32) and " + std::to_string(n_layers_) +
                " kv slots of " + std::to_string(max_len_) + " positions on the device");
+  compile_device();
+}
+
+int Interpreter::slot(const std::string& name) {
+  auto it = slots_.find(name);
+  if (it != slots_.end()) return it->second;
+  const int s = static_cast<int>(slot_names_.size());
+  slots_.emplace(name, s);
+  slot_names_.push_back(name);
+  return s;
+}
+
+std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Node>& nodes, int layer) {
+  static const std::unordered_map<std::string, DOp> kOps = {
+      {"embedding", DOp::Embedding}, {"pos_embedding", DOp::PosEmbedding}, {"layernorm", DOp::LayerNorm},
+      {"split", DOp::Split},         {"gelu", DOp::Gelu},                  {"rmsnorm", DOp::RmsNorm},
+      {"linear", DOp::Linear},       {"rope", DOp::Rope},                  {"attention", DOp::Attention},
+      {"add", DOp::Add},             {"mul", DOp::Mul},                    {"moe_ffn", DOp::MoeFfn},
+      {"silu", DOp::Silu}};
+  auto wname = [&](const Node& n) {
+    std::string w = layer_name(n.attrs.at("weight").get<std::string>(), layer);
+    if (!weights_.count(w) && has(n.attrs, "tied_to")) w = layer_name(n.attrs.at("tied_to").get<std::string>(), layer);
+    return w;
+  };
+  auto elems = [&](const std::string& wn) {
+    size_t e = 1;
+    for (int64_t s : shapes_.at(wn)) e *= static_cast<size_t>(s);
+    return e;
+  };
+  std::vector<DStep> steps;
+  for (const auto& n : nodes) {
+    DStep s;
+    auto op = kOps.find(n.op);
+    if (op == kOps.end()) throw std::runtime_error("IR op '" + n.op + "' has no CUDA kernel in ember's interpreter");
+    s.op = op->second;
+    s.node = &n;
+    for (const auto& name : n.in) s.in.push_back(slot(name));
+    for (const auto& name : n.out) s.out.push_back(slot(name));
+    switch (s.op) {
+      case DOp::Embedding:
+      case DOp::PosEmbedding:
+      case DOp::RmsNorm:
+      case DOp::LayerNorm:
+      case DOp::Linear:
+        s.wname = wname(n);
+        s.w = dweight(s.wname);
+        s.w_elems = elems(s.wname);
+        s.w_ne0 = static_cast<int>(shapes_.at(s.wname).at(0));
+        if (has(n.attrs, "bias") && (s.op == DOp::LayerNorm || s.op == DOp::Linear))
+          s.b = dweight(layer_name(n.attrs.at("bias").get<std::string>(), layer));
+        if (s.op == DOp::LayerNorm && !s.b) throw std::runtime_error("IR layernorm '" + s.wname + "' has no bias");
+        s.eps = n.attrs.value("eps", 1e-5f);
+        break;
+      case DOp::Split:
+        s.sizes = n.attrs.at("sizes").get<std::vector<int>>();
+        if (s.sizes.size() != n.out.size()) throw std::runtime_error("IR split: sizes do not match the outputs");
+        break;
+      case DOp::Gelu:
+        s.flag = n.attrs.value("approx", "none") == "tanh";
+        break;
+      case DOp::Rope:
+        s.hd = n.attrs.at("head_dim").get<int>();
+        break;
+      case DOp::Attention:
+        s.hd = n.attrs.at("head_dim").get<int>();
+        s.hq = n.attrs.at("heads").get<int>();
+        s.hkv = n.attrs.at("kv_heads").get<int>();
+        if (s.hd != head_dim_ || s.hkv != kv_heads_) throw std::runtime_error("IR attention shape differs from its kv state");
+        s.scale = n.attrs.contains("scale") ? n.attrs.at("scale").get<float>() : 1.0f / std::sqrt(float(s.hd));
+        attention_window(n, s.window, s.sinks);
+        if (s.window > 0 && layer == 0)
+          Logger::info("[IR] CUDA sliding-window attention (ir_window_attention_cuda): window " +
+                       std::to_string(s.window) + ", sinks " + std::to_string(s.sinks));
+        break;
+      case DOp::MoeFfn: {
+        const auto& ex = n.attrs.at("experts");
+        s.wname = layer_name(ex.at("gate").get<std::string>(), layer);
+        s.w = dweight(layer_name(n.attrs.at("router").get<std::string>(), layer));
+        s.gate = dweight(s.wname);
+        s.up = dweight(layer_name(ex.at("up").get<std::string>(), layer));
+        s.down = dweight(layer_name(ex.at("down").get<std::string>(), layer));
+        s.E = n.attrs.at("n_experts").get<int>();
+        s.top_k = n.attrs.at("top_k").get<int>();
+        const auto& gs = shapes_.at(s.wname);  // ggml order {d, d_ff, E}
+        if (gs.size() != 3 || gs[2] != s.E)
+          throw std::runtime_error("IR moe_ffn '" + s.wname + "': expert stack shape does not match n_experts");
+        s.w_ne0 = static_cast<int>(gs[0]);
+        s.d_ff = static_cast<int>(gs[1]);
+        s.flag = n.attrs.value("gate_norm", "renorm") == "renorm";
+        break;
+      }
+      case DOp::Add:
+      case DOp::Mul:
+      case DOp::Silu:
+        break;
+    }
+    steps.push_back(std::move(s));
+  }
+  return steps;
+}
+
+void Interpreter::compile_device() {
+  plan_embed_ = compile_nodes(embed_, -1);
+  plan_block_.resize(n_layers_);
+  for (int l = 0; l < n_layers_; ++l) plan_block_[l] = compile_nodes(block_, l);
+  plan_head_ = compile_nodes(head_, -1);
+  logits_slot_ = slot("logits");
+  dbufs_.assign(slot_names_.size(), DBuf{});  // sized once: steps hold slots, dout returns references
+  dspare_.assign(slot_names_.size(), DBuf{});
+  Logger::info("[IR] CUDA device plan: " + std::to_string(plan_embed_.size()) + " + " + std::to_string(n_layers_) +
+               " x " + std::to_string(block_.size()) + " + " + std::to_string(plan_head_.size()) + " steps over " +
+               std::to_string(slot_names_.size()) + " buffer slots");
 }
 
 void Interpreter::free_device() {
-  auto release = [](DEnv& env) {
-    for (auto& b : env)
-      if (b.second.alloc) cudaFree(b.second.alloc);
-    env.clear();
+  auto release = [](std::vector<DBuf>& bufs) {
+    for (auto& b : bufs)
+      if (b.alloc) cudaFree(b.alloc);
+    bufs.clear();
   };
-  release(denv_);
+  release(dbufs_);
   release(dspare_);
   for (auto& w : dweights_) cudaFree(w.second);
   dweights_.clear();
@@ -581,13 +693,12 @@ const float* Interpreter::dweight(const std::string& name) const {
   return it->second;
 }
 
-Interpreter::DBuf& Interpreter::dout(const std::string& name, int rows, int width,
-                                     std::initializer_list<const DBuf*> inputs) {
-  DBuf* b = &denv_[name];
+Interpreter::DBuf& Interpreter::dout(int slot, int rows, int width, std::initializer_list<const DBuf*> inputs) {
+  DBuf* b = &dbufs_[slot];
   for (const DBuf* in : inputs)
     if (in && b->alloc && in->alloc == b->alloc) {
-      b = &dspare_[name];
-      pending_.push_back(name);
+      b = &dspare_[slot];
+      pending_.push_back(slot);
       break;
     }
   const size_t need = static_cast<size_t>(rows) * width;
@@ -603,162 +714,157 @@ Interpreter::DBuf& Interpreter::dout(const std::string& name, int rows, int widt
 }
 
 void Interpreter::commit() {
-  for (const auto& name : pending_) std::swap(denv_[name], dspare_[name]);
+  for (int s : pending_) std::swap(dbufs_[s], dspare_[s]);
   pending_.clear();
 }
 
-void Interpreter::run_nodes_device(const std::vector<Node>& nodes, int layer, int T, int start_pos) {
+void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, int T, int start_pos) {
   cudaStream_t st = stream_;
-  auto in = [&](const Node& n, size_t k) -> DBuf& {
-    auto it = denv_.find(n.in.at(k));
-    if (it == denv_.end() || it->second.rows == 0)
-      throw std::runtime_error("IR op '" + n.op + "': input '" + n.in.at(k) + "' is not defined");
-    return it->second;
+  auto in = [&](const DStep& s, size_t k) -> DBuf& {
+    DBuf& b = dbufs_[s.in.at(k)];
+    if (b.rows == 0)
+      throw std::runtime_error("IR op '" + s.node->op + "': input '" + s.node->in.at(k) + "' is not defined");
+    return b;
   };
-  auto wname = [&](const Node& n) {
-    std::string w = layer_name(n.attrs.at("weight").get<std::string>(), layer);
-    if (!weights_.count(w) && has(n.attrs, "tied_to")) w = layer_name(n.attrs.at("tied_to").get<std::string>(), layer);
-    return w;
-  };
-  auto elems = [&](const std::string& wn) {
-    size_t e = 1;
-    for (int64_t s : shapes_.at(wn)) e *= static_cast<size_t>(s);
-    return e;
-  };
-  for (const auto& n : nodes) {
-    if (n.op == "embedding") {
-      const std::string wn = wname(n);
-      const int d = static_cast<int>(shapes_.at(wn).at(0));
-      const size_t rows = elems(wn) / d;
-      for (int t = 0; t < T; ++t)
-        if (htokens_[t] < 0 || static_cast<size_t>(htokens_[t]) >= rows)
-          throw std::runtime_error("IR embedding: token id " + std::to_string(htokens_[t]) + " out of range");
-      DBuf& out = dout(n.out.at(0), T, d, {});
-      ir_embedding_cuda(dweight(wn), dtokens_, out.p, T, d, st);
-    } else if (n.op == "pos_embedding") {
-      const DBuf& x = in(n, 0);
-      const std::string wn = wname(n);
-      const int d = x.width;
-      if (shapes_.at(wn).at(0) != d) throw std::runtime_error("IR pos_embedding '" + wn + "': width differs from x");
-      if (static_cast<size_t>(start_pos + T) * d > elems(wn))
-        throw std::runtime_error("IR pos_embedding: position " + std::to_string(start_pos + T - 1) + " exceeds '" + wn + "'");
-      DBuf& out = dout(n.out.at(0), T, d, {&x});
-      ir_pos_embedding_cuda(x.p, dweight(wn), out.p, T, d, start_pos, st);
-    } else if (n.op == "layernorm") {
-      const DBuf& x = in(n, 0);
-      DBuf& out = dout(n.out.at(0), T, x.width, {&x});
-      ir_layernorm_cuda(x.p, dweight(wname(n)), dweight(layer_name(n.attrs.at("bias").get<std::string>(), layer)), out.p,
-                        T, x.width, n.attrs.value("eps", 1e-5f), st);
-    } else if (n.op == "split") {
-      const DBuf& x = in(n, 0);
-      const auto sizes = n.attrs.at("sizes").get<std::vector<int>>();
-      int total = 0;
-      for (int s : sizes) total += s;
-      if (total != x.width || sizes.size() != n.out.size())
-        throw std::runtime_error("IR split: sizes do not match the input width or the outputs");
-      int col = 0;
-      for (size_t o = 0; o < sizes.size(); ++o) {
-        DBuf& part = dout(n.out[o], T, sizes[o], {&x});
-        gpuErrchk(cudaMemcpy2DAsync(part.p, sizes[o] * sizeof(float), x.p + col, x.width * sizeof(float),
-                                    sizes[o] * sizeof(float), T, cudaMemcpyDeviceToDevice, st));
-        col += sizes[o];
+  for (const DStep& s : steps) {
+    switch (s.op) {
+      case DOp::Embedding: {
+        const int d = s.w_ne0;
+        const size_t rows = s.w_elems / d;
+        for (int t = 0; t < T; ++t)
+          if (htokens_[t] < 0 || static_cast<size_t>(htokens_[t]) >= rows)
+            throw std::runtime_error("IR embedding: token id " + std::to_string(htokens_[t]) + " out of range");
+        DBuf& out = dout(s.out[0], T, d, {});
+        ir_embedding_cuda(s.w, dtokens_, out.p, T, d, st);
+        break;
       }
-    } else if (n.op == "gelu") {
-      const DBuf& x = in(n, 0);
-      DBuf& out = dout(n.out.at(0), T, x.width, {&x});
-      ir_gelu_cuda(x.p, out.p, static_cast<size_t>(T) * x.width, n.attrs.value("approx", "none") == "tanh", st);
-    } else if (n.op == "rmsnorm") {
-      const DBuf& x = in(n, 0);
-      DBuf& out = dout(n.out.at(0), T, x.width, {&x});
-      rmsnorm_batch_cuda(out.p, x.p, dweight(wname(n)), T, x.width, n.attrs.value("eps", 1e-5f), st);
-    } else if (n.op == "linear") {
-      const DBuf& x = in(n, 0);
-      const std::string wn = wname(n);
-      if (shapes_.at(wn).at(0) != x.width)
-        throw std::runtime_error("IR linear '" + wn + "': input width " + std::to_string(x.width) +
-                                 " does not match the weight's ne0 " + std::to_string(shapes_.at(wn).at(0)));
-      const int out_dim = static_cast<int>(elems(wn) / x.width);
-      DBuf& out = dout(n.out.at(0), T, out_dim, {&x});
-      gemm_rm_f32_cuda(cublas_, x.p, dweight(wn), out.p, T, out_dim, x.width, st);
-      if (has(n.attrs, "bias"))
-        ir_bias_add_cuda(out.p, dweight(layer_name(n.attrs.at("bias").get<std::string>(), layer)), T, out_dim, st);
-    } else if (n.op == "rope") {
-      const int hd = n.attrs.at("head_dim").get<int>();
-      if (start_pos + T > max_len_ || !drope_)
-        throw std::runtime_error("IR rope: position " + std::to_string(start_pos + T - 1) + " exceeds the rope table");
-      DBuf* q = &in(n, 0);
-      DBuf* k = &in(n, 1);
-      // Rotated in place when the outputs reuse the input names (the usual
-      // form); otherwise copied to the outputs first.
-      for (size_t o = 0; o < 2; ++o) {
-        DBuf*& src = o == 0 ? q : k;
-        if (n.out.at(o) == n.in.at(o)) continue;
-        DBuf& dst = dout(n.out.at(o), T, src->width, {src});
-        gpuErrchk(cudaMemcpyAsync(dst.p, src->p, static_cast<size_t>(T) * src->width * sizeof(float),
+      case DOp::PosEmbedding: {
+        const DBuf& x = in(s, 0);
+        const int d = x.width;
+        if (s.w_ne0 != d) throw std::runtime_error("IR pos_embedding '" + s.wname + "': width differs from x");
+        if (static_cast<size_t>(start_pos + T) * d > s.w_elems)
+          throw std::runtime_error("IR pos_embedding: position " + std::to_string(start_pos + T - 1) + " exceeds '" +
+                                   s.wname + "'");
+        DBuf& out = dout(s.out[0], T, d, {&x});
+        ir_pos_embedding_cuda(x.p, s.w, out.p, T, d, start_pos, st);
+        break;
+      }
+      case DOp::LayerNorm: {
+        const DBuf& x = in(s, 0);
+        DBuf& out = dout(s.out[0], T, x.width, {&x});
+        ir_layernorm_cuda(x.p, s.w, s.b, out.p, T, x.width, s.eps, st);
+        break;
+      }
+      case DOp::Split: {
+        const DBuf& x = in(s, 0);
+        int total = 0;
+        for (int sz : s.sizes) total += sz;
+        if (total != x.width) throw std::runtime_error("IR split: sizes do not match the input width or the outputs");
+        int col = 0;
+        for (size_t o = 0; o < s.sizes.size(); ++o) {
+          DBuf& part = dout(s.out[o], T, s.sizes[o], {&x});
+          gpuErrchk(cudaMemcpy2DAsync(part.p, s.sizes[o] * sizeof(float), x.p + col, x.width * sizeof(float),
+                                      s.sizes[o] * sizeof(float), T, cudaMemcpyDeviceToDevice, st));
+          col += s.sizes[o];
+        }
+        break;
+      }
+      case DOp::Gelu: {
+        const DBuf& x = in(s, 0);
+        DBuf& out = dout(s.out[0], T, x.width, {&x});
+        ir_gelu_cuda(x.p, out.p, static_cast<size_t>(T) * x.width, s.flag, st);
+        break;
+      }
+      case DOp::RmsNorm: {
+        const DBuf& x = in(s, 0);
+        DBuf& out = dout(s.out[0], T, x.width, {&x});
+        rmsnorm_batch_cuda(out.p, x.p, s.w, T, x.width, s.eps, st);
+        break;
+      }
+      case DOp::Linear: {
+        const DBuf& x = in(s, 0);
+        if (s.w_ne0 != x.width)
+          throw std::runtime_error("IR linear '" + s.wname + "': input width " + std::to_string(x.width) +
+                                   " does not match the weight's ne0 " + std::to_string(s.w_ne0));
+        const int out_dim = static_cast<int>(s.w_elems / x.width);
+        DBuf& out = dout(s.out[0], T, out_dim, {&x});
+        gemm_rm_f32_cuda(cublas_, x.p, s.w, out.p, T, out_dim, x.width, st);
+        if (s.b) ir_bias_add_cuda(out.p, s.b, T, out_dim, st);
+        break;
+      }
+      case DOp::Rope: {
+        if (start_pos + T > max_len_ || !drope_)
+          throw std::runtime_error("IR rope: position " + std::to_string(start_pos + T - 1) + " exceeds the rope table");
+        DBuf* q = &in(s, 0);
+        DBuf* k = &in(s, 1);
+        // Rotated in place when the outputs reuse the input names (the usual
+        // form); otherwise copied to the outputs first.
+        for (size_t o = 0; o < 2; ++o) {
+          DBuf*& src = o == 0 ? q : k;
+          if (s.out.at(o) == s.in.at(o)) continue;
+          DBuf& dst = dout(s.out.at(o), T, src->width, {src});
+          gpuErrchk(cudaMemcpyAsync(dst.p, src->p, static_cast<size_t>(T) * src->width * sizeof(float),
+                                    cudaMemcpyDeviceToDevice, st));
+          src = &dst;
+        }
+        ir_rope_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, start_pos, drope_, st);
+        break;
+      }
+      case DOp::Attention: {
+        const DBuf &q = in(s, 0), &k = in(s, 1), &v = in(s, 2);
+        const int hd = s.hd, hq = s.hq, hkv = s.hkv;
+        if (k.width != hkv * hd || v.width != hkv * hd || q.width != hq * hd)
+          throw std::runtime_error("IR attention: q/k/v widths do not match heads * head_dim");
+        if (start_pos + T > max_len_)
+          throw std::runtime_error("IR attention: position " + std::to_string(start_pos + T) + " exceeds the kv state (" +
+                                   std::to_string(max_len_) + ")");
+        const size_t row = static_cast<size_t>(hkv) * hd;
+        float* K = dk_[layer];
+        float* V = dv_[layer];
+        gpuErrchk(cudaMemcpyAsync(K + start_pos * row, k.p, static_cast<size_t>(T) * row * sizeof(float),
                                   cudaMemcpyDeviceToDevice, st));
-        src = &dst;
+        gpuErrchk(cudaMemcpyAsync(V + start_pos * row, v.p, static_cast<size_t>(T) * row * sizeof(float),
+                                  cudaMemcpyDeviceToDevice, st));
+        DBuf& out = dout(s.out[0], T, hq * hd, {&q, &k, &v});
+        if (s.window > 0)  // the cache keeps every position, so the window reads it in place
+          ir_window_attention_cuda(q.p, K, V, out.p, T, start_pos, hq, hkv, hd, s.scale, s.window, s.sinks, st);
+        else if (T == 1)
+          attention_decode_at_cuda(q.p, K, V, out.p, hq, start_pos + 1, hd, s.scale, max_len_, hkv, st);
+        else
+          attention_batch_prefill_cuda(q.p, nullptr, nullptr, K, V, out.p, T, start_pos, max_len_, hq, hkv, hd, s.scale,
+                                       st, nullptr);
+        break;
       }
-      ir_rope_cuda(q->p, k->p, T, q->width / hd, k->width / hd, hd, start_pos, drope_, st);
-    } else if (n.op == "attention") {
-      const DBuf &q = in(n, 0), &k = in(n, 1), &v = in(n, 2);
-      const int hd = n.attrs.at("head_dim").get<int>(), hq = n.attrs.at("heads").get<int>();
-      const int hkv = n.attrs.at("kv_heads").get<int>();
-      if (hd != head_dim_ || hkv != kv_heads_) throw std::runtime_error("IR attention shape differs from its kv state");
-      {
-        int window = 0, sinks = 0;
-        attention_window(n, window, sinks);
-        if (window > 0)
-          throw std::runtime_error("IR sliding-window attention has no CUDA kernel yet (EMBER_IR_DEVICE=cpu runs it)");
+      case DOp::Add:
+      case DOp::Mul: {
+        const DBuf &a = in(s, 0), &b = in(s, 1);
+        if (static_cast<size_t>(a.rows) * a.width != static_cast<size_t>(b.rows) * b.width)
+          throw std::runtime_error("IR " + s.node->op + ": operand sizes differ");
+        DBuf& out = dout(s.out[0], a.rows, a.width, {&a, &b});
+        ir_binary_cuda(a.p, b.p, out.p, static_cast<size_t>(a.rows) * a.width, s.op == DOp::Add ? 0 : 1, st);
+        break;
       }
-      if (k.width != hkv * hd || v.width != hkv * hd || q.width != hq * hd)
-        throw std::runtime_error("IR attention: q/k/v widths do not match heads * head_dim");
-      if (start_pos + T > max_len_)
-        throw std::runtime_error("IR attention: position " + std::to_string(start_pos + T) + " exceeds the kv state (" +
-                                 std::to_string(max_len_) + ")");
-      const size_t row = static_cast<size_t>(hkv) * hd;
-      float* K = dk_.at(layer);
-      float* V = dv_.at(layer);
-      gpuErrchk(cudaMemcpyAsync(K + start_pos * row, k.p, static_cast<size_t>(T) * row * sizeof(float),
-                                cudaMemcpyDeviceToDevice, st));
-      gpuErrchk(cudaMemcpyAsync(V + start_pos * row, v.p, static_cast<size_t>(T) * row * sizeof(float),
-                                cudaMemcpyDeviceToDevice, st));
-      const float scale = n.attrs.contains("scale") ? n.attrs.at("scale").get<float>() : 1.0f / std::sqrt(float(hd));
-      DBuf& out = dout(n.out.at(0), T, hq * hd, {&q, &k, &v});
-      if (T == 1)
-        attention_decode_at_cuda(q.p, K, V, out.p, hq, start_pos + 1, hd, scale, max_len_, hkv, st);
-      else
-        attention_batch_prefill_cuda(q.p, nullptr, nullptr, K, V, out.p, T, start_pos, max_len_, hq, hkv, hd, scale, st,
-                                     nullptr);
-    } else if (n.op == "add" || n.op == "mul") {
-      const DBuf &a = in(n, 0), &b = in(n, 1);
-      if (static_cast<size_t>(a.rows) * a.width != static_cast<size_t>(b.rows) * b.width)
-        throw std::runtime_error("IR " + n.op + ": operand sizes differ");
-      DBuf& out = dout(n.out.at(0), a.rows, a.width, {&a, &b});
-      ir_binary_cuda(a.p, b.p, out.p, static_cast<size_t>(a.rows) * a.width, n.op == "add" ? 0 : 1, st);
-    } else if (n.op == "moe_ffn") {
-      const DBuf& x = in(n, 0);
-      const auto& ex = n.attrs.at("experts");
-      const std::string gn = layer_name(ex.at("gate").get<std::string>(), layer);
-      const int E = n.attrs.at("n_experts").get<int>(), k = n.attrs.at("top_k").get<int>();
-      const auto& gs = shapes_.at(gn);  // ggml order {d, d_ff, E}
-      if (gs.size() != 3 || gs[0] != x.width || gs[2] != E)
-        throw std::runtime_error("IR moe_ffn '" + gn + "': expert stack shape does not match d and n_experts");
-      const int d = x.width, d_ff = static_cast<int>(gs[1]);
-      const size_t need = moe_ffn_scratch_floats(T, d, d_ff, E, k);
-      if (need > dmoe_cap_) {
-        if (dmoe_) gpuErrchk(cudaFree(dmoe_));
-        gpuErrchk(cudaMalloc(&dmoe_, need * sizeof(float)));
-        dmoe_cap_ = need;
+      case DOp::MoeFfn: {
+        const DBuf& x = in(s, 0);
+        if (s.w_ne0 != x.width)
+          throw std::runtime_error("IR moe_ffn '" + s.wname + "': expert stack shape does not match d and n_experts");
+        const int d = x.width;
+        const size_t need = moe_ffn_scratch_floats(T, d, s.d_ff, s.E, s.top_k);
+        if (need > dmoe_cap_) {
+          if (dmoe_) gpuErrchk(cudaFree(dmoe_));
+          gpuErrchk(cudaMalloc(&dmoe_, need * sizeof(float)));
+          dmoe_cap_ = need;
+        }
+        DBuf& out = dout(s.out[0], T, d, {&x});
+        moe_ffn_cuda(cublas_, x.p, T, d, s.d_ff, s.E, s.top_k, s.flag, s.w, s.gate, s.up, s.down, dmoe_, out.p, st);
+        break;
       }
-      DBuf& out = dout(n.out.at(0), T, d, {&x});
-      moe_ffn_cuda(cublas_, x.p, T, d, d_ff, E, k, n.attrs.value("gate_norm", "renorm") == "renorm",
-                   dweight(layer_name(n.attrs.at("router").get<std::string>(), layer)), dweight(gn),
-                   dweight(layer_name(ex.at("up").get<std::string>(), layer)),
-                   dweight(layer_name(ex.at("down").get<std::string>(), layer)), dmoe_, out.p, st);
-    } else if (n.op == "silu") {
-      const DBuf& x = in(n, 0);
-      DBuf& out = dout(n.out.at(0), T, x.width, {&x});
-      ir_silu_cuda(x.p, out.p, static_cast<size_t>(T) * x.width, st);
+      case DOp::Silu: {
+        const DBuf& x = in(s, 0);
+        DBuf& out = dout(s.out[0], T, x.width, {&x});
+        ir_silu_cuda(x.p, out.p, static_cast<size_t>(T) * x.width, st);
+        break;
+      }
     }
     commit();
   }
@@ -766,7 +872,7 @@ void Interpreter::run_nodes_device(const std::vector<Node>& nodes, int layer, in
 
 std::vector<float> Interpreter::forward_device(const std::vector<int>& tokens, int start_pos, bool all_rows) {
   const int T = static_cast<int>(tokens.size());
-  for (auto& b : denv_) b.second.rows = 0;  // allocations persist, definitions do not
+  for (auto& b : dbufs_) b.rows = 0;  // allocations persist, definitions do not
   htokens_ = tokens;
   if (dtokens_cap_ < T) {
     if (dtokens_) gpuErrchk(cudaFree(dtokens_));
@@ -775,12 +881,11 @@ std::vector<float> Interpreter::forward_device(const std::vector<int>& tokens, i
   }
   gpuErrchk(cudaMemcpyAsync(dtokens_, tokens.data(), static_cast<size_t>(T) * sizeof(int), cudaMemcpyHostToDevice,
                             stream_));
-  run_nodes_device(embed_, -1, T, start_pos);
-  for (int l = 0; l < n_layers_; ++l) run_nodes_device(block_, l, T, start_pos);
+  run_nodes_device(plan_embed_, -1, T, start_pos);
+  for (int l = 0; l < n_layers_; ++l) run_nodes_device(plan_block_[l], l, T, start_pos);
   int rows = T;
   if (!all_rows && T > 1) {  // head ops are row-wise: run them on the last row only
-    for (auto& kv : denv_) {
-      DBuf& b = kv.second;
+    for (DBuf& b : dbufs_) {
       if (b.rows == T) {
         b.p = b.alloc + static_cast<size_t>(T - 1) * b.width;
         b.rows = 1;
@@ -788,11 +893,11 @@ std::vector<float> Interpreter::forward_device(const std::vector<int>& tokens, i
     }
     rows = 1;
   }
-  run_nodes_device(head_, -1, rows, start_pos);
-  auto it = denv_.find("logits");
-  if (it == denv_.end() || it->second.rows == 0) throw std::runtime_error("IR head produced no 'logits'");
-  std::vector<float> out(static_cast<size_t>(it->second.rows) * it->second.width);
-  gpuErrchk(cudaMemcpyAsync(out.data(), it->second.p, out.size() * sizeof(float), cudaMemcpyDeviceToHost, stream_));
+  run_nodes_device(plan_head_, -1, rows, start_pos);
+  const DBuf& logits = dbufs_[logits_slot_];
+  if (logits.rows == 0) throw std::runtime_error("IR head produced no 'logits'");
+  std::vector<float> out(static_cast<size_t>(logits.rows) * logits.width);
+  gpuErrchk(cudaMemcpyAsync(out.data(), logits.p, out.size() * sizeof(float), cudaMemcpyDeviceToHost, stream_));
   gpuErrchk(cudaStreamSynchronize(stream_));
   return out;
 }
