@@ -1,4 +1,5 @@
 #include "cpu_attention.h"
+#include "parallel_for.h"
 #include "logger.h"
 #include "utils.h"
 #include <algorithm>
@@ -112,8 +113,12 @@ void attention_batch_cpu(
 
     // Tokens are independent (each writes its own output rows; scores are
     // per-iteration), so they run in parallel with unchanged arithmetic.
+#if defined(__EMSCRIPTEN_PTHREADS__)
+    ember::parallel_for(num_tokens_in_batch, [&](int64_t token_idx) {
+#else
 #pragma omp parallel for schedule(dynamic)
     for (int token_idx = 0; token_idx < num_tokens_in_batch; ++token_idx) {
+#endif
         size_t q_token_offset = (size_t)token_idx * num_q_heads * head_dim;
         size_t attn_out_token_offset = (size_t)token_idx * num_q_heads * head_dim;
         int current_token_absolute_pos = start_pos_in_sequence + token_idx;
@@ -198,7 +203,10 @@ void attention_batch_cpu(
                 }
             }
         } 
-    } 
+    }
+#if defined(__EMSCRIPTEN_PTHREADS__)
+    );
+#endif 
 }
 
 void update_kv_cache_batch_cpu_sequence_aware(

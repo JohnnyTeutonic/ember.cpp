@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "parallel_for.h"
 
 #include "logger.h"
 #include "quantization.h"
@@ -389,11 +390,10 @@ void matvec_f32_f32_vector_cpu(const std::vector<float>& mat_f32,
 
   out_f32.resize(rows);
 
-#pragma omp parallel for schedule(static)
-  for (int64_t r = 0; r < static_cast<int64_t>(rows); ++r) {
+  ember::parallel_for(rows, [&](int64_t r) {
     const float* mat_row_ptr = mat_f32.data() + static_cast<size_t>(r) * cols;
     out_f32[r] = static_cast<float>(dot_f32_as_f64(mat_row_ptr, vec_f32.data(), cols));
-  }
+  });
 }
 
 void matvec_q8k_f32_vector_cpu(const std::vector<block_q8_K>& mat_q8k,
@@ -817,14 +817,13 @@ void matmul_f32_f32_batch_cpu(
   // while every token uses it, so the weights stream from memory once per
   // call instead of once per token. The same dot products as token-major
   // order, so the same results.
-#pragma omp parallel for schedule(static)
-  for (int o = 0; o < output_dim; ++o) {
+  ember::parallel_for(output_dim, [&](int64_t o) {
     const float* w_row = mat_weights.data() + (size_t)o * input_dim;
     for (int t = 0; t < num_tokens; ++t) {
       batch_output_activations[(size_t)t * output_dim + o] = static_cast<float>(
           dot_f32_as_f64(w_row, batch_input_activations.data() + (size_t)t * input_dim, input_dim));
     }
-  }
+  });
 }
 
 void matvec_q6k_f32_vector_cpu(const std::vector<block_q6_K>& mat_q6k,

@@ -2,7 +2,18 @@
 // runs here, off the page's main thread. Messages:
 //   in:  {id, req}  where req is the /chat body (user_input, history, sampling)
 //   out: {type: 'progress', loaded, total} | {type: 'ready', ok} | {type: 'reply', id, out}
-importScripts('ember.js');
+// A cross-origin-isolated page (COOP/COEP headers; not inside the GitHub
+// Pages iframe) can run the multi-threaded build, ember-mt.js, if the Space
+// ships one; otherwise, or if it is missing, the single-threaded ember.js.
+if (self.crossOriginIsolated === true) {
+  try {
+    importScripts('ember-mt.js');
+  } catch (e) {
+    importScripts('ember.js');
+  }
+} else {
+  importScripts('ember.js');
+}
 
 let ember = null;
 

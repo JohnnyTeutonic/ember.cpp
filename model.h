@@ -400,6 +400,11 @@ class TinyLlamaModel {
   // quantized KV cache, no FP32 LM head, capture failure); the caller then
   // uses forward_device().
   std::vector<float> forward_device_graph(int token_id, int pos, KVCache* kv_cache);
+  // Speculative verification: n tokens at positions pos..pos+n-1 (all layers
+  // on the GPU, n <= 33), logits for every row ([n][vocab]). Built like the
+  // graph decode (FP32 projections, the same decode-attention kernel per
+  // row), so one pass costs about one decode step. Empty if unavailable.
+  std::vector<float> forward_device_verify(const std::vector<int>& tokens, int pos, KVCache* kv_cache);
   // Per-op GPU time of the last batched prefill, filled only when
   // EMBER_OP_TIMING=1 (docs/TTFT.md); empty otherwise.
   const std::map<std::string, double>& last_prefill_op_ms() const { return last_prefill_op_ms_; }
@@ -572,6 +577,7 @@ class TinyLlamaModel {
   float* moe_scratch_batch_dev_ = nullptr;
   size_t moe_scratch_batch_floats_ = 0;
   float* moe_scratch(int T);  // T == 1: the decode scratch
+  float* verify_buf_dev_ = nullptr;  // forward_device_verify's rows (allocated once)
   void moe_ffn_layer_cuda(int l_gpu_idx, const float* x, int T, float* out, cudaStream_t stream);
   float* lm_head_f32_dev_ = nullptr;
   cublasHandle_t cublas_handle_ = nullptr;
