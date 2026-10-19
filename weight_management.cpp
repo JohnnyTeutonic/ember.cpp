@@ -764,23 +764,41 @@ bool dequant_legacy_to_f32(const GGUFTensorInfo& info, const uint8_t* src, std::
   const size_t n = info.num_elements;
   if (t == GGMLType::GGML_TYPE_F16) {
     out.resize(n);
-    for (size_t i = 0; i < n; ++i) {
-      uint16_t h;
-      std::memcpy(&h, src + 2 * i, 2);
-      out[i] = fp16_to_fp32(h, false);
-    }
+    dequant_span_to_f32(t, src, 0, n, out.data());
     return true;
   }
   const bool q4_0 = t == GGMLType::GGML_TYPE_Q4_0, q4_1 = t == GGMLType::GGML_TYPE_Q4_1;
   const bool q5_0 = t == GGMLType::GGML_TYPE_Q5_0, q5_1 = t == GGMLType::GGML_TYPE_Q5_1;
   if (!(q4_0 || q4_1 || q5_0 || q5_1)) return false;
   if (n % 32 != 0) throw std::runtime_error("legacy-quantised tensor with " + std::to_string(n) + " elements (not a multiple of 32)");
-  const bool has_min = q4_1 || q5_1, five_bit = q5_0 || q5_1;
   const size_t bsz = ggml_type_size(t), nb = n / 32;
   if (info.size_in_bytes < nb * bsz) throw std::runtime_error("legacy-quantised tensor is shorter than its element count implies");
   out.resize(n);
+  dequant_span_to_f32(t, src, 0, n, out.data());
+  return true;
+}
+
+bool dequant_span_to_f32(GGMLType t, const uint8_t* src, size_t first, size_t n, float* out) {
+  if (t == GGMLType::GGML_TYPE_F16) {
+    for (size_t i = 0; i < n; ++i) {
+      uint16_t h;
+      std::memcpy(&h, src + 2 * (first + i), 2);
+      out[i] = fp16_to_fp32(h, false);
+    }
+    return true;
+  }
+  if (t == GGMLType::GGML_TYPE_Q8_0) {
+    const block_q8_0* blocks = reinterpret_cast<const block_q8_0*>(src) + first / GGML_QK8_0;
+    for (size_t b = 0; b < n / GGML_QK8_0; ++b) dequantize_q8_0_block(blocks + b, out + b * GGML_QK8_0);
+    return true;
+  }
+  const bool q4_0 = t == GGMLType::GGML_TYPE_Q4_0, q4_1 = t == GGMLType::GGML_TYPE_Q4_1;
+  const bool q5_0 = t == GGMLType::GGML_TYPE_Q5_0, q5_1 = t == GGMLType::GGML_TYPE_Q5_1;
+  if (!(q4_0 || q4_1 || q5_0 || q5_1)) return false;
+  const bool has_min = q4_1 || q5_1, five_bit = q5_0 || q5_1;
+  const size_t bsz = ggml_type_size(t), b0 = first / 32, nb = n / 32;
   for (size_t b = 0; b < nb; ++b) {
-    const uint8_t* p = src + b * bsz;
+    const uint8_t* p = src + (b0 + b) * bsz;
     uint16_t dh, mh = 0;
     std::memcpy(&dh, p, 2);
     p += 2;
@@ -789,7 +807,7 @@ bool dequant_legacy_to_f32(const GGUFTensorInfo& info, const uint8_t* src, std::
     if (five_bit) { std::memcpy(&qh, p, 4); p += 4; }
     const float d = fp16_to_fp32(dh, false), m = has_min ? fp16_to_fp32(mh, false) : 0.0f;
     const int offset = has_min ? 0 : (five_bit ? 16 : 8);
-    float* y = out.data() + b * 32;
+    float* y = out + b * 32;
     for (int j = 0; j < 16; ++j) {
       int lo = p[j] & 0x0F, hi = p[j] >> 4;
       if (five_bit) {

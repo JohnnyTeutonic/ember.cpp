@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <functional>
 
 #include "quantization.h"
 #include "model_constants.h"
@@ -54,6 +55,15 @@ void matvec_f32_f32_vector_cpu(const std::vector<float>& mat_f32,
 void matmul_q4k_f32_batch_cpu(const std::vector<block_q4_K>& mat_q4k,
                                const std::vector<float>& batch_input_activations,
                                std::vector<float>& batch_output_activations,
+                               int num_tokens, int output_dim, int input_dim);
+
+// The same product for a weight kept quantised: row_fn(o, dst) writes weight
+// row o (input_dim floats) into dst. Rows are dequantised one at a time into
+// a per-thread scratch row and dotted exactly as matmul_f32_f32_batch_cpu
+// does, so when row_fn yields the dequantise-at-load values the outputs are
+// bit-identical to it. batch_output_activations is [num_tokens][output_dim].
+void matmul_rows_f32_batch_cpu(const std::function<void(int64_t, float*)>& row_fn,
+                               const float* batch_input_activations, float* batch_output_activations,
                                int num_tokens, int output_dim, int input_dim);
 
 void matmul_q6k_f32_batch_cpu(const std::vector<block_q6_K>& mat_q6k,

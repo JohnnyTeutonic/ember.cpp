@@ -490,8 +490,19 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
       const std::string family = nlohmann::json::parse(ir).value("family_hint", "");
       if ((force && std::string(force) == "1") || std::getenv("EMBER_IR") || family != "llama" || model_->ir_only() ||
           ember_ir::has_windowed_attention(ir)) {
-        ir_ = std::make_unique<ember_ir::Interpreter>(ir, *gd);
-        Logger::warning("Running the model through the paperkiln IR interpreter (CPU; family_hint '" + family +
+        // CUDA builds run the interpreter on the device when the CLI asked for
+        // GPU layers (any nonzero count: the interpreter does not split
+        // layers); EMBER_IR_DEVICE=cpu keeps it on the CPU. Sliding-window
+        // attention has no device kernel yet, so a windowed IR stays on the CPU.
+        bool ir_gpu = false;
+#ifdef HAS_CUDA
+        const char* dev = std::getenv("EMBER_IR_DEVICE");
+        ir_gpu = num_gpu_layers_from_cli != 0 && !(dev && std::string(dev) == "cpu") &&
+                 !ember_ir::has_windowed_attention(ir);
+#endif
+        ir_ = std::make_unique<ember_ir::Interpreter>(ir, *gd, ir_gpu);
+        Logger::warning("Running the model through the paperkiln IR interpreter (" +
+                        std::string(ir_->on_gpu() ? "CUDA" : "CPU") + "; family_hint '" + family +
                         "'). The llama path's weights stay loaded but unused.");
       }
     }
