@@ -5,9 +5,10 @@ renormalised gate), llama.cpp layout: `ffn_gate_inp` (router, ne {d, E}),
 `ffn_{gate,up}_exps` (ne {d, d_ff, E}), `ffn_down_exps` (ne {d_ff, d, E}),
 `llama.expert_count` / `llama.expert_used_count`.
 
-ember's MoE FFN (`utils.cpp`, `moe_ffn_f32_cpu`): softmax over the E router logits, top-k
-by probability (ties to the lower index), probabilities renormalised over the k, output
-the weighted sum of the selected experts' SwiGLU FFNs. It runs on the CPU paths (single
+ember's MoE FFN (`utils.cpp`, `moe_ffn_f32_cpu`), paperkiln's IR op `moe_ffn`: the top-k
+of the E router logits (ties to the lower index), gates = a softmax over the k selected
+logits (renorm; or the E-way softmax's entries, raw), output the gate-weighted sum of the
+selected experts' SwiGLU FFNs in ascending expert index. It runs on the CPU paths (single
 token and batch prefill), and on the GPU through `moe_ffn_cuda` (below).
 
 ## Gate
