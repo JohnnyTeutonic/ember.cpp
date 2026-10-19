@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ember chat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>ember chat</h1>
+    <p id="model-info" style="text-align:center;color:#666;font-size:0.9em;margin-top:-0.5em">Starting...</p>
+    <p class="intro">
+        A 14.6M-parameter chat model trained from scratch in
+        <a href="https://github.com/JohnnyTeutonic/paperkiln" target="_blank" rel="noopener">paperkiln</a>
+        and run by
+        <a href="https://github.com/JohnnyTeutonic/ember.cpp" target="_blank" rel="noopener">ember.cpp</a>
+        compiled to WebAssembly, so it answers from inside your browser. Both were written by
+        <a href="https://johnnyteutonic.github.io" target="_blank" rel="noopener">Jonathan Reich</a>.
+        It is good at small talk and knows no facts. The model (71 MB) downloads once; nothing you type
+        is sent anywhere.
+    </p>
+    <div id="chatbox">
+        <div id="history">
+            <p class="server-message">AI: Hello! How are you today?</p>
+        </div>
+        <div id="input-area">
+            <input type="text" id="message" maxlength="600" placeholder="Say something...">
+            <button id="send">Send</button>
+        </div>
+    </div>
+    <script src="chat.js"></script>
+</body>
+</html>

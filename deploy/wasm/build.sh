@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Build ember chat for the browser: ember.cpp's CPU core + deploy/wasm/ember_wasm.cpp
+# compiled by Emscripten into ember.js + ember.wasm (single-threaded; OpenMP
+# pragmas compile away, CUDA and MPI are off).
+#   bash deploy/wasm/build.sh OUT_DIR
+# Needs: emsdk activated (emcc on PATH) and the nlohmann/json single header,
+# passed through a private include directory so emcc never sees the host's
+# system headers. Boost (regex, xpressive: header-only) comes from
+# Emscripten's own port, as in WASM.md.
+set -euo pipefail
+OUT=${1:?out_dir}
+REPO=$(cd "$(dirname "$0")/../.." && pwd)
+JSON_INC=${JSON_INC:?set JSON_INC to a directory containing nlohmann/json.hpp}
+INC=$(mktemp -d)
+ln -s "$JSON_INC/nlohmann" "$INC/nlohmann"
+mkdir -p "$OUT"
+SRC="model.cpp model_config.cpp kv_cache.cpp weight_management.cpp cpu_attention.cpp model_utils.cpp
+     gpu_initialization.cpp gpu_memory_optimization.cpp cpu_batch_processor.cpp utils.cpp safetensors_loader.cpp
+     tokenizer.cpp logger.cpp api.cpp gguf_parser.cpp quantization.cpp"
+cd "$REPO"
+em++ -O3 -std=c++17 -DNDEBUG -I"$REPO" -I"$INC" -Wno-unknown-pragmas \
+    $SRC deploy/wasm/ember_wasm.cpp \
+    -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=1gb -sMODULARIZE=1 -sEXPORT_NAME=createEmber \
+    -sEXPORTED_FUNCTIONS=_ember_load,_ember_chat -sEXPORTED_RUNTIME_METHODS=ccall,FS \
+    -sFORCE_FILESYSTEM=1 -sENVIRONMENT=web,worker,node -sUSE_BOOST_HEADERS=1 -fexceptions \
+    -o "$OUT/ember.js"
+rm -rf "$INC"
+ls -la "$OUT"
