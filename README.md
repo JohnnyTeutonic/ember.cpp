@@ -33,7 +33,7 @@ flowchart LR
 | Sliding-window attention with sinks | IR interpreter | ✅ | ✅ | ✅ |
 | Kimi linear attention (recurrent state) | IR interpreter | ✅ | ✅ | ✅ |
 | Mamba-style state-space scan | IR interpreter | ✅ | ✅ | ✅ |
-| SRD, AttnRes, flex highway/residual | IR interpreter | ✅ | ✅ | ✅ |
+| SRD, AttnRes, flex (highway, plain residual) | IR interpreter | ✅ | ✅ | ✅ |
 
 Every paperkiln family is gated the same way: **greedy replies identical to paperkiln's own
 sampler on 40 frozen prompts**, on each backend, with the receipts in
