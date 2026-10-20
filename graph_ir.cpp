@@ -1,5 +1,6 @@
 #include "graph_ir.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -25,7 +26,9 @@ namespace ember_ir {
 namespace {
 
 const std::set<std::string> kCpuOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
-                                       "attention", "add", "mul", "silu", "gelu", "moe_ffn"};
+                                       "attention", "add", "mul", "silu", "gelu", "moe_ffn",
+                                       "linear_attention", "ssm_scan"};
+const std::set<std::string> kRecurrentOps = {"linear_attention", "ssm_scan"};
 const std::set<std::string> kRowWiseOps = {"rmsnorm", "layernorm", "linear", "add", "mul", "silu", "gelu"};
 
 std::vector<std::string> names(const json& j) {
@@ -49,7 +52,56 @@ std::vector<Node> parse_nodes(const json& sub, const char* where) {
 
 bool has(const json& n, const char* key) { return n.contains(key) && !n.at(key).is_null(); }
 
+// ssm_scan names its tensors by attributes a, b, c, d (or a "weights" object
+// holding them).
+std::string ssm_weight(const json& n, const char* part) {
+  if (has(n, "weights") && n.at("weights").contains(part)) return n.at("weights").at(part).get<std::string>();
+  if (!has(n, part)) throw std::runtime_error(std::string("IR ssm_scan names no '") + part + "' tensor");
+  return n.at(part).get<std::string>();
+}
+
+// elu(x) + 1 as KimiLinearAttention::feature_map: x + 1 for x > 0, else
+// (exp(x) - 1) + 1, each step rounded to f32.
+inline float elu_plus_one(float x) {
+  float r = x;
+  if (r <= 0.f) r = std::exp(r) - 1.f;
+  r += 1.f;
+  return r;
+}
+
 }  // namespace
+
+void linear_attention_row_cpu(const float* q, const float* k, const float* v, float* num, float* den, float* out,
+                              int width, float den_floor) {
+  // num and den take token t before out[t] is formed (token t sees keys 0..t).
+  for (int c = 0; c < width; ++c) {
+    const float pk = elu_plus_one(k[c]);
+    num[c] = num[c] + pk * v[c];
+    den[c] = den[c] + pk;
+    out[c] = elu_plus_one(q[c]) * num[c] / std::max(den[c], den_floor);
+  }
+}
+
+void ssm_scan_row_cpu(const float* u, const float* A, const float* B, const float* C, float D, float* s,
+                      float* scratch, float* y, int n) {
+  // ops::ssm_scan: all of s_t from s_{t-1}, then y from s_t.
+  for (int i = 0; i < n; ++i) {
+    float acc = 0;
+    for (int j = 0; j < n; ++j) acc += A[static_cast<size_t>(i) * n + j] * s[j];
+    acc += B[i] * u[i];
+    scratch[i] = acc;
+  }
+  std::memcpy(s, scratch, static_cast<size_t>(n) * sizeof(float));
+  for (int i = 0; i < n; ++i) y[i] = C[i] * s[i] + D * u[i];
+}
+
+bool has_recurrent_state(const std::string& ir_json) {
+  const json j = json::parse(ir_json);
+  if (!j.contains("block")) return false;
+  for (const auto& s : j.at("block").value("state", json::array()))
+    if (s.value("kind", "") == "recurrent") return true;
+  return false;
+}
 
 bool has_windowed_attention(const std::string& ir_json) {
   const json j = json::parse(ir_json);
@@ -91,9 +143,38 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
   vocab_ = j.at("model").at("vocab").get<int>();
   max_len_ = j.at("model").value("ctx", 0);
 
+  bool has_kv = false;
   for (const auto& s : j.at("block").value("state", json::array())) {
     const std::string kind = s.at("kind").get<std::string>();
+    if (kind == "recurrent") {
+      RecSlot slot{s.at("name").get<std::string>(), s.at("op").get<std::string>(), {}};
+      if (!kRecurrentOps.count(slot.op))
+        throw std::runtime_error("IR recurrent state '" + slot.name + "': op '" + slot.op + "' is not a recurrent op");
+      if (s.value("dtype", "f32") != "f32")
+        throw std::runtime_error("IR recurrent state '" + slot.name + "': dtype must be f32");
+      if (!s.contains("tensors") || s.at("tensors").empty())
+        throw std::runtime_error("IR recurrent state '" + slot.name + "' declares no tensors");
+      for (const auto& t : s.at("tensors")) {
+        RecTensor rt;
+        rt.name = t.at("name").get<std::string>();
+        rt.shape = t.at("shape").get<std::vector<int64_t>>();
+        rt.floats = 1;
+        for (int64_t e : rt.shape) {
+          if (e <= 0) throw std::runtime_error("IR recurrent state '" + slot.name + "': bad shape for " + rt.name);
+          rt.floats *= static_cast<size_t>(e);
+        }
+        rt.init = t.value("init", 0.0f);
+        rt.offset = rec_floats_;
+        rec_floats_ += rt.floats;
+        slot.tensors.push_back(std::move(rt));
+      }
+      for (const auto& other : rec_slots_)
+        if (other.name == slot.name) throw std::runtime_error("IR recurrent state '" + slot.name + "' is declared twice");
+      rec_slots_.push_back(std::move(slot));
+      continue;
+    }
     if (kind != "kv") throw std::runtime_error("IR state kind '" + kind + "' has no CPU implementation in ember");
+    has_kv = true;
     kv_heads_ = s.at("kv_heads").get<int>();
     head_dim_ = s.at("head_dim").get<int>();
     max_len_ = s.at("max_len").get<int>();
@@ -132,8 +213,54 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
       rope_theta_ = n.attrs.at("theta").get<float>();
     }
   }
-  if (kv_heads_ <= 0 || head_dim_ <= 0 || max_len_ <= 0)
+  bool has_attention = false;
+  for (const auto& n : block_) has_attention = has_attention || n.op == "attention";
+  if ((has_kv || has_attention) && (kv_heads_ <= 0 || head_dim_ <= 0 || max_len_ <= 0))
     throw std::runtime_error("IR block declares no usable kv state (kv_heads, head_dim, max_len)");
+  if (max_len_ <= 0) throw std::runtime_error("IR model.ctx is required when no kv state bounds the sequence");
+  for (const auto* sub : {&embed_, &head_})
+    for (const auto& n : *sub)
+      if (kRecurrentOps.count(n.op)) throw std::runtime_error("IR op '" + n.op + "' outside the block has no state");
+  // Every recurrent node names a slot of its op whose tensors fit the node.
+  for (const auto& n : block_) {
+    if (n.op == "linear_attention") {
+      const RecSlot& slot = rec_slot(n, "linear_attention");
+      const int heads = n.attrs.at("heads").get<int>(), hd = n.attrs.at("head_dim").get<int>();
+      if (n.attrs.value("feature_map", "elu_plus_one") != "elu_plus_one")
+        throw std::runtime_error("IR linear_attention feature_map '" + n.attrs.value("feature_map", "") +
+                                 "' is not implemented in ember");
+      if (!n.attrs.value("causal", true))
+        throw std::runtime_error("IR linear_attention with causal=false is not implemented in ember");
+      if (n.in.size() != 3 || n.out.size() != 1) throw std::runtime_error("IR linear_attention reads [q, k, v] and writes one output");
+      for (const char* t : {"num", "den"}) {
+        bool found = false;
+        for (const auto& rt : slot.tensors)
+          if (rt.name == t) {
+            found = true;
+            if (rt.shape != std::vector<int64_t>{heads, hd})
+              throw std::runtime_error("IR recurrent state '" + slot.name + "': " + t + " is not [heads, head_dim]");
+          }
+        if (!found) throw std::runtime_error("IR recurrent state '" + slot.name + "' has no tensor '" + t + "'");
+      }
+    } else if (n.op == "ssm_scan") {
+      const RecSlot& slot = rec_slot(n, "ssm_scan");
+      const int64_t sn = n.attrs.at("n").get<int64_t>();
+      if (n.in.size() != 1 || n.out.size() != 1) throw std::runtime_error("IR ssm_scan reads [u] and writes one output");
+      if (slot.tensors.size() != 1 || slot.tensors[0].name != "s" || slot.tensors[0].shape != std::vector<int64_t>{sn})
+        throw std::runtime_error("IR recurrent state '" + slot.name + "' must hold one tensor s [n]");
+    }
+  }
+  if (rec_floats_ > 0) {
+    rec_init_.assign(rec_floats_, 0.0f);
+    for (const auto& slot : rec_slots_)
+      for (const auto& rt : slot.tensors)
+        std::fill(rec_init_.begin() + rt.offset, rec_init_.begin() + rt.offset + rt.floats, rt.init);
+    rec_.resize(static_cast<size_t>(n_layers_) * rec_floats_);
+    for (int l = 0; l < n_layers_; ++l) std::copy(rec_init_.begin(), rec_init_.end(), rec_.begin() + l * rec_floats_);
+    // Snapshots are a whole state each; at most 64, and at most 256 MiB.
+    const size_t budget = (256u << 20) / sizeof(float);
+    rec_max_snaps_ = std::max<size_t>(2, std::min<size_t>(64, budget / rec_.size()));
+  }
 
   // Quantised weights stay in their blocks for large models on the CPU (the
   // memory saving pays for the per-row dequantisation); small models, like
@@ -172,6 +299,8 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
     }
   }
 #ifdef HAS_CUDA
+  if (use_gpu && rec_floats_ > 0)
+    throw std::runtime_error("IR recurrent state has no CUDA kernels yet (EMBER_IR_DEVICE=cpu runs it)");
   if (use_gpu) {
     init_device();
     gpu_ = true;
@@ -179,7 +308,7 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
 #else
   (void)use_gpu;
 #endif
-  if (!gpu_) {
+  if (!gpu_ && kv_heads_ > 0) {
     kv_.resize(n_layers_);
     for (auto& layer : kv_) {
       layer.k.assign(static_cast<size_t>(max_len_) * kv_heads_ * head_dim_, 0.0f);
@@ -191,6 +320,10 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
                std::to_string(n_quant) + " kept quantised, " + std::to_string(bytes_quant >> 20) + " MiB; f32 " +
                std::to_string(bytes_f32 >> 20) + " MiB" + (dequant_all_ ? "; dequantised at load" : "") + "), device " +
                (gpu_ ? "cuda" : "cpu"));
+  if (rec_floats_ > 0)
+    Logger::info("[IR] recurrent state: " + std::to_string(rec_slots_.size()) + " slot(s), " +
+                 std::to_string(rec_floats_) + " floats per block; up to " + std::to_string(rec_max_snaps_) +
+                 " snapshots for prefix reuse and speculative rewinds");
 }
 
 Interpreter::~Interpreter() {
@@ -285,7 +418,93 @@ void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData
       for (const char* part : {"gate", "up", "down"})
         bind_tensor(layer_name(n.attrs.at("experts").at(part).get<std::string>(), layer), gguf);
     }
+    if (n.op == "ssm_scan") {
+      const size_t sn = n.attrs.at("n").get<size_t>();
+      const std::pair<const char*, size_t> parts[] = {{"a", sn * sn}, {"b", sn}, {"c", sn}, {"d", 1}};
+      for (const auto& [part, numel] : parts) {
+        const std::string w = layer_name(ssm_weight(n.attrs, part), layer);
+        bind_tensor(w, gguf);
+        if (bound(w).numel != numel)
+          throw std::runtime_error("IR ssm_scan '" + w + "' has " + std::to_string(bound(w).numel) +
+                                   " elements, expected " + std::to_string(numel));
+      }
+    }
   }
+}
+
+const Interpreter::RecSlot& Interpreter::rec_slot(const Node& n, const char* op) const {
+  if (!has(n.attrs, "state")) throw std::runtime_error(std::string("IR ") + op + " names no state slot");
+  const std::string name = n.attrs.at("state").get<std::string>();
+  for (const auto& slot : rec_slots_)
+    if (slot.name == name) {
+      if (slot.op != op)
+        throw std::runtime_error("IR recurrent state '" + name + "' belongs to op '" + slot.op + "', not " + op);
+      return slot;
+    }
+  throw std::runtime_error(std::string("IR ") + op + ": no recurrent state named '" + name + "'");
+}
+
+float* Interpreter::rec_tensor(const RecSlot& slot, const char* tensor, int layer, size_t floats) {
+  for (const auto& rt : slot.tensors)
+    if (rt.name == tensor) {
+      if (rt.floats != floats)
+        throw std::runtime_error("IR recurrent state '" + slot.name + "': " + tensor + " does not fit the op");
+      return rec_.data() + static_cast<size_t>(layer) * rec_floats_ + rt.offset;
+    }
+  throw std::runtime_error("IR recurrent state '" + slot.name + "' has no tensor '" + tensor + "'");
+}
+
+int Interpreter::resume_point(int want) const {
+  if (rec_floats_ == 0 || want <= 0) return std::max(want, 0);
+  if (want == rec_pos_) return want;
+  auto it = rec_snaps_.upper_bound(want);  // the first snapshot past want
+  return it == rec_snaps_.begin() ? 0 : std::prev(it)->first;
+}
+
+void Interpreter::rec_begin(int start_pos, int T, bool all_rows) {
+  if (start_pos == 0) {  // a new sequence
+    for (int l = 0; l < n_layers_; ++l) std::copy(rec_init_.begin(), rec_init_.end(), rec_.begin() + l * rec_floats_);
+    rec_snaps_.clear();
+  } else if (start_pos != rec_pos_) {
+    auto it = rec_snaps_.find(start_pos);
+    if (it == rec_snaps_.end())
+      throw std::runtime_error("IR recurrent state holds " + std::to_string(rec_pos_) + " tokens and has no snapshot at " +
+                               std::to_string(start_pos) + " (resume_point says where a prefix can resume)");
+    rec_ = it->second;
+  }
+  // Snapshots past start_pos belong to the continuation being replaced.
+  rec_snaps_.erase(rec_snaps_.upper_bound(start_pos), rec_snaps_.end());
+  rec_pos_ = -1;  // until this call completes
+  // Rows whose state is kept: every row of an all_rows call (speculative
+  // verification), else the second-to-last row (the same prompt again).
+  rec_snap_rows_.assign(T, -1);
+  int kept = 0;
+  for (int t = 0; t + 1 < T; ++t)
+    if (all_rows || t == T - 2) rec_snap_rows_[t] = kept++;
+  // Each kept row starts as the current state (a slot no node updates keeps it).
+  rec_rows_.resize(static_cast<size_t>(kept) * rec_.size());
+  for (int k = 0; k < kept; ++k) std::copy(rec_.begin(), rec_.end(), rec_rows_.begin() + k * rec_.size());
+}
+
+void Interpreter::rec_row_done(const RecSlot& slot, int layer, int t) {
+  const int k = rec_snap_rows_[t];
+  if (k < 0) return;
+  // This slot only: another slot of the block may be at another row.
+  const size_t off = static_cast<size_t>(layer) * rec_floats_ + slot.tensors.front().offset;
+  const size_t floats = slot.tensors.back().offset + slot.tensors.back().floats - slot.tensors.front().offset;
+  std::copy(rec_.begin() + off, rec_.begin() + off + floats, rec_rows_.begin() + k * rec_.size() + off);
+}
+
+void Interpreter::rec_end(int start_pos, int T) {
+  for (int t = 0; t + 1 < T; ++t) {
+    const int k = rec_snap_rows_[t];
+    if (k < 0) continue;
+    rec_snaps_[start_pos + t + 1].assign(rec_rows_.begin() + k * rec_.size(), rec_rows_.begin() + (k + 1) * rec_.size());
+  }
+  rec_snaps_[start_pos + T] = rec_;
+  while (rec_snaps_.size() > rec_max_snaps_) rec_snaps_.erase(rec_snaps_.begin());  // the oldest positions go first
+  rec_pos_ = start_pos + T;
+  std::vector<float>().swap(rec_rows_);
 }
 
 const Interpreter::Weight& Interpreter::bound(const std::string& name) const {
@@ -478,6 +697,40 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       Buf out{std::vector<float>(x.v.size()), x.width};
       silu_cpu(x.v, out.v);
       env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "linear_attention") {  // elu+1 linear attention over the slot's num, den. ROUNDING.
+      const Buf &q = in(n, 0), &k = in(n, 1), &v = in(n, 2);
+      const int w = n.attrs.at("heads").get<int>() * n.attrs.at("head_dim").get<int>();
+      if (q.width != w || k.width != w || v.width != w)
+        throw std::runtime_error("IR linear_attention: q/k/v widths do not match heads * head_dim");
+      const RecSlot& slot = rec_slot(n, "linear_attention");
+      float* num = rec_tensor(slot, "num", layer, w);
+      float* den = rec_tensor(slot, "den", layer, w);
+      const float floor = n.attrs.value("den_floor", 1e-8f);
+      Buf out{std::vector<float>(static_cast<size_t>(T) * w), w};
+      for (int t = 0; t < T; ++t) {  // the decode update for t = 0..T-1, in order
+        const size_t r = static_cast<size_t>(t) * w;
+        linear_attention_row_cpu(q.v.data() + r, k.v.data() + r, v.v.data() + r, num, den, out.v.data() + r, w, floor);
+        rec_row_done(slot, layer, t);
+      }
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "ssm_scan") {  // the sequential state-space scan over the slot's s. ROUNDING.
+      const Buf& u = in(n, 0);
+      const int sn = n.attrs.at("n").get<int>();
+      if (u.width != sn) throw std::runtime_error("IR ssm_scan: input width differs from n");
+      const RecSlot& slot = rec_slot(n, "ssm_scan");
+      float* s = rec_tensor(slot, "s", layer, sn);
+      const auto& A = weight(layer_name(ssm_weight(n.attrs, "a"), layer));
+      const auto& B = weight(layer_name(ssm_weight(n.attrs, "b"), layer));
+      const auto& C = weight(layer_name(ssm_weight(n.attrs, "c"), layer));
+      const float D = weight(layer_name(ssm_weight(n.attrs, "d"), layer)).at(0);
+      std::vector<float> scratch(sn);
+      Buf out{std::vector<float>(static_cast<size_t>(T) * sn), sn};
+      for (int t = 0; t < T; ++t) {
+        const size_t r = static_cast<size_t>(t) * sn;
+        ssm_scan_row_cpu(u.v.data() + r, A.data(), B.data(), C.data(), D, s, scratch.data(), out.v.data() + r, sn);
+        rec_row_done(slot, layer, t);
+      }
+      env[n.out.at(0)] = std::move(out);
     }
   }
 }
@@ -488,10 +741,17 @@ std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int star
 #ifdef HAS_CUDA
   if (gpu_) return forward_device(tokens, start_pos, all_rows);
 #endif
+  if (rec_floats_ > 0) {
+    if (start_pos < 0 || start_pos + T > max_len_)
+      throw std::runtime_error("IR recurrent state: positions " + std::to_string(start_pos) + ".." +
+                               std::to_string(start_pos + T - 1) + " exceed model.ctx (" + std::to_string(max_len_) + ")");
+    rec_begin(start_pos, T, all_rows);
+  }
   Env env;
   env["tokens"] = Buf{std::vector<float>(tokens.begin(), tokens.end()), 1};
   run_nodes(embed_, -1, env, T, start_pos, false);
   for (int l = 0; l < n_layers_; ++l) run_nodes(block_, l, env, T, start_pos, false);
+  if (rec_floats_ > 0) rec_end(start_pos, T);
   int rows = T;
   if (!all_rows && T > 1) {  // head ops are row-wise: run them on the last row only
     for (auto& kv : env) {

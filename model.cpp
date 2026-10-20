@@ -195,11 +195,25 @@ TinyLlamaModel::TinyLlamaModel(const ModelConfig& initial_config,
             config_from_gguf.num_hidden_layers = j.at("block").at("repeat").get<int>();
             config_from_gguf.vocab_size = m.at("vocab").get<int>();
             config_from_gguf.max_position_embeddings = m.value("ctx", config_from_gguf.max_position_embeddings);
+            // Head counts from the kv state; without one (recurrent-only
+            // families), from linear attention's [heads, head_dim] state, else
+            // one head of width d (the llama-side KV cache is then unused).
+            bool kv_heads_set = false;
             for (const auto& s : j.at("block").value("state", nlohmann::json::array()))
               if (s.value("kind", "") == "kv") {
                 config_from_gguf.num_attention_heads = s.at("heads").get<int>();
                 config_from_gguf.num_key_value_heads = s.at("kv_heads").get<int>();
+                kv_heads_set = true;
               }
+            if (!kv_heads_set) {
+              int heads = 1;
+              for (const auto& s : j.at("block").value("state", nlohmann::json::array()))
+                if (s.value("kind", "") == "recurrent" && s.value("op", "") == "linear_attention" &&
+                    !s.value("tensors", nlohmann::json::array()).empty())
+                  heads = s.at("tensors").at(0).at("shape").at(0).get<int>();
+              config_from_gguf.num_attention_heads = heads;
+              config_from_gguf.num_key_value_heads = heads;
+            }
             config_from_gguf.num_experts = 0;
             Logger::info("GGUF served by the paperkiln IR interpreter only (family_hint '" +
                          j.value("family_hint", "") + "'): llama weights are not loaded.");

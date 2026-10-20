@@ -1,0 +1,173 @@
+{
+ "ir_version": 0,
+ "family_hint": "mamba",
+ "model": {
+  "vocab": 8192,
+  "d": 64,
+  "n_layers": 2,
+  "ctx": 128,
+  "dtype": "f32"
+ },
+ "inputs": [
+  "tokens"
+ ],
+ "embed": {
+  "nodes": [
+   {
+    "op": "embedding",
+    "in": [
+     "tokens"
+    ],
+    "weight": "token_embd.weight",
+    "out": "x"
+   }
+  ]
+ },
+ "block": {
+  "repeat": 2,
+  "state": [
+   {
+    "name": "ssm",
+    "kind": "recurrent",
+    "op": "ssm_scan",
+    "dtype": "f32",
+    "tensors": [
+     {
+      "name": "s",
+      "shape": [
+       16
+      ],
+      "init": 0
+     }
+    ]
+   }
+  ],
+  "nodes": [
+   {
+    "op": "layernorm",
+    "in": [
+     "x"
+    ],
+    "weight": "blk.{i}.ssm_norm.weight",
+    "bias": "blk.{i}.ssm_norm.bias",
+    "eps": 1e-05,
+    "out": "h"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h"
+    ],
+    "weight": "blk.{i}.ssm_in.weight",
+    "out": "u",
+    "bias": "blk.{i}.ssm_in.bias"
+   },
+   {
+    "op": "ssm_scan",
+    "in": [
+     "u"
+    ],
+    "state": "ssm",
+    "a": "blk.{i}.ssm_a.weight",
+    "b": "blk.{i}.ssm_b.weight",
+    "c": "blk.{i}.ssm_c.weight",
+    "d": "blk.{i}.ssm_d.weight",
+    "n": 16,
+    "out": "s"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "s"
+    ],
+    "weight": "blk.{i}.ssm_out.weight",
+    "out": "y",
+    "bias": "blk.{i}.ssm_out.bias"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h"
+    ],
+    "weight": "blk.{i}.ssm_gate.weight",
+    "out": "g",
+    "bias": "blk.{i}.ssm_gate.bias"
+   },
+   {
+    "op": "gelu",
+    "in": [
+     "g"
+    ],
+    "approx": "tanh",
+    "out": "g"
+   },
+   {
+    "op": "mul",
+    "in": [
+     "y",
+     "g"
+    ],
+    "out": "y"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "x"
+    ],
+    "weight": "blk.{i}.ssm_out_gate.weight",
+    "out": "og",
+    "bias": "blk.{i}.ssm_out_gate.bias"
+   },
+   {
+    "op": "gelu",
+    "in": [
+     "og"
+    ],
+    "approx": "tanh",
+    "out": "og"
+   },
+   {
+    "op": "mul",
+    "in": [
+     "y",
+     "og"
+    ],
+    "out": "y"
+   },
+   {
+    "op": "add",
+    "in": [
+     "x",
+     "y"
+    ],
+    "out": "x"
+   }
+  ]
+ },
+ "head": {
+  "nodes": [
+   {
+    "op": "layernorm",
+    "in": [
+     "x"
+    ],
+    "weight": "output_norm.weight",
+    "bias": "output_norm.bias",
+    "eps": 1e-05,
+    "out": "h"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h"
+    ],
+    "weight": "output.weight",
+    "out": "logits",
+    "bias": "output.bias"
+   }
+  ]
+ },
+ "outputs": [
+  "logits"
+ ]
+}

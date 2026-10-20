@@ -493,11 +493,13 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
         // CUDA builds run the interpreter on the device when the CLI asked for
         // GPU layers (any nonzero count: the interpreter does not split
         // layers); EMBER_IR_DEVICE=cpu keeps it on the CPU. Sliding-window
-        // attention runs on either.
+        // attention runs on either; recurrent state has no device kernels yet,
+        // so such an IR stays on the CPU.
         bool ir_gpu = false;
 #ifdef HAS_CUDA
         const char* dev = std::getenv("EMBER_IR_DEVICE");
-        ir_gpu = num_gpu_layers_from_cli != 0 && !(dev && std::string(dev) == "cpu");
+        ir_gpu = num_gpu_layers_from_cli != 0 && !(dev && std::string(dev) == "cpu") &&
+                 !ember_ir::has_recurrent_state(ir);
 #endif
         ir_ = std::make_unique<ember_ir::Interpreter>(ir, *gd, ir_gpu);
         Logger::warning("Running the model through the paperkiln IR interpreter (" +
@@ -733,7 +735,11 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
     const char* v = std::getenv("EMBER_PREFIX_REUSE");
     return !(v && std::string(v) == "0");
   }();
-  const int reuse = prefix_reuse_on ? last_ttft_.prefix_reusable_tokens : 0;
+  int reuse = prefix_reuse_on ? last_ttft_.prefix_reusable_tokens : 0;
+  // Recurrent IR state (linear attention, state-space scans) cannot drop
+  // tokens: resume where the interpreter holds the state after the prefix
+  // (the live state or a snapshot), else nearer the start or from 0.
+  if (ir_ && ir_->has_recurrent()) reuse = ir_->resume_point(reuse);
   kv_token_history_.clear();  // refilled only if this request completes
 
   int total_steps = num_prompt_tokens + steps -1; // Max total tokens including prompt
@@ -964,7 +970,9 @@ if (prefill_enabled) {
     // gives the logits at every position; tokens are taken greedily while
     // they equal the draft, plus the first one that does not (or a stop).
     // KV entries written for rejected draft positions lie past the valid
-    // length and are overwritten by the next steps.
+    // length and are overwritten by the next steps. Recurrent IR state has
+    // absorbed them all: the next forward, from pos + accepted + 1, restores
+    // the interpreter's snapshot after that row (all_rows keeps every row).
     if (spec_on && pos >= num_prompt_tokens) {
       const int room = std::min({spec_k, steps - generated_count, total_steps - pos - 1,
                                  config_.max_position_embeddings - pos - 1});
