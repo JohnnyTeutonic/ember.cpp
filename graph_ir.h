@@ -12,13 +12,28 @@
 // results equal dequantising at load bit for bit. Every other weight (norms,
 // biases, MoE stacks) is f32 at load. Kept quantised only for models over
 // 64M parameters on the CPU; small models and the CUDA path dequantise every
-// weight at load (EMBER_IR_QUANT=1 / EMBER_IR_DEQUANT=1 force either way). State is owned here: one KV slot per block.
+// weight at load (EMBER_IR_QUANT=1 / EMBER_IR_DEQUANT=1 force either way). State is owned here: per block, at most
+// one kv slot and any number of recurrent slots.
+//
+// Recurrent state (block.state kind "recurrent": linear_attention's num and
+// den, ssm_scan's s). The interpreter tracks how many tokens it has absorbed
+// (one sequence). forward() at start_pos 0 starts a sequence from the init
+// state; at the absorbed count it continues; anywhere else it restores a
+// snapshot of the state taken after start_pos tokens, or throws when it has
+// none (a recurrence cannot drop tokens). Snapshots are taken at the end of
+// every call, after the second-to-last row of a multi-row call (the same
+// prompt again resumes there), and after every row of an all_rows call
+// (speculative verification resumes after the accepted rows). A later call
+// from position p drops the snapshots past p. resume_point() tells the caller
+// where a prefix can actually be resumed.
 //
 // CPU kernels, built from the same primitives as ember's llama CPU path so
 // the arithmetic matches it: embedding, pos_embedding, rmsnorm, layernorm,
 // linear (+ bias), split, rope (interleaved pairs), attention (causal, KV
 // state, optional sliding window + sinks as paperkiln's swa_attention), add, mul, silu, gelu (tanh or erf), moe_ffn (llama.cpp's expert
-// layout). Any other op fails at load, naming the op and the backend.
+// layout), linear_attention (elu+1, ops::kimi_attention) and ssm_scan
+// (ops::ssm_scan) over recurrent state, CPU only. Any other op fails at load,
+// naming the op and the backend.
 //
 // CUDA builds add a device path, chosen at construction (use_gpu): weights
 // are uploaded once, the KV state and the named row buffers live on the
@@ -29,6 +44,7 @@
 // other kernels follow the CPU forms (graph_ir_cuda.h), sliding-window
 // attention included, so the two paths agree to rounding.
 #include <initializer_list>
+#include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -64,6 +80,14 @@ class Interpreter {
   // state must already hold positions < start_pos). Returns logits for the
   // last token ([vocab]) or, with all_rows, for every token ([T][vocab]).
   std::vector<float> forward(const std::vector<int>& tokens, int start_pos, bool all_rows = false);
+
+  // True when a block declares recurrent state (see the header comment).
+  bool has_recurrent() const { return rec_floats_ > 0; }
+  // The largest position <= want from which forward() can resume the current
+  // sequence: want itself without recurrent state; else want when the state
+  // or a snapshot is there, otherwise the nearest snapshot below it (0 at
+  // worst: a fresh start).
+  int resume_point(int want) const;
 
   int vocab() const { return vocab_; }
   int max_len() const { return max_len_; }
@@ -108,6 +132,34 @@ class Interpreter {
   std::vector<std::pair<float, float>> rope_freqs_;
   float rope_theta_ = 0.0f;
   bool gpu_ = false;
+
+  // Recurrent slots: each block's state is rec_floats_ floats, slot after
+  // slot, each slot's tensors in declaration order.
+  struct RecTensor {
+    std::string name;
+    std::vector<int64_t> shape;
+    size_t offset = 0, floats = 0;  // within the block's state
+    float init = 0.0f;
+  };
+  struct RecSlot {
+    std::string name, op;
+    std::vector<RecTensor> tensors;
+  };
+  const RecSlot& rec_slot(const Node& n, const char* op) const;
+  float* rec_tensor(const RecSlot& slot, const char* tensor, int layer, size_t floats);
+  void rec_begin(int start_pos, int T, bool all_rows);
+  void rec_row_done(const RecSlot& slot, int layer, int t);  // the slot's state after row t (kept rows only)
+  void rec_end(int start_pos, int T);
+  std::vector<RecSlot> rec_slots_;
+  size_t rec_floats_ = 0;
+  std::vector<float> rec_init_;  // one block's initial state
+  std::vector<float> rec_;  // [n_layers][rec_floats_]
+  int rec_pos_ = 0;  // tokens absorbed; -1 after a failed call
+  std::map<int, std::vector<float>> rec_snaps_;  // state after `key` tokens
+  size_t rec_max_snaps_ = 0;
+  std::vector<int> rec_snap_rows_;  // this call: rows whose state is kept (-1 = not kept), indices into rec_rows_
+  std::vector<float> rec_rows_;  // this call: [kept row][n_layers][rec_floats_]
+
 
 #ifdef HAS_CUDA
   // Device path. A DBuf is a [rows, width] buffer, one per tensor name of the
@@ -181,5 +233,18 @@ std::string find_ir(const GGUFData& gguf);
 // attention node with window != 0). Only the interpreter implements it, so
 // such a GGUF never runs on the llama path, whatever its family_hint.
 bool has_windowed_attention(const std::string& ir_json);
+
+// True when the IR declares recurrent state (a block.state of kind
+// "recurrent"). It has no CUDA kernels, so such an IR runs on the CPU.
+bool has_recurrent_state(const std::string& ir_json);
+
+// The recurrent ops for one token (row), in paperkiln's order of operations
+// (graph_ir.cpp); the state is updated in place. Exposed for the op tests.
+//   linear_attention: q, k, v, num, den, out each `width` = heads * head_dim.
+void linear_attention_row_cpu(const float* q, const float* k, const float* v, float* num, float* den, float* out,
+                              int width, float den_floor);
+//   ssm_scan: u, s, y [n]; A [n, n] row-major; B, C [n]; scratch [n].
+void ssm_scan_row_cpu(const float* u, const float* A, const float* B, const float* C, float D, float* s,
+                      float* scratch, float* y, int n);
 
 }  // namespace ember_ir
