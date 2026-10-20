@@ -90,7 +90,32 @@ struct BpeChatRequest {
   bool has_seed = false;
   unsigned seed = 0;
   bool want_ids = false;
+  float repeat_penalty = 1.0f;  // the contract's repetition penalty (point 4); 1 = off
+  int repeat_last_n = 64;
 };
+
+// repeat_penalty / repeat_last_n from a request body (LOCAL_LLM_STACK.md
+// section 3, point 4): p in [1, 2], n in [0, ctx]. Public mode clamps; other
+// requests get an error message (HTTP 400). Empty string: fine.
+static std::string bpe_repeat_fields(const json& body, BpeChatRequest& r, int ctx, bool clamp) {
+  if (body.contains("repeat_penalty")) {
+    if (!body["repeat_penalty"].is_number()) return "repeat_penalty must be a number";
+    r.repeat_penalty = body["repeat_penalty"].get<float>();
+  }
+  if (body.contains("repeat_last_n")) {
+    if (!body["repeat_last_n"].is_number_integer()) return "repeat_last_n must be an integer";
+    r.repeat_last_n = body["repeat_last_n"].get<int>();
+  }
+  if (clamp) {
+    r.repeat_penalty = std::min(std::max(r.repeat_penalty, 1.0f), 2.0f);
+    r.repeat_last_n = std::min(std::max(r.repeat_last_n, 0), ctx);
+    return "";
+  }
+  if (!(r.repeat_penalty >= 1.0f && r.repeat_penalty <= 2.0f)) return "repeat_penalty must be in [1.0, 2.0]";
+  if (r.repeat_last_n < 0 || r.repeat_last_n > ctx)
+    return "repeat_last_n must be in [0, " + std::to_string(ctx) + "]";
+  return "";
+}
 
 struct BpePrompt {
   std::string prompt;
@@ -144,7 +169,9 @@ static json bpe_run(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r, 
       }
     });
   }
+  sess.set_repeat_penalty(r.repeat_penalty, r.repeat_last_n);
   const std::string reply = sess.generate(p.prompt, r.max_new_tokens, r.temperature, r.top_k, r.top_p, "", false);
+  sess.set_repeat_penalty(1.0f, 64);
   sess.set_token_callback(nullptr);
   const tinyllama::TtftBreakdown& tb = sess.last_ttft();
   auto ms = [](auto a, auto b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
@@ -334,6 +361,13 @@ int main(int argc, char** argv) {
             r.has_seed = req_json.contains("seed");
             r.seed = r.has_seed ? req_json["seed"].get<unsigned>() : 0u;
             r.want_ids = req_json.value("return_ids", false);
+            const std::string rp_error = bpe_repeat_fields(
+                req_json, r, session->get_config().max_position_embeddings, public_mode);
+            if (!rp_error.empty()) {
+              res.status = 400;
+              res.set_content(json{{"error", rp_error}}.dump(), "application/json");
+              return;
+            }
             if (req_json.contains("history") && req_json["history"].is_array()) {
               std::string pending_user;
               bool have_user = false;
@@ -650,6 +684,21 @@ int main(int argc, char** argv) {
     } catch (const json::exception& e) {
       openai_error(res, 400, std::string("bad request field: ") + e.what());
       return;
+    }
+    // OpenAI's frequency/presence penalties are not approximated: only 0 is
+    // accepted. The contract's repeat_penalty / repeat_last_n are extensions.
+    for (const char* key : {"frequency_penalty", "presence_penalty"})
+      if (body.contains(key) && !body[key].is_null() && !(body[key].is_number() && body[key].get<double>() == 0.0)) {
+        openai_error(res, 400, std::string(key) + " is not supported (only 0); use repeat_penalty and repeat_last_n");
+        return;
+      }
+    {
+      const std::string rp_error =
+          bpe_repeat_fields(body, r, session->get_config().max_position_embeddings, public_mode);
+      if (!rp_error.empty()) {
+        openai_error(res, 400, rp_error);
+        return;
+      }
     }
     r.max_new_tokens = std::max(r.max_new_tokens, 1);
     if (public_mode) {

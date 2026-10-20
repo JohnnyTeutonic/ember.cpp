@@ -166,6 +166,13 @@ class TinyLlamaSession {
   void set_repetition_penalty(float p) { repetition_penalty_ = p; }
   float get_repetition_penalty() const { return repetition_penalty_; }
 
+  // The /chat contract's repetition penalty (LOCAL_LLM_STACK.md section 3,
+  // point 4), separate from the CTRL-style one above: over the last `last_n`
+  // ids the next token conditions on (prompt + reply so far), each distinct id
+  // outside the stop set once, l > 0 ? l / p : l * p. p == 1 or last_n == 0
+  // is off. The caller validates the ranges (p in [1, 2], last_n in [0, ctx]).
+  void set_repeat_penalty(float p, int last_n) { repeat_penalty_ = p; repeat_last_n_ = last_n; }
+
   // Timing of the most recent generate() call up to its first token.
   const TtftBreakdown& last_ttft() const { return last_ttft_; }
 
@@ -222,6 +229,8 @@ class TinyLlamaSession {
   int eos_token_id_;
   std::mt19937 rng_{std::random_device{}()};  // RNG for sampling
   float repetition_penalty_ = 1.3f;           // see set_repetition_penalty
+  float repeat_penalty_ = 1.0f;               // see set_repeat_penalty
+  int repeat_last_n_ = 64;
   int threads_;
   bool use_batch_generation_; // Enable batch generation
   std::stringstream generated_stream_; // Added for streaming output

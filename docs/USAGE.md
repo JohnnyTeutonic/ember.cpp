@@ -54,8 +54,8 @@ GPU, 0 for CPU only. Endpoints:
 | Endpoint | What it does |
 |---|---|
 | `GET /` | the chat web UI (`www/`) |
-| `POST /chat` | `{user_input, history, temperature, top_k, top_p, seed, max_new_tokens, stream, return_ids}` -> `{reply, stop_reason, tokens, ttft}`; `"stream": true` sends server-sent events |
-| `POST /v1/chat/completions` | OpenAI-compatible chat completions, with `stream` and `stream_options.include_usage` |
+| `POST /chat` | `{user_input, history, temperature, top_k, top_p, seed, max_new_tokens, repeat_penalty, repeat_last_n, stream, return_ids}` -> `{reply, stop_reason, tokens, ttft}`; `"stream": true` sends server-sent events |
+| `POST /v1/chat/completions` | OpenAI-compatible chat completions, with `stream` and `stream_options.include_usage`; `repeat_penalty` / `repeat_last_n` as extension fields; `frequency_penalty` and `presence_penalty` accept only 0 |
 | `GET /v1/models` | OpenAI-compatible model list |
 | `GET /health` | model, tokenizer and context length |
 
@@ -63,6 +63,15 @@ Context rule (shared with paperkiln's `mtstudio chat`): the oldest whole history
 dropped while prompt + `max_new_tokens` exceeds the context; a message that alone fills the
 context is rejected with HTTP 400; a reply that reaches the limit ends with `stop_reason`
 "length".
+
+Repetition penalty (shared with paperkiln's `mtstudio chat`): `repeat_penalty` p (default 1.0,
+off) and `repeat_last_n` n (default 64; 0 is off). Before each token is sampled, every distinct
+id among the last n ids of the prompt plus the reply so far, except end-of-text, `<|user|>` and
+`<|assistant|>`, has its logit l replaced by l / p when l > 0 and l * p otherwise; greedy
+decoding applies it too. p must be in [1.0, 2.0] and n in [0, context]: public mode and the
+WebAssembly page clamp to those ranges, other requests get HTTP 400. Speculative decoding
+(`EMBER_SPEC`) is off while the penalty is on. The command line's `--rep-penalty` is a different,
+older penalty for word-level models.
 
 ## `tinyllama` (command line)
 

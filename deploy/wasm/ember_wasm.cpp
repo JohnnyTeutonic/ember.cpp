@@ -79,7 +79,13 @@ EMSCRIPTEN_KEEPALIVE const char* ember_chat(const char* request) {
             throw std::runtime_error("message is " + std::to_string(prompt_tokens) + " tokens; the model's context is " +
                                      std::to_string(ctx));
         if (r.contains("seed")) g_session->set_seed(r["seed"].get<unsigned>());
+        // The contract's repetition penalty (point 4), clamped as a public page:
+        // p in [1, 2], n in [0, ctx].
+        const float repeat_penalty = std::max(1.0f, std::min(r.value("repeat_penalty", 1.0f), 2.0f));
+        const int repeat_last_n = std::max(0, std::min(r.value("repeat_last_n", 64), ctx));
+        g_session->set_repeat_penalty(repeat_penalty, repeat_last_n);
         out["reply"] = g_session->generate(prompt, max_new, temperature, top_k, top_p, "", false);
+        g_session->set_repeat_penalty(1.0f, 64);
         out["stop_reason"] = g_session->last_stop_reason();
         out["tokens"] = g_session->last_generated_tokens();
         out["prompt_tokens"] = prompt_tokens;
