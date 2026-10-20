@@ -14,6 +14,7 @@
 //                            or {"error"}
 #include <emscripten/emscripten.h>
 
+#include <cstdio>
 #include <memory>
 #include <string>
 #include <utility>
@@ -36,7 +37,8 @@ EMSCRIPTEN_KEEPALIVE int ember_load(const char* path) {
     try {
         g_session = std::make_unique<tinyllama::TinyLlamaSession>(path, "", 1, 0, /*mmap=*/false);
         return g_session->is_bpe() ? 1 : 0;
-    } catch (const std::exception&) {
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "ember_load: %s\n", e.what());
         g_session.reset();
         return -1;
     }

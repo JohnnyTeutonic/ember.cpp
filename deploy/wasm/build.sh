@@ -21,6 +21,8 @@ SRC="model.cpp model_config.cpp kv_cache.cpp weight_management.cpp cpu_attention
      tokenizer.cpp logger.cpp api.cpp gguf_parser.cpp quantization.cpp graph_ir.cpp graph_ir_ops.cpp parallel_for.cpp"
 SIMD=-msimd128
 [ "${EMBER_WASM_SIMD:-1}" = 0 ] && SIMD=
+# EMBER_WASM_MAX_MEMORY (default 1gb, up to 4gb): the heap ceiling; models past about
+# 150M f32 parameters need more than 1gb.
 # EMBER_WASM_THREADS=N: a pthreads build (ember::parallel_for on N threads,
 # workers pre-spawned); it needs a cross-origin-isolated page (COOP/COEP).
 # EMBER_WASM_NAME=ember-mt names the outputs (pthread workers load the main
@@ -30,7 +32,7 @@ THREADS=
 cd "$REPO"
 em++ -O3 $SIMD $THREADS -std=c++17 -DNDEBUG -I"$REPO" -I"$INC" -Wno-unknown-pragmas \
     $SRC deploy/wasm/ember_wasm.cpp \
-    -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=1gb -sMODULARIZE=1 -sEXPORT_NAME=createEmber \
+    -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=${EMBER_WASM_MAX_MEMORY:-1gb} -sMODULARIZE=1 -sEXPORT_NAME=createEmber \
     -sEXPORTED_FUNCTIONS=_ember_load,_ember_chat -sEXPORTED_RUNTIME_METHODS=ccall,FS \
     -sFORCE_FILESYSTEM=1 -sENVIRONMENT=web,worker,node -sUSE_BOOST_HEADERS=1 -fexceptions \
     -o "$OUT/${EMBER_WASM_NAME:-ember}.js"
