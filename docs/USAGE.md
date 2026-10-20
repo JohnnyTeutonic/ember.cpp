@@ -1,0 +1,172 @@
+# ember.cpp: full usage reference
+
+The [README](../README.md) is the overview with quick starts. This page is the complete
+reference: build dependencies, every command-line option, the Python package, the management
+scripts, runtime switches and the source layout.
+
+## Build dependencies
+
+1. **CMake (>= 3.11)** and a **C++17 compiler** (g++, Clang or MSVC).
+2. **Boost (Regex and Xpressive headers)**, used by the Llama 3 tokenizer.
+   - Debian/Ubuntu: `sudo apt install build-essential cmake libboost-all-dev libomp-dev`
+   - Fedora/RHEL: `sudo dnf install gcc-c++ cmake boost-devel libgomp`
+   - macOS (Homebrew): `brew install cmake boost llvm` (llvm for OpenMP)
+   - Windows (vcpkg): `vcpkg install boost-regex nlohmann-json cpp-httplib`
+3. **nlohmann/json and cpp-httplib**: fetched by CMake when not installed system-wide.
+4. **OpenMP** (optional, recommended): CPU multi-threading.
+5. **CUDA Toolkit** (optional): GPU inference. `nvcc` and cuBLAS are needed; CMake detects them,
+   or force with `-DHAS_CUDA=ON` / `-DHAS_CUDA=OFF`.
+6. **Emscripten** (optional): the WebAssembly build (`deploy/wasm/build.sh`).
+
+```bash
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release          # CUDA auto-detected; -DHAS_CUDA=ON/OFF to force
+make -j$(nproc)                              # Windows/MSVC: cmake --build . --config Release
+```
+
+Executables: `tinyllama` (command line), `tinyllama_server` (HTTP server + web UI). The binary
+names predate the ember.cpp rename and are kept for compatibility.
+
+## Model files
+
+- **GGUF**: one self-contained file with the tokenizer embedded. Tensor types F32, F16, BF16,
+  Q8_0, Q8_K, Q4_K_M, Q6_K, and Q4_0 / Q4_1 / Q5_0 / Q5_1 (dequantised at load). Older Llama 2 /
+  TinyLlama files without BPE merges get merges generated from vocabulary and scores.
+  paperkiln GGUFs carry their byte-level BPE tokenizer and, from paperkiln master, the model's
+  graph as the `paperkiln.ir` key.
+- **SafeTensors**: a directory with `config.json`, `tokenizer.json` and `model.safetensors`
+  (F32, BF16, F16; computed in F32).
+
+Tested sources: [TinyLlama 1.1B Chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0)
+(SafeTensors) and [its GGUFs](https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF),
+[Llama-2 7B GGUF](https://huggingface.co/TheBloke/Llama-2-7B-GGUF),
+[Llama-3 8B GGUF](https://huggingface.co/QuantFactory/Meta-Llama-3-8B-GGUF).
+
+## `tinyllama_server`
+
+```
+tinyllama_server <model> [port=8080] [host=localhost] [www=./www] [n_gpu_layers]
+```
+
+`model` is a `.gguf` file or a SafeTensors directory; `n_gpu_layers` is -1 for all layers on the
+GPU, 0 for CPU only. Endpoints:
+
+| Endpoint | What it does |
+|---|---|
+| `GET /` | the chat web UI (`www/`) |
+| `POST /chat` | `{user_input, history, temperature, top_k, top_p, seed, max_new_tokens, stream, return_ids}` -> `{reply, stop_reason, tokens, ttft}`; `"stream": true` sends server-sent events |
+| `POST /v1/chat/completions` | OpenAI-compatible chat completions, with `stream` and `stream_options.include_usage` |
+| `GET /v1/models` | OpenAI-compatible model list |
+| `GET /health` | model, tokenizer and context length |
+
+Context rule (shared with paperkiln's `mtstudio chat`): the oldest whole history turns are
+dropped while prompt + `max_new_tokens` exceeds the context; a message that alone fills the
+context is rejected with HTTP 400; a reply that reaches the limit ends with `stop_reason`
+"length".
+
+## `tinyllama` (command line)
+
+```
+tinyllama <model_path> <tokenizer_path> <num_threads> <prompt|chat> [options] [initial prompt]
+```
+
+- `tokenizer_path`: `tokenizer.json` for SafeTensors; the model path again for GGUF.
+- `--system-prompt "<text>"`, `--max-tokens <N>` (256), `--n-gpu-layers <N>` (-1),
+  `--use-mmap <true|false>` (true), `--temperature <F>` (0.1), `--top-k <N>` (40),
+  `--top-p <F>` (0.9), `--use-kv-quant <true|false>` (INT8 KV cache on GPU, false),
+  `--use-batch-generation <true|false>`, `--max-batch-size <N>` (1),
+  `--rep-penalty <F>` (1.3; 1.0 disables), `--raw-prompt` (no `Q: ... A:` wrap).
+
+```bash
+./build/tinyllama ./models/model.Q4_K_M.gguf ./models/model.Q4_K_M.gguf 4 chat \
+    --system-prompt "You are a helpful AI." --n-gpu-layers -1 --temperature 0.7 "Tell me a joke."
+```
+
+Operational logs go to `debugging.log` in the working directory.
+
+## Runtime switches
+
+| Variable | Effect |
+|---|---|
+| `EMBER_PUBLIC=1` | public-serving limits: 600-character messages, 16 history turns, 64 new tokens, clamped sampling, 64 KB requests, bounded queue, warnings-only logging |
+| `EMBER_PREFIX_REUSE=0` | disable KV/prefix reuse across turns |
+| `EMBER_SPEC=k` | speculative decoding with prompt-lookup drafts of up to k tokens (greedy only) |
+| `EMBER_DECODE_GRAPH=0` | disable the CUDA-graph decode on the llama path |
+| `EMBER_DECODE_ATTN=legacy` | the one-block-per-head decode attention kernel instead of split-K |
+| `EMBER_GEMM_TF32=0` | FP32 instead of TF32 GEMMs in the CUDA prefill |
+| `EMBER_DEQUANT_AT_LOAD=0` | keep small quantised models in their blocks (default: dequantise under 64M parameters) |
+| `EMBER_MOE_DENSE=1` | run every MoE expert densely instead of the routed path |
+| `EMBER_INTERPRETER=1/0` | force the IR interpreter on, or off, for a GGUF with `paperkiln.ir` |
+| `EMBER_IR=path` | run the interpreter from a side-file IR |
+| `EMBER_IR_ONLY=1` | load only through the interpreter (no llama weights) |
+| `EMBER_IR_DEVICE=cpu` | keep the interpreter on the CPU in a CUDA build |
+| `EMBER_IR_GRAPH=0` | disable the interpreter's CUDA-graph decode |
+| `EMBER_IR_QUANT=1` / `EMBER_IR_DEQUANT=1` | interpreter weights kept quantised / dequantised at load (default: quantised above 64M parameters, CPU only) |
+| `EMBER_DECODE_TIMING=1`, `EMBER_OP_TIMING=1` | per-phase decode and per-op prefill timing |
+| `EMBER_KERNEL_DEBUG=1` | the CUDA batch helpers' debug probes (each one synchronises) |
+| `TINYLLAMA_LOGITS_DUMP=file` | append each prompt's next-token logits to a file |
+| `TINYLLAMA_TOPK_DEBUG=1` | top-10 candidates at every sampled position, on stderr |
+
+## Python package
+
+```bash
+pip install .                         # CPU
+TINYLLAMA_CPP_BUILD_CUDA=1 pip install .   # CUDA (Windows: set / $env:)
+pip install .[torch]                  # with the PyTorch extras
+pip install -e .                      # editable
+```
+
+CUDA builds need the CUDA Toolkit (11.0+), CMake 3.18+ and a C++17 compiler.
+
+```python
+import tinyllama_cpp
+
+session = tinyllama_cpp.TinyLlamaSession(
+    model_path="path/to/model.gguf",
+    tokenizer_path="path/to/model.gguf",   # GGUF: same path; SafeTensors: tokenizer.json
+    threads=4,
+    n_gpu_layers=-1,
+)
+print(session.generate("What is AI?", steps=64))
+```
+
+## Management scripts
+
+`manage.sh` (Linux/macOS, `chmod +x manage.sh` first) and `manage.ps1` (Windows PowerShell) wrap
+the common tasks; `./manage.sh help` lists every option.
+
+- `build [--build-type Release|Debug] [--cuda ON|OFF]`
+- `run-server [--model-dir <path>] [--threads <n>] [--host <h>] [--port <n>] [--n-gpu-layers <n>] [--mmap true|false] [--no-log]`
+- `run-chat [--model-dir <path>] [--tokenizer <path>] [--threads <n>] [--system-prompt <text>] [--prompt <text>] [--steps <n>] [--n-gpu-layers <n>]`
+- `run-prompt [--model-dir <path>] [--prompt <text>] [--steps <n>] [--temperature <f>]`
+- `install [--gpu|--cpu]`
+- `docs` (Doxygen API reference)
+
+PowerShell takes the same commands with `-BuildType`, `-Cuda`, `-ModelDir`, `-TokenizerPath`,
+`-Threads`, `-NGpuLayers`, `-Gpu` / `-Cpu`.
+
+## PyTorch reference
+
+`pytorch/` holds a plain PyTorch implementation of the Llama 2 / TinyLlama architecture for
+SafeTensors models (`run_inference.py`, `tinyllama.py`, `utils.py`; `pip install -r
+pytorch/requirements.txt`), for checking ember's outputs against an independent implementation.
+See `pytorch/README.md`.
+
+## Source layout
+
+| Path | Contents |
+|---|---|
+| `api.cpp/.h` | `TinyLlamaSession`: load, tokenise, prefill, decode, sampling, prefix reuse, speculation |
+| `server.cpp` | HTTP server: `/chat`, OpenAI endpoints, streaming, public mode |
+| `main.cpp` | the `tinyllama` command line |
+| `model.cpp/.h`, `cpu_batch_processor.cpp`, `cpu_attention.cpp` | the tuned llama path (CPU and CUDA forward, CUDA-graph decode, MoE) |
+| `cuda_kernels.cu/.h` | CUDA kernels: flash prefill attention, split-K decode attention, MoE, RoPE, norms |
+| `graph_ir.cpp/.h`, `graph_ir_ops.cpp/.h`, `graph_ir_cuda.cu/.h` | the paperkiln IR interpreter (CPU and CUDA) |
+| `gguf_parser.cpp`, `weight_management.cpp`, `safetensors_loader.cpp`, `quantization.cpp` | model loading and dequantisation |
+| `tokenizer.cpp`, `bpe_tokenizer.h` | Llama SentencePiece / tiktoken tokenizers; paperkiln byte-level BPE |
+| `parallel_for.h/.cpp` | OpenMP natively, a thread pool in WebAssembly pthread builds |
+| `bindings.cpp`, `tinyllama_cpp/` | Python bindings (pybind11) |
+| `deploy/wasm/` | WebAssembly build and the static web chat |
+| `tools/` | parity gates, benchmarks, quantiser, kernel tests |
+| `experiments/` | dated receipts for every measured claim |
+| `www/` | the server's web UI |
