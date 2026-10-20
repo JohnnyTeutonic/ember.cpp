@@ -1,0 +1,70 @@
+kernels, T = 1
+  sub                                              ok    max |d| 0 (tol 0.000272), bit for bit
+  relu (-0, 0 and NaN included)                    ok    max |d| 0 (tol 0.000147), bit for bit
+  sigmoid (NaN included)                           ok    max |d| 1.19e-07 (tol 5e-05)
+  affine                                           ok    max |d| 0 (tol 0.000264), bit for bit
+  mul_col                                          ok    max |d| 0 (tol 0.000213), bit for bit
+  rms_row                                          ok    max |d| 0 (tol 7.76e-05), bit for bit
+  depth_attend, 2 sources                          ok    max |d| 0 (tol 9.86e-05), bit for bit
+  depth_attend, 5 sources                          ok    max |d| 0 (tol 9.46e-05), bit for bit
+  linear_attention prefill: out                    ok    max |d| 2.38e-07 (tol 0.000913)
+  linear_attention prefill: num                    ok    max |d| 2.38e-07 (tol 0.000837)
+  linear_attention prefill: den                    ok    max |d| 5.96e-08 (tol 0.000242)
+  linear_attention decode steps == prefill: out    ok    max |d| 0 (tol 0.000913), bit for bit
+  linear_attention decode steps == prefill: num    ok    max |d| 0 (tol 0.000837), bit for bit
+  ssm_scan n 48 prefill: y                         ok    max |d| 0 (tol 0.000216), bit for bit
+  ssm_scan n 48 prefill: s                         ok    max |d| 0 (tol 0.00017), bit for bit
+  ssm_scan n 48 decode steps == prefill: y         ok    max |d| 0 (tol 0.000216), bit for bit
+  ssm_scan n 48 decode steps == prefill: s         ok    max |d| 0 (tol 0.00017), bit for bit
+  ssm_scan n 300 prefill: y                        ok    max |d| 0 (tol 0.000269), bit for bit
+  ssm_scan n 300 prefill: s                        ok    max |d| 0 (tol 0.00019), bit for bit
+  ssm_scan n 300 decode steps == prefill: y        ok    max |d| 0 (tol 0.000269), bit for bit
+  ssm_scan n 300 decode steps == prefill: s        ok    max |d| 0 (tol 0.00019), bit for bit
+kernels, T = 7
+  sub                                              ok    max |d| 0 (tol 0.000294), bit for bit
+  relu (-0, 0 and NaN included)                    ok    max |d| 0 (tol 0.00015), bit for bit
+  sigmoid (NaN included)                           ok    max |d| 1.19e-07 (tol 5e-05)
+  affine                                           ok    max |d| 0 (tol 0.000267), bit for bit
+  mul_col                                          ok    max |d| 0 (tol 0.00023), bit for bit
+  rms_row                                          ok    max |d| 0 (tol 9.23e-05), bit for bit
+  depth_attend, 2 sources                          ok    max |d| 1.19e-07 (tol 9.99e-05)
+  depth_attend, 5 sources                          ok    max |d| 2.38e-07 (tol 9.97e-05)
+  linear_attention prefill: out                    ok    max |d| 9.54e-07 (tol 0.000818)
+  linear_attention prefill: num                    ok    max |d| 9.54e-07 (tol 0.00225)
+  linear_attention prefill: den                    ok    max |d| 9.54e-07 (tol 0.0011)
+  linear_attention decode steps == prefill: out    ok    max |d| 0 (tol 0.000818), bit for bit
+  linear_attention decode steps == prefill: num    ok    max |d| 0 (tol 0.00225), bit for bit
+  ssm_scan n 48 prefill: y                         ok    max |d| 0 (tol 0.000416), bit for bit
+  ssm_scan n 48 prefill: s                         ok    max |d| 0 (tol 0.000243), bit for bit
+  ssm_scan n 48 decode steps == prefill: y         ok    max |d| 0 (tol 0.000416), bit for bit
+  ssm_scan n 48 decode steps == prefill: s         ok    max |d| 0 (tol 0.000243), bit for bit
+  ssm_scan n 300 prefill: y                        ok    max |d| 0 (tol 0.00039), bit for bit
+  ssm_scan n 300 prefill: s                        ok    max |d| 0 (tol 0.000329), bit for bit
+  ssm_scan n 300 decode steps == prefill: y        ok    max |d| 0 (tol 0.00039), bit for bit
+  ssm_scan n 300 decode steps == prefill: s        ok    max |d| 0 (tol 0.000329), bit for bit
+interpreter, linear_attention: GPU vs CPU
+  prefill                                          ok    max |d| 7.15e-07 (tol 0.000709)
+  decode (graph)                                   ok    max |d| 7.15e-07 (tol 0.000709)
+  half prefill, decode                             ok    max |d| 7.15e-07 (tol 0.000709)
+  speculative rewind                               ok    max |d| 7.15e-07 (tol 0.000709)
+  reset                                            ok    max |d| 7.15e-07 (tol 0.000709)
+  GPU decode (graph) == GPU prefill                ok    max |d| 0 (tol 0.000709), bit for bit
+  GPU half prefill, decode == GPU prefill          ok    max |d| 0 (tol 0.000709), bit for bit
+  GPU speculative rewind == GPU prefill            ok    max |d| 0 (tol 0.000709), bit for bit
+  GPU reset == GPU prefill                         ok    max |d| 0 (tol 0.000709), bit for bit
+interpreter, ssm_scan: GPU vs CPU
+  prefill                                          ok    max |d| 0 (tol 0.00041), bit for bit
+  decode (graph)                                   ok    max |d| 0 (tol 0.00041), bit for bit
+  half prefill, decode                             ok    max |d| 0 (tol 0.00041), bit for bit
+  speculative rewind                               ok    max |d| 0 (tol 0.00041), bit for bit
+  reset                                            ok    max |d| 0 (tol 0.00041), bit for bit
+  GPU decode (graph) == GPU prefill                ok    max |d| 0 (tol 0.00041), bit for bit
+  GPU half prefill, decode == GPU prefill          ok    max |d| 0 (tol 0.00041), bit for bit
+  GPU speculative rewind == GPU prefill            ok    max |d| 0 (tol 0.00041), bit for bit
+  GPU reset == GPU prefill                         ok    max |d| 0 (tol 0.00041), bit for bit
+interpreter, gated / attention-residual (depth_attend over 1..5 sources): GPU vs CPU
+  prefill, all rows (T = 12)                       ok    max |d| 4.77e-07 (tol 0.000109)
+  prefill, last row                                ok    max |d| 1.19e-07 (tol 9.75e-05)
+  decode steps (graph)                             ok    max |d| 4.77e-07 (tol 0.000109)
+  GPU decode steps == GPU prefill rows             ok    max |d| 0 (tol 0.000109), bit for bit
+PASS (0 failures)

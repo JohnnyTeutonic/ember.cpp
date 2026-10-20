@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <limits>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -34,7 +35,9 @@ const std::set<std::string> kCpuOps = {"embedding", "pos_embedding", "rmsnorm", 
 const std::set<std::string> kRecurrentOps = {"linear_attention", "ssm_scan"};
 // The ops run_nodes_device implements.
 const std::set<std::string> kCudaOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
-                                        "attention", "add", "mul", "silu", "gelu", "moe_ffn"};
+                                        "attention", "add", "mul", "silu", "gelu", "moe_ffn",
+                                        "linear_attention", "ssm_scan",
+                                        "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend"};
 const std::set<std::string> kRowWiseOps = {"rmsnorm", "layernorm", "linear", "add", "mul", "silu", "gelu",
                                            "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend"};
 
@@ -122,13 +125,28 @@ bool has_windowed_attention(const std::string& ir_json) {
 }
 
 bool device_supported(const std::string& ir_json) {
-  if (has_recurrent_state(ir_json)) return false;  // no device kernels for recurrent state yet
   const json j = json::parse(ir_json);
+  // depth_attend reads at most every tensor ever put in a list (list inputs
+  // and appends, the block's once per repeat) plus its own extra inputs.
+  size_t list_tensors = 0, extra = 0;
   for (const char* sub : {"embed", "block", "head"}) {
     if (!j.contains(sub)) continue;
-    for (const auto& n : j.at(sub).value("nodes", json::array()))
-      if (!kCudaOps.count(n.value("op", ""))) return false;
+    const size_t times = std::string(sub) == "block" ? j.at(sub).value("repeat", 1) : 1;
+    for (const auto& n : j.at(sub).value("nodes", json::array())) {
+      const std::string op = n.value("op", "");
+      if (!kCudaOps.count(op)) return false;
+      const size_t ins = n.contains("in") && n.at("in").is_array() ? n.at("in").size() : 1;
+      if (op == "list") list_tensors += ins * times;
+      if (op == "append") list_tensors += times;
+      if (op == "depth_attend") extra = std::max(extra, ins - 1);
+#ifdef HAS_CUDA
+      if (op == "ssm_scan" && n.value("n", 0) > kIrSsmMax) return false;
+#endif
+    }
   }
+#ifdef HAS_CUDA
+  if (list_tensors + extra > static_cast<size_t>(kIrDepthSourcesMax)) return false;
+#endif
   return true;
 }
 
@@ -241,7 +259,7 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
     }
 #ifdef HAS_CUDA
   if (use_gpu && !device_supported(ir_json))
-    throw std::runtime_error("IR uses an op or recurrent state that has no CUDA kernel yet (EMBER_IR_DEVICE=cpu runs it)");
+    throw std::runtime_error("IR uses an op or a shape that has no CUDA kernel (EMBER_IR_DEVICE=cpu runs it)");
 #endif
   for (const auto& n : block_) {
     if (n.op == "rope") {
@@ -338,8 +356,6 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
     }
   }
 #ifdef HAS_CUDA
-  if (use_gpu && rec_floats_ > 0)
-    throw std::runtime_error("IR recurrent state has no CUDA kernels yet (EMBER_IR_DEVICE=cpu runs it)");
   if (use_gpu) {
     init_device();
     gpu_ = true;
@@ -501,23 +517,59 @@ float* Interpreter::rec_tensor(const RecSlot& slot, const char* tensor, int laye
 int Interpreter::resume_point(int want) const {
   if (rec_floats_ == 0 || want <= 0) return std::max(want, 0);
   if (want == rec_pos_) return want;
-  auto it = rec_snaps_.upper_bound(want);  // the first snapshot past want
-  return it == rec_snaps_.begin() ? 0 : std::prev(it)->first;
+  auto below = [want](const auto& snaps) {
+    auto it = snaps.upper_bound(want);  // the first snapshot past want
+    return it == snaps.begin() ? 0 : std::prev(it)->first;
+  };
+#ifdef HAS_CUDA
+  if (gpu_) return below(dsnaps_);
+#endif
+  return below(rec_snaps_);
 }
 
+// The device path keeps the same bookkeeping (keys, kept rows, eviction) over
+// device buffers: drec_ is the live state, each snapshot a device copy, and
+// every copy is device to device on the interpreter's stream.
 void Interpreter::rec_begin(int start_pos, int T, bool all_rows) {
+#ifdef HAS_CUDA
+  const size_t bytes = rec_.size() * sizeof(float);
+#endif
   if (start_pos == 0) {  // a new sequence
-    for (int l = 0; l < n_layers_; ++l) std::copy(rec_init_.begin(), rec_init_.end(), rec_.begin() + l * rec_floats_);
-    rec_snaps_.clear();
+#ifdef HAS_CUDA
+    if (gpu_) {
+      gpuErrchk(cudaMemcpyAsync(drec_, drec_init_, bytes, cudaMemcpyDeviceToDevice, stream_));
+      while (!dsnaps_.empty()) dsnap_drop(dsnaps_.begin());
+    } else
+#endif
+    {
+      for (int l = 0; l < n_layers_; ++l) std::copy(rec_init_.begin(), rec_init_.end(), rec_.begin() + l * rec_floats_);
+      rec_snaps_.clear();
+    }
   } else if (start_pos != rec_pos_) {
-    auto it = rec_snaps_.find(start_pos);
-    if (it == rec_snaps_.end())
-      throw std::runtime_error("IR recurrent state holds " + std::to_string(rec_pos_) + " tokens and has no snapshot at " +
-                               std::to_string(start_pos) + " (resume_point says where a prefix can resume)");
-    rec_ = it->second;
+    auto missing = [&] {
+      return std::runtime_error("IR recurrent state holds " + std::to_string(rec_pos_) + " tokens and has no snapshot at " +
+                                std::to_string(start_pos) + " (resume_point says where a prefix can resume)");
+    };
+#ifdef HAS_CUDA
+    if (gpu_) {
+      auto it = dsnaps_.find(start_pos);
+      if (it == dsnaps_.end()) throw missing();
+      gpuErrchk(cudaMemcpyAsync(drec_, it->second, bytes, cudaMemcpyDeviceToDevice, stream_));
+    } else
+#endif
+    {
+      auto it = rec_snaps_.find(start_pos);
+      if (it == rec_snaps_.end()) throw missing();
+      rec_ = it->second;
+    }
   }
   // Snapshots past start_pos belong to the continuation being replaced.
-  rec_snaps_.erase(rec_snaps_.upper_bound(start_pos), rec_snaps_.end());
+#ifdef HAS_CUDA
+  if (gpu_)
+    while (!dsnaps_.empty() && dsnaps_.rbegin()->first > start_pos) dsnap_drop(std::prev(dsnaps_.end()));
+  else
+#endif
+    rec_snaps_.erase(rec_snaps_.upper_bound(start_pos), rec_snaps_.end());
   rec_pos_ = -1;  // until this call completes
   // Rows whose state is kept: every row of an all_rows call (speculative
   // verification), else the second-to-last row (the same prompt again).
@@ -526,6 +578,14 @@ void Interpreter::rec_begin(int start_pos, int T, bool all_rows) {
   for (int t = 0; t + 1 < T; ++t)
     if (all_rows || t == T - 2) rec_snap_rows_[t] = kept++;
   // Each kept row starts as the current state (a slot no node updates keeps it).
+#ifdef HAS_CUDA
+  if (gpu_) {
+    if (kept > 0) grow(drec_rows_, static_cast<size_t>(kept) * rec_.size());
+    for (int k = 0; k < kept; ++k)
+      gpuErrchk(cudaMemcpyAsync(drec_rows_.alloc + k * rec_.size(), drec_, bytes, cudaMemcpyDeviceToDevice, stream_));
+    return;
+  }
+#endif
   rec_rows_.resize(static_cast<size_t>(kept) * rec_.size());
   for (int k = 0; k < kept; ++k) std::copy(rec_.begin(), rec_.end(), rec_rows_.begin() + k * rec_.size());
 }
@@ -536,10 +596,32 @@ void Interpreter::rec_row_done(const RecSlot& slot, int layer, int t) {
   // This slot only: another slot of the block may be at another row.
   const size_t off = static_cast<size_t>(layer) * rec_floats_ + slot.tensors.front().offset;
   const size_t floats = slot.tensors.back().offset + slot.tensors.back().floats - slot.tensors.front().offset;
+#ifdef HAS_CUDA
+  if (gpu_) {
+    gpuErrchk(cudaMemcpyAsync(drec_rows_.alloc + k * rec_.size() + off, drec_ + off, floats * sizeof(float),
+                              cudaMemcpyDeviceToDevice, stream_));
+    return;
+  }
+#endif
   std::copy(rec_.begin() + off, rec_.begin() + off + floats, rec_rows_.begin() + k * rec_.size() + off);
 }
 
 void Interpreter::rec_end(int start_pos, int T) {
+#ifdef HAS_CUDA
+  if (gpu_) {
+    const size_t bytes = rec_.size() * sizeof(float);
+    for (int t = 0; t + 1 < T; ++t) {
+      const int k = rec_snap_rows_[t];
+      if (k < 0) continue;
+      gpuErrchk(cudaMemcpyAsync(dsnap_take(start_pos + t + 1), drec_rows_.alloc + k * rec_.size(), bytes,
+                                cudaMemcpyDeviceToDevice, stream_));
+    }
+    gpuErrchk(cudaMemcpyAsync(dsnap_take(start_pos + T), drec_, bytes, cudaMemcpyDeviceToDevice, stream_));
+    while (dsnaps_.size() > rec_max_snaps_) dsnap_drop(dsnaps_.begin());  // the oldest positions go first
+    rec_pos_ = start_pos + T;
+    return;
+  }
+#endif
   for (int t = 0; t + 1 < T; ++t) {
     const int k = rec_snap_rows_[t];
     if (k < 0) continue;
@@ -858,15 +940,13 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
 std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int start_pos, bool all_rows) {
   const int T = static_cast<int>(tokens.size());
   if (T == 0) return {};
+  if (rec_floats_ > 0 && (start_pos < 0 || start_pos + T > max_len_))
+    throw std::runtime_error("IR recurrent state: positions " + std::to_string(start_pos) + ".." +
+                             std::to_string(start_pos + T - 1) + " exceed model.ctx (" + std::to_string(max_len_) + ")");
 #ifdef HAS_CUDA
   if (gpu_) return forward_device(tokens, start_pos, all_rows);
 #endif
-  if (rec_floats_ > 0) {
-    if (start_pos < 0 || start_pos + T > max_len_)
-      throw std::runtime_error("IR recurrent state: positions " + std::to_string(start_pos) + ".." +
-                               std::to_string(start_pos + T - 1) + " exceed model.ctx (" + std::to_string(max_len_) + ")");
-    rec_begin(start_pos, T, all_rows);
-  }
+  if (rec_floats_ > 0) rec_begin(start_pos, T, all_rows);
   Env env;
   env["tokens"] = Buf{std::vector<float>(tokens.begin(), tokens.end()), 1};
   run_nodes(embed_, -1, env, T, start_pos, false);
@@ -912,7 +992,7 @@ void Interpreter::init_device() {
   const size_t kv_floats = static_cast<size_t>(max_len_) * kv_heads_ * head_dim_;
   dk_.assign(n_layers_, nullptr);
   dv_.assign(n_layers_, nullptr);
-  for (int l = 0; l < n_layers_; ++l) {
+  for (int l = 0; l < n_layers_ && kv_floats > 0; ++l) {
     gpuErrchk(cudaMalloc(&dk_[l], kv_floats * sizeof(float)));
     gpuErrchk(cudaMalloc(&dv_[l], kv_floats * sizeof(float)));
     gpuErrchk(cudaMemset(dk_[l], 0, kv_floats * sizeof(float)));
@@ -927,9 +1007,23 @@ void Interpreter::init_device() {
     gpuErrchk(cudaMalloc(&drope_, flat.size() * sizeof(float)));
     gpuErrchk(cudaMemcpy(drope_, flat.data(), flat.size() * sizeof(float), cudaMemcpyHostToDevice));
   }
+  if (rec_floats_ > 0) {  // rec_ holds every block's initial state here
+    const size_t bytes = rec_.size() * sizeof(float);
+    gpuErrchk(cudaMalloc(&drec_, bytes));
+    gpuErrchk(cudaMalloc(&drec_init_, bytes));
+    gpuErrchk(cudaMemcpy(drec_init_, rec_.data(), bytes, cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(drec_, rec_.data(), bytes, cudaMemcpyHostToDevice));
+  }
+  gpuErrchk(cudaMalloc(&dstep_, 2 * sizeof(int)));
+  gpuErrchk(cudaHostAlloc(reinterpret_cast<void**>(&hstep_), 2 * sizeof(int), cudaHostAllocDefault));
+  gpuErrchk(cudaHostAlloc(reinterpret_cast<void**>(&hlogits_), static_cast<size_t>(vocab_) * sizeof(float),
+                          cudaHostAllocDefault));
   Logger::info("[IR] CUDA device path: " + std::to_string(dweights_.size()) + " weights (" +
-               std::to_string(floats * sizeof(float) / (1024 * 1024)) + " MiB f32) and " + std::to_string(n_layers_) +
-               " kv slots of " + std::to_string(max_len_) + " positions on the device");
+               std::to_string(floats * sizeof(float) / (1024 * 1024)) + " MiB f32), " +
+               (kv_floats > 0 ? std::to_string(n_layers_) + " kv slots of " + std::to_string(max_len_) + " positions"
+                              : std::string("no kv slots")) +
+               (rec_floats_ > 0 ? " and " + std::to_string(rec_floats_) + " recurrent floats per block" : "") +
+               " on the device");
   compile_device();
 }
 
@@ -948,7 +1042,10 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
       {"split", DOp::Split},         {"gelu", DOp::Gelu},                  {"rmsnorm", DOp::RmsNorm},
       {"linear", DOp::Linear},       {"rope", DOp::Rope},                  {"attention", DOp::Attention},
       {"add", DOp::Add},             {"mul", DOp::Mul},                    {"moe_ffn", DOp::MoeFfn},
-      {"silu", DOp::Silu}};
+      {"silu", DOp::Silu},           {"sub", DOp::Sub},                    {"relu", DOp::Relu},
+      {"sigmoid", DOp::Sigmoid},     {"affine", DOp::Affine},              {"mul_col", DOp::MulCol},
+      {"rms_row", DOp::RmsRow},      {"list", DOp::List},                  {"append", DOp::Append},
+      {"depth_attend", DOp::DepthAttend}, {"linear_attention", DOp::LinearAttention}, {"ssm_scan", DOp::SsmScan}};
   auto wname = [&](const Node& n) {
     std::string w = layer_name(n.attrs.at("weight").get<std::string>(), layer);
     if (!weights_.count(w) && has(n.attrs, "tied_to")) w = layer_name(n.attrs.at("tied_to").get<std::string>(), layer);
@@ -1021,10 +1118,57 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
         s.flag = n.attrs.value("gate_norm", "renorm") == "renorm";
         break;
       }
+      case DOp::Affine:
+        s.scale = n.attrs.at("scale").get<float>();
+        s.shift = n.attrs.at("shift").get<float>();
+        break;
+      case DOp::RmsRow:
+        s.eps = n.attrs.at("eps").get<float>();
+        break;
+      case DOp::DepthAttend:
+        // The pseudo-query may be absent (one source never reads it; a call
+        // with more sources then fails, as on the CPU).
+        s.eps = n.attrs.value("eps", 1e-5f);
+        s.wname = layer_name(n.attrs.at("weight").get<std::string>(), layer);
+        if (dweights_.count(s.wname)) {
+          s.w = dweight(s.wname);
+          s.w_elems = elems(s.wname);
+        }
+        break;
+      case DOp::LinearAttention: {
+        s.rec = &rec_slot(n, "linear_attention");
+        s.hq = n.attrs.at("heads").get<int>();
+        s.hd = n.attrs.at("head_dim").get<int>();
+        const size_t w = static_cast<size_t>(s.hq) * s.hd;
+        // rec_tensor checks the slot's tensors; the device state has the host layout.
+        s.rec_a = drec_ + (rec_tensor(*s.rec, "num", layer, w) - rec_.data());
+        s.rec_b = drec_ + (rec_tensor(*s.rec, "den", layer, w) - rec_.data());
+        s.eps = n.attrs.value("den_floor", 1e-8f);
+        break;
+      }
+      case DOp::SsmScan:
+        s.rec = &rec_slot(n, "ssm_scan");
+        s.n = n.attrs.at("n").get<int>();
+        s.rec_a = drec_ + (rec_tensor(*s.rec, "s", layer, s.n) - rec_.data());
+        s.w = dweight(layer_name(ssm_weight(n.attrs, "a"), layer));
+        s.b = dweight(layer_name(ssm_weight(n.attrs, "b"), layer));
+        s.ssm_c = dweight(layer_name(ssm_weight(n.attrs, "c"), layer));
+        s.ssm_d = dweight(layer_name(ssm_weight(n.attrs, "d"), layer));
+        break;
       case DOp::Add:
       case DOp::Mul:
       case DOp::Silu:
+      case DOp::Sub:
+      case DOp::Relu:
+      case DOp::Sigmoid:
+      case DOp::MulCol:
+      case DOp::List:
+      case DOp::Append:
         break;
+    }
+    if (s.op == DOp::Embedding || s.op == DOp::PosEmbedding) {  // the graph replay's range checks
+      int& rows = s.op == DOp::Embedding ? embed_rows_ : pos_rows_;
+      rows = static_cast<int>(std::min<size_t>(rows, s.w_elems / s.w_ne0));
     }
     steps.push_back(std::move(s));
   }
@@ -1032,6 +1176,7 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
 }
 
 void Interpreter::compile_device() {
+  embed_rows_ = pos_rows_ = std::numeric_limits<int>::max();
   plan_embed_ = compile_nodes(embed_, -1);
   plan_block_.resize(n_layers_);
   for (int l = 0; l < n_layers_; ++l) plan_block_[l] = compile_nodes(block_, l);
@@ -1039,6 +1184,7 @@ void Interpreter::compile_device() {
   logits_slot_ = slot("logits");
   dbufs_.assign(slot_names_.size(), DBuf{});  // sized once: steps hold slots, dout returns references
   dspare_.assign(slot_names_.size(), DBuf{});
+  ditems_.assign(slot_names_.size(), {});
   Logger::info("[IR] CUDA device plan: " + std::to_string(plan_embed_.size()) + " + " + std::to_string(n_layers_) +
                " x " + std::to_string(block_.size()) + " + " + std::to_string(plan_head_.size()) + " steps over " +
                std::to_string(slot_names_.size()) + " buffer slots");
@@ -1050,19 +1196,32 @@ void Interpreter::free_device() {
       if (b.alloc) cudaFree(b.alloc);
     bufs.clear();
   };
+  if (graph_exec_) cudaGraphExecDestroy(graph_exec_);
+  graph_exec_ = nullptr;
   release(dbufs_);
   release(dspare_);
+  for (auto& items : ditems_) release(items);
+  ditems_.clear();
   for (auto& w : dweights_) cudaFree(w.second);
   dweights_.clear();
   for (float* p : dk_) if (p) cudaFree(p);
   for (float* p : dv_) if (p) cudaFree(p);
   dk_.clear();
   dv_.clear();
-  if (drope_) cudaFree(drope_);
+  for (auto& kv : dsnaps_) cudaFree(kv.second);
+  for (float* p : dsnap_pool_) cudaFree(p);
+  dsnaps_.clear();
+  dsnap_pool_.clear();
+  for (float* p : {drope_, drec_, drec_init_, drec_rows_.alloc, dmoe_.alloc})
+    if (p) cudaFree(p);
+  drope_ = drec_ = drec_init_ = nullptr;
+  drec_rows_ = dmoe_ = DBuf{};
   if (dtokens_) cudaFree(dtokens_);
-  if (dmoe_) cudaFree(dmoe_);
-  drope_ = dmoe_ = nullptr;
-  dtokens_ = nullptr;
+  if (dstep_) cudaFree(dstep_);
+  if (hstep_) cudaFreeHost(hstep_);
+  if (hlogits_) cudaFreeHost(hlogits_);
+  dtokens_ = dstep_ = hstep_ = nullptr;
+  hlogits_ = nullptr;
   if (cublas_) cublasDestroy(cublas_);
   if (stream_) cudaStreamDestroy(stream_);
   cublas_ = nullptr;
@@ -1075,7 +1234,22 @@ const float* Interpreter::dweight(const std::string& name) const {
   return it->second;
 }
 
+void Interpreter::grow(DBuf& b, size_t need) {
+  if (b.cap >= need) return;
+  // Grows only on the first calls of a shape; cudaFree waits for the device.
+  // A captured graph may hold the old pointer: it is captured again.
+  if (capturing_) throw std::runtime_error("IR CUDA graph: a buffer must grow during capture");
+  if (b.alloc) gpuErrchk(cudaFree(b.alloc));
+  gpuErrchk(cudaMalloc(&b.alloc, need * sizeof(float)));
+  b.cap = need;
+  ++alloc_epoch_;
+}
+
 Interpreter::DBuf& Interpreter::dout(int slot, int rows, int width, std::initializer_list<const DBuf*> inputs) {
+  return dout(slot, rows, width, std::vector<const DBuf*>(inputs));
+}
+
+Interpreter::DBuf& Interpreter::dout(int slot, int rows, int width, const std::vector<const DBuf*>& inputs) {
   DBuf* b = &dbufs_[slot];
   for (const DBuf* in : inputs)
     if (in && b->alloc && in->alloc == b->alloc) {
@@ -1083,16 +1257,40 @@ Interpreter::DBuf& Interpreter::dout(int slot, int rows, int width, std::initial
       pending_.push_back(slot);
       break;
     }
-  const size_t need = static_cast<size_t>(rows) * width;
-  if (b->cap < need) {  // grows only on the first calls of a shape; cudaFree waits for the device
-    if (b->alloc) gpuErrchk(cudaFree(b->alloc));
-    gpuErrchk(cudaMalloc(&b->alloc, need * sizeof(float)));
-    b->cap = need;
-  }
+  grow(*b, static_cast<size_t>(rows) * width);
   b->p = b->alloc;
   b->rows = rows;
   b->width = width;
+  b->is_list = false;
   return *b;
+}
+
+void Interpreter::copy_item(DBuf& dst, const DBuf& x) {
+  grow(dst, static_cast<size_t>(x.rows) * x.width);
+  dst.p = dst.alloc;
+  dst.rows = x.rows;
+  dst.width = x.width;
+  gpuErrchk(cudaMemcpyAsync(dst.p, x.p, static_cast<size_t>(x.rows) * x.width * sizeof(float),
+                            cudaMemcpyDeviceToDevice, stream_));
+}
+
+float* Interpreter::dsnap_take(int key) {
+  auto it = dsnaps_.find(key);
+  if (it != dsnaps_.end()) return it->second;
+  float* p = nullptr;
+  if (!dsnap_pool_.empty()) {
+    p = dsnap_pool_.back();
+    dsnap_pool_.pop_back();
+  } else {
+    gpuErrchk(cudaMalloc(&p, rec_.size() * sizeof(float)));
+  }
+  dsnaps_.emplace(key, p);
+  return p;
+}
+
+void Interpreter::dsnap_drop(std::map<int, float*>::iterator it) {
+  dsnap_pool_.push_back(it->second);
+  dsnaps_.erase(it);
 }
 
 void Interpreter::commit() {
@@ -1102,11 +1300,28 @@ void Interpreter::commit() {
 
 void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, int T, int start_pos) {
   cudaStream_t st = stream_;
-  auto in = [&](const DStep& s, size_t k) -> DBuf& {
+  auto value = [&](const DStep& s, size_t k, bool want_list) -> DBuf& {
     DBuf& b = dbufs_[s.in.at(k)];
     if (b.rows == 0)
       throw std::runtime_error("IR op '" + s.node->op + "': input '" + s.node->in.at(k) + "' is not defined");
+    if (b.is_list != want_list)
+      throw std::runtime_error("IR op '" + s.node->op + "': input '" + s.node->in.at(k) + "' is " +
+                               (want_list ? "a tensor, not a list" : "a list, not a tensor"));
     return b;
+  };
+  auto in = [&](const DStep& s, size_t k) -> DBuf& { return value(s, k, false); };
+  auto list_in = [&](const DStep& s, size_t k) -> DBuf& { return value(s, k, true); };
+  // A recurrent op over rows [0, T): one launch per run of rows up to each
+  // kept row, whose state rec_row_done then copies (the CPU's per-row
+  // snapshot, rec_begin). A call without kept rows is one launch.
+  auto rec_rows = [&](const DStep& s, auto&& launch) {
+    for (int t0 = 0, t = 0; t < T; ++t) {
+      const bool kept = t + 1 < T && rec_snap_rows_[t] >= 0;
+      if (!kept && t + 1 < T) continue;
+      launch(t0, t - t0 + 1);
+      if (kept) rec_row_done(*s.rec, layer, t);
+      t0 = t + 1;
+    }
   };
   for (const DStep& s : steps) {
     switch (s.op) {
@@ -1117,7 +1332,7 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
           if (htokens_[t] < 0 || static_cast<size_t>(htokens_[t]) >= rows)
             throw std::runtime_error("IR embedding: token id " + std::to_string(htokens_[t]) + " out of range");
         DBuf& out = dout(s.out[0], T, d, {});
-        ir_embedding_cuda(s.w, dtokens_, out.p, T, d, st);
+        ir_embedding_cuda(s.w, capturing_ ? dstep_ : dtokens_, out.p, T, d, st);  // dstep_[0]: the token
         break;
       }
       case DOp::PosEmbedding: {
@@ -1128,7 +1343,7 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
           throw std::runtime_error("IR pos_embedding: position " + std::to_string(start_pos + T - 1) + " exceeds '" +
                                    s.wname + "'");
         DBuf& out = dout(s.out[0], T, d, {&x});
-        ir_pos_embedding_cuda(x.p, s.w, out.p, T, d, start_pos, st);
+        ir_pos_embedding_cuda(x.p, s.w, out.p, T, d, start_pos, st, dpos_);
         break;
       }
       case DOp::LayerNorm: {
@@ -1189,7 +1404,7 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
                                     cudaMemcpyDeviceToDevice, st));
           src = &dst;
         }
-        ir_rope_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, start_pos, drope_, st);
+        ir_rope_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, start_pos, drope_, st, dpos_);
         break;
       }
       case DOp::Attention: {
@@ -1203,13 +1418,12 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         const size_t row = static_cast<size_t>(hkv) * hd;
         float* K = dk_[layer];
         float* V = dv_[layer];
-        gpuErrchk(cudaMemcpyAsync(K + start_pos * row, k.p, static_cast<size_t>(T) * row * sizeof(float),
-                                  cudaMemcpyDeviceToDevice, st));
-        gpuErrchk(cudaMemcpyAsync(V + start_pos * row, v.p, static_cast<size_t>(T) * row * sizeof(float),
-                                  cudaMemcpyDeviceToDevice, st));
+        ir_kv_write_cuda(K, V, k.p, v.p, T, static_cast<int>(row), start_pos, st, dpos_);
         DBuf& out = dout(s.out[0], T, hq * hd, {&q, &k, &v});
         if (s.window > 0)  // the cache keeps every position, so the window reads it in place
-          ir_window_attention_cuda(q.p, K, V, out.p, T, start_pos, hq, hkv, hd, s.scale, s.window, s.sinks, st);
+          ir_window_attention_cuda(q.p, K, V, out.p, T, start_pos, hq, hkv, hd, s.scale, s.window, s.sinks, st, dpos_);
+        else if (T == 1 && dpos_)  // the same split kernel as below, its length read from dstep_[1]
+          attention_devpos_cuda(q.p, K, V, out.p, hq, hd, s.scale, max_len_, hkv, dstep_, st);
         else if (T == 1)
           attention_decode_at_cuda(q.p, K, V, out.p, hq, start_pos + 1, hd, s.scale, max_len_, hkv, st);
         else
@@ -1231,14 +1445,10 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         if (s.w_ne0 != x.width)
           throw std::runtime_error("IR moe_ffn '" + s.wname + "': expert stack shape does not match d and n_experts");
         const int d = x.width;
-        const size_t need = moe_ffn_scratch_floats(T, d, s.d_ff, s.E, s.top_k);
-        if (need > dmoe_cap_) {
-          if (dmoe_) gpuErrchk(cudaFree(dmoe_));
-          gpuErrchk(cudaMalloc(&dmoe_, need * sizeof(float)));
-          dmoe_cap_ = need;
-        }
+        grow(dmoe_, moe_ffn_scratch_floats(T, d, s.d_ff, s.E, s.top_k));
         DBuf& out = dout(s.out[0], T, d, {&x});
-        moe_ffn_cuda(cublas_, x.p, T, d, s.d_ff, s.E, s.top_k, s.flag, s.w, s.gate, s.up, s.down, dmoe_, out.p, st);
+        moe_ffn_cuda(cublas_, x.p, T, d, s.d_ff, s.E, s.top_k, s.flag, s.w, s.gate, s.up, s.down, dmoe_.alloc, out.p,
+                     st);
         break;
       }
       case DOp::Silu: {
@@ -1247,14 +1457,218 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         ir_silu_cuda(x.p, out.p, static_cast<size_t>(T) * x.width, st);
         break;
       }
+      case DOp::Sub: {
+        const DBuf &a = in(s, 0), &b = in(s, 1);
+        if (a.rows != b.rows || a.width != b.width) throw std::runtime_error("IR sub: operand shapes differ");
+        DBuf& out = dout(s.out[0], a.rows, a.width, {&a, &b});
+        ir_binary_cuda(a.p, b.p, out.p, static_cast<size_t>(a.rows) * a.width, 2, st);
+        break;
+      }
+      case DOp::Relu:
+      case DOp::Sigmoid:
+      case DOp::Affine: {
+        const DBuf& x = in(s, 0);
+        DBuf& out = dout(s.out[0], x.rows, x.width, {&x});
+        const size_t n = static_cast<size_t>(x.rows) * x.width;
+        if (s.op == DOp::Relu)
+          ir_relu_cuda(x.p, out.p, n, st);
+        else if (s.op == DOp::Sigmoid)
+          ir_sigmoid_cuda(x.p, out.p, n, st);
+        else
+          ir_affine_cuda(x.p, out.p, n, s.scale, s.shift, st);
+        break;
+      }
+      case DOp::MulCol: {
+        const DBuf &x = in(s, 0), &c = in(s, 1);
+        if (c.width != 1 || c.rows != T || x.rows != T) throw std::runtime_error("IR mul_col: c must be [T, 1] beside x [T, w]");
+        DBuf& out = dout(s.out[0], T, x.width, {&x, &c});
+        ir_mul_col_cuda(x.p, c.p, out.p, T, x.width, st);
+        break;
+      }
+      case DOp::RmsRow: {
+        const DBuf& x = in(s, 0);
+        if (x.width <= 0 || x.rows != T) throw std::runtime_error("IR rms_row: input is not [T, w]");
+        DBuf& out = dout(s.out[0], T, 1, {&x});
+        ir_rms_row_cuda(x.p, out.p, T, x.width, s.eps, st);
+        break;
+      }
+      case DOp::List: {  // the inputs, copied in order, as one list value
+        std::vector<DBuf>& items = ditems_[s.out[0]];
+        if (items.size() < s.in.size()) items.resize(s.in.size());
+        for (size_t k = 0; k < s.in.size(); ++k) copy_item(items[k], in(s, k));
+        DBuf& L = dbufs_[s.out[0]];
+        L.is_list = true;
+        L.rows = T;
+        L.width = items[0].width;
+        L.items = static_cast<int>(s.in.size());
+        break;
+      }
+      case DOp::Append: {  // the list with a copy of x added at the end (in place when out names the list)
+        const DBuf& x = in(s, 1);
+        const DBuf& src = list_in(s, 0);
+        const int o = s.out[0];
+        if (o != s.in[0]) {
+          std::vector<DBuf>& items = ditems_[o];
+          if (items.size() < static_cast<size_t>(src.items)) items.resize(src.items);
+          for (int k = 0; k < src.items; ++k) copy_item(items[k], ditems_[s.in[0]][k]);
+          DBuf& L = dbufs_[o];
+          L.is_list = true;
+          L.rows = src.rows;
+          L.width = src.width;
+          L.items = src.items;
+        }
+        DBuf& L = dbufs_[o];
+        std::vector<DBuf>& items = ditems_[o];
+        if (items.size() < static_cast<size_t>(L.items) + 1) items.resize(L.items + 1);
+        copy_item(items[L.items], x);
+        ++L.items;
+        break;
+      }
+      case DOp::DepthAttend: {  // attention over depth (AttnRes block form)
+        const DBuf& L = list_in(s, 0);
+        std::vector<const float*> src;
+        std::vector<const DBuf*> tensors;  // the extra inputs (aliasing for dout)
+        int d = 0;
+        auto add_source = [&](const DBuf& b) {
+          if (d == 0) d = b.width;
+          if (b.width != d || d <= 0 || b.rows != T) throw std::runtime_error("IR depth_attend: sources must all be [T, d]");
+          src.push_back(b.p);
+        };
+        for (int k = 0; k < L.items; ++k) add_source(ditems_[s.in[0]][k]);
+        for (size_t k = 1; k < s.in.size(); ++k) {
+          tensors.push_back(&in(s, k));
+          add_source(*tensors.back());
+        }
+        if (src.empty()) throw std::runtime_error("IR depth_attend: no sources");
+        DBuf& out = dout(s.out[0], T, d, tensors);
+        if (src.size() == 1) {  // softmax over one source is the identity: s_0 bit for bit, w not read
+          gpuErrchk(cudaMemcpyAsync(out.p, src[0], static_cast<size_t>(T) * d * sizeof(float),
+                                    cudaMemcpyDeviceToDevice, st));
+          break;
+        }
+        if (!s.w) throw std::runtime_error("IR depth_attend: pseudo-query '" + s.wname + "' is not in the GGUF");
+        if (s.w_elems != static_cast<size_t>(d))
+          throw std::runtime_error("IR depth_attend: pseudo-query '" + s.wname + "' is not [d]");
+        ir_depth_attend_cuda(src.data(), static_cast<int>(src.size()), s.w, out.p, T, d, s.eps, st);
+        break;
+      }
+      case DOp::LinearAttention: {  // over the slot's num, den (device state)
+        const DBuf &q = in(s, 0), &k = in(s, 1), &v = in(s, 2);
+        const int w = s.hq * s.hd;
+        if (q.width != w || k.width != w || v.width != w || q.rows != T || k.rows != T || v.rows != T)
+          throw std::runtime_error("IR linear_attention: q/k/v widths do not match heads * head_dim");
+        DBuf& out = dout(s.out[0], T, w, {&q, &k, &v});
+        rec_rows(s, [&](int t0, int n) {
+          const size_t r = static_cast<size_t>(t0) * w;
+          ir_linear_attention_cuda(q.p + r, k.p + r, v.p + r, s.rec_a, s.rec_b, out.p + r, n, w, s.eps, st);
+        });
+        break;
+      }
+      case DOp::SsmScan: {  // over the slot's s (device state)
+        const DBuf& u = in(s, 0);
+        if (u.width != s.n || u.rows != T) throw std::runtime_error("IR ssm_scan: input width differs from n");
+        DBuf& out = dout(s.out[0], T, s.n, {&u});
+        rec_rows(s, [&](int t0, int n) {
+          const size_t r = static_cast<size_t>(t0) * s.n;
+          ir_ssm_scan_cuda(u.p + r, s.w, s.b, s.ssm_c, s.ssm_d, s.rec_a, out.p + r, n, s.n, st);
+        });
+        break;
+      }
     }
     commit();
   }
 }
 
+void Interpreter::run_device(int T, int start_pos) {
+  for (auto& b : dbufs_) b.rows = b.items = 0;  // allocations persist, definitions do not
+  pending_.clear();
+  run_nodes_device(plan_embed_, -1, T, start_pos);
+  for (int l = 0; l < n_layers_; ++l) run_nodes_device(plan_block_[l], l, T, start_pos);
+}
+
+// Captures the T = 1 step (embed, blocks, head) on stream_ as a graph. The
+// kernels are those of the per-launch step, with the token and position read
+// from dstep_ (dpos_), so a replay computes exactly what the per-launch step
+// would. Nothing runs while capturing; the caller replays the graph. False
+// (and no graph) when the capture fails, e.g. a buffer that must still grow
+// at this shape: the call then runs per-launch, which grows it, and the next
+// T = 1 call captures again. Four failures in a row turn the graph off.
+bool Interpreter::capture_decode(int start_pos) {
+  if (graph_exec_) cudaGraphExecDestroy(graph_exec_);
+  graph_exec_ = nullptr;
+  if (cudaStreamBeginCapture(stream_, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
+    cudaGetLastError();
+    graph_off_ = true;
+    Logger::warning("[IR] CUDA graph: stream capture unavailable; decode runs per-launch.");
+    return false;
+  }
+  capturing_ = true;
+  dpos_ = dstep_ + 1;
+  std::string err;
+  try {
+    run_device(1, start_pos);
+    run_nodes_device(plan_head_, -1, 1, start_pos);
+    if (dbufs_[logits_slot_].rows != 1 || dbufs_[logits_slot_].width > vocab_)
+      err = "the head produced no [1, vocab] 'logits'";
+  } catch (const std::exception& e) {
+    err = e.what();
+  }
+  capturing_ = false;
+  dpos_ = nullptr;
+  pending_.clear();
+  cudaGraph_t graph = nullptr;
+  cudaError_t e = cudaStreamEndCapture(stream_, &graph);
+  if (err.empty() && e == cudaSuccess) e = cudaGraphInstantiate(&graph_exec_, graph, 0);
+  if (graph) cudaGraphDestroy(graph);
+  if (!err.empty() || e != cudaSuccess) {
+    cudaGetLastError();
+    if (graph_exec_) cudaGraphExecDestroy(graph_exec_);
+    graph_exec_ = nullptr;
+    if (++graph_failures_ >= 4) graph_off_ = true;
+    Logger::info("[IR] CUDA graph: capture failed (" + (err.empty() ? std::string(cudaGetErrorString(e)) : err) + ")" +
+                 (graph_off_ ? "; decode runs per-launch from now on." : "; this step runs per-launch."));
+    return false;
+  }
+  graph_failures_ = 0;
+  graph_epoch_ = alloc_epoch_;
+  graph_logits_ = dbufs_[logits_slot_].p;
+  graph_vocab_ = dbufs_[logits_slot_].width;
+  ++graph_captures_;
+  Logger::info("[IR] CUDA graph: captured the T = 1 step (" + std::to_string(n_layers_) + " blocks, capture " +
+               std::to_string(graph_captures_) + "); decode replays it with the position in device memory");
+  return true;
+}
+
+bool Interpreter::decode_graph(int token, int start_pos) {
+  static const bool enabled = [] {
+    const char* v = std::getenv("EMBER_IR_GRAPH");
+    return !(v && std::string(v) == "0");
+  }();
+  // The range checks a replay cannot make (the per-launch step throws them).
+  if (!enabled || graph_off_ || start_pos < 0 || start_pos + 1 > max_len_ || start_pos + 1 > pos_rows_ ||
+      token < 0 || token >= embed_rows_)
+    return false;
+  hstep_[0] = token;
+  hstep_[1] = start_pos;
+  gpuErrchk(cudaMemcpyAsync(dstep_, hstep_, 2 * sizeof(int), cudaMemcpyHostToDevice, stream_));
+  if (!graph_exec_ || graph_epoch_ != alloc_epoch_) {
+    htokens_.assign(1, token);
+    if (!capture_decode(start_pos)) return false;
+  }
+  gpuErrchk(cudaGraphLaunch(graph_exec_, stream_));
+  gpuErrchk(cudaMemcpyAsync(hlogits_, graph_logits_, static_cast<size_t>(graph_vocab_) * sizeof(float),
+                            cudaMemcpyDeviceToHost, stream_));
+  return true;
+}
+
 std::vector<float> Interpreter::forward_device(const std::vector<int>& tokens, int start_pos, bool all_rows) {
   const int T = static_cast<int>(tokens.size());
-  for (auto& b : dbufs_) b.rows = 0;  // allocations persist, definitions do not
+  if (rec_floats_ > 0) rec_begin(start_pos, T, all_rows);
+  if (T == 1 && decode_graph(tokens[0], start_pos)) {
+    if (rec_floats_ > 0) rec_end(start_pos, T);
+    gpuErrchk(cudaStreamSynchronize(stream_));
+    return std::vector<float>(hlogits_, hlogits_ + graph_vocab_);
+  }
   htokens_ = tokens;
   if (dtokens_cap_ < T) {
     if (dtokens_) gpuErrchk(cudaFree(dtokens_));
@@ -1263,14 +1677,23 @@ std::vector<float> Interpreter::forward_device(const std::vector<int>& tokens, i
   }
   gpuErrchk(cudaMemcpyAsync(dtokens_, tokens.data(), static_cast<size_t>(T) * sizeof(int), cudaMemcpyHostToDevice,
                             stream_));
-  run_nodes_device(plan_embed_, -1, T, start_pos);
-  for (int l = 0; l < n_layers_; ++l) run_nodes_device(plan_block_[l], l, T, start_pos);
+  run_device(T, start_pos);
+  if (rec_floats_ > 0) rec_end(start_pos, T);
   int rows = T;
   if (!all_rows && T > 1) {  // head ops are row-wise: run them on the last row only
-    for (DBuf& b : dbufs_) {
-      if (b.rows == T) {
+    auto last_row = [T](DBuf& b) {
+      if (b.rows == T && b.alloc) {
         b.p = b.alloc + static_cast<size_t>(T - 1) * b.width;
         b.rows = 1;
+      }
+    };
+    for (size_t sl = 0; sl < dbufs_.size(); ++sl) {
+      DBuf& b = dbufs_[sl];
+      if (b.is_list && b.rows == T) {  // a list's tensors
+        for (int k = 0; k < b.items; ++k) last_row(ditems_[sl][k]);
+        b.rows = 1;
+      } else {
+        last_row(b);
       }
     }
     rows = 1;
