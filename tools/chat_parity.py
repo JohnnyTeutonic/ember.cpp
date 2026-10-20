@@ -26,6 +26,11 @@ EMBER = f"http://127.0.0.1:{os.environ.get('PARITY_EMBER_PORT', '8090')}/chat"
 MTS = f"http://127.0.0.1:{os.environ.get('PARITY_MTS_PORT', '8091')}/chat"
 GGUF = os.environ.get("PARITY_GGUF", "/home/jonat/ember_ttft/chat/chat_sft_bpe.gguf")
 PROMPTS = "/mnt/c/ml_artifacts/chat_base/sft/tinychat_hf_prompts_v1.jsonl"
+# PARITY_REPEAT_PENALTY / PARITY_REPEAT_LAST_N: the /chat contract's repetition
+# penalty (point 4), sent to both servers; unset leaves the fields out (off).
+REPEAT = {k: f(os.environ[e]) for k, e, f in (("repeat_penalty", "PARITY_REPEAT_PENALTY", float),
+                                               ("repeat_last_n", "PARITY_REPEAT_LAST_N", int))
+          if e in os.environ}
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 40
 OUT = sys.argv[2] if len(sys.argv) > 2 else None
 
@@ -42,7 +47,7 @@ same_text = same_tok = same_stop = tok_ok = 0
 records = []
 for i, r in enumerate(rows):
     body = {"user_input": r["prompt"], "max_new_tokens": 60, "temperature": 1.0,
-            "top_k": 1, "top_p": 1.0, "seed": 0}
+            "top_k": 1, "top_p": 1.0, "seed": 0, **REPEAT}
     e = post(EMBER, body)
     m = post(MTS, body)
     py_n = len(tok.encode("<|user|>" + r["prompt"] + "<|assistant|>"))

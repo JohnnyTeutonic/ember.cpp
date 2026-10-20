@@ -749,7 +749,28 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
 
   std::vector<float> logits; // Declare logits here, to be populated by prefill or loop
   std::vector<int> generated_token_ids; // Track generated tokens separately
-  
+
+  // The /chat contract's repetition penalty (set_repeat_penalty): the window
+  // is the last repeat_last_n_ ids of prompt + reply so far, the token being
+  // sampled not included; each distinct id outside the stop set is scaled
+  // once, before sampling.
+  const bool repeat_on = repeat_penalty_ != 1.0f && repeat_last_n_ > 0;
+  std::vector<char> repeat_seen(repeat_on ? config_.vocab_size : 0);
+  auto apply_repeat_penalty = [&](std::vector<float>& lg) {
+    if (!repeat_on) return;
+    const size_t np = tokens.size(), total = np + generated_token_ids.size();
+    const size_t first = total > static_cast<size_t>(repeat_last_n_) ? total - repeat_last_n_ : 0;
+    if (repeat_seen.size() < lg.size()) repeat_seen.resize(lg.size());
+    std::fill(repeat_seen.begin(), repeat_seen.end(), 0);
+    for (size_t i = first; i < total; ++i) {
+      const int id = i < np ? tokens[i] : generated_token_ids[i - np];
+      if (id < 0 || static_cast<size_t>(id) >= lg.size() || repeat_seen[id] || is_stop(id)) continue;
+      repeat_seen[id] = 1;
+      float& l = lg[id];
+      l = l > 0.0f ? l / repeat_penalty_ : l * repeat_penalty_;
+    }
+  };
+
   auto t_kv_reset = ttft_clock::now();
   if (reuse > 0) {
     // Keep positions [0, reuse); every later position is rewritten before
@@ -881,6 +902,7 @@ if (prefill_enabled) {
       auto t_sample = ttft_clock::now();
       last_ttft_.prefill_wall_ms = ms_between(t_prefill, t_sample);
       apply_repetition_penalty(logits, generated_token_ids, repetition_penalty_);
+      apply_repeat_penalty(logits);
       debug_dump_topk(logits);
       next_token_id = sample_top_k_top_p_temperature(logits, temperature, top_k, top_p, rng_);
       generated_token_ids.push_back(next_token_id); // Track generated token
@@ -925,12 +947,13 @@ if (prefill_enabled) {
 #endif
   const auto t_decode_start = ttft_clock::now();
   // EMBER_SPEC=k: speculative decoding with prompt-lookup drafts of up to k
-  // tokens, greedy (top_k == 1) only, all-GPU or all-CPU layers.
+  // tokens, greedy (top_k == 1) only, all-GPU or all-CPU layers, and off
+  // under the contract repetition penalty (its window moves with each row).
   static const int spec_k = [] {
     const char* e = std::getenv("EMBER_SPEC");
     return e ? std::max(0, std::atoi(e)) : 0;
   }();
-  const bool spec_on = spec_k > 0 && top_k == 1 &&
+  const bool spec_on = spec_k > 0 && top_k == 1 && !repeat_on &&
                        (config_.num_cpu_offload_layers == 0 ||
                         config_.num_cpu_offload_layers == config_.num_hidden_layers);
 
@@ -1094,6 +1117,7 @@ if (prefill_enabled) {
     // Sampling logic: Only sample if we're at the last prompt token or generating
     if (pos == num_prompt_tokens - 1 || pos >= num_prompt_tokens) {
       apply_repetition_penalty(logits, generated_token_ids, repetition_penalty_);
+      apply_repeat_penalty(logits);
       debug_dump_topk(logits);
       next_token_id = sample_top_k_top_p_temperature(logits, temperature, top_k, top_p, rng_);
       host_phase("host.sample");
