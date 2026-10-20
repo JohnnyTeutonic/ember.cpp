@@ -1,0 +1,2 @@
+numpy IR interpreter vs mtstudio greedy: 0/0 identical replies
+80 sequences: top-1 80/80, max |logit diff| / range 4.15e-07

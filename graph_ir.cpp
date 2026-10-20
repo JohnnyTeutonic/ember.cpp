@@ -11,6 +11,7 @@
 
 #include "cpu_attention.h"
 #include "gguf_structs.h"
+#include "graph_ir_ops.h"
 #include "logger.h"
 #include "quantization.h"
 #include "utils.h"
@@ -27,9 +28,15 @@ namespace {
 
 const std::set<std::string> kCpuOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
                                        "attention", "add", "mul", "silu", "gelu", "moe_ffn",
-                                       "linear_attention", "ssm_scan"};
+                                       "linear_attention", "ssm_scan",
+                                       // gated and attention-residual families (graph_ir_ops.h)
+                                       "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend"};
 const std::set<std::string> kRecurrentOps = {"linear_attention", "ssm_scan"};
-const std::set<std::string> kRowWiseOps = {"rmsnorm", "layernorm", "linear", "add", "mul", "silu", "gelu"};
+// The ops run_nodes_device implements.
+const std::set<std::string> kCudaOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
+                                        "attention", "add", "mul", "silu", "gelu", "moe_ffn"};
+const std::set<std::string> kRowWiseOps = {"rmsnorm", "layernorm", "linear", "add", "mul", "silu", "gelu",
+                                           "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend"};
 
 std::vector<std::string> names(const json& j) {
   if (j.is_string()) return {j.get<std::string>()};
@@ -112,6 +119,17 @@ bool has_windowed_attention(const std::string& ir_json) {
   for (const auto& n : blk.value("nodes", json::array()))
     if (n.value("op", "") == "attention" && n.value("window", 0) != 0) return true;
   return false;
+}
+
+bool device_supported(const std::string& ir_json) {
+  if (has_recurrent_state(ir_json)) return false;  // no device kernels for recurrent state yet
+  const json j = json::parse(ir_json);
+  for (const char* sub : {"embed", "block", "head"}) {
+    if (!j.contains(sub)) continue;
+    for (const auto& n : j.at(sub).value("nodes", json::array()))
+      if (!kCudaOps.count(n.value("op", ""))) return false;
+  }
+  return true;
 }
 
 std::string find_ir(const GGUFData& gguf) {
@@ -204,6 +222,27 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
     for (const auto& n : *sub)
       if (n.op == "gelu" && n.attrs.value("approx", "none") != "tanh" && n.attrs.value("approx", "none") != "none")
         throw std::runtime_error("IR gelu approx '" + n.attrs.value("approx", "") + "' is not implemented in ember");
+  // The gating ops' attributes and arities (paperkiln ir.hpp): checked here so
+  // a malformed node fails at load, not mid-generation.
+  for (const auto* sub : {&embed_, &block_, &head_})
+    for (const auto& n : *sub) {
+      auto arity = [&](size_t k, bool at_least) {
+        if (at_least ? n.in.size() < k : n.in.size() != k)
+          throw std::runtime_error("IR " + n.op + " needs " + (at_least ? "at least " : "") + std::to_string(k) +
+                                   " input(s), has " + std::to_string(n.in.size()));
+        if (n.out.size() != 1) throw std::runtime_error("IR " + n.op + " needs one output");
+      };
+      if (n.op == "sub" || n.op == "mul_col" || n.op == "append") arity(2, false);
+      if (n.op == "relu" || n.op == "sigmoid" || n.op == "affine" || n.op == "rms_row") arity(1, false);
+      if (n.op == "list" || n.op == "depth_attend") arity(1, true);
+      if (n.op == "affine" && (!has(n.attrs, "scale") || !has(n.attrs, "shift")))
+        throw std::runtime_error("IR affine needs float attributes scale and shift");
+      if (n.op == "rms_row" && !has(n.attrs, "eps")) throw std::runtime_error("IR rms_row needs its eps attribute");
+    }
+#ifdef HAS_CUDA
+  if (use_gpu && !device_supported(ir_json))
+    throw std::runtime_error("IR uses an op or recurrent state that has no CUDA kernel yet (EMBER_IR_DEVICE=cpu runs it)");
+#endif
   for (const auto& n : block_) {
     if (n.op == "rope") {
       if (n.attrs.value("pairing", "interleaved") != "interleaved")
@@ -403,6 +442,11 @@ void Interpreter::bind_tensor(const std::string& name, const GGUFData& gguf, boo
 
 void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData& gguf) {
   for (const auto& n : nodes) {
+    // depth_attend over one source never reads its pseudo-query (ir.hpp), so
+    // a file may leave it out; run_nodes refuses a missing one for S >= 2.
+    if (n.op == "depth_attend" && has(n.attrs, "weight") &&
+        !gguf.tensor_infos_map.count(layer_name(n.attrs.at("weight").get<std::string>(), layer)))
+      continue;
     if (has(n.attrs, "weight")) {
       std::string w = layer_name(n.attrs.at("weight").get<std::string>(), layer);
       if (!gguf.tensor_infos_map.count(w) && has(n.attrs, "tied_to"))
@@ -521,11 +565,16 @@ const std::vector<float>& Interpreter::weight(const std::string& name) const {
 
 void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env, int T, int start_pos,
                             bool /*head_last_only*/) {
-  auto in = [&](const Node& n, size_t k) -> Buf& {
+  auto value = [&](const Node& n, size_t k, bool want_list) -> Buf& {
     auto it = env.find(n.in.at(k));
     if (it == env.end()) throw std::runtime_error("IR op '" + n.op + "': input '" + n.in.at(k) + "' is not defined");
+    if (it->second.is_list != want_list)
+      throw std::runtime_error("IR op '" + n.op + "': input '" + n.in.at(k) + "' is " +
+                               (want_list ? "a tensor, not a list" : "a list, not a tensor"));
     return it->second;
   };
+  auto in = [&](const Node& n, size_t k) -> Buf& { return value(n, k, false); };
+  auto list_in = [&](const Node& n, size_t k) -> Buf& { return value(n, k, true); };
   auto wname = [&](const Node& n) {
     std::string w = layer_name(n.attrs.at("weight").get<std::string>(), layer);
     if (!weights_.count(w) && has(n.attrs, "tied_to")) w = layer_name(n.attrs.at("tied_to").get<std::string>(), layer);
@@ -697,6 +746,77 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       Buf out{std::vector<float>(x.v.size()), x.width};
       silu_cpu(x.v, out.v);
       env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "sub") {  // a - b. EXACT.
+      const Buf &a = in(n, 0), &b = in(n, 1);
+      if (a.v.size() != b.v.size() || a.width != b.width) throw std::runtime_error("IR sub: operand shapes differ");
+      Buf out{std::vector<float>(a.v.size()), a.width};
+      cpu::sub(a.v.data(), b.v.data(), out.v.data(), a.v.size());
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "relu" || n.op == "sigmoid") {  // relu EXACT; sigmoid ROUNDING.
+      const Buf& x = in(n, 0);
+      Buf out{std::vector<float>(x.v.size()), x.width};
+      (n.op == "relu" ? cpu::relu : cpu::sigmoid)(x.v.data(), out.v.data(), x.v.size());
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "affine") {  // (x * scale) + shift. EXACT.
+      const Buf& x = in(n, 0);
+      Buf out{std::vector<float>(x.v.size()), x.width};
+      cpu::affine(x.v.data(), out.v.data(), x.v.size(), n.attrs.at("scale").get<float>(),
+                  n.attrs.at("shift").get<float>());
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "mul_col") {  // x [T, w] * c [T, 1]. EXACT.
+      const Buf &x = in(n, 0), &c = in(n, 1);
+      if (c.width != 1 || c.v.size() != static_cast<size_t>(T) || x.v.size() != static_cast<size_t>(T) * x.width)
+        throw std::runtime_error("IR mul_col: c must be [T, 1] beside x [T, w]");
+      Buf out{std::vector<float>(x.v.size()), x.width};
+      cpu::mul_col(x.v.data(), c.v.data(), out.v.data(), T, x.width);
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "rms_row") {  // [T, w] -> [T, 1]: sqrt(ss / w + eps). ROUNDING.
+      const Buf& x = in(n, 0);
+      if (x.width <= 0 || x.v.size() != static_cast<size_t>(T) * x.width)
+        throw std::runtime_error("IR rms_row: input is not [T, w]");
+      Buf out{std::vector<float>(static_cast<size_t>(T)), 1};
+      cpu::rms_row(x.v.data(), out.v.data(), T, x.width, n.attrs.at("eps").get<float>());
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "list") {  // the inputs, in order, as one list value. EXACT.
+      Buf out;
+      out.is_list = true;
+      for (size_t k = 0; k < n.in.size(); ++k) out.items.push_back(in(n, k));
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "append") {  // the list with x added at the end. EXACT.
+      const Buf& x = in(n, 1);
+      // The usual form appends in place (out names the list): no copy.
+      Buf out;
+      if (n.out.at(0) == n.in.at(0))
+        out = std::move(list_in(n, 0));
+      else
+        out = list_in(n, 0);
+      out.items.push_back(x);
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "depth_attend") {  // attention over depth (AttnRes block form). ROUNDING.
+      const Buf& L = list_in(n, 0);
+      std::vector<const float*> src;
+      int d = 0;
+      auto add_source = [&](const Buf& s) {
+        if (d == 0) d = s.width;
+        if (s.width != d || d <= 0 || s.v.size() != static_cast<size_t>(T) * d)
+          throw std::runtime_error("IR depth_attend: sources must all be [T, d]");
+        src.push_back(s.v.data());
+      };
+      for (const Buf& s : L.items) add_source(s);
+      for (size_t k = 1; k < n.in.size(); ++k) add_source(in(n, k));
+      if (src.empty()) throw std::runtime_error("IR depth_attend: no sources");
+      const float* w = nullptr;
+      if (src.size() > 1) {  // one source: out = s_0 and the pseudo-query is not read
+        const std::string wn = layer_name(n.attrs.at("weight").get<std::string>(), layer);
+        if (!weights_.count(wn)) throw std::runtime_error("IR depth_attend: pseudo-query '" + wn + "' is not in the GGUF");
+        const auto& W = weight(wn);
+        if (W.size() != static_cast<size_t>(d))
+          throw std::runtime_error("IR depth_attend: pseudo-query '" + wn + "' is not [d]");
+        w = W.data();
+      }
+      Buf out{std::vector<float>(static_cast<size_t>(T) * d), d};
+      cpu::depth_attend(src, w, out.v.data(), T, d, n.attrs.value("eps", 1e-5f));
+      env[n.out.at(0)] = std::move(out);
     } else if (n.op == "linear_attention") {  // elu+1 linear attention over the slot's num, den. ROUNDING.
       const Buf &q = in(n, 0), &k = in(n, 1), &v = in(n, 2);
       const int w = n.attrs.at("heads").get<int>() * n.attrs.at("head_dim").get<int>();
@@ -754,10 +874,12 @@ std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int star
   if (rec_floats_ > 0) rec_end(start_pos, T);
   int rows = T;
   if (!all_rows && T > 1) {  // head ops are row-wise: run them on the last row only
+    auto last_row = [T](Buf& b) {
+      if (b.width > 0 && b.v.size() == static_cast<size_t>(T) * b.width) b.v.erase(b.v.begin(), b.v.end() - b.width);
+    };
     for (auto& kv : env) {
-      Buf& b = kv.second;
-      if (b.width > 0 && b.v.size() == static_cast<size_t>(T) * b.width)
-        b.v.erase(b.v.begin(), b.v.end() - b.width);
+      last_row(kv.second);
+      for (Buf& item : kv.second.items) last_row(item);  // a list's tensors
     }
     rows = 1;
   }

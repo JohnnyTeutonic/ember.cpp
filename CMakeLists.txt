@@ -288,6 +288,7 @@ add_library(tinyllama_core STATIC
     gguf_parser.cpp
     quantization.cpp
     graph_ir.cpp
+    graph_ir_ops.cpp
     parallel_for.cpp
     model_constants.h
     ${CUDA_SOURCES} # Conditionally include CUDA source file
@@ -295,6 +296,12 @@ add_library(tinyllama_core STATIC
 )
 
 set_target_properties(tinyllama_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# The gating IR ops round every product before it is added (paperkiln's CPU
+# ops, graph_ir_ops.h): never contract a * b + c into a fused multiply-add,
+# whatever -march a build adds. MSVC does not contract without /fp:contract.
+if(NOT MSVC)
+    set_source_files_properties(graph_ir_ops.cpp PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")
+endif()
 
 # Set properties for the core library
 target_include_directories(tinyllama_core PUBLIC

@@ -1,0 +1,255 @@
+{
+  "_comment": "paperkiln IR v0 for attnres_tiny, exported by mtstudio. Schema and semantics: microtorch/ir.hpp and LOCAL_LLM_STACK.md section 4.",
+  "ir_version": 0,
+  "family_hint": "attnres",
+  "model": {
+    "vocab": 8192,
+    "d": 128,
+    "n_layers": 2,
+    "ctx": 128,
+    "dtype": "f32"
+  },
+  "tokenizer": {
+    "type": "bpe",
+    "source": "gguf",
+    "specials": {
+      "unk": 0,
+      "eot": 1,
+      "user": 2,
+      "assistant": 3
+    },
+    "bos": null
+  },
+  "inputs": [
+    {
+      "name": "tokens",
+      "kind": "token_ids"
+    },
+    {
+      "name": "pos",
+      "kind": "positions",
+      "note": "absolute positions; prefill 0..T-1, decode = tokens seen so far; must stay below model.ctx"
+    }
+  ],
+  "embed": {
+    "nodes": [
+      {
+        "op": "embedding",
+        "in": [
+          "tokens"
+        ],
+        "weight": "token_embd.weight",
+        "out": "x"
+      },
+      {
+        "op": "pos_embedding",
+        "in": [
+          "x",
+          "pos"
+        ],
+        "weight": "position_embd.weight",
+        "out": "x"
+      },
+      {
+        "op": "list",
+        "in": [
+          "x"
+        ],
+        "out": "bank"
+      }
+    ]
+  },
+  "block": {
+    "repeat": 2,
+    "state": [
+      {
+        "name": "kv",
+        "kind": "kv",
+        "heads": 2,
+        "kv_heads": 2,
+        "head_dim": 64,
+        "max_len": 128,
+        "window": 0,
+        "sinks": 0,
+        "dtype": "f32"
+      }
+    ],
+    "nodes": [
+      {
+        "op": "depth_attend",
+        "in": [
+          "bank"
+        ],
+        "weight": "blk.{i}.attnres_attn_q.weight",
+        "eps": 1e-05,
+        "out": "h"
+      },
+      {
+        "op": "layernorm",
+        "in": [
+          "h"
+        ],
+        "weight": "blk.{i}.attn_norm.weight",
+        "bias": "blk.{i}.attn_norm.bias",
+        "eps": 1e-05,
+        "out": "h"
+      },
+      {
+        "op": "linear",
+        "in": [
+          "h"
+        ],
+        "weight": "blk.{i}.attn_qkv.weight",
+        "bias": "blk.{i}.attn_qkv.bias",
+        "out": "qkv"
+      },
+      {
+        "op": "split",
+        "in": [
+          "qkv"
+        ],
+        "sizes": [
+          128,
+          128,
+          128
+        ],
+        "out": [
+          "q",
+          "k",
+          "v"
+        ]
+      },
+      {
+        "op": "attention",
+        "in": [
+          "q",
+          "k",
+          "v"
+        ],
+        "state": "kv",
+        "heads": 2,
+        "kv_heads": 2,
+        "head_dim": 64,
+        "causal": true,
+        "scale": 0.125,
+        "window": 0,
+        "sinks": 0,
+        "softmax": "max-shifted, masked entries exactly zero",
+        "out": "a"
+      },
+      {
+        "op": "linear",
+        "in": [
+          "a"
+        ],
+        "weight": "blk.{i}.attn_output.weight",
+        "bias": "blk.{i}.attn_output.bias",
+        "out": "o"
+      },
+      {
+        "op": "depth_attend",
+        "in": [
+          "bank",
+          "o"
+        ],
+        "weight": "blk.{i}.attnres_ffn_q.weight",
+        "eps": 1e-05,
+        "out": "h2"
+      },
+      {
+        "op": "layernorm",
+        "in": [
+          "h2"
+        ],
+        "weight": "blk.{i}.ffn_norm.weight",
+        "bias": "blk.{i}.ffn_norm.bias",
+        "eps": 1e-05,
+        "out": "h2"
+      },
+      {
+        "op": "linear",
+        "in": [
+          "h2"
+        ],
+        "weight": "blk.{i}.ffn_up.weight",
+        "bias": "blk.{i}.ffn_up.bias",
+        "out": "u"
+      },
+      {
+        "op": "gelu",
+        "in": [
+          "u"
+        ],
+        "approx": "tanh",
+        "out": "u"
+      },
+      {
+        "op": "linear",
+        "in": [
+          "u"
+        ],
+        "weight": "blk.{i}.ffn_down.weight",
+        "bias": "blk.{i}.ffn_down.bias",
+        "out": "f"
+      },
+      {
+        "op": "add",
+        "in": [
+          "o",
+          "f"
+        ],
+        "out": "o"
+      },
+      {
+        "op": "append",
+        "in": [
+          "bank",
+          "o"
+        ],
+        "out": "bank"
+      }
+    ]
+  },
+  "head": {
+    "nodes": [
+      {
+        "op": "depth_attend",
+        "in": [
+          "bank"
+        ],
+        "weight": "attnres_out_q.weight",
+        "eps": 1e-05,
+        "out": "x"
+      },
+      {
+        "op": "layernorm",
+        "in": [
+          "x"
+        ],
+        "weight": "output_norm.weight",
+        "bias": "output_norm.bias",
+        "eps": 1e-05,
+        "out": "h"
+      },
+      {
+        "op": "linear",
+        "in": [
+          "h"
+        ],
+        "weight": "output.weight",
+        "bias": null,
+        "out": "logits"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "name": "logits",
+      "kind": "logits"
+    }
+  ],
+  "modes": {
+    "prefill": "all nodes over T tokens",
+    "decode": "the same graph with T = 1; attention reads and appends to its kv state"
+  }
+}

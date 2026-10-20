@@ -32,7 +32,11 @@
 // linear (+ bias), split, rope (interleaved pairs), attention (causal, KV
 // state, optional sliding window + sinks as paperkiln's swa_attention), add, mul, silu, gelu (tanh or erf), moe_ffn (llama.cpp's expert
 // layout), linear_attention (elu+1, ops::kimi_attention) and ssm_scan
-// (ops::ssm_scan) over recurrent state, CPU only. Any other op fails at load,
+// (ops::ssm_scan) over recurrent state, CPU only; and for the gated and
+// attention-residual families (flex highway / plain, attnres, srd's router)
+// sub, relu, sigmoid, affine, mul_col, rms_row, list, append and depth_attend
+// (graph_ir_ops.h), CPU only: a list is a value like a tensor (named by "out",
+// read by "in"), an ordered set of [T, d] tensors. Any other op fails at load,
 // naming the op and the backend.
 //
 // CUDA builds add a device path, chosen at construction (use_gpu): weights
@@ -99,6 +103,8 @@ class Interpreter {
   struct Buf {
     std::vector<float> v;
     int width = 0;
+    bool is_list = false;    // a list value (op list / append): its tensors are `items`, v is empty
+    std::vector<Buf> items;  // in order; each a tensor
   };
   using Env = std::unordered_map<std::string, Buf>;
   // A bound weight: f32 values, or (quantised) the tensor's raw GGUF bytes.
@@ -237,6 +243,10 @@ bool has_windowed_attention(const std::string& ir_json);
 // True when the IR declares recurrent state (a block.state of kind
 // "recurrent"). It has no CUDA kernels, so such an IR runs on the CPU.
 bool has_recurrent_state(const std::string& ir_json);
+
+// True when the CUDA path has a kernel for every op of the IR and the IR has
+// no recurrent state; otherwise the interpreter must run on the CPU.
+bool device_supported(const std::string& ir_json);
 
 // The recurrent ops for one token (row), in paperkiln's order of operations
 // (graph_ir.cpp); the state is updated in place. Exposed for the op tests.

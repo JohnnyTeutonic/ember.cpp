@@ -1,0 +1,1 @@
+80 sequences: top-1 80/80, max |logit diff| / range 4.73e-07
