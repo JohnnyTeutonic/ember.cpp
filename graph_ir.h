@@ -32,21 +32,24 @@
 // linear (+ bias), split, rope (interleaved pairs), attention (causal, KV
 // state, optional sliding window + sinks as paperkiln's swa_attention), add, mul, silu, gelu (tanh or erf), moe_ffn (llama.cpp's expert
 // layout), linear_attention (elu+1, ops::kimi_attention) and ssm_scan
-// (ops::ssm_scan) over recurrent state, CPU only; and for the gated and
+// (ops::ssm_scan) over recurrent state; and for the gated and
 // attention-residual families (flex highway / plain, attnres, srd's router)
 // sub, relu, sigmoid, affine, mul_col, rms_row, list, append and depth_attend
-// (graph_ir_ops.h), CPU only: a list is a value like a tensor (named by "out",
-// read by "in"), an ordered set of [T, d] tensors. Any other op fails at load,
+// (graph_ir_ops.h): a list is a value like a tensor (named by "out", read by
+// "in"), an ordered set of [T, d] tensors. Any other op fails at load,
 // naming the op and the backend.
 //
-// CUDA builds add a device path, chosen at construction (use_gpu): weights
-// are uploaded once, the KV state and the named row buffers live on the
+// CUDA builds add a device path, chosen at construction (use_gpu), for every
+// op above (device_supported): weights are uploaded once, the KV state, the
+// recurrent state with its snapshots and the named row buffers live on the
 // device, and the op sequence runs on one stream with no host sync until the
 // logits are copied back. The ops are compiled at load into a per-block plan
 // (enum ops, buffer slots, device weight pointers, numeric attributes), so a
 // call does no JSON or string work. GEMMs are FP32 cuBLAS (default math); the
 // other kernels follow the CPU forms (graph_ir_cuda.h), sliding-window
-// attention included, so the two paths agree to rounding.
+// attention included, so the two paths agree to rounding. A T = 1 call
+// (decode) replays a CUDA graph of the whole step, captured once, with the
+// token and position in device memory (EMBER_IR_GRAPH=0: per-launch).
 #include <initializer_list>
 #include <map>
 #include <memory>
@@ -173,30 +176,42 @@ class Interpreter {
   // last row of a prefill in place). Buffers persist across calls so
   // steady-state decode allocates nothing; an op whose output name is also
   // one of its inputs writes the slot's spare and swaps.
+  // A list value (op list / append) is a DBuf with is_list set and `items`
+  // tensors, held as copies in the slot's ditems_ (a list is a value: a later
+  // write of a tensor it was built from does not change it).
   struct DBuf {
     float* alloc = nullptr;
     float* p = nullptr;
     size_t cap = 0;  // floats
     int width = 0, rows = 0;  // rows == 0: not defined in this call
+    bool is_list = false;
+    int items = 0;
   };
   // One op of the device plan, resolved once at load (compile_device): the op
   // as an enum, its tensors as slots, its weights as device pointers and its
   // attributes as numbers, so a call does no JSON, string or map work. Only
   // the checks that depend on the call (widths, positions) remain per call.
-  enum class DOp { Embedding, PosEmbedding, LayerNorm, Split, Gelu, RmsNorm, Linear, Rope, Attention, Add, Mul, MoeFfn, Silu };
+  enum class DOp {
+    Embedding, PosEmbedding, LayerNorm, Split, Gelu, RmsNorm, Linear, Rope, Attention, Add, Mul, MoeFfn, Silu,
+    Sub, Relu, Sigmoid, Affine, MulCol, RmsRow, List, Append, DepthAttend, LinearAttention, SsmScan
+  };
   struct DStep {
     DOp op = DOp::Add;
     const Node* node = nullptr;  // names for error messages
     std::vector<int> in, out;    // slots
     std::string wname;           // the resolved weight (error messages)
-    const float* w = nullptr;    // weight: table, norm scale, linear [out, in], moe router
-    const float* b = nullptr;    // bias (layernorm, linear)
+    const float* w = nullptr;    // weight: table, norm scale, linear [out, in], moe router, depth_attend query, ssm A
+    const float* b = nullptr;    // bias (layernorm, linear); ssm B
     const float *gate = nullptr, *up = nullptr, *down = nullptr;  // moe_ffn expert stacks
+    const float *ssm_c = nullptr, *ssm_d = nullptr;               // ssm_scan C [n], D (a device scalar)
+    float *rec_a = nullptr, *rec_b = nullptr;  // device state: linear_attention num, den; ssm_scan s
+    const RecSlot* rec = nullptr;              // the recurrent op's state slot
     size_t w_elems = 0;
     int w_ne0 = 0;  // the weight's ne0 (rows of width ne0)
-    int hd = 0, hq = 0, hkv = 0, window = 0, sinks = 0;  // rope, attention
+    int hd = 0, hq = 0, hkv = 0, window = 0, sinks = 0;  // rope, attention, linear_attention (hq heads)
     int E = 0, top_k = 0, d_ff = 0;                      // moe_ffn
-    float eps = 1e-5f, scale = 0.0f;
+    int n = 0;                                           // ssm_scan state size
+    float eps = 1e-5f, scale = 0.0f, shift = 0.0f;       // eps: also linear_attention's den_floor
     bool flag = false;  // gelu: tanh form; moe_ffn: renorm gates
     std::vector<int> sizes;  // split
   };
@@ -206,10 +221,21 @@ class Interpreter {
   int slot(const std::string& name);
   void free_device();
   const float* dweight(const std::string& name) const;
+  // (Re)allocates b to hold `need` floats when it is smaller. A growth during
+  // graph capture throws (the capture is abandoned; see capture_decode).
+  void grow(DBuf& b, size_t need);
   DBuf& dout(int slot, int rows, int width, std::initializer_list<const DBuf*> inputs);
+  DBuf& dout(int slot, int rows, int width, const std::vector<const DBuf*>& inputs);
+  void copy_item(DBuf& dst, const DBuf& x);
   void commit();
   void run_nodes_device(const std::vector<DStep>& steps, int layer, int T, int start_pos);
   std::vector<float> forward_device(const std::vector<int>& tokens, int start_pos, bool all_rows);
+  void run_device(int T, int start_pos);  // embed, blocks; not the head
+  // The captured T = 1 step: true when it ran (logits in hlogits_).
+  bool decode_graph(int token, int start_pos);
+  bool capture_decode(int start_pos);
+  float* dsnap_take(int key);  // the device snapshot buffer for `key`, created or reused
+  void dsnap_drop(std::map<int, float*>::iterator it);
 
   cublasHandle_t cublas_ = nullptr;
   cudaStream_t stream_ = nullptr;
@@ -217,6 +243,7 @@ class Interpreter {
   std::unordered_map<std::string, int> slots_;  // tensor name -> slot (load time only)
   std::vector<std::string> slot_names_;
   std::vector<DBuf> dbufs_, dspare_;            // by slot
+  std::vector<std::vector<DBuf>> ditems_;       // by slot: a list value's tensors
   std::vector<int> pending_;  // slots written to their spare by dout, swapped by commit
   std::vector<DStep> plan_embed_, plan_head_;
   std::vector<std::vector<DStep>> plan_block_;  // per block
@@ -226,8 +253,35 @@ class Interpreter {
   int* dtokens_ = nullptr;
   int dtokens_cap_ = 0;
   std::vector<int> htokens_;  // this call's tokens (range checks on the host)
-  float* dmoe_ = nullptr;
-  size_t dmoe_cap_ = 0;
+  DBuf dmoe_;  // moe_ffn scratch
+
+  // Device recurrent state: drec_ [n_layers][rec_floats_] (fixed: a restore
+  // copies into it, so a captured graph keeps reading the live state);
+  // drec_init_ the initial state of every block; snapshots and this call's
+  // kept rows as on the CPU path (rec_begin / rec_row_done / rec_end), by
+  // device-to-device copies.
+  float* drec_ = nullptr;
+  float* drec_init_ = nullptr;
+  std::map<int, float*> dsnaps_;  // state after `key` tokens
+  std::vector<float*> dsnap_pool_;  // released snapshot buffers
+  DBuf drec_rows_;  // this call: [kept row][n_layers][rec_floats_]
+
+  // CUDA graph of the T = 1 step (EMBER_IR_GRAPH=0 disables): captured once,
+  // replayed with the token and position in device memory (dstep_ = [token,
+  // pos]; dpos_ points at the position while capturing). Any buffer growth
+  // (alloc_epoch_) invalidates it; it is captured again at the next T = 1.
+  cudaGraphExec_t graph_exec_ = nullptr;
+  int* dstep_ = nullptr;
+  int* hstep_ = nullptr;       // pinned
+  float* hlogits_ = nullptr;   // pinned, [vocab]
+  const int* dpos_ = nullptr;  // non-null only while capturing
+  bool capturing_ = false, graph_off_ = false;
+  int graph_failures_ = 0;     // consecutive failed captures
+  int graph_captures_ = 0;
+  unsigned long long alloc_epoch_ = 0, graph_epoch_ = 0;
+  const float* graph_logits_ = nullptr;
+  int graph_vocab_ = 0;
+  int embed_rows_ = 0, pos_rows_ = 0;  // replay range checks: token ids, positions
 #endif
 };
 
@@ -241,11 +295,12 @@ std::string find_ir(const GGUFData& gguf);
 bool has_windowed_attention(const std::string& ir_json);
 
 // True when the IR declares recurrent state (a block.state of kind
-// "recurrent"). It has no CUDA kernels, so such an IR runs on the CPU.
+// "recurrent").
 bool has_recurrent_state(const std::string& ir_json);
 
-// True when the CUDA path has a kernel for every op of the IR and the IR has
-// no recurrent state; otherwise the interpreter must run on the CPU.
+// True when the CUDA path has a kernel for every op of the IR (recurrent
+// state included) within its limits (depth_attend sources, ssm_scan n);
+// otherwise the interpreter must run on the CPU.
 bool device_supported(const std::string& ir_json);
 
 // The recurrent ops for one token (row), in paperkiln's order of operations

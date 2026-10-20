@@ -492,10 +492,10 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
           ember_ir::has_windowed_attention(ir)) {
         // CUDA builds run the interpreter on the device when the CLI asked for
         // GPU layers (any nonzero count: the interpreter does not split
-        // layers); EMBER_IR_DEVICE=cpu keeps it on the CPU. Sliding-window
-        // attention runs on either; recurrent state and the gating /
-        // attention-residual ops have no device kernels yet, so such an IR
-        // stays on the CPU (ember_ir::device_supported).
+        // layers); EMBER_IR_DEVICE=cpu keeps it on the CPU. Every op the
+        // interpreter has (recurrent state, gating and attention-residual ops
+        // and sliding-window attention included) runs on either; an IR past
+        // the device kernels' limits stays on the CPU (ember_ir::device_supported).
         bool ir_gpu = false;
 #ifdef HAS_CUDA
         const char* dev = std::getenv("EMBER_IR_DEVICE");
