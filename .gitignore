@@ -9,4 +9,5 @@ myenv/
 */debugging.log
 deps/
 *.bak
-docs/
+docs/html/
+docs/latex/
