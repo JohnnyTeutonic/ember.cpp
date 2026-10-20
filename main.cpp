@@ -8,7 +8,9 @@
  * required for proper model responses in both formats.
  *
  * Usage:
+ * @verbatim
  *   tinyllama <model_path> <tokenizer_path> <num_threads> <prompt|chat|batch> [--system-prompt <system_prompt_string>] [initial_user_prompt] [max_tokens] [n_gpu_layers] [use_mmap] [temperature] [top_k] [top_p] [use_kv_quant] [use_batch_generation] [--batch-prompts "prompt1" "prompt2" ...] [--max-batch-size N]
+ * @endverbatim
  *
  * Arguments:
  *   model_path: Path to the model file (.gguf) or directory (SafeTensors).

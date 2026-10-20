@@ -172,7 +172,7 @@ struct KVCache {
      * @param config The model configuration, used to determine if KVCache quantization is enabled.
      * @param total_num_model_layers Total number of layers in the model (for sizing CPU cache vectors)
      * @param num_gpu_layers_to_allocate Number of layers for which to allocate GPU device memory. Can be 0.
-     * @param max_seq_len Maximum sequence length to cache
+     * @param max_seq_len_arg Maximum sequence length to cache
      * @param num_kv_heads Number of key/value heads
      * @param head_dim Dimension of each attention head
      * @param max_batch_size_arg Maximum number of sequences for batch processing (default: 1 for single-sequence)

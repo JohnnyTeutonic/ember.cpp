@@ -1,49 +1,58 @@
 name: Documentation
 
+# Builds the Doxygen site on every push and pull request; deploys it to GitHub Pages on pushes
+# to main. Local equivalent: doxygen Doxyfile (output in docs/html).
+
 on:
   push:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
+  build:
+    runs-on: ubuntu-24.04  # Doxygen 1.9.8, the version the Doxyfile is tested with
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install Doxygen and Graphviz
+        run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+
+      - name: Generate documentation
         run: |
-          sudo apt-get update
-          sudo apt-get install -y doxygen graphviz
+          ( cat Doxyfile; echo "WARN_LOGFILE = doxygen-warnings.log" ) | doxygen -
+          test -f docs/html/index.html
+          n=$(grep -c "warning:" doxygen-warnings.log || true)
+          echo "Doxygen $(doxygen --version): $(find docs/html -name '*.html' | wc -l) pages, $n warnings" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$n" -gt 0 ]; then
+            { echo '```'; head -n 50 doxygen-warnings.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
-      - name: Generate Documentation
-        run: |
-          chmod +x manage.sh
-          ./manage.sh docs
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-        with:
-          static_site_generator: other
-
-      - name: Upload artifact
+      - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/html
 
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Output Pages URL
-        run: |
-          echo "Documentation deployed to: ${{ steps.deployment.outputs.page_url }}" 
