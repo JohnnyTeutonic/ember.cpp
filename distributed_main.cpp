@@ -7,7 +7,9 @@
  * (processing inference requests).
  *
  * Usage:
+ * @verbatim
  *   mpirun -np 4 ./tinyllama_distributed <model_path> <tokenizer_path> <role> [gpu_layers]
+ * @endverbatim
  *
  * Arguments:
  *   model_path: Path to the model file (.gguf) or directory (SafeTensors).
