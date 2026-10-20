@@ -39,6 +39,8 @@ cross-origin-isolated page (COOP/COEP) and falls back to `ember.js` otherwise or
 
 - 4-thread build vs single-threaded, node, reply by reply: q8all 40/40 identical, f32 v2 40/40
   identical; gpt2 (IR) and moe_tiny 40/40 vs mtstudio. Native CPU chat v3 40/40.
-- Speed is not established: this run shared the 4 CPUs with three parallel builds (4-thread
-  642 vs single 448 ms/reply on q8all). Re-measure on an idle machine before shipping
-  ember-mt to the Space.
+- Speed on an idle machine (`wasm_threads_quiet.log`, node, three interleaved rounds, load
+  average 1.4-2.1, no GPU work): q8all (the Space's model) single 302-378 vs 4-thread 400-450
+  ms/reply; f32 v2 single 195-347 vs 4-thread 187-308. Replies identical (40/40) on both. At
+  d=384 the per-loop work is too small to repay the thread handoff, so threads do not help this
+  model: the Space keeps the single-threaded build. ember-mt is for larger models.
