@@ -1,0 +1,195 @@
+{
+  "_comment": "paperkiln IR v0 for mamba_tiny, exported by mtstudio. Schema and semantics: microtorch/ir.hpp and LOCAL_LLM_STACK.md section 4.",
+  "ir_version": 0,
+  "family_hint": "mamba",
+  "model": {
+    "vocab": 8192,
+    "d": 128,
+    "n_layers": 2,
+    "ctx": 128,
+    "dtype": "f32"
+  },
+  "tokenizer": {
+    "type": "bpe",
+    "source": "gguf",
+    "specials": {
+      "unk": 0,
+      "eot": 1,
+      "user": 2,
+      "assistant": 3
+    },
+    "bos": null
+  },
+  "inputs": [
+    {
+      "name": "tokens",
+      "kind": "token_ids"
+    }
+  ],
+  "embed": {
+    "nodes": [
+      {
+        "op": "embedding",
+        "in": [
+          "tokens"
+        ],
+        "weight": "token_embd.weight",
+        "out": "x"
+      }
+    ]
+  },
+  "block": {
+    "repeat": 2,
+    "state": [
+      {
+        "name": "ssm",
+        "kind": "recurrent",
+        "op": "ssm_scan",
+        "dtype": "f32",
+        "tensors": [
+          {
+            "name": "s",
+            "shape": [
+              64
+            ],
+            "init": 0
+          }
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "op": "layernorm",
+        "in": [
+          "x"
+        ],
+        "weight": "blk.{i}.ssm_norm.weight",
+        "bias": "blk.{i}.ssm_norm.bias",
+        "eps": 1e-05,
+        "out": "h"
+      },
+      {
+        "op": "linear",
+        "in": [
+          "h"
+        ],
+        "weight": "blk.{i}.ssm_in.weight",
+        "bias": "blk.{i}.ssm_in.bias",
+        "out": "u"
+      },
+      {
+        "op": "ssm_scan",
+        "in": [
+          "u"
+        ],
+        "state": "ssm",
+        "n": 64,
+        "a": "blk.{i}.ssm_a.weight",
+        "b": "blk.{i}.ssm_b.weight",
+        "c": "blk.{i}.ssm_c.weight",
+        "d": "blk.{i}.ssm_d.weight",
+        "out": "y"
+      },
+      {
+        "op": "linear",
+        "in": [
+          "y"
+        ],
+        "weight": "blk.{i}.ssm_out.weight",
+        "bias": "blk.{i}.ssm_out.bias",
+        "out": "y"
+      },
+      {
+        "op": "linear",
+        "in": [
+          "h"
+        ],
+        "weight": "blk.{i}.ssm_gate.weight",
+        "bias": "blk.{i}.ssm_gate.bias",
+        "out": "g"
+      },
+      {
+        "op": "gelu",
+        "in": [
+          "g"
+        ],
+        "approx": "tanh",
+        "out": "g"
+      },
+      {
+        "op": "mul",
+        "in": [
+          "y",
+          "g"
+        ],
+        "out": "y"
+      },
+      {
+        "op": "linear",
+        "in": [
+          "x"
+        ],
+        "weight": "blk.{i}.ssm_out_gate.weight",
+        "bias": "blk.{i}.ssm_out_gate.bias",
+        "out": "g"
+      },
+      {
+        "op": "gelu",
+        "in": [
+          "g"
+        ],
+        "approx": "tanh",
+        "out": "g"
+      },
+      {
+        "op": "mul",
+        "in": [
+          "y",
+          "g"
+        ],
+        "out": "y"
+      },
+      {
+        "op": "add",
+        "in": [
+          "x",
+          "y"
+        ],
+        "out": "x"
+      }
+    ]
+  },
+  "head": {
+    "nodes": [
+      {
+        "op": "layernorm",
+        "in": [
+          "x"
+        ],
+        "weight": "output_norm.weight",
+        "bias": "output_norm.bias",
+        "eps": 1e-05,
+        "out": "h"
+      },
+      {
+        "op": "linear",
+        "in": [
+          "h"
+        ],
+        "weight": "output.weight",
+        "bias": "output.bias",
+        "out": "logits"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "name": "logits",
+      "kind": "logits"
+    }
+  ],
+  "modes": {
+    "prefill": "all nodes over T tokens; each recurrent op scans t = 0..T-1 in order",
+    "decode": "the same graph with T = 1; each recurrent op applies one update to its recurrent state"
+  }
+}
