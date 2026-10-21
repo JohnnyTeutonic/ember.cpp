@@ -8,7 +8,7 @@ import { createLlama } from './webgpu/llama_webgpu.js';
 const out = document.getElementById('out');
 const argmax = (a) => { let b = 0; for (let i = 1; i < a.length; i++) if (a[i] > a[b]) b = i; return b; };
 try {
-  const fx = await (await fetch('greedy.json')).json();
+  const fx = await (await fetch(new URL(location.href).searchParams.get('fixture') || 'greedy.json')).json();
   const model = new URL(location.href).searchParams.get('model') || 'chat_sftfinal_v3.gguf';
   const buf = await (await fetch(model)).arrayBuffer();
   const adapter = await navigator.gpu.requestAdapter();

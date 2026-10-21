@@ -128,6 +128,77 @@ var<workgroup> part: array<f32, ${WG}>;
     o[qo + d] = acc / zz;
   }
 }`,
+  // Mixture of experts, as ember's moe_ffn_f32_cpu (utils.cpp): top-k router logits (ties to the
+  // lower index), gates = a softmax over the k selected logits (renorm), experts in ascending index.
+  moe_select: `
+struct P { E: u32, k: u32, _a: u32, _b: u32 };
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(1) var<storage, read> r: array<f32>;
+@group(0) @binding(2) var<storage, read_write> sel: array<u32>;
+@group(0) @binding(3) var<storage, read_write> gate: array<f32>;
+@compute @workgroup_size(1) fn main() {
+  var taken: array<bool, 256>;
+  var pick: array<u32, 16>;
+  for (var j = 0u; j < p.k; j++) {
+    var best = 0xffffffffu;
+    for (var e = 0u; e < p.E; e++) {
+      if (!taken[e] && (best == 0xffffffffu || r[e] > r[best])) { best = e; }
+    }
+    taken[best] = true; pick[j] = best;
+  }
+  for (var a = 1u; a < p.k; a++) {                 // ascending expert index
+    let v = pick[a]; var b = a;
+    while (b > 0u && pick[b - 1u] > v) { pick[b] = pick[b - 1u]; b--; }
+    pick[b] = v;
+  }
+  var mx = -3.4e38;
+  for (var j = 0u; j < p.k; j++) { mx = max(mx, r[pick[j]]); }
+  var z = 0.0;
+  for (var j = 0u; j < p.k; j++) { z += exp(r[pick[j]] - mx); }
+  for (var j = 0u; j < p.k; j++) { sel[j] = pick[j]; gate[j] = exp(r[pick[j]] - mx) / z; }
+}`,
+  matvec_exp: `
+struct P { rows: u32, cols: u32, _a: u32, _b: u32 };
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(1) var<storage, read> sel: array<u32>;
+@group(0) @binding(2) var<storage, read> W: array<f32>;      // [E][rows][cols]
+@group(0) @binding(3) var<storage, read> x: array<f32>;
+@group(0) @binding(4) var<storage, read_write> y: array<f32>; // [k][rows]
+var<workgroup> part: array<f32, ${WG}>;
+@compute @workgroup_size(${WG}) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_id) l: vec3u) {
+  let row = wg.x; let j = wg.y;
+  let base = (sel[j] * p.rows + row) * p.cols;
+  var s = 0.0;
+  for (var c = l.x; c < p.cols; c += ${WG}u) { s += W[base + c] * x[c]; }
+  part[l.x] = s;
+  workgroupBarrier();
+  for (var k = ${WG / 2}u; k > 0u; k >>= 1u) { if (l.x < k) { part[l.x] += part[l.x + k]; } workgroupBarrier(); }
+  if (l.x == 0u) { y[j * p.rows + row] = part[0]; }
+}`,
+  moe_down: `
+struct P { rows: u32, cols: u32, k: u32, _a: u32 };
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(1) var<storage, read> sel: array<u32>;
+@group(0) @binding(2) var<storage, read> gate: array<f32>;
+@group(0) @binding(3) var<storage, read> W: array<f32>;      // [E][rows = d][cols = d_ff]
+@group(0) @binding(4) var<storage, read> h: array<f32>;      // [k][d_ff]
+@group(0) @binding(5) var<storage, read_write> x: array<f32>; // residual stream, += sum_j gate_j * down_j h_j
+var<workgroup> part: array<f32, ${WG}>;
+@compute @workgroup_size(${WG}) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_id) l: vec3u) {
+  let row = wg.x;
+  var acc = 0.0;
+  for (var j = 0u; j < p.k; j++) {
+    let base = (sel[j] * p.rows + row) * p.cols;
+    var s = 0.0;
+    for (var c = l.x; c < p.cols; c += ${WG}u) { s += W[base + c] * h[j * p.cols + c]; }
+    part[l.x] = s;
+    workgroupBarrier();
+    for (var k = ${WG / 2}u; k > 0u; k >>= 1u) { if (l.x < k) { part[l.x] += part[l.x + k]; } workgroupBarrier(); }
+    acc += gate[j] * part[0];
+    workgroupBarrier();
+  }
+  if (l.x == 0u) { x[row] = x[row] + acc; }
+}`,
   swiglu: `
 struct P { n: u32, _a: u32, _b: u32, _c: u32 };
 @group(0) @binding(0) var<uniform> p: P;
@@ -145,7 +216,11 @@ export async function createLlama(device, ggufBuffer) {
   const nh = M['llama.attention.head_count'], nkv = M['llama.attention.head_count_kv'] || nh;
   const eps = M['llama.attention.layer_norm_rms_epsilon'], theta = M['llama.rope.freq_base'] || 10000;
   const ctx = Math.min(M['llama.context_length'], MAX_CTX), hd = d / nh, kvd = nkv * hd;
-  if (g.tensors['blk.0.ffn_gate_inp.weight']) throw new Error('WebGPU path: mixture-of-experts not supported yet');
+  const moe = !!g.tensors['blk.0.ffn_gate_inp.weight'];
+  const E = moe ? g.tensors['blk.0.ffn_gate_exps.weight'].dims[2] : 0;
+  const topk = moe ? (M['llama.expert_used_count'] || 2) : 0;
+  const ffE = moe ? g.tensors['blk.0.ffn_gate_exps.weight'].dims[1] : 0;   // per-expert d_ff
+  if (moe && (E > 256 || topk > 16)) throw new Error('WebGPU path: at most 256 experts, top-16');
   const vocab = g.tensors['token_embd.weight'].dims[1];
   const S = GPUBufferUsage;
   const storage = (arr) => {
@@ -177,12 +252,16 @@ export async function createLlama(device, ggufBuffer) {
     layers: Array.from({ length: L }, (_, l) => ({
       attnNorm: weight(`blk.${l}.attn_norm.weight`), q: weight(`blk.${l}.attn_q.weight`), k: weight(`blk.${l}.attn_k.weight`),
       v: weight(`blk.${l}.attn_v.weight`), o: weight(`blk.${l}.attn_output.weight`), ffnNorm: weight(`blk.${l}.ffn_norm.weight`),
-      gate: weight(`blk.${l}.ffn_gate.weight`), up: weight(`blk.${l}.ffn_up.weight`), down: weight(`blk.${l}.ffn_down.weight`),
+      ...(moe ? { router: weight(`blk.${l}.ffn_gate_inp.weight`), gateE: weight(`blk.${l}.ffn_gate_exps.weight`),
+                  upE: weight(`blk.${l}.ffn_up_exps.weight`), downE: weight(`blk.${l}.ffn_down_exps.weight`) }
+              : { gate: weight(`blk.${l}.ffn_gate.weight`), up: weight(`blk.${l}.ffn_up.weight`),
+                  down: weight(`blk.${l}.ffn_down.weight`) }),
       kc: scratch(ctx * kvd), vc: scratch(ctx * kvd),
     })),
   };
   const A = { x: scratch(d), xn: scratch(d), q: scratch(d), k: scratch(kvd), v: scratch(kvd), att: scratch(d),
-              g: scratch(ff), u: scratch(ff), logits: scratch(vocab) };
+              g: scratch(moe ? topk * ffE : ff), u: scratch(moe ? topk * ffE : ff), logits: scratch(vocab),
+              r: scratch(Math.max(E, 4)), sel: scratch(16), gate: scratch(16) };
   const readback = device.createBuffer({ size: 4 * vocab, usage: S.MAP_READ | S.COPY_DST });
   const step = device.createBuffer({ size: 16, usage: S.UNIFORM | S.COPY_DST });
 
@@ -196,6 +275,22 @@ export async function createLlama(device, ggufBuffer) {
   const pMat = (rows, cols, acc) => uniform(u4(rows, cols, acc ? 1 : 0));
   const pQ = pMat(d, d, false), pKV = pMat(kvd, d, false), pO = pMat(d, d, true), pUp = pMat(ff, d, false),
         pDown = pMat(d, ff, true), pOut = pMat(vocab, d, false), pEmb = step;
+  const pRouter = moe ? pMat(E, d, false) : null, pSel = moe ? uniform(u4(E, topk)) : null,
+        pExp = moe ? uniform(u4(ffE, d)) : null, pMoeDown = moe ? uniform(u4(d, ffE, topk)) : null,
+        pFFk = moe ? uniform(u4(topk * ffE)) : null;
+  const ffnSteps = (lw) => moe ? [
+    ['matvec', bind('matvec', [pRouter, lw.router, A.xn, A.r]), E],
+    ['moe_select', bind('moe_select', [pSel, A.r, A.sel, A.gate]), 1],
+    ['matvec_exp', bind('matvec_exp', [pExp, A.sel, lw.gateE, A.xn, A.g]), [ffE, topk]],
+    ['matvec_exp', bind('matvec_exp', [pExp, A.sel, lw.upE, A.xn, A.u]), [ffE, topk]],
+    ['swiglu', bind('swiglu', [pFFk, A.g, A.u]), Math.ceil(topk * ffE / WG)],
+    ['moe_down', bind('moe_down', [pMoeDown, A.sel, A.gate, lw.downE, A.g, A.x]), d],
+  ] : [
+    ['matvec', bind('matvec', [pUp, lw.gate, A.xn, A.g]), ff],
+    ['matvec', bind('matvec', [pUp, lw.up, A.xn, A.u]), ff],
+    ['swiglu', bind('swiglu', [pFF, A.g, A.u]), Math.ceil(ff / WG)],
+    ['matvec', bind('matvec', [pDown, lw.down, A.g, A.x]), d],
+  ];
 
   // The per-token program: [pipeline, bind group, workgroups] in order.
   const prog = [['embed', bind('embed', [pEmb, W.embd, A.x]), Math.ceil(d / WG)]];
@@ -208,10 +303,7 @@ export async function createLlama(device, ggufBuffer) {
               ['attention', bind('attention', [step, pHeads, A.q, lw.kc, lw.vc, A.att]), nh],
               ['matvec', bind('matvec', [pO, lw.o, A.att, A.x]), d],
               ['rmsnorm', bind('rmsnorm', [pNorm, A.x, lw.ffnNorm, A.xn]), 1],
-              ['matvec', bind('matvec', [pUp, lw.gate, A.xn, A.g]), ff],
-              ['matvec', bind('matvec', [pUp, lw.up, A.xn, A.u]), ff],
-              ['swiglu', bind('swiglu', [pFF, A.g, A.u]), Math.ceil(ff / WG)],
-              ['matvec', bind('matvec', [pDown, lw.down, A.g, A.x]), d]);
+              ...ffnSteps(lw));
   }
   prog.push(['rmsnorm', bind('rmsnorm', [pNorm, A.x, W.outNorm, A.xn]), 1],
             ['matvec', bind('matvec', [pOut, W.out, A.xn, A.logits]), vocab]);
@@ -219,14 +311,18 @@ export async function createLlama(device, ggufBuffer) {
   function submitToken(token, pos, wantLogits) {
     device.queue.writeBuffer(step, 0, u4(pos, token, d));
     const enc = device.createCommandEncoder(), pass = enc.beginComputePass();
-    for (const [k, bg, n] of prog) { pass.setPipeline(pipe[k]); pass.setBindGroup(0, bg); pass.dispatchWorkgroups(n); }
+    for (const [k, bg, n] of prog) {
+      pass.setPipeline(pipe[k]); pass.setBindGroup(0, bg);
+      if (Array.isArray(n)) pass.dispatchWorkgroups(n[0], n[1]); else pass.dispatchWorkgroups(n);
+    }
     pass.end();
     if (wantLogits) enc.copyBufferToBuffer(A.logits, 0, readback, 0, 4 * vocab);
     device.queue.submit([enc.finish()]);
   }
 
   return {
-    config: { d, L, ff, nh, nkv, hd, ctx, vocab, eps, theta, dispatchesPerToken: prog.length },
+    config: { d, L, ff: moe ? ffE : ff, nh, nkv, hd, ctx, vocab, eps, theta, experts: E, topk,
+              dispatchesPerToken: prog.length },
     // Run tokens at positions startPos.. and return the next-token logits after the last one.
     async forward(tokens, startPos) {
       if (startPos + tokens.length > ctx) throw new Error('past the context');
