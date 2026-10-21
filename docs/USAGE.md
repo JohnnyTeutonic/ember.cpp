@@ -154,6 +154,21 @@ the common tasks; `./manage.sh help` lists every option.
 PowerShell takes the same commands with `-BuildType`, `-Cuda`, `-ModelDir`, `-TokenizerPath`,
 `-Threads`, `-NGpuLayers`, `-Gpu` / `-Cpu`.
 
+## Releasing a chat model
+
+`tools/release_chat.py build` takes a paperkiln spec and checkpoint through five stages:
+1. GGUF export (f32 and `q8_0_all`).
+2. The greedy parity gate against `mtstudio chat` on CPU (and CUDA). The Q8 file is gated on
+   first-token logits.
+3. paperkiln's simple-QA and chat evals.
+4. The WebAssembly build, with its own parity check.
+5. The static Space folder.
+
+Every stage writes its receipt to `OUT/release.json`, a finished stage is skipped on a rerun,
+and every heavy stage takes the workspace's `.cpu_lock` first. `release_chat.py publish`
+uploads the Space only with `--confirm ember-chat` and a build whose every stage passed. It
+reads just `HF_TOKEN` from the env file named on the command line.
+
 ## PyTorch reference
 
 `pytorch/` holds a plain PyTorch implementation of the Llama 2 / TinyLlama architecture for
