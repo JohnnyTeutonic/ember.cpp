@@ -1,0 +1,9 @@
+{"label": "chat_sftfinal_v3_llama_path", "prompts": 40, "ids_same_as_338b24a": 40, "reply_same_as_338b24a": 40, "reply_same_as_mtstudio": 1}
+{"label": "chat_sftfinal_v3_interpreter", "prompts": 40, "ids_same_as_338b24a": 40, "reply_same_as_338b24a": 40, "reply_same_as_mtstudio": 1}
+{"label": "moe_tiny_v3", "prompts": 40, "ids_same_as_338b24a": 40, "reply_same_as_338b24a": 40, "reply_same_as_mtstudio": 40}
+{"label": "gpt2_tiny", "prompts": 40, "ids_same_as_338b24a": 40, "reply_same_as_338b24a": 40, "reply_same_as_mtstudio": 40}
+{"label": "kimi_tiny", "prompts": 40, "ids_same_as_338b24a": 40, "reply_same_as_338b24a": 40, "reply_same_as_mtstudio": 40}
+{"label": "mamba_tiny", "prompts": 40, "ids_same_as_338b24a": 40, "reply_same_as_338b24a": 40, "reply_same_as_mtstudio": 40}
+{"label": "attnres_tiny", "prompts": 40, "ids_same_as_338b24a": 40, "reply_same_as_338b24a": 40, "reply_same_as_mtstudio": 40}
+{"label": "flex_highway_tiny", "prompts": 40, "ids_same_as_338b24a": 40, "reply_same_as_338b24a": 40, "reply_same_as_mtstudio": 40}
+{"label": "swa_tiny", "prompts": 40, "ids_same_as_338b24a": 40, "reply_same_as_338b24a": 40, "reply_same_as_mtstudio": 11}

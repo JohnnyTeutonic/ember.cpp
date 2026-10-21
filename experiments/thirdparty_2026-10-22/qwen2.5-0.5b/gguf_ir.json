@@ -1,0 +1,241 @@
+{
+ "_comment": "built by tools/gguf_ir.py from general.architecture = qwen2 and its metadata",
+ "ir_version": 0,
+ "family_hint": "qwen2",
+ "model": {
+  "vocab": 151936,
+  "d": 896,
+  "n_layers": 24,
+  "ctx": 8192,
+  "dtype": "f32"
+ },
+ "tokenizer": {
+  "type": "gguf",
+  "source": "gguf",
+  "specials": {
+   "eot": 151645
+  },
+  "bos": 151643
+ },
+ "inputs": [
+  {
+   "name": "tokens",
+   "kind": "token_ids"
+  },
+  {
+   "name": "pos",
+   "kind": "positions"
+  }
+ ],
+ "embed": {
+  "nodes": [
+   {
+    "op": "embedding",
+    "in": [
+     "tokens"
+    ],
+    "weight": "token_embd.weight",
+    "out": "x"
+   }
+  ]
+ },
+ "block": {
+  "repeat": 24,
+  "state": [
+   {
+    "name": "kv",
+    "kind": "kv",
+    "heads": 14,
+    "kv_heads": 2,
+    "head_dim": 64,
+    "max_len": 8192,
+    "window": 0,
+    "sinks": 0,
+    "dtype": "f32"
+   }
+  ],
+  "nodes": [
+   {
+    "op": "rmsnorm",
+    "in": [
+     "x"
+    ],
+    "weight": "blk.{i}.attn_norm.weight",
+    "eps": 1e-06,
+    "out": "h"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h"
+    ],
+    "weight": "blk.{i}.attn_q.weight",
+    "bias": "blk.{i}.attn_q.bias",
+    "out": "q"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h"
+    ],
+    "weight": "blk.{i}.attn_k.weight",
+    "bias": "blk.{i}.attn_k.bias",
+    "out": "k"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h"
+    ],
+    "weight": "blk.{i}.attn_v.weight",
+    "bias": "blk.{i}.attn_v.bias",
+    "out": "v"
+   },
+   {
+    "op": "rope",
+    "in": [
+     "q",
+     "k",
+     "pos"
+    ],
+    "heads": 14,
+    "kv_heads": 2,
+    "head_dim": 64,
+    "n_rot": 64,
+    "theta": 1000000.0,
+    "rope_heads": "all",
+    "pairing": "neox",
+    "out": [
+     "q",
+     "k"
+    ]
+   },
+   {
+    "op": "attention",
+    "in": [
+     "q",
+     "k",
+     "v"
+    ],
+    "state": "kv",
+    "heads": 14,
+    "kv_heads": 2,
+    "head_dim": 64,
+    "causal": true,
+    "scale": 0.125,
+    "window": 0,
+    "sinks": 0,
+    "softmax": "max-shifted, masked entries exactly zero",
+    "out": "a"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "a"
+    ],
+    "weight": "blk.{i}.attn_output.weight",
+    "bias": null,
+    "out": "o"
+   },
+   {
+    "op": "add",
+    "in": [
+     "x",
+     "o"
+    ],
+    "out": "x"
+   },
+   {
+    "op": "rmsnorm",
+    "in": [
+     "x"
+    ],
+    "weight": "blk.{i}.ffn_norm.weight",
+    "eps": 1e-06,
+    "out": "h2"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h2"
+    ],
+    "weight": "blk.{i}.ffn_gate.weight",
+    "bias": null,
+    "out": "g"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h2"
+    ],
+    "weight": "blk.{i}.ffn_up.weight",
+    "bias": null,
+    "out": "u"
+   },
+   {
+    "op": "silu",
+    "in": [
+     "g"
+    ],
+    "out": "g"
+   },
+   {
+    "op": "mul",
+    "in": [
+     "g",
+     "u"
+    ],
+    "out": "gu"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "gu"
+    ],
+    "weight": "blk.{i}.ffn_down.weight",
+    "bias": null,
+    "out": "f"
+   },
+   {
+    "op": "add",
+    "in": [
+     "x",
+     "f"
+    ],
+    "out": "x"
+   }
+  ]
+ },
+ "head": {
+  "nodes": [
+   {
+    "op": "rmsnorm",
+    "in": [
+     "x"
+    ],
+    "weight": "output_norm.weight",
+    "eps": 1e-06,
+    "out": "h"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h"
+    ],
+    "weight": "output.weight",
+    "bias": null,
+    "out": "logits"
+   }
+  ]
+ },
+ "outputs": [
+  {
+   "name": "logits",
+   "kind": "logits"
+  }
+ ],
+ "modes": {
+  "prefill": "all nodes over T tokens",
+  "decode": "the same graph with T = 1, attention reads and appends to the kv state, a recurrent op reads and replaces its recurrent state"
+ }
+}

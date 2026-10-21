@@ -37,10 +37,13 @@ flowchart LR
 | Kimi linear attention (recurrent state) | IR interpreter | ✅ | ✅ | ✅ | |
 | Mamba-style state-space scan | IR interpreter | ✅ | ✅ | ✅ | |
 | SRD, AttnRes, flex (highway, plain residual) | IR interpreter | ✅ | ✅ | ✅ | |
+| Qwen2.5, Qwen3 (third-party llama.cpp GGUF; f16, bf16, Q8_0) | IR built from the GGUF's metadata | ✅ | CPU fallback | | |
 
 Every paperkiln family is gated the same way: **greedy replies identical to paperkiln's own
 sampler on 40 frozen prompts**, on each backend, including a trained 70M mixture-of-experts
-model. The receipts are in [`experiments/`](experiments/).
+model. Third-party families are gated against HF transformers on the same GGUF: Qwen2.5-0.5B-Instruct
+and Qwen3-0.6B give greedy replies identical to HF on 40/40 prompts, with ember's own tokeniser and
+ChatML template. The receipts are in [`experiments/`](experiments/).
 
 **Highlights**
 
@@ -154,6 +157,13 @@ flowchart LR
 `EMBER_INTERPRETER=1` runs a llama model through the interpreter too, which is how the
 interpreter is checked against the tuned path.
 
+A third-party GGUF with no `paperkiln.ir` whose `general.architecture` is `qwen2` or `qwen3` gets
+its IR built from the llama.cpp metadata at load (NEOX RoPE, q/k/v biases or per-head q/k norm,
+grouped-query attention) and runs on the interpreter, with Qwen's tokeniser and ChatML template:
+`./build/tinyllama_server qwen2.5-0.5b-instruct-fp16.gguf 8080 127.0.0.1 ./www 0`.
+`EMBER_IR_CTX=N` caps the KV state, since these files declare their full trained context. Any other
+architecture without an IR is refused at load, naming it.
+
 ## Quick start: check a model against paperkiln
 
 ```bash
@@ -165,11 +175,14 @@ python3 tools/quantize_gguf.py model.gguf model_q8.gguf --output-q8 --embed-q8  
 
 ## Landing next
 
-All of these are built or written; each is waiting on a model that is still training or on its gate run:
+In progress, or built and waiting on a model that is still training or on its gate run:
 - **A llama.cpp-compatible vocabulary.** paperkiln's next base model uses the Llama 3 scheme
   (16,384 tokens), so llama.cpp, Ollama and LM Studio can tokenise it too. ember's chat mode
   already loads that form, with paperkiln's exact Llama 3 encoder vendored. Its 40/40 gate runs
   on the first model trained with it.
+- **More third-party architectures through the IR.** After Qwen2.5 and Qwen3: Gemma 3, GPT-2 and
+  Pythia, Mistral's sliding window and Mamba, each gated 40/40 against HF transformers. CUDA and
+  WebAssembly kernels for NEOX RoPE and per-head RMSNorm come with them.
 - **New chat models.** These are training on Colab: a 70M mixture-of-experts fine-tune, a d768
   L12 base and its fine-tune, and next a base trained on FineWeb-Edu plus conversational text.
   Each is released through `release_chat.py` with the WebGPU page.
