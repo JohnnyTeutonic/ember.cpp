@@ -184,6 +184,8 @@ class TinyLlamaSession {
   // <|assistant|> (the marker is cut), and strips the reply's leading and
   // trailing whitespace. Repetition penalty is off, matching mtstudio chat.
   bool is_bpe() const { return bpe_ != nullptr; }
+  // The chat format of chat mode (template and stop ids; chat_tokenizer.h), or nullptr.
+  const ember::ChatFormat* chat_format() const { return bpe_ ? &bpe_->format() : nullptr; }
   int bpe_token_count(const std::string& text) const {
     return bpe_ ? static_cast<int>(bpe_->encode(text).size()) : 0;
   }

@@ -1,8 +1,9 @@
 // ember chat in the browser: ember.cpp's own TinyLlamaSession compiled to
 // WebAssembly (deploy/wasm/build.sh), so a free static page can serve the
 // paperkiln BPE chat model with no server. Same contract as the server's
-// /chat for BPE models (server.cpp): the prompt is exactly the SFT template,
-// <|user|>U<|assistant|>A<|endoftext|> per past turn then <|user|>U<|assistant|>,
+// /chat for BPE models (server.cpp): the prompt is exactly the model's chat
+// format (chat_tokenizer.h; paperkiln's SFT template is
+// <|user|>U<|assistant|>A<|endoftext|> per past turn then <|user|>U<|assistant|>),
 // with the oldest turns dropped until prompt + max_new_tokens fits the
 // context; a request's seed reseeds the sampler before generating.
 //
@@ -67,13 +68,8 @@ Request parse_request(const json& r) {
         for (const auto& h : r["history"]) turns.emplace_back(h.value("user", ""), h.value("assistant", ""));
     // Public-page cap: the NEWEST 16 turns (the contract drops the oldest).
     if (turns.size() > 16) turns.erase(turns.begin(), turns.end() - 16);
-    const std::string tail = "<|user|>" + user + "<|assistant|>";
-    auto build = [&](size_t from) {
-        std::string p;
-        for (size_t i = from; i < turns.size(); ++i)
-            p += "<|user|>" + turns[i].first + "<|assistant|>" + turns[i].second + "<|endoftext|>";
-        return p + tail;
-    };
+    const ember::ChatFormat& fmt = *g_session->chat_format();
+    auto build = [&](size_t from) { return fmt.prompt(turns, from, user); };
     q.ctx = g_session->get_config().max_position_embeddings;
     size_t from = 0;
     q.prompt = build(from);

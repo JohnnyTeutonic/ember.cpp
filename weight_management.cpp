@@ -752,7 +752,7 @@ void TinyLlamaModel::free_layer_gpu_weights(int layer_idx) {
 // GGUF tensors into host-side model fields). It was previously trapped inside
 // the HAS_CUDA block opened far above, which broke CPU-only linking.
 // Load-time dequantisation of the formats ember has no kernels for: ggml's
-// legacy 32-wide blocks (Q4_0, Q4_1, Q5_0, Q5_1) and F16, written straight
+// legacy 32-wide blocks (Q4_0, Q4_1, Q5_0, Q5_1), F16 and BF16, written straight
 // into the f32 vector in the tensor's own element order. Block layouts as in
 // ggml-common.h: Q4_0 {d, qs[16]}, Q4_1 {d, m, qs[16]}, Q5_0 {d, qh[4], qs[16]},
 // Q5_1 {d, m, qh[4], qs[16]}; element j of a block uses the low nibble of qs[j],
@@ -762,7 +762,7 @@ void TinyLlamaModel::free_layer_gpu_weights(int layer_idx) {
 bool dequant_legacy_to_f32(const GGUFTensorInfo& info, const uint8_t* src, std::vector<float>& out) {
   const GGMLType t = info.type;
   const size_t n = info.num_elements;
-  if (t == GGMLType::GGML_TYPE_F16) {
+  if (t == GGMLType::GGML_TYPE_F16 || t == GGMLType::GGML_TYPE_BF16) {
     out.resize(n);
     dequant_span_to_f32(t, src, 0, n, out.data());
     return true;
@@ -778,12 +778,35 @@ bool dequant_legacy_to_f32(const GGUFTensorInfo& info, const uint8_t* src, std::
   return true;
 }
 
+// Every f16 value as f32, built once from fp16_to_fp32 itself (so a lookup equals the call bit for
+// bit): the interpreter dequantises an F16 weight row by row on every call, so a large F16 model
+// converts every weight once per decode step.
+static const float* fp16_table() {
+  static const std::vector<float> table = [] {
+    std::vector<float> t(65536);
+    for (uint32_t h = 0; h < 65536; ++h) t[h] = fp16_to_fp32(static_cast<uint16_t>(h), false);
+    return t;
+  }();
+  return table.data();
+}
+
 bool dequant_span_to_f32(GGMLType t, const uint8_t* src, size_t first, size_t n, float* out) {
   if (t == GGMLType::GGML_TYPE_F16) {
+    const float* table = fp16_table();
+    const uint8_t* p = src + 2 * first;
+    for (size_t i = 0; i < n; ++i) {
+      uint16_t h;
+      std::memcpy(&h, p + 2 * i, 2);
+      out[i] = table[h];
+    }
+    return true;
+  }
+  if (t == GGMLType::GGML_TYPE_BF16) {  // the top 16 bits of an f32: exact
     for (size_t i = 0; i < n; ++i) {
       uint16_t h;
       std::memcpy(&h, src + 2 * (first + i), 2);
-      out[i] = fp16_to_fp32(h, false);
+      const uint32_t bits = static_cast<uint32_t>(h) << 16;
+      std::memcpy(out + i, &bits, 4);
     }
     return true;
   }

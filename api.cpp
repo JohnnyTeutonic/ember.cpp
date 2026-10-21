@@ -540,18 +540,42 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
 
   // paperkiln chat models: their vocabulary ("bpe" with id-pair merges, or the llama.cpp-compatible
   // "gpt2"/"llama-bpe" form with the chat specials at ids 0-3) goes through the vendored paperkiln
-  // tokenizers in chat_tokenizer.h (see is_bpe()); any other GGUF keeps ember's own tokenizers.
+  // tokenizers in chat_tokenizer.h (see is_bpe()); so do Qwen2/Qwen3 GGUFs ("gpt2"/"qwen2", ChatML).
+  // Any other GGUF keeps ember's own tokenizers.
   {
     std::string ext = std::filesystem::path(model_path_arg).extension().string();
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
     if (ext == ".gguf") {
-      microtorch::bpe::GgufTokenizer g = microtorch::bpe::read_gguf_tokenizer(model_path_arg);
+      std::string arch, chat_template;
+      microtorch::bpe::GgufTokenizer g;
+      bool have = false;
+      if (const GGUFData* gd = model_->get_gguf_data()) {
+        auto str = [&](const char* key) {
+          auto it = gd->metadata.find(key);
+          const std::string* s = it == gd->metadata.end() ? nullptr : std::get_if<std::string>(&it->second);
+          return s ? *s : std::string();
+        };
+        arch = str("general.architecture");
+        chat_template = str("tokenizer.chat_template");
+        // A Qwen vocabulary comes from the metadata already parsed: read_gguf_tokenizer reads the
+        // whole file into memory (1.3 GB for Qwen2.5-0.5B f16). paperkiln files keep that reader.
+        if (str("tokenizer.ggml.pre") == "qwen2" && !gd->tokenizer_tokens.empty()) {
+          g.model = str("tokenizer.ggml.model");
+          g.pre = "qwen2";
+          g.tokens = gd->tokenizer_tokens;
+          g.merges = gd->tokenizer_merges;
+          g.token_type.assign(gd->tokenizer_token_types.begin(), gd->tokenizer_token_types.end());
+          have = true;
+        }
+      }
+      if (!have) g = microtorch::bpe::read_gguf_tokenizer(model_path_arg);
       const size_t n_merges = g.merges.size();
-      bpe_ = ember::make_chat_tokenizer(std::move(g));
+      bpe_ = ember::make_chat_tokenizer(std::move(g), arch, chat_template);
       if (bpe_) {
         repetition_penalty_ = 1.0f;  // mtstudio chat applies none
         Logger::info(std::string("Chat tokenizer (") + bpe_->kind() + "): " + std::to_string(bpe_->size()) +
-                     " tokens, " + std::to_string(n_merges) + " merges (chat mode)");
+                     " tokens, " + std::to_string(n_merges) + " merges (chat mode, " + bpe_->format().name +
+                     " template)");
       }
     }
   }
@@ -704,10 +728,11 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   // BPE chat models take no BOS (the SFT template starts at <|user|>).
   std::vector<int> tokens = bpe_ ? bpe_->encode(final_prompt_for_encoding)
                                  : tokenizer_->encode(final_prompt_for_encoding, true, false, Tokenizer::PreTokenizeMethod::DEFAULT); // add_bos=true, add_eos=false (EOS handled by loop)
-  // Stop tokens: <|endoftext|> always; in BPE chat mode also a generated
-  // <|user|> or <|assistant|> (the model starting the next turn).
+  // Stop tokens: in chat mode the chat format's (paperkiln: <|endoftext|>, or a
+  // generated <|user|> or <|assistant|>, the model starting the next turn;
+  // ChatML: <|im_end|> or <|endoftext|>), else the GGUF's eos.
   auto is_stop = [&](int id) {
-    return bpe_ ? (id == 1 || id == 2 || id == 3) : id == eos_token_id_;
+    return bpe_ ? bpe_->format().is_stop(id) : id == eos_token_id_;
   };
   auto decode_one = [&](int id) {
     return bpe_ ? bpe_->decode({id}) : tokenizer_->decode({id}, false);
@@ -1202,7 +1227,7 @@ if (prefill_enabled) {
   if (bpe_) {
     std::vector<int> out = generated_token_ids;
     if (!out.empty() && is_stop(out.back())) {
-      last_stop_reason_ = out.back() == 1 ? "eos" : "turn";
+      last_stop_reason_ = bpe_->format().is_eos(out.back()) ? "eos" : "turn";
       last_stop_id_ = out.back();
       out.pop_back();
     }
@@ -1247,7 +1272,7 @@ int TinyLlamaSession::sample_step(std::vector<float>& logits, const std::vector<
   if (!bpe_) throw std::runtime_error("sample_step: chat models only");
   std::vector<char> seen;
   apply_contract_penalty(logits, context, std::vector<int>(), repeat_penalty_, repeat_last_n_,
-                         [](int id) { return id == 1 || id == 2 || id == 3; }, seen);
+                         [this](int id) { return bpe_->format().is_stop(id); }, seen);
   return sample_top_k_top_p_temperature(logits, temperature, top_k, top_p, rng_);
 }
 

@@ -3,6 +3,8 @@
 // tools/llama3_vocab_check.py to compare with HF tokenizers' tokenizer.json.
 //   g++ -O2 -std=c++17 -I. tools/llama3_vocab_check.cpp -o llama3_vocab_check
 //   ./llama3_vocab_check VOCAB.gguf < texts.nul
+//   ./llama3_vocab_check QWEN.gguf qwen2 < texts.nul    (a Qwen2/Qwen3 vocabulary: ARCH selects ChatML;
+//                                                         tools/thirdparty_tokenizer_check.py)
 #include <iostream>
 #include <iterator>
 #include <sstream>
@@ -11,11 +13,11 @@
 #include "chat_tokenizer.h"
 
 int main(int argc, char** argv) {
-    if (argc != 2) {
-        std::cerr << "usage: llama3_vocab_check VOCAB.gguf < NUL-separated texts\n";
+    if (argc != 2 && argc != 3) {
+        std::cerr << "usage: llama3_vocab_check VOCAB.gguf [ARCH] < NUL-separated texts\n";
         return 2;
     }
-    auto tok = ember::make_chat_tokenizer(microtorch::bpe::read_gguf_tokenizer(argv[1]));
+    auto tok = ember::make_chat_tokenizer(microtorch::bpe::read_gguf_tokenizer(argv[1]), argc == 3 ? argv[2] : "");
     if (!tok) {
         std::cerr << argv[1] << ": not a paperkiln chat vocabulary\n";
         return 1;

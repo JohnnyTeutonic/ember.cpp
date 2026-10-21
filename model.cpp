@@ -195,6 +195,10 @@ TinyLlamaModel::TinyLlamaModel(const ModelConfig& initial_config,
             config_from_gguf.num_hidden_layers = j.at("block").at("repeat").get<int>();
             config_from_gguf.vocab_size = m.at("vocab").get<int>();
             config_from_gguf.max_position_embeddings = m.value("ctx", config_from_gguf.max_position_embeddings);
+            // EMBER_IR_CTX caps it as it caps the interpreter's kv state (graph_ir.h).
+            if (const char* c = std::getenv("EMBER_IR_CTX"))
+              if (std::atoi(c) > 0)
+                config_from_gguf.max_position_embeddings = std::min(config_from_gguf.max_position_embeddings, std::atoi(c));
             // Head counts from the kv state; without one (recurrent-only
             // families), from linear attention's [heads, head_dim] state, else
             // one head of width d (the llama-side KV cache is then unused).
