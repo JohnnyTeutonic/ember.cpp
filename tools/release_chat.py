@@ -82,12 +82,17 @@ class Receipt:
 
 
 class CpuLock:
-    """The workspace's one-heavy-job rule (AGENTS.md, "Shared CPU budget")."""
+    """The workspace's CPU rule (AGENTS.md, "Shared CPU budget"). Under scripts/cpu_budget.py (which
+    sets CPU_BUDGET_CORES) the wrapper already holds this job's slots, so nothing more is taken; run
+    outside it, the stage falls back to the older one-heavy-job lock file."""
     def __init__(self, job, path=LOCK, wait_s=6 * 3600, poll_s=60):
         self.job, self.path, self.wait_s, self.poll_s = job, path, wait_s, poll_s
         self.line = f"ember release_chat.py: {job} (pid {os.getpid()}), started {now()}\n"
+        self.budgeted = bool(os.environ.get("CPU_BUDGET_CORES"))
 
     def __enter__(self):
+        if self.budgeted:
+            return self
         t0 = time.time()
         while True:
             try:
@@ -102,6 +107,8 @@ class CpuLock:
                 time.sleep(self.poll_s)
 
     def __exit__(self, *exc):
+        if self.budgeted:
+            return
         try:
             if open(self.path).read() == self.line:
                 os.remove(self.path)
@@ -197,6 +204,37 @@ def q8_check(f32_dump, q8_dump):
             "pass": top1 == len(f) and frac <= 0.01}
 
 
+def ckpt_spec(a, rc):
+    """The spec re-pointed at this release's files. `mtstudio chat` and the paperkiln evals have no
+    --from: they load <out_dir>/<name>.safetensors, read the run record beside it (events.jsonl,
+    which fixes rope_heads; bare weights without one are refused) and serve <out_dir>/<name>.gguf.
+    out/ckpt holds symlinks to --ckpt, its events.jsonl and the GGUFs the export stage wrote, so the
+    gate and evals test exactly the released files (no copies)."""
+    spec = json.load(open(a.spec))
+    stem = os.path.basename(a.ckpt)[:-len(".safetensors")]
+    d = os.path.join(a.out, "ckpt")
+    os.makedirs(d, exist_ok=True)
+    links = {f"{stem}.safetensors": os.path.abspath(a.ckpt)}
+    events = os.path.join(os.path.dirname(os.path.abspath(a.ckpt)), "events.jsonl")
+    if os.path.exists(events):
+        links["events.jsonl"] = events
+    elif not spec.get("arch", {}).get("rope_heads"):
+        sys.exit(f"{a.ckpt}: no events.jsonl beside it and the spec has no arch.rope_heads; state it "
+                 "(\"all\" for models trained since 18 Oct 2026)")
+    for kind, f in rc.data["stages"]["export"]["files"].items():
+        links[f"{stem}.gguf" if kind == "f32" else f"{stem}_q8_0_all.gguf"] = f["path"]
+    for name, target in links.items():
+        p = os.path.join(d, name)
+        if os.path.lexists(p):
+            os.remove(p)
+        os.symlink(target, p)
+    spec["out_dir"], spec["name"] = d, stem
+    path = os.path.join(a.out, "ckpt_spec.json")
+    with open(path, "w") as f:
+        json.dump(spec, f, indent=1)
+    return path
+
+
 # ---- stages ----------------------------------------------------------------
 def stage_export(a, rc):
     spec = json.load(open(a.spec))
@@ -231,7 +269,7 @@ def stage_gate(a, rc):
             info["reference"] = {"path": a.reference, "sha256": sha256(a.reference)}
         else:   # record mtstudio live, against ember CPU, with tools/chat_parity.py
             mts_env = dict(kv.split("=", 1) for kv in a.mts_env)
-            with Server([a.mtstudio, "chat", a.spec, "--port", str(PORT_MTS)], PORT_MTS, mts_env,
+            with Server([a.mtstudio, "chat", ckpt_spec(a, rc), "--port", str(PORT_MTS)], PORT_MTS, mts_env,
                         os.path.join(work, "mtstudio.log")), \
                  ember(a.ember_cpu, f32, PORT_EMBER, 0, log=os.path.join(work, "ember_cpu.log")):
                 rec = os.path.join(work, "live_cpu.jsonl")
@@ -262,18 +300,18 @@ def stage_gate(a, rc):
         with ember(a.ember_cpu, f32, PORT_EMBER, 0):
             cpu_ref = greedy_vs(PORT_EMBER, ref)
         with open(os.path.join(work, "ember_cpu_replies.jsonl"), "w") as f:
-            f.writelines(json.dumps({"i": x["i"], "prompt": x["prompt"], "ember": x["ember"]}) + "\n" for x in cpu_ref)
+            f.writelines(json.dumps({k: x[k] for k in ("i", "prompt", "ember", "ember_tokens", "ember_stop")}) + "\n" for x in cpu_ref)
         if a.space_model == "q8":
             with ember(a.ember_cpu, q8, PORT_EMBER, 0):
                 q8_ref = greedy_vs(PORT_EMBER, ref)
             with open(os.path.join(work, "ember_cpu_q8_replies.jsonl"), "w") as f:
-                f.writelines(json.dumps({"i": x["i"], "prompt": x["prompt"], "ember": x["ember"]}) + "\n" for x in q8_ref)
+                f.writelines(json.dumps({k: x[k] for k in ("i", "prompt", "ember", "ember_tokens", "ember_stop")}) + "\n" for x in q8_ref)
     ok = all(info[k]["pass"] for k in info if k.startswith("f32_")) and (a.space_model == "f32" or info["q8"]["pass"])
     rc.put("gate", ok, **info)
 
 
 def stage_evals(a, rc):
-    spec_tag = f"release={a.spec}"
+    spec_tag = f"release={ckpt_spec(a, rc)}"
     work = os.path.join(a.out, "evals")
     os.makedirs(work, exist_ok=True)
     info = {}
@@ -308,7 +346,7 @@ def stage_wasm(a, rc):
         res = os.path.join(work, "parity.json")
         r = run(["bash", "-c", f'source "{a.emsdk}/emsdk_env.sh" > /dev/null 2>&1; '
                                f'node "{REPO}/tools/wasm_parity.mjs" "{work}" "{model["path"]}" "{ref}" ember.js "{res}"'],
-                env={"REF_FIELD": "ember"})
+                env={"REF_FIELD": "ember", "REF_TOKENS": "ember_tokens", "REF_STOP": "ember_stop"})
     parity = read_json(res) or {}
     parity.pop("replies", None)
     rc.put("wasm", r.returncode == 0, heap=heap, parity=parity, ember_wasm_sha256=sha256(os.path.join(work, "ember.wasm")))
