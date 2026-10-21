@@ -1,0 +1,39 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>webgpu parity</title></head>
+<body><pre id="out">pending</pre>
+<script type="module">
+import { createLlama } from './webgpu/llama_webgpu.js';
+const out = document.getElementById('out');
+try {
+  const fx = await (await fetch('fixture.json')).json();
+  const buf = await (await fetch(fx.model)).arrayBuffer();
+  const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+  const device = await adapter.requestDevice({ requiredLimits: {
+    maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize,
+    maxBufferSize: adapter.limits.maxBufferSize } });
+  const t0 = performance.now();
+  const m = await createLlama(device, buf);
+  const tLoad = performance.now() - t0;
+  const res = [];
+  for (const p of fx.prompts) {
+    const t1 = performance.now();
+    const lg = await m.forward(p.prompt_ids, 0);
+    const ms = performance.now() - t1;
+    let maxd = 0, lo = Infinity, hi = -Infinity, ae = 0, ar = 0;
+    for (let i = 0; i < lg.length; i++) {
+      maxd = Math.max(maxd, Math.abs(lg[i] - p.logits[i]));
+      lo = Math.min(lo, p.logits[i]); hi = Math.max(hi, p.logits[i]);
+      if (lg[i] > lg[ae]) ae = i;
+      if (p.logits[i] > p.logits[ar]) ar = i;
+    }
+    res.push({ i: p.i, tokens: p.prompt_ids.length, max_abs: maxd, of_range: maxd / (hi - lo), top1: ae === ar, ms });
+  }
+  // Decode speed: 64 single-token steps after the first prompt.
+  let pos = fx.prompts[0].prompt_ids.length, tok = 300;
+  const t2 = performance.now();
+  for (let s = 0; s < 64; s++) { const lg = await m.forward([tok], pos++); tok = lg.indexOf(Math.max(...lg)); }
+  const decodeMs = (performance.now() - t2) / 64;
+  out.textContent = 'RESULT ' + JSON.stringify({ adapter: adapter.info?.vendor + ' ' + adapter.info?.architecture,
+    config: m.config, load_ms: tLoad, decode_ms_per_token: decodeMs, prompts: res });
+} catch (e) { out.textContent = 'ERROR ' + (e.stack || e); }
+</script></body></html>
