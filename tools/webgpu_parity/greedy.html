@@ -1,0 +1,44 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>webgpu greedy parity</title></head>
+<body><pre id="out">pending</pre>
+<script type="module">
+// Greedy replies on the GPU (argmax; stop at <|endoftext|>, <|user|> or <|assistant|>; 60 new tokens),
+// compared id by id with ember CPU's /chat replies (greedy.json).
+import { createLlama } from './webgpu/llama_webgpu.js';
+const out = document.getElementById('out');
+const argmax = (a) => { let b = 0; for (let i = 1; i < a.length; i++) if (a[i] > a[b]) b = i; return b; };
+try {
+  const fx = await (await fetch('greedy.json')).json();
+  const model = new URL(location.href).searchParams.get('model') || 'chat_sftfinal_v3.gguf';
+  const buf = await (await fetch(model)).arrayBuffer();
+  const adapter = await navigator.gpu.requestAdapter();
+  const device = await adapter.requestDevice({ requiredLimits: {
+    maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize, maxBufferSize: adapter.limits.maxBufferSize } });
+  const m = await createLlama(device, buf);
+  let same = 0, sameStop = 0, tokens = 0;
+  const diffs = [];
+  const t0 = performance.now();
+  for (const p of fx.prompts) {
+    const ids = [];
+    let stop = -1, pos = p.prompt_ids.length;
+    let lg = await m.forward(p.prompt_ids, 0);
+    for (let s = 0; s < 60; s++) {
+      const t = argmax(lg);
+      if (t === 1 || t === 2 || t === 3) { stop = t; break; }
+      ids.push(t);
+      if (s === 59) break;
+      lg = await m.forward([t], pos++);
+    }
+    tokens += ids.length;
+    const ok = ids.length === p.ids.length && ids.every((x, i) => x === p.ids[i]);
+    same += ok; sameStop += stop === p.stop_id;
+    if (!ok) {
+      let k = 0; while (k < ids.length && ids[k] === p.ids[k]) k++;
+      diffs.push({ i: p.i, first_diff_at: k, gpu: ids.slice(k, k + 5), cpu: p.ids.slice(k, k + 5) });
+    }
+  }
+  const ms = performance.now() - t0;
+  out.textContent = 'RESULT ' + JSON.stringify({ n: fx.prompts.length, ids_identical: same, stop_identical: sameStop,
+    tokens, ms_total: ms, ms_per_reply: ms / fx.prompts.length, diffs });
+} catch (e) { out.textContent = 'ERROR ' + (e.stack || e); }
+</script></body></html>
