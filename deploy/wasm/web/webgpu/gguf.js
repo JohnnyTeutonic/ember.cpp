@@ -66,6 +66,8 @@ export function tensorF32(g, name) {
   throw new Error(`GGUF: tensor ${name} has type ${t.type}, not supported by the WebGPU path yet`);
 }
 
+export function f16ToF32(h) { return f16(h); }
+
 function f16(h) {
   const s = (h & 0x8000) ? -1 : 1, e = (h >> 10) & 0x1f, f = h & 0x3ff;
   if (e === 0) return s * Math.pow(2, -14) * (f / 1024);
