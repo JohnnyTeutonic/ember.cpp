@@ -16,6 +16,7 @@
 
 #include "cpu_attention.h"
 #include "gguf_structs.h"
+#include "graph_ir_expr.h"
 #include "graph_ir_ops.h"
 #include "logger.h"
 #include "quantization.h"
@@ -35,7 +36,9 @@ const std::set<std::string> kCpuOps = {"embedding", "pos_embedding", "rmsnorm", 
                                        "attention", "add", "mul", "silu", "gelu", "moe_ffn",
                                        "linear_attention", "ssm_scan",
                                        // gated and attention-residual families (graph_ir_ops.h)
-                                       "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend"};
+                                       "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
+                                       // runtime-defined elementwise ops (graph_ir_expr.h)
+                                       "expr"};
 const std::set<std::string> kRecurrentOps = {"linear_attention", "ssm_scan"};
 // The ops run_nodes_device implements.
 const std::set<std::string> kCudaOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
@@ -43,7 +46,8 @@ const std::set<std::string> kCudaOps = {"embedding", "pos_embedding", "rmsnorm",
                                         "linear_attention", "ssm_scan",
                                         "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend"};
 const std::set<std::string> kRowWiseOps = {"rmsnorm", "layernorm", "linear", "add", "mul", "silu", "gelu",
-                                           "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend"};
+                                           "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
+                                           "expr"};
 
 std::vector<std::string> names(const json& j) {
   if (j.is_string()) return {j.get<std::string>()};
@@ -444,6 +448,16 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
       if (n.op == "affine" && (!has(n.attrs, "scale") || !has(n.attrs, "shift")))
         throw std::runtime_error("IR affine needs float attributes scale and shift");
       if (n.op == "rms_row" && !has(n.attrs, "eps")) throw std::runtime_error("IR rms_row needs its eps attribute");
+      if (n.op == "expr") {  // a runtime-defined op: parsed here, so a bad string fails at load naming its column
+        arity(1, true);
+        if (!n.attrs.contains("expr") || !n.attrs.at("expr").is_string())
+          throw std::runtime_error("IR expr needs its string attribute expr");
+        try {
+          expr::cached(n.attrs.at("expr").get<std::string>(), n.in.size());
+        } catch (const std::invalid_argument& e) {
+          throw std::runtime_error(std::string("IR ") + e.what());
+        }
+      }
     }
 #ifdef HAS_CUDA
   if (use_gpu && !device_supported(ir_json))
@@ -1120,6 +1134,20 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
         throw std::runtime_error("IR rms_row: input is not [T, w]");
       Buf out{std::vector<float>(static_cast<size_t>(T)), 1};
       cpu::rms_row(x.v.data(), out.v.data(), T, x.width, n.attrs.at("eps").get<float>());
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "expr") {  // runtime-defined elementwise op (graph_ir_expr.h). ROUNDING.
+      std::vector<const float*> ptrs;
+      const Buf& x0 = in(n, 0);
+      for (size_t k = 0; k < n.in.size(); ++k) {
+        const Buf& a = in(n, k);
+        if (a.width != x0.width || a.v.size() != x0.v.size())
+          throw std::runtime_error("IR expr: inputs must share one shape [T, w]");
+        ptrs.push_back(a.v.data());
+      }
+      if (x0.width <= 0 || x0.v.size() % x0.width) throw std::runtime_error("IR expr: input is not [T, w]");
+      Buf out{std::vector<float>(x0.v.size()), x0.width};
+      expr::eval(expr::cached(n.attrs.at("expr").get<std::string>(), n.in.size()), ptrs,
+                 static_cast<int>(x0.v.size() / x0.width), x0.width, out.v.data());
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "list") {  // the inputs, in order, as one list value. EXACT.
       Buf out;
