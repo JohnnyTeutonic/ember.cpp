@@ -11,7 +11,7 @@
 #include <random>
 #include <sstream>
 
-#include "bpe_tokenizer.h"
+#include "chat_tokenizer.h"
 #include "model.h"
 #include "tokenizer.h"
 
@@ -176,8 +176,9 @@ class TinyLlamaSession {
   // Timing of the most recent generate() call up to its first token.
   const TtftBreakdown& last_ttft() const { return last_ttft_; }
 
-  // Byte-level BPE chat models (GGUF tokenizer.ggml.model == "bpe",
-  // paperkiln exports). In this mode generate() takes the prompt verbatim
+  // paperkiln chat models (a GGUF with tokenizer.ggml.model "bpe", or "gpt2"
+  // with pre "llama-bpe" and the chat specials at ids 0-3; chat_tokenizer.h).
+  // In this mode generate() takes the prompt verbatim
   // (the caller builds the chat template), encodes it with the GGUF's own
   // merges and no BOS, stops at <|endoftext|> or at a generated <|user|> or
   // <|assistant|> (the marker is cut), and strips the reply's leading and
@@ -237,7 +238,7 @@ class TinyLlamaSession {
   std::string generated_text_for_api_return_; // Added to accumulate full response
   TtftBreakdown last_ttft_;            // see last_ttft()
   std::vector<int> kv_token_history_;  // token ids the previous generate() left in the KV cache
-  std::unique_ptr<microtorch::bpe::Tokenizer> bpe_;  // set for "bpe" GGUFs; see is_bpe()
+  std::unique_ptr<ember::ChatTokenizer> bpe_;  // set for paperkiln chat GGUFs; see is_bpe()
   std::string last_stop_reason_;
   int last_generated_tokens_ = 0;
   std::vector<int> last_prompt_ids_, last_generated_ids_;
