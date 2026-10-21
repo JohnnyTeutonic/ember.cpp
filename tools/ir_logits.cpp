@@ -8,8 +8,10 @@
 //
 // "prefill" runs each sequence as one forward from position 0 (all rows); "decode" runs it one
 // token at a time through the KV / recurrent state, as generation does. Both start fresh. The IR
-// comes from EMBER_IR, else the GGUF's paperkiln.ir. CPU only.
+// comes from ember_ir::find_ir: EMBER_IR, else the GGUF's paperkiln.ir, else the IR built from its
+// metadata. EMBER_IR_PRINT=path writes that IR to path. CPU only.
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <iterator>
 #include <string>
@@ -30,9 +32,10 @@ int main(int argc, char** argv) {
   const GGUFData gguf = load_gguf_meta(argv[1], true);
   const std::string ir = ember_ir::find_ir(gguf);
   if (ir.empty()) {
-    std::cerr << "no IR: set EMBER_IR or use a GGUF with paperkiln.ir\n";
+    std::cerr << "no IR: set EMBER_IR, use a GGUF with paperkiln.ir, or EMBER_IR_BUILD=1 for llama/mistral\n";
     return 1;
   }
+  if (const char* dump = std::getenv("EMBER_IR_PRINT")) std::ofstream(dump) << ir << "\n";
   const std::string in((std::istreambuf_iterator<char>(std::cin)), std::istreambuf_iterator<char>());
   const json seqs = json::parse(in);
   const int V = ember_ir::Interpreter(ir, gguf, false).vocab();

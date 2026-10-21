@@ -140,6 +140,13 @@ std::optional<std::string> meta_string(const GGUFData& g, const std::string& key
   return std::nullopt;
 }
 
+std::optional<bool> meta_bool(const GGUFData& g, const std::string& key) {
+  auto it = g.metadata.find(key);
+  if (it == g.metadata.end()) return std::nullopt;
+  if (const auto* b = std::get_if<bool>(&it->second)) return *b;
+  return std::nullopt;
+}
+
 // The value a float32 holds, as the shortest decimal that round-trips it,
 // read back as a double (paperkiln's ir::f32 / gguf_ir.py f32 convention).
 double f32_value(double v) {
@@ -240,6 +247,12 @@ bool device_supported(const std::string& ir_json) {
   return true;
 }
 
+bool has_ir_builder(const std::string& arch) {
+  static const std::set<std::string> kBuilt = {"llama", "mistral", "qwen2", "qwen3", "gpt2", "gptneox", "gemma3",
+                                               "mamba"};
+  return kBuilt.count(arch) > 0;
+}
+
 std::string find_ir(const GGUFData& gguf) {
   if (const char* path = std::getenv("EMBER_IR")) {
     std::ifstream f(path);
@@ -252,24 +265,24 @@ std::string find_ir(const GGUFData& gguf) {
   if (it != gguf.metadata.end()) {
     if (const auto* s = std::get_if<std::string>(&it->second)) return *s;
   }
-  // No IR in the file: qwen2/qwen3 get one built from their metadata; llama
-  // and mistral keep the llama path unless EMBER_IR_BUILD=1; anything else
-  // cannot run.
+  // No IR in the file: every built architecture gets one from its metadata,
+  // except that llama and mistral without a sliding window keep the llama path
+  // unless EMBER_IR_BUILD=1 (a window needs the IR: the llama path has none).
   const std::string arch = meta_string(gguf, "general.architecture").value_or("llama");
-  if (arch == "qwen2" || arch == "qwen3") return build_ir_from_gguf(gguf);
   if (arch == "llama" || arch == "mistral") {
     const char* b = std::getenv("EMBER_IR_BUILD");
-    return b && std::string(b) == "1" ? build_ir_from_gguf(gguf) : std::string();
+    const bool windowed = meta_number(gguf, arch + ".attention.sliding_window").value_or(0) > 0;
+    return windowed || (b && std::string(b) == "1") ? build_ir_from_gguf(gguf) : std::string();
   }
+  if (has_ir_builder(arch)) return build_ir_from_gguf(gguf);
   throw std::runtime_error("ember cannot run general.architecture = '" + arch +
                            "': the GGUF has no paperkiln.ir and ember has no IR builder for that architecture "
-                           "(built: llama, mistral, qwen2, qwen3)");
+                           "(built: llama, mistral, qwen2, qwen3, gpt2, gptneox, gemma3, mamba)");
 }
 
 std::string build_ir_from_gguf(const GGUFData& g) {
   const std::string arch = meta_string(g, "general.architecture").value_or("");
-  if (arch != "llama" && arch != "mistral" && arch != "qwen2" && arch != "qwen3")
-    throw std::runtime_error("no IR builder for general.architecture = '" + arch + "'");
+  if (!has_ir_builder(arch)) throw std::runtime_error("no IR builder for general.architecture = '" + arch + "'");
   const std::string p = arch + ".";
   auto get = [&](const std::string& key, std::optional<double> dflt = std::nullopt) -> double {
     auto v = meta_number(g, p + key);
@@ -278,21 +291,13 @@ std::string build_ir_from_gguf(const GGUFData& g) {
     return *v;
   };
   auto shape_has = [&](const std::string& t) { return g.tensor_infos_map.count(t) > 0; };
-  const int d = static_cast<int>(get("embedding_length")), H = static_cast<int>(get("attention.head_count"));
-  const int KV = static_cast<int>(get("attention.head_count_kv", H));
-  const int hd = static_cast<int>(get("attention.key_length", d / H));
-  const int n_rot = static_cast<int>(get("rope.dimension_count", hd));
-  const int ctx = static_cast<int>(get("context_length"));
-  const double eps = get("attention.layer_norm_rms_epsilon");
-  const double theta = get("rope.freq_base", 10000.0);
+  auto no_rope_scaling = [&]() {
+    const auto scaling = meta_string(g, p + "rope.scaling.type");
+    if ((scaling && *scaling != "none") || shape_has("rope_freqs.weight"))
+      throw std::runtime_error("IR builder: " + arch + " with RoPE scaling is not built yet");
+  };
+  const int d = static_cast<int>(get("embedding_length"));
   const int n_layers = static_cast<int>(get("block_count"));
-  const auto scaling = meta_string(g, p + "rope.scaling.type");
-  if ((scaling && *scaling != "none") || shape_has("rope_freqs.weight"))
-    throw std::runtime_error("IR builder: " + arch + " with RoPE scaling is not built yet");
-  // HF Mistral's window (key j visible from query p iff p - w < j <= p); qwen2's
-  // GGUF does not say which layers a window would cover, so none.
-  int window = 0;
-  if (arch == "llama" || arch == "mistral") window = static_cast<int>(meta_number(g, p + "attention.sliding_window").value_or(0));
   int vocab = static_cast<int>(g.tokenizer_tokens.size());
   if (vocab == 0) {
     auto it = g.tensor_infos_map.find("token_embd.weight");
@@ -300,8 +305,6 @@ std::string build_ir_from_gguf(const GGUFData& g) {
       throw std::runtime_error("IR builder: no tokens and no token_embd.weight");
     vocab = static_cast<int>(it->second.shape[1]);
   }
-  const bool bias = shape_has("blk.0.attn_q.bias"), qk_norm = shape_has("blk.0.attn_q_norm.weight");
-  const std::string pairing = arch == "qwen2" || arch == "qwen3" ? "neox" : "interleaved";
   const std::string B = "blk.{i}.";
 
   auto linear = [](const std::string& x, const std::string& w, const std::string& out, const std::string& b = "",
@@ -311,42 +314,217 @@ std::string build_ir_from_gguf(const GGUFData& g) {
     if (!tied.empty()) n["tied_to"] = tied;
     return n;
   };
-  auto rmsnorm = [&](const std::string& x, const std::string& w, const std::string& out, int group = 0) {
+  auto rmsnorm = [](const std::string& x, const std::string& w, double eps, const std::string& out, int group = 0) {
     json n = {{"op", "rmsnorm"}, {"in", {x}}, {"weight", w}, {"eps", f32_value(eps)}, {"out", out}};
     if (group) n["group"] = group;
     return n;
   };
-  auto op = [](const std::string& name, std::vector<std::string> in, const std::string& out) {
-    return json{{"op", name}, {"in", in}, {"out", out}};
+  auto layernorm = [](const std::string& x, const std::string& name, double eps, const std::string& out) {
+    return json{{"op", "layernorm"}, {"in", {x}},           {"weight", name + ".weight"},
+                {"bias", name + ".bias"}, {"eps", f32_value(eps)}, {"out", out}};
   };
-  auto proj = [&](const std::string& name, const std::string& out) {
-    return linear("h", B + name + ".weight", out, bias ? B + name + ".bias" : "");
+  auto op = [](const std::string& name, std::vector<std::string> in, const json& out, json attrs = json::object()) {
+    attrs["op"] = name;
+    attrs["in"] = in;
+    attrs["out"] = out;
+    return attrs;
   };
-  json nodes = json::array({rmsnorm("x", B + "attn_norm.weight", "h"), proj("attn_q", "q"), proj("attn_k", "k"),
-                            proj("attn_v", "v")});
-  if (qk_norm) {
-    nodes.push_back(rmsnorm("q", B + "attn_q_norm.weight", "q", hd));
-    nodes.push_back(rmsnorm("k", B + "attn_k_norm.weight", "k", hd));
-  }
-  nodes.push_back({{"op", "rope"}, {"in", {"q", "k", "pos"}}, {"heads", H}, {"kv_heads", KV}, {"head_dim", hd},
-                   {"n_rot", n_rot}, {"theta", f32_value(theta)}, {"rope_heads", "all"}, {"pairing", pairing},
-                   {"out", {"q", "k"}}});
-  nodes.push_back({{"op", "attention"}, {"in", {"q", "k", "v"}}, {"state", "kv"}, {"heads", H}, {"kv_heads", KV},
-                   {"head_dim", hd}, {"causal", true}, {"scale", f32_value(1.0 / std::sqrt(static_cast<double>(hd)))},
-                   {"window", window}, {"sinks", 0}, {"softmax", "max-shifted, masked entries exactly zero"},
-                   {"out", "a"}});
-  nodes.push_back(linear("a", B + "attn_output.weight", "o"));
-  nodes.push_back(op("add", {"x", "o"}, "x"));
-  nodes.push_back(rmsnorm("x", B + "ffn_norm.weight", "h2"));
-  nodes.push_back(linear("h2", B + "ffn_gate.weight", "g"));
-  nodes.push_back(linear("h2", B + "ffn_up.weight", "u"));
-  nodes.push_back(op("silu", {"g"}, "g"));
-  nodes.push_back(op("mul", {"g", "u"}, "gu"));
-  nodes.push_back(linear("gu", B + "ffn_down.weight", "f"));
-  nodes.push_back(op("add", {"x", "f"}, "x"));
+  auto rope = [](int H, int KV, int hd, int n_rot, const json& theta, const std::string& pairing,
+                 const json& freq_scale = nullptr) {
+    json n = {{"op", "rope"},     {"in", {"q", "k", "pos"}}, {"heads", H},          {"kv_heads", KV},
+              {"head_dim", hd},   {"n_rot", n_rot},          {"theta", theta},      {"rope_heads", "all"},
+              {"pairing", pairing}, {"out", {"q", "k"}}};
+    if (!freq_scale.is_null()) n["freq_scale"] = freq_scale;
+    return n;
+  };
+  auto attention = [](int H, int KV, int hd, double scale, const json& window = 0) {
+    return json{{"op", "attention"}, {"in", {"q", "k", "v"}}, {"state", "kv"},     {"heads", H},
+                {"kv_heads", KV},    {"head_dim", hd},        {"causal", true},    {"scale", f32_value(scale)},
+                {"window", window},  {"sinks", 0},            {"softmax", "max-shifted, masked entries exactly zero"},
+                {"out", "a"}};
+  };
+  auto kv_state = [](int H, int KV, int hd, int ctx, const json& window = 0) {
+    return json{{"name", "kv"},     {"kind", "kv"}, {"heads", H}, {"kv_heads", KV}, {"head_dim", hd},
+                {"max_len", ctx},   {"window", window}, {"sinks", 0}, {"dtype", "f32"}};
+  };
   const bool tied = !shape_has("output.weight");
-  json head = json::array({rmsnorm("x", "output_norm.weight", "h"),
-                           linear("h", "output.weight", "logits", "", tied ? "token_embd.weight" : "")});
+  auto tied_head = [&](json norm_nodes) {
+    norm_nodes.push_back(linear("h", "output.weight", "logits", "", tied ? "token_embd.weight" : ""));
+    return norm_nodes;
+  };
+  json embed = json::array({{{"op", "embedding"}, {"in", {"tokens"}}, {"weight", "token_embd.weight"}, {"out", "x"}}});
+  json state, nodes, head;
+  int ctx = 0;
+  std::string summary;
+
+  if (arch == "llama" || arch == "mistral" || arch == "qwen2" || arch == "qwen3") {
+    const int H = static_cast<int>(get("attention.head_count"));
+    const int KV = static_cast<int>(get("attention.head_count_kv", H));
+    const int hd = static_cast<int>(get("attention.key_length", d / H));
+    const int n_rot = static_cast<int>(get("rope.dimension_count", hd));
+    ctx = static_cast<int>(get("context_length"));
+    const double eps = get("attention.layer_norm_rms_epsilon");
+    const double theta = get("rope.freq_base", 10000.0);
+    no_rope_scaling();
+    // HF Mistral's window (key j visible from query p iff p - w < j <= p); qwen2's
+    // GGUF does not say which layers a window would cover, so none.
+    int window = 0;
+    if (arch == "llama" || arch == "mistral")
+      window = static_cast<int>(meta_number(g, p + "attention.sliding_window").value_or(0));
+    const bool bias = shape_has("blk.0.attn_q.bias"), qk_norm = shape_has("blk.0.attn_q_norm.weight");
+    const std::string pairing = arch == "qwen2" || arch == "qwen3" ? "neox" : "interleaved";
+    auto proj = [&](const std::string& name, const std::string& out) {
+      return linear("h", B + name + ".weight", out, bias ? B + name + ".bias" : "");
+    };
+    nodes = json::array({rmsnorm("x", B + "attn_norm.weight", eps, "h"), proj("attn_q", "q"), proj("attn_k", "k"),
+                         proj("attn_v", "v")});
+    if (qk_norm) {
+      nodes.push_back(rmsnorm("q", B + "attn_q_norm.weight", eps, "q", hd));
+      nodes.push_back(rmsnorm("k", B + "attn_k_norm.weight", eps, "k", hd));
+    }
+    for (json n : {rope(H, KV, hd, n_rot, f32_value(theta), pairing),
+                   attention(H, KV, hd, 1.0 / std::sqrt(static_cast<double>(hd)), window),
+                   linear("a", B + "attn_output.weight", "o"), op("add", {"x", "o"}, "x"),
+                   rmsnorm("x", B + "ffn_norm.weight", eps, "h2"), linear("h2", B + "ffn_gate.weight", "g"),
+                   linear("h2", B + "ffn_up.weight", "u"), op("silu", {"g"}, "g"), op("mul", {"g", "u"}, "gu"),
+                   linear("gu", B + "ffn_down.weight", "f"), op("add", {"x", "f"}, "x")})
+      nodes.push_back(n);
+    head = tied_head(json::array({rmsnorm("x", "output_norm.weight", eps, "h")}));
+    state = json::array({kv_state(H, KV, hd, ctx, window)});
+    summary = "heads " + std::to_string(H) + "/" + std::to_string(KV) + " x " + std::to_string(hd) + ", n_rot " +
+              std::to_string(n_rot) + ", " + pairing + " RoPE" + (window ? ", window " + std::to_string(window) : "") +
+              (bias ? ", q/k/v biases" : "") + (qk_norm ? ", per-head q/k RMSNorm" : "");
+  } else if (arch == "gpt2" || arch == "gptneox") {
+    // LayerNorm blocks over a fused, biased qkv (q | k | v as llama.cpp's convert
+    // writes it; for gptneox it has already de-interleaved HF's per-head [q k v] rows).
+    const bool neox = arch == "gptneox";
+    const int H = static_cast<int>(get("attention.head_count"));
+    const int KV = static_cast<int>(get("attention.head_count_kv", H));
+    const int hd = static_cast<int>(get("attention.key_length", d / H));
+    ctx = static_cast<int>(get("context_length"));
+    const double eps = get("attention.layer_norm_epsilon");
+    if (!neox)
+      embed.push_back({{"op", "pos_embedding"}, {"in", {"x", "pos"}}, {"weight", "position_embd.weight"}, {"out", "x"}});
+    nodes = json::array({layernorm("x", B + "attn_norm", eps, "h"),
+                         linear("h", B + "attn_qkv.weight", "qkv", B + "attn_qkv.bias"),
+                         op("split", {"qkv"}, {"q", "k", "v"}, {{"sizes", {H * hd, KV * hd, KV * hd}}})});
+    int n_rot = 0;
+    if (neox) {
+      no_rope_scaling();
+      n_rot = static_cast<int>(get("rope.dimension_count", hd));
+      nodes.push_back(rope(H, KV, hd, n_rot, f32_value(get("rope.freq_base", 10000.0)), "neox"));
+    }
+    nodes.push_back(attention(H, KV, hd, 1.0 / std::sqrt(static_cast<double>(hd))));
+    nodes.push_back(linear("a", B + "attn_output.weight", "o", B + "attn_output.bias"));
+    const json ffn = json::array({layernorm("x", B + "ffn_norm", eps, "h2"),
+                                  linear("h2", B + "ffn_up.weight", "u", B + "ffn_up.bias"),
+                                  op("gelu", {"u"}, "u", {{"approx", neox ? "none" : "tanh"}}),
+                                  linear("u", B + "ffn_down.weight", "f", B + "ffn_down.bias")});
+    const bool parallel = neox && meta_bool(g, p + "use_parallel_residual").value_or(true);
+    if (parallel) {
+      // llama.cpp: cur = ffn(ln2 x) + x, then + attn_out; HF sums mlp + attn + x (ROUNDING apart).
+      for (const auto& n : ffn) nodes.push_back(n);
+      nodes.push_back(op("add", {"f", "x"}, "x"));
+      nodes.push_back(op("add", {"x", "o"}, "x"));
+    } else {
+      nodes.push_back(op("add", {"x", "o"}, "x"));
+      for (const auto& n : ffn) nodes.push_back(n);
+      nodes.push_back(op("add", {"x", "f"}, "x"));
+    }
+    head = json::array({layernorm("x", "output_norm", eps, "h")});
+    if (neox)
+      head.push_back(linear("h", "output.weight", "logits"));
+    else
+      head = tied_head(head);
+    state = json::array({kv_state(H, KV, hd, ctx)});
+    summary = "heads " + std::to_string(H) + "/" + std::to_string(KV) + " x " + std::to_string(hd) + ", LayerNorm" +
+              (neox ? ", NEOX RoPE n_rot " + std::to_string(n_rot) + (parallel ? ", parallel residual" : "")
+                    : std::string(", learned positions"));
+  } else if (arch == "gemma3") {
+    // llama.cpp b6000 hparams.set_swa_pattern(6): layer i is local (windowed,
+    // theta 10000) iff i % 6 < 5; the rest are global (the file's theta, linear scaling).
+    constexpr int kSwaPattern = 6;
+    constexpr double kLocalTheta = 10000.0;
+    const int H = static_cast<int>(get("attention.head_count"));
+    const int KV = static_cast<int>(get("attention.head_count_kv", H));
+    const int hd = static_cast<int>(get("attention.key_length", d / H));
+    const int n_rot = static_cast<int>(get("rope.dimension_count", hd));
+    ctx = static_cast<int>(get("context_length"));
+    const double eps = get("attention.layer_norm_rms_epsilon");
+    if (shape_has("rope_freqs.weight")) throw std::runtime_error("IR builder: gemma3 with rope_freqs is not built yet");
+    const auto stype = meta_string(g, p + "rope.scaling.type");
+    if (stype && *stype != "none" && *stype != "linear")
+      throw std::runtime_error("IR builder: gemma3 RoPE scaling '" + *stype + "' is not built yet");
+    double factor = 1.0;
+    if (stype && *stype == "linear") {
+      factor = meta_number(g, p + "rope.scaling.factor").value_or(1.0);
+      if (factor == 0.0) factor = 1.0;
+    }
+    const int win = static_cast<int>(get("attention.sliding_window"));
+    const double theta_global = get("rope.freq_base");
+    json windows = json::array(), thetas = json::array(), scales = json::array();
+    for (int i = 0; i < n_layers; ++i) {
+      const bool local = i % kSwaPattern < kSwaPattern - 1;
+      windows.push_back(local ? win : 0);
+      thetas.push_back(f32_value(local ? kLocalTheta : theta_global));
+      scales.push_back(local ? 1.0 : f32_value(1.0 / factor));
+    }
+    windows = {{"per_layer", windows}};
+    thetas = {{"per_layer", thetas}};
+    scales = {{"per_layer", scales}};
+    // llama.cpp: f_attention_scale = 1/sqrt(n_embd_head_k), except 1/sqrt(n_embd / n_head) for the 27B.
+    const double scale = n_layers == 62 ? 1.0 / std::sqrt(static_cast<double>(d) / H)
+                                        : 1.0 / std::sqrt(static_cast<double>(hd));
+    embed.push_back(op("affine", {"x"}, "x", {{"scale", f32_value(std::sqrt(static_cast<double>(d)))}, {"shift", 0.0}}));
+    nodes = json::array({rmsnorm("x", B + "attn_norm.weight", eps, "h"), linear("h", B + "attn_q.weight", "q"),
+                         linear("h", B + "attn_k.weight", "k"), linear("h", B + "attn_v.weight", "v"),
+                         rmsnorm("q", B + "attn_q_norm.weight", eps, "q", hd),
+                         rmsnorm("k", B + "attn_k_norm.weight", eps, "k", hd),
+                         rope(H, KV, hd, n_rot, thetas, "neox", factor != 1.0 ? scales : json(nullptr)),
+                         attention(H, KV, hd, scale, windows), linear("a", B + "attn_output.weight", "o"),
+                         rmsnorm("o", B + "post_attention_norm.weight", eps, "o"), op("add", {"x", "o"}, "x"),
+                         rmsnorm("x", B + "ffn_norm.weight", eps, "h2"), linear("h2", B + "ffn_gate.weight", "g"),
+                         linear("h2", B + "ffn_up.weight", "u"), op("gelu", {"g"}, "g", {{"approx", "tanh"}}),
+                         op("mul", {"g", "u"}, "gu"), linear("gu", B + "ffn_down.weight", "f"),
+                         rmsnorm("f", B + "post_ffw_norm.weight", eps, "f"), op("add", {"x", "f"}, "x")});
+    head = tied_head(json::array({rmsnorm("x", "output_norm.weight", eps, "h")}));
+    state = json::array({kv_state(H, KV, hd, ctx, windows)});
+    summary = "heads " + std::to_string(H) + "/" + std::to_string(KV) + " x " + std::to_string(hd) +
+              ", sandwich RMSNorms, GeGLU, window " + std::to_string(win) + " on 5 of every 6 layers" +
+              (factor != 1.0 ? ", global RoPE scaled 1/" + std::to_string(factor) : "");
+  } else {  // mamba
+    const int K = static_cast<int>(get("ssm.conv_kernel")), Di = static_cast<int>(get("ssm.inner_size"));
+    const int N = static_cast<int>(get("ssm.state_size")), R = static_cast<int>(get("ssm.time_step_rank"));
+    const double eps = get("attention.layer_norm_rms_epsilon");
+    ctx = static_cast<int>(get("context_length", 0.0));
+    if (ctx == 0) ctx = 1048576;  // llama.cpp writes 1M: a recurrence has no length limit
+    if (!shape_has("blk.0.ssm_dt.weight") || !shape_has("blk.0.ssm_d"))
+      throw std::runtime_error("IR builder: mamba file lacks ssm_dt.weight or ssm_d");
+    if (meta_bool(g, p + "ssm.dt_b_c_rms").value_or(false) || shape_has("blk.0.ssm_dt_norm.weight"))
+      throw std::runtime_error("IR builder: mamba with dt/B/C RMSNorms (Falcon-Mamba) is not built yet");
+    nodes = json::array(
+        {rmsnorm("x", B + "attn_norm.weight", eps, "h"), linear("h", B + "ssm_in.weight", "xz"),
+         op("split", {"xz"}, {"xs", "z"}, {{"sizes", {Di, Di}}}),
+         op("conv1d_causal", {"xs"}, "xs",
+            {{"state", "conv"}, {"weight", B + "ssm_conv1d.weight"}, {"bias", B + "ssm_conv1d.bias"},
+             {"channels", Di}, {"kernel", K}}),
+         op("silu", {"xs"}, "xs"), linear("xs", B + "ssm_x.weight", "xdb"),
+         op("split", {"xdb"}, {"dt", "bm", "cm"}, {{"sizes", {R, N, N}}}),
+         linear("dt", B + "ssm_dt.weight", "dt", B + "ssm_dt.bias"),
+         op("selective_scan", {"xs", "dt", "bm", "cm"}, "y",
+            {{"state", "ssm"}, {"a", B + "ssm_a"}, {"d", B + "ssm_d"}, {"channels", Di}, {"d_state", N},
+             {"dt_softplus", true}}),
+         op("silu", {"z"}, "z"), op("mul", {"y", "z"}, "y"), linear("y", B + "ssm_out.weight", "o"),
+         op("add", {"x", "o"}, "x")});
+    state = json::array({{{"name", "conv"}, {"kind", "recurrent"}, {"op", "conv1d_causal"}, {"dtype", "f32"},
+                          {"tensors", json::array({{{"name", "x"}, {"shape", {K - 1, Di}}, {"init", 0}}})}},
+                         {{"name", "ssm"}, {"kind", "recurrent"}, {"op", "selective_scan"}, {"dtype", "f32"},
+                          {"tensors", json::array({{{"name", "s"}, {"shape", {Di, N}}, {"init", 0}}})}}});
+    head = tied_head(json::array({rmsnorm("x", "output_norm.weight", eps, "h")}));
+    summary = "selective scan d_inner " + std::to_string(Di) + ", d_state " + std::to_string(N) + ", dt_rank " +
+              std::to_string(R) + ", conv kernel " + std::to_string(K);
+  }
+
   const auto eos = meta_number(g, "tokenizer.ggml.eos_token_id");
   const auto bos = meta_number(g, "tokenizer.ggml.bos_token_id");
   json doc;
@@ -360,23 +538,16 @@ std::string build_ir_from_gguf(const GGUFData& g) {
                       {"specials", eos ? json{{"eot", static_cast<int64_t>(*eos)}} : json::object()},
                       {"bos", bos ? json(static_cast<int64_t>(*bos)) : json(nullptr)}};
   doc["inputs"] = json::array({{{"name", "tokens"}, {"kind", "token_ids"}}, {{"name", "pos"}, {"kind", "positions"}}});
-  doc["embed"] = {{"nodes", json::array({{{"op", "embedding"}, {"in", {"tokens"}}, {"weight", "token_embd.weight"},
-                                          {"out", "x"}}})}};
-  doc["block"] = {{"repeat", n_layers},
-                  {"state", json::array({{{"name", "kv"}, {"kind", "kv"}, {"heads", H}, {"kv_heads", KV},
-                                          {"head_dim", hd}, {"max_len", ctx}, {"window", window}, {"sinks", 0},
-                                          {"dtype", "f32"}}})},
-                  {"nodes", nodes}};
+  if (arch == "mamba") doc["inputs"] = json::array({{{"name", "tokens"}, {"kind", "token_ids"}}});
+  doc["embed"] = {{"nodes", embed}};
+  doc["block"] = {{"repeat", n_layers}, {"state", state}, {"nodes", nodes}};
   doc["head"] = {{"nodes", head}};
   doc["outputs"] = json::array({{{"name", "logits"}, {"kind", "logits"}}});
   doc["modes"] = {{"prefill", "all nodes over T tokens"},
                   {"decode", "the same graph with T = 1, attention reads and appends to the kv state, a recurrent op "
                              "reads and replaces its recurrent state"}};
   Logger::info("[IR] built the IR for general.architecture = " + arch + " from its metadata: d " + std::to_string(d) +
-               ", " + std::to_string(n_layers) + " layers, heads " + std::to_string(H) + "/" + std::to_string(KV) +
-               " x " + std::to_string(hd) + ", n_rot " + std::to_string(n_rot) + ", " + pairing + " RoPE" +
-               (bias ? ", q/k/v biases" : "") + (qk_norm ? ", per-head q/k RMSNorm" : "") +
-               (tied ? ", tied head" : ""));
+               ", " + std::to_string(n_layers) + " layers, " + summary + (tied ? ", tied head" : ""));
   return doc.dump();
 }
 
@@ -488,7 +659,7 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
       for (const auto& kv : n.attrs.items()) {  // per-layer attributes: block nodes, the attributes ember reads per block
         if (!is_per_layer(kv.value())) continue;
         const bool ok = sub == &block_ && ((n.op == "attention" && (kv.key() == "window" || kv.key() == "sinks")) ||
-                                           (n.op == "rope" && kv.key() == "theta"));
+                                           (n.op == "rope" && (kv.key() == "theta" || kv.key() == "freq_scale")));
         if (!ok)
           throw std::runtime_error("IR " + n.op + ": a per-layer '" + kv.key() + "' is not implemented in ember");
         if (static_cast<int>(kv.value().at("per_layer").size()) != n_layers_)
@@ -518,12 +689,6 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
         throw std::runtime_error("IR rope pairing '" + pairing + "' is not implemented in ember");
       if (n.attrs.value("rope_heads", "all") != "all")
         throw std::runtime_error("IR rope_heads '" + n.attrs.value("rope_heads", "") + "' is not implemented in ember");
-      if (has(n.attrs, "freq_scale")) {
-        if (is_per_layer(n.attrs.at("freq_scale")))
-          throw std::runtime_error("IR rope: a per-layer freq_scale is not implemented in ember");
-        rope_freq_scale_ = n.attrs.at("freq_scale").get<float>();
-        if (!(rope_freq_scale_ > 0.0f)) throw std::runtime_error("IR rope freq_scale must be positive");
-      }
       if (kv_heads_ > 0 && has(n.attrs, "kv_heads") && n.attrs.at("kv_heads").get<int>() != kv_heads_)
         throw std::runtime_error("IR rope kv_heads differs from its kv state's");
       // The table is the kv state's head_dim wide, as before, unless the node
@@ -538,11 +703,20 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
                                    " (kv state head_dim " + std::to_string(head_dim_) + ") is not usable");
       }
       std::vector<float> thetas(static_cast<size_t>(n_layers_));
-      for (int l = 0; l < n_layers_; ++l) thetas[l] = at_layer(n.attrs.at("theta"), l).get<float>();
-      if (rope_dim_ != 0 && (rope_theta_layer_ != thetas || rope_dim_ != n_rot || rope_neox_ != (pairing == "neox")))
-        throw std::runtime_error("IR rope nodes with different theta, n_rot or pairing are not implemented in ember");
+      std::vector<float> scales(static_cast<size_t>(n_layers_), 1.0f);
+      for (int l = 0; l < n_layers_; ++l) {
+        thetas[l] = at_layer(n.attrs.at("theta"), l).get<float>();
+        if (has(n.attrs, "freq_scale")) scales[l] = at_layer(n.attrs.at("freq_scale"), l).get<float>();
+        if (!(scales[l] > 0.0f)) throw std::runtime_error("IR rope freq_scale must be positive");
+      }
+      if (rope_dim_ != 0 && (rope_theta_layer_ != thetas || rope_scale_layer_ != scales || rope_dim_ != n_rot ||
+                             rope_neox_ != (pairing == "neox")))
+        throw std::runtime_error(
+            "IR rope nodes with different theta, freq_scale, n_rot or pairing are not implemented in ember");
       rope_theta_layer_ = thetas;
+      rope_scale_layer_ = scales;
       rope_theta_ = thetas[0];
+      rope_freq_scale_ = scales[0];
       rope_dim_ = n_rot;
       rope_neox_ = pairing == "neox";
     }
@@ -663,20 +837,22 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
 
   // RoPE table, computed exactly as TinyLlamaModel::initialize_rope_freqs,
   // over rope_dim_ (n_rot; head_dim for full rotary).
-  // One table per distinct theta (per-layer RoPE bases); freq_scale 1 leaves the angle pos * freq.
-  for (const float theta : rope_theta_layer_) {
-    if (!(theta > 0.0f) || rope_tables_.count(theta)) continue;
-    auto& tab = rope_tables_[theta];
+  // One table per distinct (theta, freq_scale) (per-layer RoPE bases and scales); freq_scale 1 leaves the
+  // angle pos * freq.
+  for (size_t l = 0; l < rope_theta_layer_.size(); ++l) {
+    const float theta = rope_theta_layer_[l], fs = rope_scale_layer_[l];
+    if (!(theta > 0.0f) || rope_tables_.count({theta, fs})) continue;
+    auto& tab = rope_tables_[{theta, fs}];
     tab.resize(static_cast<size_t>(max_len_) * rope_dim_ / 2);
     for (int pos = 0; pos < max_len_; ++pos) {
       for (int i = 0; i < rope_dim_; i += 2) {
         float freq = 1.0f / std::pow(theta, float(i) / rope_dim_);
-        float val = (static_cast<float>(pos) * rope_freq_scale_) * freq;
+        float val = (static_cast<float>(pos) * fs) * freq;
         tab[(static_cast<size_t>(pos) * rope_dim_ / 2) + (i / 2)] = {std::cos(val), std::sin(val)};
       }
     }
   }
-  if (rope_theta_ > 0.0f) rope_freqs_ = rope_tables_.at(rope_theta_);
+  if (rope_theta_ > 0.0f) rope_freqs_ = rope_tables_.at({rope_theta_, rope_freq_scale_});
 #ifdef HAS_CUDA
   if (use_gpu) {
     init_device();
@@ -719,7 +895,7 @@ void Interpreter::attention_window(const Node& n, int layer, int& window, int& s
 
 const std::vector<std::pair<float, float>>& Interpreter::rope_table(int layer) const {
   if (rope_theta_layer_.empty()) return rope_freqs_;
-  return rope_tables_.at(rope_theta_layer_.at(layer));
+  return rope_tables_.at({rope_theta_layer_.at(layer), rope_scale_layer_.at(layer)});
 }
 
 std::string Interpreter::layer_name(const std::string& pattern, int layer) const {

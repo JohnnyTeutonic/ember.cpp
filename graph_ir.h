@@ -168,10 +168,11 @@ class Interpreter {
   bool rope_neox_ = false;   // pairing "neox"
   float rope_freq_scale_ = 1.0f;  // linear RoPE scaling: the angle is (pos * freq_scale) * theta^(-2j/n_rot)
   // Per-layer attributes (paperkiln ir.hpp, {"per_layer": [v_0, ..., v_{L-1}]}): the kv state's window
-  // per block (empty when one value serves every block), each block's RoPE theta, a table per theta.
+  // per block (empty when one value serves every block), each block's RoPE theta and freq_scale, a
+  // table per distinct (theta, freq_scale).
   std::vector<int> window_layer_;
-  std::vector<float> rope_theta_layer_;
-  std::map<float, std::vector<std::pair<float, float>>> rope_tables_;
+  std::vector<float> rope_theta_layer_, rope_scale_layer_;
+  std::map<std::pair<float, float>, std::vector<std::pair<float, float>>> rope_tables_;
   std::set<std::string> offset_applied_;  // rmsnorm weights already read as w + weight_offset
   bool gpu_ = false;
 
@@ -319,19 +320,28 @@ class Interpreter {
 };
 
 // The IR for a GGUF: the EMBER_IR side file if set, else the `paperkiln.ir`
-// key, else the IR build_ir_from_gguf makes for a qwen2 / qwen3 file (and
-// llama / mistral with EMBER_IR_BUILD=1), else empty (the llama path). Throws
-// for a file with no IR whose architecture ember cannot run, naming it.
+// key, else the IR build_ir_from_gguf makes for a qwen2 / qwen3 / gpt2 /
+// gptneox / gemma3 / mamba file (and llama / mistral when the file names a
+// sliding window, or with EMBER_IR_BUILD=1), else empty (the llama path).
+// Throws for a file with no IR whose architecture ember cannot run, naming it.
 std::string find_ir(const GGUFData& gguf);
 
-// The IR of a third-party llama-like GGUF (general.architecture llama,
-// mistral, qwen2 or qwen3) from its metadata and tensor names, as paperkiln's
-// tools/gguf_ir.py builds it: pre-RMSNorm blocks, q/k/v biases when the file
-// has blk.0.attn_q.bias, per-head q/k RMSNorm (group head_dim) when it has
-// blk.0.attn_q_norm.weight, RoPE pairing "neox" for qwen2/qwen3 and
-// "interleaved" for llama/mistral, grouped-query attention, SwiGLU, and the
-// head tied to token_embd.weight when output.weight is absent. Throws naming
-// the architecture or the missing key otherwise.
+// The IR of a third-party GGUF from its metadata and tensor names, node for
+// node as paperkiln's tools/gguf_ir.py builds it:
+//   llama, mistral, qwen2, qwen3: pre-RMSNorm blocks, q/k/v biases when the
+//     file has blk.0.attn_q.bias, per-head q/k RMSNorm (group head_dim) when it
+//     has blk.0.attn_q_norm.weight, RoPE pairing "neox" for qwen2/qwen3 and
+//     "interleaved" for llama/mistral, grouped-query attention (llama/mistral's
+//     attention.sliding_window as the window), SwiGLU;
+//   gpt2, gptneox: LayerNorm blocks over a fused biased qkv, gelu (tanh for
+//     gpt2, exact for gptneox); gpt2 learned positions, gptneox partial NEOX
+//     RoPE and (use_parallel_residual) llama.cpp's parallel residual;
+//   gemma3: sqrt(d)-scaled embeddings, sandwich RMSNorms, per-head q/k
+//     RMSNorm, NEOX RoPE and GeGLU; window and theta 10000 on layers with
+//     i % 6 < 5, the file's theta (and linear scaling) on the rest;
+//   mamba: Mamba-1 blocks (conv1d_causal, selective_scan) with no positions.
+// The head is tied to token_embd.weight when output.weight is absent (gptneox
+// always has its own). Throws naming the architecture or the missing key.
 std::string build_ir_from_gguf(const GGUFData& gguf);
 
 // True when the IR declares sliding-window attention (a kv state or an
