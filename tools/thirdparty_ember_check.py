@@ -102,12 +102,34 @@ def main():
                "top1_prefill_vs_hf": int((pre.argmax(1) == hf.argmax(1)).sum())}
         rows.append(row)
         print(json.dumps(row), flush=True)
-    worst = max(max(x["prefill_vs_numpy_rel"], x["decode_vs_numpy_rel"]) for x in rows)
+    extra = {}
+    if a.family == "gemma3":  # rmsnorm weight_offset: the same model with every norm read as w + 0.25
+        doc2 = json.loads(json.dumps(doc))
+        for part in ("block", "head"):
+            for nd in doc2[part]["nodes"]:
+                if nd["op"] == "rmsnorm":
+                    nd["weight_offset"] = 0.25
+        ir2 = os.path.join(a.work, f"{a.family}.offset.ir.json")
+        json.dump(doc2, open(ir2, "w"), indent=1)
+        r2 = subprocess.run([a.bin, gguf], input=json.dumps(seqs[:2]), capture_output=True, text=True,
+                            env={**os.environ, "EMBER_IR": ir2})
+        if r2.returncode != 0:
+            raise SystemExit(f"ir_logits (weight_offset) failed: {r2.stderr[-2000:]}")
+        e2 = json.loads(r2.stdout)
+        rels = []
+        for k, ids in enumerate(seqs[:2]):
+            ref2 = ir_numpy.forward(doc2, W, ids)
+            rels += [rel(np.array(e2[k]["prefill"]), ref2), rel(np.array(e2[k]["decode"]), ref2)]
+            if not (np.array(e2[k]["prefill"]).argmax(1) == ref2.argmax(1)).all():
+                rels.append(1.0)
+        extra["weight_offset_0.25_vs_numpy_rel"] = max(rels)
+        print(json.dumps(extra), flush=True)
+    worst = max([max(x["prefill_vs_numpy_rel"], x["decode_vs_numpy_rel"]) for x in rows] + list(extra.values()))
     top1 = all(x["top1_prefill_vs_numpy"] == x["top1_decode_vs_numpy"] == x["positions"] for x in rows)
     summary = {"family": a.family, "gguf_arch": meta["general.architecture"], "sequences": len(rows), "len": a.len,
                "worst_ember_vs_numpy_rel": worst, "worst_ember_vs_hf_rel": max(x["prefill_vs_hf_rel"] for x in rows),
                "worst_numpy_vs_hf_rel": max(x["numpy_vs_hf_rel"] for x in rows), "all_top1_agree": top1,
-               "pass": top1 and worst <= a.tol, "rows": rows}
+               "pass": top1 and worst <= a.tol, **extra, "rows": rows}
     json.dump(summary, open(os.path.join(a.work, "check.json"), "w"), indent=1)
     print(json.dumps({k: v for k, v in summary.items() if k != "rows"}, indent=1))
     return 0 if summary["pass"] else 1

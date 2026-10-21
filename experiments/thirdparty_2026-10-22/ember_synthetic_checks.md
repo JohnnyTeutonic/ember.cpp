@@ -42,7 +42,23 @@ adds in the graph.
 All gates rerun on the rebased branch (22 Oct, ~08:40): expr gpt2_tiny 40/40 (8.1e-7), Mamba 6.7e-7,
 Mistral SWA 1.4e-6, GPT-NeoX 4.5e-7.
 
-## Still to do on this branch
+## Gemma 3 (`gemma3_synth_check.json`)
 
-- gemma3: per-layer attributes ({"per_layer": [...]}: attention and kv windows, RoPE theta per layer),
-  rmsnorm weight_offset, Gemma's attention and embedding scales.
+paperkiln's synthetic Gemma3ForCausalLM (8 layers; window 8 on local layers, global layer 5 with
+theta 1e6 against 10000; sandwich norms, per-head q/k norm, NEOX RoPE, GeGLU, embedding x sqrt(d),
+tied head), regenerated through thirdparty_synth.convert, 4 sequences of 40 ids (longer than the
+window, so the per-layer windows and bases decide the result). Needed in ember: per-layer attributes
+({"per_layer": [...]} for the kv state's window, attention window/sinks and rope theta; one RoPE table
+per distinct theta), rope freq_scale (scalar), rmsnorm weight_offset (read as w + c once at load).
+ember vs numpy IR worst 1.1e-6 of the logit range, vs HF 6.9e-7, argmax agrees everywhere, decode
+equal to prefill. The same model with weight_offset 0.25 on every rmsnorm, ember vs numpy IR: 1.1e-6.
+
+Every gate on this commit (22 Oct, ~08:45): expr gpt2_tiny 40/40 (8.1e-7), Mamba 6.7e-7, Mistral SWA
+1.4e-6, GPT-NeoX 4.5e-7, Gemma 3 1.1e-6.
+
+## Still to do
+
+- The C++ IR builder entries (GGUF without paperkiln.ir) for gemma3, gptneox, mamba, mistral sliding
+  window and gpt2, so these load through ember's server like Qwen does; then the official checkpoints.
+- CUDA kernels for the per-layer, NEOX, per-head RMSNorm, expr and Mamba ops (device graphs with any
+  of them run on the CPU interpreter today), and the WASM gate.
