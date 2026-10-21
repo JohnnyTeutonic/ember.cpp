@@ -1,0 +1,62 @@
+{
+ "family": "gemma3",
+ "gguf_arch": "gemma3",
+ "sequences": 4,
+ "len": 40,
+ "worst_ember_vs_numpy_rel": 1.1024894888056196e-06,
+ "worst_ember_vs_hf_rel": 6.923541991433237e-07,
+ "worst_numpy_vs_hf_rel": 6.818346567704148e-07,
+ "all_top1_agree": true,
+ "pass": true,
+ "weight_offset_0.25_vs_numpy_rel": 1.1024894888056196e-06,
+ "rows": [
+  {
+   "i": 0,
+   "positions": 40,
+   "numpy_vs_hf_rel": 5.743616704681395e-07,
+   "prefill_vs_numpy_rel": 4.975574404352283e-07,
+   "decode_vs_numpy_rel": 4.975574404352283e-07,
+   "prefill_vs_hf_rel": 6.178567598192594e-07,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 40,
+   "top1_decode_vs_numpy": 40,
+   "top1_prefill_vs_hf": 40
+  },
+  {
+   "i": 1,
+   "positions": 40,
+   "numpy_vs_hf_rel": 6.255114424808173e-07,
+   "prefill_vs_numpy_rel": 5.571840943030689e-07,
+   "decode_vs_numpy_rel": 5.571840943030689e-07,
+   "prefill_vs_hf_rel": 6.255114424808173e-07,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 40,
+   "top1_decode_vs_numpy": 40,
+   "top1_prefill_vs_hf": 40
+  },
+  {
+   "i": 2,
+   "positions": 40,
+   "numpy_vs_hf_rel": 6.818346567704148e-07,
+   "prefill_vs_numpy_rel": 5.616415659690142e-07,
+   "decode_vs_numpy_rel": 5.616415659690142e-07,
+   "prefill_vs_hf_rel": 5.00767676848609e-07,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 40,
+   "top1_decode_vs_numpy": 40,
+   "top1_prefill_vs_hf": 40
+  },
+  {
+   "i": 3,
+   "positions": 40,
+   "numpy_vs_hf_rel": 6.420011664783547e-07,
+   "prefill_vs_numpy_rel": 5.284258012832676e-07,
+   "decode_vs_numpy_rel": 5.284258012832676e-07,
+   "prefill_vs_hf_rel": 6.923541991433237e-07,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 40,
+   "top1_decode_vs_numpy": 40,
+   "top1_prefill_vs_hf": 40
+  }
+ ]
+}

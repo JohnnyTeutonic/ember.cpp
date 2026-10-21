@@ -73,6 +73,20 @@ std::vector<Node> parse_nodes(const json& sub, const char* where) {
 
 bool has(const json& n, const char* key) { return n.contains(key) && !n.at(key).is_null(); }
 
+// A per-layer attribute (paperkiln ir.hpp): {"per_layer": [v_0, ..., v_{L-1}]}, block i reading v_i.
+bool is_per_layer(const json& v) { return v.is_object() && v.contains("per_layer"); }
+const json& at_layer(const json& v, int layer) { return is_per_layer(v) ? v.at("per_layer").at(layer) : v; }
+
+// An integer attribute that is non-zero in some block.
+bool any_nonzero(const json& n, const char* key) {
+  if (!has(n, key)) return false;
+  const json& v = n.at(key);
+  if (!is_per_layer(v)) return v.get<int>() != 0;
+  for (const auto& e : v.at("per_layer"))
+    if (e.get<int>() != 0) return true;
+  return false;
+}
+
 // ssm_scan names its tensors by attributes a, b, c, d (or a "weights" object
 // holding them).
 std::string ssm_weight(const json& n, const char* part) {
@@ -182,9 +196,9 @@ bool has_windowed_attention(const std::string& ir_json) {
   if (!j.contains("block")) return false;
   const json& blk = j.at("block");
   for (const auto& s : blk.value("state", json::array()))
-    if (s.value("window", 0) != 0) return true;
+    if (any_nonzero(s, "window")) return true;
   for (const auto& n : blk.value("nodes", json::array()))
-    if (n.value("op", "") == "attention" && n.value("window", 0) != 0) return true;
+    if (n.value("op", "") == "attention" && any_nonzero(n, "window")) return true;
   return false;
 }
 
@@ -193,12 +207,18 @@ bool device_supported(const std::string& ir_json) {
   // depth_attend reads at most every tensor ever put in a list (list inputs
   // and appends, the block's once per repeat) plus its own extra inputs.
   size_t list_tensors = 0, extra = 0;
+  if (j.contains("block"))
+    for (const auto& s : j.at("block").value("state", json::array()))
+      for (const auto& kv : s.items())
+        if (is_per_layer(kv.value())) return false;
   for (const char* sub : {"embed", "block", "head"}) {
     if (!j.contains(sub)) continue;
     const size_t times = std::string(sub) == "block" ? j.at(sub).value("repeat", 1) : 1;
     for (const auto& n : j.at(sub).value("nodes", json::array())) {
       const std::string op = n.value("op", "");
       if (!kCudaOps.count(op)) return false;
+      for (const auto& kv : n.items())  // per-layer attributes run on the CPU interpreter only
+        if (is_per_layer(kv.value())) return false;
       // NEOX pairing, partial rotary and grouped (per-head) RMSNorm have CPU
       // kernels only so far.
       if (op == "rope" && (n.value("pairing", "interleaved") != "interleaved" ||
@@ -412,24 +432,38 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
     // Sliding window + sinks (paperkiln swa_attention). The cache keeps every
     // position up to max_len, which holds the first `sinks` and the last
     // `window` rows the rule needs.
-    window_ = s.value("window", 0);
+    if (has(s, "window") && is_per_layer(s.at("window"))) {
+      window_layer_ = s.at("window").at("per_layer").get<std::vector<int>>();
+      if (static_cast<int>(window_layer_.size()) != n_layers_)
+        throw std::runtime_error("IR kv state: per-layer window has " + std::to_string(window_layer_.size()) +
+                                 " entries for " + std::to_string(n_layers_) + " blocks");
+      window_ = *std::max_element(window_layer_.begin(), window_layer_.end());
+    } else {
+      window_ = s.value("window", 0);
+    }
+    if (has(s, "sinks") && is_per_layer(s.at("sinks")))
+      throw std::runtime_error("IR kv state: per-layer sinks are not implemented in ember");
     sinks_ = s.value("sinks", 0);
   }
   for (const auto& n : block_) {
     if (n.op != "attention") continue;
     if (!n.attrs.value("causal", true))
       throw std::runtime_error("IR attention with causal=false is not implemented in ember");
-    int w = 0, s = 0;
-    attention_window(n, w, s);
-    if (w < 0 || s < 0) throw std::runtime_error("IR attention window/sinks must be non-negative");
-    // A windowed kv state declares what its cache holds; an attention node
-    // reading it with another window or sink count is an exporter error.
-    if (window_ > 0 && (w != window_ || s != sinks_))
-      throw std::runtime_error("IR attention window/sinks (" + std::to_string(w) + ", " + std::to_string(s) +
-                               ") differ from its kv state's (" + std::to_string(window_) + ", " +
-                               std::to_string(sinks_) + ")");
-    if (w > 0)
-      Logger::info("[IR] sliding-window attention: window " + std::to_string(w) + ", sinks " + std::to_string(s));
+    for (int l = 0; l < n_layers_; ++l) {
+      int w = 0, s = 0;
+      attention_window(n, l, w, s);
+      if (w < 0 || s < 0) throw std::runtime_error("IR attention window/sinks must be non-negative");
+      // A windowed kv state declares what its cache holds; an attention node
+      // reading it with another window or sink count is an exporter error.
+      const int kvw = window_layer_.empty() ? window_ : window_layer_[l];
+      if (kvw > 0 && (w != kvw || s != sinks_))
+        throw std::runtime_error("IR attention window/sinks (" + std::to_string(w) + ", " + std::to_string(s) +
+                                 ") in block " + std::to_string(l) + " differ from its kv state's (" +
+                                 std::to_string(kvw) + ", " + std::to_string(sinks_) + ")");
+      if (w > 0 && (l == 0 || window_layer_.size() > 0))
+        Logger::info("[IR] sliding-window attention: block " + std::to_string(l) + " window " + std::to_string(w) +
+                     ", sinks " + std::to_string(s));
+    }
   }
   for (const auto* sub : {&embed_, &block_, &head_})
     for (const auto& n : *sub)
@@ -451,6 +485,17 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
       if (n.op == "affine" && (!has(n.attrs, "scale") || !has(n.attrs, "shift")))
         throw std::runtime_error("IR affine needs float attributes scale and shift");
       if (n.op == "rms_row" && !has(n.attrs, "eps")) throw std::runtime_error("IR rms_row needs its eps attribute");
+      for (const auto& kv : n.attrs.items()) {  // per-layer attributes: block nodes, the attributes ember reads per block
+        if (!is_per_layer(kv.value())) continue;
+        const bool ok = sub == &block_ && ((n.op == "attention" && (kv.key() == "window" || kv.key() == "sinks")) ||
+                                           (n.op == "rope" && kv.key() == "theta"));
+        if (!ok)
+          throw std::runtime_error("IR " + n.op + ": a per-layer '" + kv.key() + "' is not implemented in ember");
+        if (static_cast<int>(kv.value().at("per_layer").size()) != n_layers_)
+          throw std::runtime_error("IR " + n.op + ": per-layer '" + kv.key() + "' has " +
+                                   std::to_string(kv.value().at("per_layer").size()) + " entries for " +
+                                   std::to_string(n_layers_) + " blocks");
+      }
       if (n.op == "expr") {  // a runtime-defined op: parsed here, so a bad string fails at load naming its column
         arity(1, true);
         if (!n.attrs.contains("expr") || !n.attrs.at("expr").is_string())
@@ -473,10 +518,12 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
         throw std::runtime_error("IR rope pairing '" + pairing + "' is not implemented in ember");
       if (n.attrs.value("rope_heads", "all") != "all")
         throw std::runtime_error("IR rope_heads '" + n.attrs.value("rope_heads", "") + "' is not implemented in ember");
-      if (!n.attrs.at("theta").is_number())
-        throw std::runtime_error("IR rope theta must be a number (per-layer RoPE bases are not implemented in ember)");
-      if (has(n.attrs, "freq_scale"))
-        throw std::runtime_error("IR rope freq_scale is not implemented in ember");
+      if (has(n.attrs, "freq_scale")) {
+        if (is_per_layer(n.attrs.at("freq_scale")))
+          throw std::runtime_error("IR rope: a per-layer freq_scale is not implemented in ember");
+        rope_freq_scale_ = n.attrs.at("freq_scale").get<float>();
+        if (!(rope_freq_scale_ > 0.0f)) throw std::runtime_error("IR rope freq_scale must be positive");
+      }
       if (kv_heads_ > 0 && has(n.attrs, "kv_heads") && n.attrs.at("kv_heads").get<int>() != kv_heads_)
         throw std::runtime_error("IR rope kv_heads differs from its kv state's");
       // The table is the kv state's head_dim wide, as before, unless the node
@@ -490,10 +537,12 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
           throw std::runtime_error("IR rope: n_rot " + std::to_string(n_rot) + " / head_dim " + std::to_string(hd) +
                                    " (kv state head_dim " + std::to_string(head_dim_) + ") is not usable");
       }
-      const float theta = n.attrs.at("theta").get<float>();
-      if (rope_dim_ != 0 && (rope_theta_ != theta || rope_dim_ != n_rot || rope_neox_ != (pairing == "neox")))
+      std::vector<float> thetas(static_cast<size_t>(n_layers_));
+      for (int l = 0; l < n_layers_; ++l) thetas[l] = at_layer(n.attrs.at("theta"), l).get<float>();
+      if (rope_dim_ != 0 && (rope_theta_layer_ != thetas || rope_dim_ != n_rot || rope_neox_ != (pairing == "neox")))
         throw std::runtime_error("IR rope nodes with different theta, n_rot or pairing are not implemented in ember");
-      rope_theta_ = theta;
+      rope_theta_layer_ = thetas;
+      rope_theta_ = thetas[0];
       rope_dim_ = n_rot;
       rope_neox_ = pairing == "neox";
     }
@@ -614,14 +663,20 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
 
   // RoPE table, computed exactly as TinyLlamaModel::initialize_rope_freqs,
   // over rope_dim_ (n_rot; head_dim for full rotary).
-  if (rope_theta_ > 0.0f) rope_freqs_.resize(static_cast<size_t>(max_len_) * rope_dim_ / 2);
-  for (int pos = 0; rope_theta_ > 0.0f && pos < max_len_; ++pos) {
-    for (int i = 0; i < rope_dim_; i += 2) {
-      float freq = 1.0f / std::pow(rope_theta_, float(i) / rope_dim_);
-      float val = static_cast<float>(pos) * freq;
-      rope_freqs_[(static_cast<size_t>(pos) * rope_dim_ / 2) + (i / 2)] = {std::cos(val), std::sin(val)};
+  // One table per distinct theta (per-layer RoPE bases); freq_scale 1 leaves the angle pos * freq.
+  for (const float theta : rope_theta_layer_) {
+    if (!(theta > 0.0f) || rope_tables_.count(theta)) continue;
+    auto& tab = rope_tables_[theta];
+    tab.resize(static_cast<size_t>(max_len_) * rope_dim_ / 2);
+    for (int pos = 0; pos < max_len_; ++pos) {
+      for (int i = 0; i < rope_dim_; i += 2) {
+        float freq = 1.0f / std::pow(theta, float(i) / rope_dim_);
+        float val = (static_cast<float>(pos) * rope_freq_scale_) * freq;
+        tab[(static_cast<size_t>(pos) * rope_dim_ / 2) + (i / 2)] = {std::cos(val), std::sin(val)};
+      }
     }
   }
+  if (rope_theta_ > 0.0f) rope_freqs_ = rope_tables_.at(rope_theta_);
 #ifdef HAS_CUDA
   if (use_gpu) {
     init_device();
@@ -656,9 +711,15 @@ Interpreter::~Interpreter() {
 #endif
 }
 
-void Interpreter::attention_window(const Node& n, int& window, int& sinks) const {
-  window = has(n.attrs, "window") ? n.attrs.at("window").get<int>() : window_;
-  sinks = has(n.attrs, "sinks") ? n.attrs.at("sinks").get<int>() : sinks_;
+void Interpreter::attention_window(const Node& n, int layer, int& window, int& sinks) const {
+  window = has(n.attrs, "window") ? at_layer(n.attrs.at("window"), layer).get<int>()
+                                  : (window_layer_.empty() ? window_ : window_layer_.at(layer));
+  sinks = has(n.attrs, "sinks") ? at_layer(n.attrs.at("sinks"), layer).get<int>() : sinks_;
+}
+
+const std::vector<std::pair<float, float>>& Interpreter::rope_table(int layer) const {
+  if (rope_theta_layer_.empty()) return rope_freqs_;
+  return rope_tables_.at(rope_theta_layer_.at(layer));
 }
 
 std::string Interpreter::layer_name(const std::string& pattern, int layer) const {
@@ -748,6 +809,15 @@ void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData
       bind_tensor(w, gguf, n.op == "linear" || n.op == "embedding");
     }
     if (has(n.attrs, "bias")) bind_tensor(layer_name(n.attrs.at("bias").get<std::string>(), layer), gguf);
+    // rmsnorm weight_offset c: the weight is read as w + c, rounded to f32 once at load (Gemma's (1 + w)
+    // for a file holding HF's raw w; llama.cpp's convert already stores 1 + w).
+    if (n.op == "rmsnorm" && has(n.attrs, "weight_offset") && n.attrs.at("weight_offset").get<float>() != 0.0f) {
+      const std::string w = layer_name(n.attrs.at("weight").get<std::string>(), layer);
+      if (offset_applied_.insert(w).second) {
+        const float off = n.attrs.at("weight_offset").get<float>();
+        for (float& x : weights_.at(w).f32) x = x + off;
+      }
+    }
     if (n.op == "moe_ffn") {
       const std::string norm = n.attrs.value("gate_norm", "renorm"), act = n.attrs.value("activation", "silu");
       if (norm != "renorm" && norm != "raw") throw std::runtime_error("IR moe_ffn gate_norm '" + norm + "' is not implemented");
@@ -1075,16 +1145,17 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
     } else if (n.op == "rope") {
       Buf q = in(n, 0), k = in(n, 1);
       const int hd = n.attrs.at("head_dim").get<int>();
+      const auto& freqs = rope_table(layer);
       if (!rope_neox_ && rope_dim_ == head_dim_) {  // full interleaved: the llama path's kernel
-        apply_rope_batch_cpu(q.v, k.v, T, q.width / hd, k.width / hd, hd, start_pos, rope_freqs_, max_len_,
+        apply_rope_batch_cpu(q.v, k.v, T, q.width / hd, k.width / hd, hd, start_pos, freqs, max_len_,
                              /*use_adjacent_pairing=*/true);
       } else {  // NEOX pairing or partial rotary
         if (start_pos < 0 || start_pos + T > max_len_)
           throw std::runtime_error("IR rope: position " + std::to_string(start_pos + T - 1) + " exceeds the rope table (" +
                                    std::to_string(max_len_) + ")");
         if (q.width % hd != 0 || k.width % hd != 0) throw std::runtime_error("IR rope: q/k widths are not whole heads");
-        rope_rows_cpu(q.v, T, q.width / hd, hd, rope_dim_, rope_neox_, start_pos, rope_freqs_);
-        rope_rows_cpu(k.v, T, k.width / hd, hd, rope_dim_, rope_neox_, start_pos, rope_freqs_);
+        rope_rows_cpu(q.v, T, q.width / hd, hd, rope_dim_, rope_neox_, start_pos, freqs);
+        rope_rows_cpu(k.v, T, k.width / hd, hd, rope_dim_, rope_neox_, start_pos, freqs);
       }
       env[n.out.at(0)] = std::move(q);
       env[n.out.at(1)] = std::move(k);
@@ -1103,7 +1174,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       const float scale = n.attrs.contains("scale") ? n.attrs.at("scale").get<float>() : 1.0f / std::sqrt(float(hd));
       Buf out{{}, hq * hd};
       int window = 0, sinks = 0;
-      attention_window(n, window, sinks);
+      attention_window(n, layer, window, sinks);
       if (window > 0)
         attention_window_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale, window, sinks);
       else
@@ -1459,7 +1530,7 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
         s.hkv = n.attrs.at("kv_heads").get<int>();
         if (s.hd != head_dim_ || s.hkv != kv_heads_) throw std::runtime_error("IR attention shape differs from its kv state");
         s.scale = n.attrs.contains("scale") ? n.attrs.at("scale").get<float>() : 1.0f / std::sqrt(float(s.hd));
-        attention_window(n, s.window, s.sinks);
+        attention_window(n, 0, s.window, s.sinks);  // device graphs have no per-layer attributes
         if (s.window > 0 && layer == 0)
           Logger::info("[IR] CUDA sliding-window attention (ir_window_attention_cuda): window " +
                        std::to_string(s.window) + ", sinks " + std::to_string(s.sinks));

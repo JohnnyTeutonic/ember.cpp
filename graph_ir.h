@@ -70,6 +70,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <set>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -141,7 +142,10 @@ class Interpreter {
 
   void run_nodes(const std::vector<Node>& nodes, int layer, Env& env, int T, int start_pos, bool head_last_only);
   // The attention node's own window/sinks when it names them, else its kv state's.
-  void attention_window(const Node& n, int& window, int& sinks) const;
+  // Per-layer values ({"per_layer": [...]}) are read for `layer`.
+  void attention_window(const Node& n, int layer, int& window, int& sinks) const;
+  // The RoPE table of block `layer` (its theta; one table per distinct theta).
+  const std::vector<std::pair<float, float>>& rope_table(int layer) const;
   const std::vector<float>& weight(const std::string& name) const;  // f32 weights only
   const Weight& bound(const std::string& name) const;
   std::string layer_name(const std::string& pattern, int layer) const;
@@ -162,6 +166,13 @@ class Interpreter {
   float rope_theta_ = 0.0f;
   int rope_dim_ = 0;         // n_rot (head_dim_ when the rope node names none)
   bool rope_neox_ = false;   // pairing "neox"
+  float rope_freq_scale_ = 1.0f;  // linear RoPE scaling: the angle is (pos * freq_scale) * theta^(-2j/n_rot)
+  // Per-layer attributes (paperkiln ir.hpp, {"per_layer": [v_0, ..., v_{L-1}]}): the kv state's window
+  // per block (empty when one value serves every block), each block's RoPE theta, a table per theta.
+  std::vector<int> window_layer_;
+  std::vector<float> rope_theta_layer_;
+  std::map<float, std::vector<std::pair<float, float>>> rope_tables_;
+  std::set<std::string> offset_applied_;  // rmsnorm weights already read as w + weight_offset
   bool gpu_ = false;
 
   // Recurrent slots: each block's state is rec_floats_ floats, slot after
