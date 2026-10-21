@@ -1,0 +1,13 @@
+{
+ "label": "qwen2.5-0.5b-instruct f16, prompts 0-39 (everyday), ember CPU interpreter",
+ "prompts": 40,
+ "prompt_ids_same": 40,
+ "greedy_same": 40,
+ "greedy_differs_at": {},
+ "top1_same": 40,
+ "worst_first_max_dlogit": 5.626678466796875e-05,
+ "worst_first_rel": 1.3676496250414698e-06,
+ "median_first_rel": 1.2639788910755459e-06,
+ "ir_equal_to_gguf_ir_py": true,
+ "ir_differences": []
+}

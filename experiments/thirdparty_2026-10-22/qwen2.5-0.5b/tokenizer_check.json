@@ -1,0 +1,19 @@
+{
+ "gguf": "/mnt/c/ml_artifacts/thirdparty/qwen2.5-0.5b-instruct/qwen2.5-0.5b-instruct-fp16.gguf",
+ "arch": "qwen2",
+ "system": "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.",
+ "cases": {
+  "hard": 21,
+  "raw": 200,
+  "chat": 200
+ },
+ "ids_same": {
+  "hard": 21,
+  "raw": 200,
+  "chat": 200
+ },
+ "template_text_same": 200,
+ "prompts": 200,
+ "differences": [],
+ "stderr": "chat tokenizer: qwen2_bpe, 151936 tokens"
+}
