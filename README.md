@@ -57,8 +57,9 @@ model. The receipts are in [`experiments/`](experiments/).
 - **Quantised models.** Q8_0, K-quants, and Q4_0/Q4_1/Q5_0/Q5_1. The legacy formats are
   bit-identical to the reference dequantiser and can stay in their blocks for large models.
 - **Serving features.** Server-sent-event streaming, an OpenAI-compatible API, KV prefix reuse
-  across turns, a repetition penalty defined jointly with paperkiln, speculative decoding, and a
-  hardened public mode.
+  across turns, speculative decoding, and a hardened public mode. The repetition penalty is
+  defined jointly with paperkiln, and replies match mtstudio 40/40 at penalties 1.1 and 1.3 on
+  CPU, CUDA and WebAssembly.
 - **From checkpoint to the public chat in one command.** `tools/release_chat.py` exports, gates,
   evaluates and builds the browser page, and publishes only when told to.
 - **Proved, not assumed.** Parity tools in [`tools/`](tools/) compare ember with paperkiln token
@@ -172,7 +173,6 @@ All of these are built or written; each is waiting on a model that is still trai
 - **New chat models.** These are training on Colab: a 70M mixture-of-experts fine-tune, a d768
   L12 base and its fine-tune, and next a base trained on FineWeb-Edu plus conversational text.
   Each is released through `release_chat.py` with the WebGPU page.
-- **The joint repetition-penalty gate** against paperkiln, at penalties 1.1 and 1.3.
 
 ## More
 
