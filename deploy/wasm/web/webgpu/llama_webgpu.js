@@ -9,7 +9,7 @@
 // (1/sqrt(mean(x^2) + eps)), RoPE on adjacent pairs with theta^(-i/head_dim), causal softmax
 // attention scaled by 1/sqrt(head_dim) with grouped KV heads, SwiGLU. Sums are f32 in a different
 // order, so logits match the CPU to rounding, not bit for bit.
-import { readGguf, tensorF32 } from './gguf.js';
+import { GGML_Q8_0, f16ToF32, readGguf, tensorF32 } from './gguf.js';
 
 const WG = 64;
 const MAX_CTX = 2048;   // attention's workgroup score array
@@ -51,6 +51,34 @@ var<workgroup> part: array<f32, ${WG}>;
   let base = row * p.cols;
   var s = 0.0;
   for (var c = l.x; c < p.cols; c += ${WG}u) { s += W[base + c] * x[c]; }
+  part[l.x] = s;
+  workgroupBarrier();
+  for (var k = ${WG / 2}u; k > 0u; k >>= 1u) { if (l.x < k) { part[l.x] += part[l.x + k]; } workgroupBarrier(); }
+  if (l.x == 0u) { if (p.accumulate != 0u) { y[row] = y[row] + part[0]; } else { y[row] = part[0]; } }
+}`,
+  // Q8_0 kept quantised: per 32-weight block an f32 scale and 8 words of 4 int8. Each weight is
+  // scale * q in f32, the value ember's dequantise-at-load produces, then the same dot as matvec.
+  matvec_q8: `
+struct P { rows: u32, cols: u32, accumulate: u32, _p: u32 };
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(1) var<storage, read> Q: array<u32>;   // [rows][cols / 4] packed int8
+@group(0) @binding(2) var<storage, read> D: array<f32>;   // [rows][cols / 32] scales
+@group(0) @binding(3) var<storage, read> x: array<f32>;
+@group(0) @binding(4) var<storage, read_write> y: array<f32>;
+var<workgroup> part: array<f32, ${WG}>;
+@compute @workgroup_size(${WG}) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_id) l: vec3u) {
+  let row = wg.x;
+  let words = p.cols / 4u;
+  var s = 0.0;
+  for (var w = l.x; w < words; w += ${WG}u) {
+    let packed = Q[row * words + w];
+    let sc = D[row * (p.cols / 32u) + w / 8u];
+    let c = 4u * w;
+    for (var b = 0u; b < 4u; b++) {
+      let q = f32((i32(packed << (24u - 8u * b))) >> 24u);
+      s += (sc * q) * x[c + b];
+    }
+  }
   part[l.x] = s;
   workgroupBarrier();
   for (var k = ${WG / 2}u; k > 0u; k >>= 1u) { if (l.x < k) { part[l.x] += part[l.x + k]; } workgroupBarrier(); }
@@ -209,6 +237,42 @@ struct P { n: u32, _a: u32, _b: u32, _c: u32 };
 }`,
 };
 
+// Test hook: one weight matrix through matvec (dequantised f32) and matvec_q8 (kept quantised)
+// with the same input x; returns both outputs and a JS f64 reference.
+export async function testMatvecQ8(device, ggufBuffer, name, x) {
+  const g = readGguf(ggufBuffer), t = g.tensors[name];
+  const cols = t.dims[0], rows = t.dims[1], S = GPUBufferUsage;
+  const buf = (arr, extra = 0) => {
+    const b = device.createBuffer({ size: Math.max(16, arr.byteLength), usage: S.STORAGE | S.COPY_DST | S.COPY_SRC | extra });
+    device.queue.writeBuffer(b, 0, arr.buffer, arr.byteOffset, arr.byteLength);
+    return b;
+  };
+  const f = tensorF32(g, name);
+  const nb = t.n / 32, raw = new Uint8Array(g.buf, t.start, 34 * nb), dv = new DataView(g.buf, t.start);
+  const q = new Uint8Array(32 * nb), sc = new Float32Array(nb);
+  for (let b = 0; b < nb; b++) { sc[b] = f16ToF32(dv.getUint16(34 * b, true)); q.set(raw.subarray(34 * b + 2, 34 * b + 34), 32 * b); }
+  const P = device.createBuffer({ size: 16, usage: S.UNIFORM | S.COPY_DST });
+  device.queue.writeBuffer(P, 0, new Uint32Array([rows, cols, 0, 0]));
+  const X = buf(x), Y1 = buf(new Float32Array(rows)), Y2 = buf(new Float32Array(rows));
+  const run = (code, bufs, out) => {
+    const pl = device.createComputePipeline({ layout: 'auto', compute: { module: device.createShaderModule({ code }), entryPoint: 'main' } });
+    const bg = device.createBindGroup({ layout: pl.getBindGroupLayout(0), entries: bufs.map((b, i) => ({ binding: i, resource: { buffer: b } })) });
+    const e = device.createCommandEncoder(), c = e.beginComputePass();
+    c.setPipeline(pl); c.setBindGroup(0, bg); c.dispatchWorkgroups(rows); c.end();
+    device.queue.submit([e.finish()]);
+  };
+  run(SHADERS.matvec, [P, buf(f), X, Y1]);
+  run(SHADERS.matvec_q8, [P, buf(q), buf(sc), X, Y2]);
+  const read = async (b) => {
+    const r = device.createBuffer({ size: 4 * rows, usage: S.MAP_READ | S.COPY_DST });
+    const e = device.createCommandEncoder(); e.copyBufferToBuffer(b, 0, r, 0, 4 * rows); device.queue.submit([e.finish()]);
+    await r.mapAsync(GPUMapMode.READ); const v = new Float32Array(r.getMappedRange().slice(0)); r.unmap(); return v;
+  };
+  const ref = new Float64Array(rows);
+  for (let i = 0; i < rows; i++) { let s = 0; for (let c = 0; c < cols; c++) s += f[i * cols + c] * x[c]; ref[i] = s; }
+  return { rows, cols, f32: await read(Y1), q8: await read(Y2), ref };
+}
+
 export async function createLlama(device, ggufBuffer) {
   const g = readGguf(ggufBuffer), M = g.meta;
   if (M['general.architecture'] !== 'llama') throw new Error('WebGPU path: llama GGUFs only');
@@ -217,11 +281,14 @@ export async function createLlama(device, ggufBuffer) {
   const eps = M['llama.attention.layer_norm_rms_epsilon'], theta = M['llama.rope.freq_base'] || 10000;
   const ctx = Math.min(M['llama.context_length'], MAX_CTX), hd = d / nh, kvd = nkv * hd;
   const moe = !!g.tensors['blk.0.ffn_gate_inp.weight'];
-  const E = moe ? g.tensors['blk.0.ffn_gate_exps.weight'].dims[2] : 0;
+  const E = moe ? (M['llama.expert_count'] || g.tensors['blk.0.ffn_gate_inp.weight'].n / d) : 0;
   const topk = moe ? (M['llama.expert_used_count'] || 2) : 0;
-  const ffE = moe ? g.tensors['blk.0.ffn_gate_exps.weight'].dims[1] : 0;   // per-expert d_ff
+  const ffE = moe ? (M['llama.expert_feed_forward_length'] || g.tensors['blk.0.ffn_gate_exps.weight'].n / (E * d)) : 0;
   if (moe && (E > 256 || topk > 16)) throw new Error('WebGPU path: at most 256 experts, top-16');
-  const vocab = g.tensors['token_embd.weight'].dims[1];
+  // Shapes come from the metadata: GGUFs written before the dims fix record 2-D tensors as
+  // [out, in] (bytes are row-major [out][in] either way), so dims order cannot be trusted.
+  const vocab = M['llama.vocab_size'] || (M['tokenizer.ggml.tokens'] || []).length ||
+                Math.max(...g.tensors['token_embd.weight'].dims);
   const S = GPUBufferUsage;
   const storage = (arr) => {
     const b = device.createBuffer({ size: Math.max(16, arr.byteLength), usage: S.STORAGE | S.COPY_DST });
@@ -236,6 +303,20 @@ export async function createLlama(device, ggufBuffer) {
   };
   const u4 = (a, b = 0, c = 0, e = 0) => new Uint32Array([a, b, c, e]);
   const weight = (name) => storage(tensorF32(g, name));
+  // A matrix for matvec: Q8_0 stays quantised (repacked to scales + packed int8), others go to f32.
+  const mat = (name) => {
+    const t = g.tensors[name];
+    if (t.type !== GGML_Q8_0) return { q8: false, buf: weight(name) };
+    const nb = t.n / 32, raw = new Uint8Array(g.buf, t.start, 34 * nb), dv = new DataView(g.buf, t.start);
+    const q = new Uint8Array(32 * nb), sc = new Float32Array(nb);
+    for (let b = 0; b < nb; b++) {
+      sc[b] = f16ToF32(dv.getUint16(34 * b, true));
+      q.set(raw.subarray(34 * b + 2, 34 * b + 34), 32 * b);
+    }
+    return { q8: true, Q: storage(q), D: storage(sc) };
+  };
+  const mv = (P, m, x, y, n) => m.q8 ? ['matvec_q8', bind('matvec_q8', [P, m.Q, m.D, x, y]), n]
+                                    : ['matvec', bind('matvec', [P, m.buf, x, y]), n];
   const outName = g.tensors['output.weight'] ? 'output.weight' : 'token_embd.weight';   // tied embeddings
 
   // RoPE table exactly as ember builds it: f32 freq = 1 / theta^(i / head_dim), angle pos * freq.
@@ -248,14 +329,14 @@ export async function createLlama(device, ggufBuffer) {
     }
 
   const W = {
-    embd: weight('token_embd.weight'), outNorm: weight('output_norm.weight'), out: weight(outName), rope: storage(cs),
+    embd: weight('token_embd.weight'), outNorm: weight('output_norm.weight'), out: mat(outName), rope: storage(cs),
     layers: Array.from({ length: L }, (_, l) => ({
-      attnNorm: weight(`blk.${l}.attn_norm.weight`), q: weight(`blk.${l}.attn_q.weight`), k: weight(`blk.${l}.attn_k.weight`),
-      v: weight(`blk.${l}.attn_v.weight`), o: weight(`blk.${l}.attn_output.weight`), ffnNorm: weight(`blk.${l}.ffn_norm.weight`),
-      ...(moe ? { router: weight(`blk.${l}.ffn_gate_inp.weight`), gateE: weight(`blk.${l}.ffn_gate_exps.weight`),
+      attnNorm: weight(`blk.${l}.attn_norm.weight`), q: mat(`blk.${l}.attn_q.weight`), k: mat(`blk.${l}.attn_k.weight`),
+      v: mat(`blk.${l}.attn_v.weight`), o: mat(`blk.${l}.attn_output.weight`), ffnNorm: weight(`blk.${l}.ffn_norm.weight`),
+      ...(moe ? { router: mat(`blk.${l}.ffn_gate_inp.weight`), gateE: weight(`blk.${l}.ffn_gate_exps.weight`),
                   upE: weight(`blk.${l}.ffn_up_exps.weight`), downE: weight(`blk.${l}.ffn_down_exps.weight`) }
-              : { gate: weight(`blk.${l}.ffn_gate.weight`), up: weight(`blk.${l}.ffn_up.weight`),
-                  down: weight(`blk.${l}.ffn_down.weight`) }),
+              : { gate: mat(`blk.${l}.ffn_gate.weight`), up: mat(`blk.${l}.ffn_up.weight`),
+                  down: mat(`blk.${l}.ffn_down.weight`) }),
       kc: scratch(ctx * kvd), vc: scratch(ctx * kvd),
     })),
   };
@@ -279,34 +360,34 @@ export async function createLlama(device, ggufBuffer) {
         pExp = moe ? uniform(u4(ffE, d)) : null, pMoeDown = moe ? uniform(u4(d, ffE, topk)) : null,
         pFFk = moe ? uniform(u4(topk * ffE)) : null;
   const ffnSteps = (lw) => moe ? [
-    ['matvec', bind('matvec', [pRouter, lw.router, A.xn, A.r]), E],
+    mv(pRouter, lw.router, A.xn, A.r, E),
     ['moe_select', bind('moe_select', [pSel, A.r, A.sel, A.gate]), 1],
     ['matvec_exp', bind('matvec_exp', [pExp, A.sel, lw.gateE, A.xn, A.g]), [ffE, topk]],
     ['matvec_exp', bind('matvec_exp', [pExp, A.sel, lw.upE, A.xn, A.u]), [ffE, topk]],
     ['swiglu', bind('swiglu', [pFFk, A.g, A.u]), Math.ceil(topk * ffE / WG)],
     ['moe_down', bind('moe_down', [pMoeDown, A.sel, A.gate, lw.downE, A.g, A.x]), d],
   ] : [
-    ['matvec', bind('matvec', [pUp, lw.gate, A.xn, A.g]), ff],
-    ['matvec', bind('matvec', [pUp, lw.up, A.xn, A.u]), ff],
+    mv(pUp, lw.gate, A.xn, A.g, ff),
+    mv(pUp, lw.up, A.xn, A.u, ff),
     ['swiglu', bind('swiglu', [pFF, A.g, A.u]), Math.ceil(ff / WG)],
-    ['matvec', bind('matvec', [pDown, lw.down, A.g, A.x]), d],
+    mv(pDown, lw.down, A.g, A.x, d),
   ];
 
   // The per-token program: [pipeline, bind group, workgroups] in order.
   const prog = [['embed', bind('embed', [pEmb, W.embd, A.x]), Math.ceil(d / WG)]];
   for (const lw of W.layers) {
     prog.push(['rmsnorm', bind('rmsnorm', [pNorm, A.x, lw.attnNorm, A.xn]), 1],
-              ['matvec', bind('matvec', [pQ, lw.q, A.xn, A.q]), d],
-              ['matvec', bind('matvec', [pKV, lw.k, A.xn, A.k]), kvd],
-              ['matvec', bind('matvec', [pKV, lw.v, A.xn, A.v]), kvd],
+              mv(pQ, lw.q, A.xn, A.q, d),
+              mv(pKV, lw.k, A.xn, A.k, kvd),
+              mv(pKV, lw.v, A.xn, A.v, kvd),
               ['rope_kv', bind('rope_kv', [step, pHeads, W.rope, A.q, A.k, A.v, lw.kc, lw.vc]), Math.ceil(Math.max(d / 2, kvd) / WG)],
               ['attention', bind('attention', [step, pHeads, A.q, lw.kc, lw.vc, A.att]), nh],
-              ['matvec', bind('matvec', [pO, lw.o, A.att, A.x]), d],
+              mv(pO, lw.o, A.att, A.x, d),
               ['rmsnorm', bind('rmsnorm', [pNorm, A.x, lw.ffnNorm, A.xn]), 1],
               ...ffnSteps(lw));
   }
   prog.push(['rmsnorm', bind('rmsnorm', [pNorm, A.x, W.outNorm, A.xn]), 1],
-            ['matvec', bind('matvec', [pOut, W.out, A.xn, A.logits]), vocab]);
+            mv(pOut, W.out, A.xn, A.logits, vocab));
 
   function submitToken(token, pos, wantLogits) {
     device.queue.writeBuffer(step, 0, u4(pos, token, d));

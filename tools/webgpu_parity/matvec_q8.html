@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>q8 debug</title></head>
+<body><pre id="out">pending</pre>
+<script type="module">
+import { testMatvecQ8 } from './webgpu/llama_webgpu.js';
+const out = document.getElementById('out');
+try {
+  const buf = await (await fetch('chat_sftfinal_q8all.gguf')).arrayBuffer();
+  const adapter = await navigator.gpu.requestAdapter();
+  const device = await adapter.requestDevice({ requiredLimits: { maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize, maxBufferSize: adapter.limits.maxBufferSize } });
+  const res = {};
+  for (const name of ['blk.0.attn_q.weight', 'blk.0.ffn_down.weight', 'output.weight']) {
+    const t0 = 384, x = new Float32Array(name.includes('down') ? 1152 : 384);
+    for (let i = 0; i < x.length; i++) x[i] = Math.sin(i * 0.37) * 0.5;
+    const r = await testMatvecQ8(device, buf, name, x);
+    let e1 = 0, e2 = 0, worst = -1;
+    for (let i = 0; i < r.rows; i++) {
+      e1 = Math.max(e1, Math.abs(r.f32[i] - r.ref[i]));
+      const d2 = Math.abs(r.q8[i] - r.ref[i]); if (d2 > e2) { e2 = d2; worst = i; }
+    }
+    res[name] = { rows: r.rows, cols: r.cols, max_err_f32: e1, max_err_q8: e2, worst_row: worst,
+                  sample: [r.ref[0], r.f32[0], r.q8[0], r.ref[1], r.q8[1]] };
+  }
+  out.textContent = 'RESULT ' + JSON.stringify(res);
+} catch (e) { out.textContent = 'ERROR ' + (e.stack || e); }
+</script></body></html>
