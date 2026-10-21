@@ -18,7 +18,7 @@ ln -s "$JSON_INC/nlohmann" "$INC/nlohmann"
 mkdir -p "$OUT"
 SRC="model.cpp model_config.cpp kv_cache.cpp weight_management.cpp cpu_attention.cpp model_utils.cpp
      gpu_initialization.cpp gpu_memory_optimization.cpp cpu_batch_processor.cpp utils.cpp safetensors_loader.cpp
-     tokenizer.cpp logger.cpp api.cpp gguf_parser.cpp quantization.cpp graph_ir.cpp graph_ir_ops.cpp parallel_for.cpp"
+     tokenizer.cpp logger.cpp api.cpp gguf_parser.cpp quantization.cpp graph_ir.cpp graph_ir_ops.cpp graph_ir_expr.cpp parallel_for.cpp"
 SIMD=-msimd128
 [ "${EMBER_WASM_SIMD:-1}" = 0 ] && SIMD=
 # EMBER_WASM_MAX_MEMORY (default 1gb, up to 4gb): the heap ceiling; models past about

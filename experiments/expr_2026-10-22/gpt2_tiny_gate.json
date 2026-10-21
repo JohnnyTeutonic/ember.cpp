@@ -1,0 +1,15 @@
+{
+ "op": "gelu",
+ "expr": "0.5*x*(1 + tanh(sqrt(2/pi)*(x + 0.044715*x^3)))",
+ "nodes_swapped": 1,
+ "first_token_max_rel": 8.102841261701193e-07,
+ "first_token_top1": "40/40",
+ "greedy_vs_ref": {
+  "n": 40,
+  "reply_identical": 40,
+  "tokens_identical": 40,
+  "stop_identical": 40,
+  "pass": true
+ },
+ "pass": true
+}
