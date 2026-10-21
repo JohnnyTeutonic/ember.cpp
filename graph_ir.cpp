@@ -17,6 +17,7 @@
 #include "cpu_attention.h"
 #include "gguf_structs.h"
 #include "graph_ir_expr.h"
+#include "graph_ir_mamba.h"
 #include "graph_ir_ops.h"
 #include "logger.h"
 #include "quantization.h"
@@ -35,11 +36,13 @@ namespace {
 const std::set<std::string> kCpuOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
                                        "attention", "add", "mul", "silu", "gelu", "moe_ffn",
                                        "linear_attention", "ssm_scan",
+                                       // Mamba-1 (graph_ir_mamba.h)
+                                       "conv1d_causal", "selective_scan",
                                        // gated and attention-residual families (graph_ir_ops.h)
                                        "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
                                        // runtime-defined elementwise ops (graph_ir_expr.h)
                                        "expr"};
-const std::set<std::string> kRecurrentOps = {"linear_attention", "ssm_scan"};
+const std::set<std::string> kRecurrentOps = {"linear_attention", "ssm_scan", "conv1d_causal", "selective_scan"};
 // The ops run_nodes_device implements.
 const std::set<std::string> kCudaOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
                                         "attention", "add", "mul", "silu", "gelu", "moe_ffn",
@@ -552,6 +555,21 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
       if (n.in.size() != 1 || n.out.size() != 1) throw std::runtime_error("IR ssm_scan reads [u] and writes one output");
       if (slot.tensors.size() != 1 || slot.tensors[0].name != "s" || slot.tensors[0].shape != std::vector<int64_t>{sn})
         throw std::runtime_error("IR recurrent state '" + slot.name + "' must hold one tensor s [n]");
+    } else if (n.op == "conv1d_causal") {
+      const RecSlot& slot = rec_slot(n, "conv1d_causal");
+      const int64_t C = n.attrs.at("channels").get<int64_t>(), K = n.attrs.at("kernel").get<int64_t>();
+      if (n.in.size() != 1 || n.out.size() != 1) throw std::runtime_error("IR conv1d_causal reads [x] and writes one output");
+      if (K < 2 || C < 1) throw std::runtime_error("IR conv1d_causal needs channels >= 1 and kernel >= 2");
+      if (slot.tensors.size() != 1 || slot.tensors[0].name != "x" ||
+          slot.tensors[0].shape != std::vector<int64_t>{K - 1, C})
+        throw std::runtime_error("IR recurrent state '" + slot.name + "' must hold one tensor x [kernel - 1, channels]");
+    } else if (n.op == "selective_scan") {
+      const RecSlot& slot = rec_slot(n, "selective_scan");
+      const int64_t D = n.attrs.at("channels").get<int64_t>(), N = n.attrs.at("d_state").get<int64_t>();
+      if (n.in.size() != 4 || n.out.size() != 1)
+        throw std::runtime_error("IR selective_scan reads [x, dt, B, C] and writes one output");
+      if (slot.tensors.size() != 1 || slot.tensors[0].name != "s" || slot.tensors[0].shape != std::vector<int64_t>{D, N})
+        throw std::runtime_error("IR recurrent state '" + slot.name + "' must hold one tensor s [channels, d_state]");
     }
   }
   if (rec_floats_ > 0) {
@@ -747,6 +765,27 @@ void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData
         if (bound(w).numel != numel)
           throw std::runtime_error("IR ssm_scan '" + w + "' has " + std::to_string(bound(w).numel) +
                                    " elements, expected " + std::to_string(numel));
+      }
+    }
+    auto expect = [&](const std::string& w, size_t numel) {
+      if (bound(w).numel != numel)
+        throw std::runtime_error("IR " + n.op + " '" + w + "' has " + std::to_string(bound(w).numel) +
+                                 " elements, expected " + std::to_string(numel));
+    };
+    if (n.op == "conv1d_causal") {  // weight [channels, kernel], bias [channels] (bound above)
+      const size_t C = n.attrs.at("channels").get<size_t>(), K = n.attrs.at("kernel").get<size_t>();
+      expect(layer_name(n.attrs.at("weight").get<std::string>(), layer), C * K);
+      if (has(n.attrs, "bias")) expect(layer_name(n.attrs.at("bias").get<std::string>(), layer), C);
+    }
+    if (n.op == "selective_scan") {  // a [channels, d_state] as stored, d [channels] optional
+      const size_t D = n.attrs.at("channels").get<size_t>(), N = n.attrs.at("d_state").get<size_t>();
+      const std::string a = layer_name(n.attrs.at("a").get<std::string>(), layer);
+      bind_tensor(a, gguf);
+      expect(a, D * N);
+      if (has(n.attrs, "d")) {
+        const std::string d = layer_name(n.attrs.at("d").get<std::string>(), layer);
+        bind_tensor(d, gguf);
+        expect(d, D);
       }
     }
   }
@@ -1220,6 +1259,40 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       for (int t = 0; t < T; ++t) {
         const size_t r = static_cast<size_t>(t) * sn;
         ssm_scan_row_cpu(u.v.data() + r, A.data(), B.data(), C.data(), D, s, scratch.data(), out.v.data() + r, sn);
+        rec_row_done(slot, layer, t);
+      }
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "conv1d_causal") {  // depthwise causal conv over the slot's previous inputs. ROUNDING.
+      const Buf& x = in(n, 0);
+      const int C = n.attrs.at("channels").get<int>(), K = n.attrs.at("kernel").get<int>();
+      if (x.width != C) throw std::runtime_error("IR conv1d_causal: input width differs from channels");
+      const RecSlot& slot = rec_slot(n, "conv1d_causal");
+      float* st = rec_tensor(slot, "x", layer, static_cast<size_t>(K - 1) * C);
+      const auto& w = weight(layer_name(n.attrs.at("weight").get<std::string>(), layer));
+      const float* bias =
+          has(n.attrs, "bias") ? weight(layer_name(n.attrs.at("bias").get<std::string>(), layer)).data() : nullptr;
+      Buf out{std::vector<float>(static_cast<size_t>(T) * C), C};
+      for (int t = 0; t < T; ++t) {
+        const size_t r = static_cast<size_t>(t) * C;
+        cpu::conv1d_causal_row(x.v.data() + r, w.data(), bias, st, out.v.data() + r, C, K);
+        rec_row_done(slot, layer, t);
+      }
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "selective_scan") {  // Mamba-1's scan over the slot's s. ROUNDING.
+      const Buf &x = in(n, 0), &dt = in(n, 1), &bm = in(n, 2), &cm = in(n, 3);
+      const int D = n.attrs.at("channels").get<int>(), N = n.attrs.at("d_state").get<int>();
+      if (x.width != D || dt.width != D || bm.width != N || cm.width != N)
+        throw std::runtime_error("IR selective_scan: x/dt must be [T, channels] and B/C [T, d_state]");
+      const RecSlot& slot = rec_slot(n, "selective_scan");
+      float* s = rec_tensor(slot, "s", layer, static_cast<size_t>(D) * N);
+      const auto& A = weight(layer_name(n.attrs.at("a").get<std::string>(), layer));
+      const float* d = has(n.attrs, "d") ? weight(layer_name(n.attrs.at("d").get<std::string>(), layer)).data() : nullptr;
+      const bool softplus = n.attrs.value("dt_softplus", true);
+      Buf out{std::vector<float>(static_cast<size_t>(T) * D), D};
+      for (int t = 0; t < T; ++t) {
+        cpu::selective_scan_row(x.v.data() + static_cast<size_t>(t) * D, dt.v.data() + static_cast<size_t>(t) * D,
+                                bm.v.data() + static_cast<size_t>(t) * N, cm.v.data() + static_cast<size_t>(t) * N,
+                                A.data(), d, s, out.v.data() + static_cast<size_t>(t) * D, D, N, softplus);
         rec_row_done(slot, layer, t);
       }
       env[n.out.at(0)] = std::move(out);
