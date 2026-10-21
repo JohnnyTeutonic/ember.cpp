@@ -284,8 +284,17 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
                ", Num GPU Layers (CLI): " + std::to_string(num_gpu_layers_from_cli) +
                ", Use MMAP (CLI): " + (cli_use_mmap ? "true" : "false") +
                ", Use KV Quant (CLI): " + (use_kv_quant ? "true" : "false"));
+#ifndef HAS_CUDA
+  // A CPU build runs every layer on the CPU whatever the CLI asks: a nonzero
+  // count here otherwise reaches generate(), which cannot run GPU layers.
+  if (num_gpu_layers_from_cli != 0) {
+    Logger::warning("This build has no CUDA: " + std::to_string(num_gpu_layers_from_cli) +
+                    " GPU layer(s) requested; every layer runs on the CPU.");
+    num_gpu_layers_from_cli = 0;
+  }
+#endif
 
-  std::string effective_model_file_path = model_path_arg; 
+  std::string effective_model_file_path = model_path_arg;
   std::string path_for_config_json = model_path_arg;
 
   ModelConfig initial_model_config_for_model_ctor;
@@ -922,8 +931,8 @@ if (prefill_enabled) {
               gpuErrchk(cudaFree(d_temp_batch_embeddings));
           }
 #else
-          Logger::error("[Generate API] GPU layers requested but CUDA not available. Cannot proceed.");
-          return "";
+          // An error, not an empty reply: a caller must not read it as a finished generation.
+          throw std::runtime_error("[Generate API] GPU layers requested but CUDA not available");
 #endif
       }
       }  // llama path
