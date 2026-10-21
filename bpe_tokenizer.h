@@ -1,7 +1,7 @@
 // Vendored verbatim from paperkiln (microtorch) include/microtorch/bpe_tokenizer.hpp
-// at paperkiln fb810ca1066b. ember.cpp uses it for GGUFs whose tokenizer.ggml.model
-// is "bpe" (paperkiln byte-level BPE: merges are token-id pairs). Do not
-// edit here: change it in paperkiln (tests/test_bpe.py checks C++/Python
+// at paperkiln e70f75d44f6e (include names .hpp -> .h). ember.cpp uses it for GGUFs whose tokenizer.ggml.model
+// is "bpe" (paperkiln byte-level BPE: merges are token-id pairs).
+// Do not edit here: change it in paperkiln (its tests check C++/Python
 // parity) and re-vendor.
 #pragma once
 // Byte-level BPE encoder/decoder: the C++ side of tools/bpe.py (the
@@ -154,10 +154,13 @@ private:
 struct GgufTokenizer {
     std::string model;
     std::vector<std::string> tokens, merges;
+    std::string pre;              // tokenizer.ggml.pre ("" when absent)
+    std::vector<int32_t> token_type;  // tokenizer.ggml.token_type (empty when absent)
 };
 
-// The tokenizer block of any GGUF (tokenizer.ggml.model, tokens, merges),
-// unvalidated: a vocabulary file from tools/bpe.py or a model export.
+// The tokenizer block of any GGUF (tokenizer.ggml.model, pre, tokens,
+// token_type, merges), unvalidated: a vocabulary file from tools/bpe.py or a
+// model export.
 inline GgufTokenizer read_gguf_tokenizer(const std::string& path) {
     std::ifstream f(path, std::ios::binary);
     if (!f) throw std::runtime_error("cannot open " + path);
@@ -174,7 +177,8 @@ inline GgufTokenizer read_gguf_tokenizer(const std::string& path) {
     u64();
     const uint64_t nkv = u64();
     std::vector<std::string> tokens, merges;
-    std::string model;
+    std::string model, pre;
+    std::vector<int32_t> token_type;
     std::function<void(uint32_t)> skip = [&](uint32_t t) {
         static const size_t sz[] = {1, 1, 2, 2, 4, 4, 4, 1, 0, 0, 8, 8, 8};
         if (t == 8) {
@@ -199,13 +203,24 @@ inline GgufTokenizer read_gguf_tokenizer(const std::string& path) {
             if (et != 8) throw std::runtime_error(path + ": " + k + " is not a string array");
             auto& dst = k == "tokenizer.ggml.tokens" ? tokens : merges;
             for (uint64_t j = 0; j < n; ++j) dst.push_back(str());
+        } else if (k == "tokenizer.ggml.token_type" && t == 9) {
+            const uint32_t et = u32();
+            const uint64_t n = u64();
+            for (uint64_t j = 0; j < n; ++j) {  // another element type is skipped, not an error
+                if (et == 5)
+                    token_type.push_back(static_cast<int32_t>(u32()));
+                else
+                    skip(et);
+            }
         } else if (k == "tokenizer.ggml.model" && t == 8) {
             model = str();
+        } else if (k == "tokenizer.ggml.pre" && t == 8) {
+            pre = str();
         } else {
             skip(t);
         }
     }
-    return {std::move(model), std::move(tokens), std::move(merges)};
+    return {std::move(model), std::move(tokens), std::move(merges), std::move(pre), std::move(token_type)};
 }
 
 // Reads a tokenizer GGUF written by tools/bpe.py (or a BPE model export):

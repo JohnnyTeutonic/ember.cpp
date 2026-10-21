@@ -518,20 +518,20 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
       Logger::info("Dequantised all weights to f32 at load (small model).");
   }
 
-  // paperkiln byte-level BPE (tokenizer.ggml.model == "bpe"): ember's own
-  // Tokenizer cannot read its id-pair merges, so encode/decode go through
-  // the vendored microtorch::bpe::Tokenizer instead (see is_bpe()).
+  // paperkiln chat models: their vocabulary ("bpe" with id-pair merges, or the llama.cpp-compatible
+  // "gpt2"/"llama-bpe" form with the chat specials at ids 0-3) goes through the vendored paperkiln
+  // tokenizers in chat_tokenizer.h (see is_bpe()); any other GGUF keeps ember's own tokenizers.
   {
     std::string ext = std::filesystem::path(model_path_arg).extension().string();
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
     if (ext == ".gguf") {
       microtorch::bpe::GgufTokenizer g = microtorch::bpe::read_gguf_tokenizer(model_path_arg);
-      if (g.model == "bpe") {
-        if (g.merges.empty()) throw std::runtime_error("BPE GGUF has no tokenizer.ggml.merges");
-        bpe_ = std::make_unique<microtorch::bpe::Tokenizer>(std::move(g.tokens), g.merges);
+      const size_t n_merges = g.merges.size();
+      bpe_ = ember::make_chat_tokenizer(std::move(g));
+      if (bpe_) {
         repetition_penalty_ = 1.0f;  // mtstudio chat applies none
-        Logger::info("BPE tokenizer: " + std::to_string(bpe_->size()) + " tokens, " +
-                     std::to_string(g.merges.size()) + " merges (chat mode)");
+        Logger::info(std::string("Chat tokenizer (") + bpe_->kind() + "): " + std::to_string(bpe_->size()) +
+                     " tokens, " + std::to_string(n_merges) + " merges (chat mode)");
       }
     }
   }
