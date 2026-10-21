@@ -251,6 +251,142 @@ __global__ void rope_kernel(float* __restrict__ q, float* __restrict__ k, int hq
   }
 }
 
+// One block per token, threads over (head, pair) (rope_rows_cpu).
+__global__ void rope_rows_kernel(float* __restrict__ x, int heads, int hd, int n_rot, int neox, int start_pos,
+                                 const float* __restrict__ freqs, const int* __restrict__ dpos) {
+  const int t = blockIdx.x, half = n_rot / 2;
+  if (dpos) start_pos = *dpos;
+  const float* f = freqs + (size_t)(start_pos + t) * half * 2;
+  for (int j = threadIdx.x; j < heads * half; j += blockDim.x) {
+    const int h = j / half, i = j % half;
+    float* r = x + ((size_t)t * heads + h) * hd;
+    const int i0 = neox ? i : 2 * i, i1 = neox ? i + half : 2 * i + 1;
+    const float c = f[2 * i], s = f[2 * i + 1];
+    const float v0 = r[i0], v1 = r[i1];
+    r[i0] = __fsub_rn(__fmul_rn(v0, c), __fmul_rn(v1, s));
+    r[i1] = __fadd_rn(__fmul_rn(v0, s), __fmul_rn(v1, c));
+  }
+}
+
+__global__ void conv1d_causal_kernel(const float* __restrict__ x, const float* __restrict__ w,
+                                     const float* __restrict__ bias, float* __restrict__ state, float* __restrict__ out,
+                                     int T, int C, int K) {
+  const int c = blockIdx.x * blockDim.x + threadIdx.x;
+  if (c >= C) return;
+  for (int t = 0; t < T; ++t) {
+    const float xc = x[(size_t)t * C + c];
+    float acc = 0.0f;
+    for (int k = 0; k < K; ++k) {
+      const float v = k < K - 1 ? state[(size_t)k * C + c] : xc;
+      acc = __fadd_rn(acc, __fmul_rn(w[(size_t)c * K + k], v));
+    }
+    out[(size_t)t * C + c] = bias ? __fadd_rn(acc, bias[c]) : acc;
+    if (K > 1) {  // the channel's state becomes the last K - 1 entries of [state; x]
+      for (int k = 0; k + 2 < K; ++k) state[(size_t)k * C + c] = state[(size_t)(k + 1) * C + c];
+      state[(size_t)(K - 2) * C + c] = xc;
+    }
+  }
+}
+
+__global__ void selective_scan_kernel(const float* __restrict__ x, const float* __restrict__ dt,
+                                      const float* __restrict__ B, const float* __restrict__ Cm,
+                                      const float* __restrict__ A, const float* __restrict__ d, float* __restrict__ s,
+                                      float* __restrict__ y, int T, int D, int N, int softplus) {
+  const int c = blockIdx.x * blockDim.x + threadIdx.x;
+  if (c >= D) return;
+  float* sc = s + (size_t)c * N;
+  const float* ac = A + (size_t)c * N;
+  for (int t = 0; t < T; ++t) {
+    const float dtc = dt[(size_t)t * D + c], xc = x[(size_t)t * D + c];
+    const float delta = softplus ? (dtc <= 20.0f ? log1pf(expf(dtc)) : dtc) : dtc;
+    const float xd = __fmul_rn(xc, delta);
+    const float* bt = B + (size_t)t * N;
+    const float* ct = Cm + (size_t)t * N;
+    float acc = 0.0f;
+    for (int n = 0; n < N; ++n) {
+      const float decay = __fmul_rn(sc[n], expf(__fmul_rn(delta, ac[n])));
+      const float v = __fadd_rn(decay, __fmul_rn(bt[n], xd));
+      sc[n] = v;
+      acc = __fadd_rn(acc, __fmul_rn(v, ct[n]));
+    }
+    y[(size_t)t * D + c] = d ? __fadd_rn(acc, __fmul_rn(d[c], xc)) : acc;
+  }
+}
+
+struct ExprCode {
+  int n;
+  expr::Instr code[expr::kMaxCode];
+};
+struct ExprPtrs {
+  const float* in[expr::Expr::kMaxInputs];
+  const float* col[expr::kMaxColumns];
+};
+
+// One thread per element: the stage's stack program (graph_ir_expr.cpp
+// unary_op / binary_op, each primitive rounded on its own).
+__global__ void expr_kernel(ExprCode code, ExprPtrs p, float* __restrict__ out, size_t n, int w) {
+  const size_t i = (size_t)blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= n) return;
+  const size_t t = i / w;
+  float st[expr::kMaxStack];
+  int sp = 0;
+  for (int k = 0; k < code.n; ++k) {
+    const expr::Instr ins = code.code[k];
+    switch (ins.op) {
+      case expr::Op::CONST: st[sp++] = ins.c; break;
+      case expr::Op::INPUT: st[sp++] = p.in[ins.idx][i]; break;
+      case expr::Op::COL: st[sp++] = p.col[ins.idx][t]; break;
+      case expr::Op::WIDTH: st[sp++] = (float)w; break;
+      case expr::Op::NEG: st[sp - 1] = -st[sp - 1]; break;
+      case expr::Op::EXP: st[sp - 1] = expf(st[sp - 1]); break;
+      case expr::Op::LOG: st[sp - 1] = logf(st[sp - 1]); break;
+      case expr::Op::SQRT: st[sp - 1] = __fsqrt_rn(st[sp - 1]); break;
+      case expr::Op::TANH: st[sp - 1] = tanhf(st[sp - 1]); break;
+      case expr::Op::SIGMOID: st[sp - 1] = __fdiv_rn(1.0f, __fadd_rn(1.0f, expf(-st[sp - 1]))); break;
+      case expr::Op::ERF: st[sp - 1] = erff(st[sp - 1]); break;
+      case expr::Op::ABS: st[sp - 1] = fabsf(st[sp - 1]); break;
+      case expr::Op::RELU: st[sp - 1] = 0.0f < st[sp - 1] ? st[sp - 1] : 0.0f; break;  // std::max(0.0f, a)
+      case expr::Op::WHERE: {
+        const float b = st[--sp], a = st[--sp];
+        st[sp - 1] = st[sp - 1] > 0.0f ? a : b;
+        break;
+      }
+      default: {
+        const float b = st[--sp], a = st[sp - 1];
+        float r;
+        switch (ins.op) {
+          case expr::Op::ADD: r = __fadd_rn(a, b); break;
+          case expr::Op::SUB: r = __fsub_rn(a, b); break;
+          case expr::Op::MUL: r = __fmul_rn(a, b); break;
+          case expr::Op::DIV: r = __fdiv_rn(a, b); break;
+          case expr::Op::POW: r = powf(a, b); break;
+          case expr::Op::MAX: r = a >= b ? a : b; break;
+          default: r = a <= b ? a : b; break;  // MIN
+        }
+        st[sp - 1] = r;
+      }
+    }
+  }
+  out[i] = st[0];
+}
+
+// One thread per row, ascending columns: 0 + r0 + r1 + ... (rowsum), or the
+// first largest entry (rowmax).
+__global__ void row_reduce_kernel(const float* __restrict__ x, float* __restrict__ out, int T, int w, int is_max) {
+  const int t = blockIdx.x * blockDim.x + threadIdx.x;
+  if (t >= T) return;
+  const float* r = x + (size_t)t * w;
+  float acc;
+  if (is_max) {
+    acc = r[0];
+    for (int j = 1; j < w; ++j) acc = r[j] > acc ? r[j] : acc;
+  } else {
+    acc = 0.0f;
+    for (int j = 0; j < w; ++j) acc = __fadd_rn(acc, r[j]);
+  }
+  out[t] = acc;
+}
+
 // Block-wide float max / sum (every thread gets the result).
 __device__ float block_reduce(float v, bool is_max, float* red) {
   for (int o = 16; o > 0; o >>= 1) {
@@ -456,6 +592,58 @@ void ir_rope_cuda(float* q, float* k, int T, int hq, int hk, int hd, int start_p
                   cudaStream_t stream, const int* dpos) {
   rope_kernel<<<T, 128, 0, stream>>>(q, k, hq, hk, hd, start_pos, freqs, dpos);
   check_launch("rope");
+}
+
+void ir_rope_rows_cuda(float* x, int T, int heads, int hd, int n_rot, bool neox, int start_pos, const float* freqs,
+                       cudaStream_t stream, const int* dpos) {
+  if (n_rot <= 0 || n_rot % 2 != 0 || n_rot > hd)
+    throw std::runtime_error("IR CUDA rope: n_rot " + std::to_string(n_rot) + " / head_dim " + std::to_string(hd));
+  rope_rows_kernel<<<T, 128, 0, stream>>>(x, heads, hd, n_rot, neox ? 1 : 0, start_pos, freqs, dpos);
+  check_launch("rope (rows)");
+}
+
+void ir_conv1d_causal_cuda(const float* x, const float* w, const float* bias, float* state, float* out, int T, int C,
+                           int K, cudaStream_t stream) {
+  if (K < 1 || C <= 0) throw std::runtime_error("IR CUDA conv1d_causal: kernel " + std::to_string(K));
+  conv1d_causal_kernel<<<(C + 127) / 128, 128, 0, stream>>>(x, w, bias, state, out, T, C, K);
+  check_launch("conv1d_causal");
+}
+
+void ir_selective_scan_cuda(const float* x, const float* dt, const float* B, const float* C, const float* A,
+                            const float* d, float* s, float* y, int T, int D, int N, bool softplus,
+                            cudaStream_t stream) {
+  selective_scan_kernel<<<(D + 127) / 128, 128, 0, stream>>>(x, dt, B, C, A, d, s, y, T, D, N, softplus ? 1 : 0);
+  check_launch("selective_scan");
+}
+
+size_t ir_expr_scratch_floats(const std::vector<expr::Stage>& stages, int T, int w) {
+  if (stages.size() <= 1) return 0;
+  return (size_t)T * w + (stages.size() - 1) * (size_t)T;
+}
+
+void ir_expr_cuda(const std::vector<expr::Stage>& stages, const float* const* ins, int n_ins, float* scratch,
+                  float* out, int T, int w, cudaStream_t stream) {
+  if (n_ins <= 0 || n_ins > (int)expr::Expr::kMaxInputs || stages.empty() || stages.size() - 1 > expr::kMaxColumns)
+    throw std::runtime_error("IR CUDA expr: " + std::to_string(n_ins) + " inputs, " + std::to_string(stages.size()) +
+                             " stages");
+  ExprPtrs p{};
+  for (int k = 0; k < n_ins; ++k) p.in[k] = ins[k];
+  float* full = scratch;  // a reduction's argument, [T, w], reused stage by stage
+  for (size_t k = 0; k + 1 < stages.size(); ++k) p.col[k] = scratch + (size_t)T * w + k * (size_t)T;
+  const size_t n = (size_t)T * w;
+  for (size_t k = 0; k < stages.size(); ++k) {
+    const expr::Stage& s = stages[k];
+    if (s.code.empty() || s.code.size() > expr::kMaxCode) throw std::runtime_error("IR CUDA expr: a stage's code");
+    ExprCode code{};
+    code.n = (int)s.code.size();
+    for (size_t i = 0; i < s.code.size(); ++i) code.code[i] = s.code[i];
+    const bool last = k + 1 == stages.size();
+    expr_kernel<<<blocks_for(n), kThreads, 0, stream>>>(code, p, last ? out : full, n, w);
+    check_launch("expr");
+    if (last) break;
+    row_reduce_kernel<<<(T + 63) / 64, 64, 0, stream>>>(full, const_cast<float*>(p.col[k]), T, w, s.reduce == 2);
+    check_launch("expr row reduction");
+  }
 }
 
 }  // namespace ember_ir

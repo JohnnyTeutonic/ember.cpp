@@ -13,6 +13,10 @@
 #ifdef HAS_CUDA
 #include <cuda_runtime.h>
 
+#include <vector>
+
+#include "graph_ir_expr.h"
+
 namespace ember_ir {
 
 // out[t] = table[tokens[t]] (rows of d floats).
@@ -36,6 +40,11 @@ void ir_gelu_cuda(const float* x, float* out, size_t n, bool tanh_form, cudaStre
 // positions start_pos + t, table [max_len][hd/2] of (cos, sin) pairs.
 void ir_rope_cuda(float* q, float* k, int T, int hq, int hk, int hd, int start_pos, const float* freqs,
                   cudaStream_t stream, const int* dpos = nullptr);
+// RoPE over the first n_rot dims of each head of x [T][heads*hd] in place
+// (graph_ir.cpp rope_rows_cpu): pairs (2i, 2i+1) or, neox, (i, i + n_rot/2);
+// table [max_len][n_rot/2] of (cos, sin) pairs. Any n_rot (even, <= hd).
+void ir_rope_rows_cuda(float* x, int T, int heads, int hd, int n_rot, bool neox, int start_pos, const float* freqs,
+                       cudaStream_t stream, const int* dpos = nullptr);
 // The rows of k, v [T][row] into the caches K, V [pos][row] at positions
 // start_pos + t. EXACT (a copy).
 void ir_kv_write_cuda(float* K, float* V, const float* k, const float* v, int T, int row, int start_pos,
@@ -87,6 +96,26 @@ void ir_linear_attention_cuda(const float* q, const float* k, const float* v, fl
 constexpr int kIrSsmMax = 6144;
 void ir_ssm_scan_cuda(const float* u, const float* A, const float* B, const float* C, const float* D, float* s,
                       float* y, int T, int n, cudaStream_t stream);
+
+// Mamba-1 (graph_ir_mamba.h cpu::conv1d_causal_row and selective_scan_row,
+// row by row in t): one thread per channel, its state updated in place.
+// conv1d_causal: x, out [T][C]; w [C][K]; bias [C] or null; state [K-1][C].
+void ir_conv1d_causal_cuda(const float* x, const float* w, const float* bias, float* state, float* out, int T, int C,
+                           int K, cudaStream_t stream);
+// selective_scan: x, dt, y [T][D]; B, C [T][N]; A [D][N]; d [D] or null;
+// s [D][N]. delta = softplus(dt) (log1p(exp(dt)), dt itself above 20) when
+// softplus. ROUNDING (expf, log1pf).
+void ir_selective_scan_cuda(const float* x, const float* dt, const float* B, const float* C, const float* A,
+                            const float* d, float* s, float* y, int T, int D, int N, bool softplus,
+                            cudaStream_t stream);
+
+// expr (graph_ir_expr.h lower): out [T, w] from ins (each [T, w]); scratch
+// holds ir_expr_scratch_floats(stages, T, w) floats (a reduction's argument
+// and the columns). Every element runs the stage's stack program; reductions
+// are one thread per row in ascending columns, as the CPU's eval.
+size_t ir_expr_scratch_floats(const std::vector<expr::Stage>& stages, int T, int w);
+void ir_expr_cuda(const std::vector<expr::Stage>& stages, const float* const* ins, int n_ins, float* scratch,
+                  float* out, int T, int w, cudaStream_t stream);
 
 }  // namespace ember_ir
 #endif  // HAS_CUDA

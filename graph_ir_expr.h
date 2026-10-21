@@ -60,5 +60,33 @@ void eval(const Expr& e, const std::vector<const float*>& ins, int T, int w, flo
 // The parse of (text, n_inputs), cached: an IR's expressions are parsed once at load.
 const Expr& cached(const std::string& text, size_t n_inputs);
 
+// The device form (graph_ir_cuda.h ir_expr_cuda): the expression as stages of
+// a per-element stack program over [T, w]. A row reduction's argument is a
+// stage of its own, reduced to a column [T] in ascending columns as eval
+// reduces it; a later stage reads column k (stage k's) broadcast along its row.
+// Constant subexpressions are folded here with eval's own operations, so both
+// paths compute with the same constants; every other primitive is one
+// instruction, rounded on its own.
+enum class Op : int {
+  CONST, INPUT, COL, WIDTH,                            // push c, input idx at (t, j), column idx at t, (float) w
+  NEG, EXP, LOG, SQRT, TANH, SIGMOID, ERF, ABS, RELU,  // pop a, push f(a)
+  ADD, SUB, MUL, DIV, POW, MAX, MIN,                   // pop b, pop a, push f(a, b)
+  WHERE,                                               // pop b, a, c; push c > 0 ? a : b
+};
+struct Instr {
+  Op op = Op::CONST;
+  int idx = 0;
+  float c = 0.0f;
+};
+struct Stage {
+  std::vector<Instr> code;
+  int reduce = 0;  // 0 for the last stage (the result); 1 rowsum, 2 rowmax: column k for the later stages
+};
+constexpr size_t kMaxCode = 96;    // instructions per stage
+constexpr size_t kMaxStack = 16;   // stack depth
+constexpr size_t kMaxColumns = 8;  // row reductions
+// Throws std::invalid_argument naming the limit an expression exceeds.
+std::vector<Stage> lower(const Expr& e);
+
 }  // namespace expr
 }  // namespace ember_ir
