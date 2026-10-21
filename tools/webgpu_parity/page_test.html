@@ -1,0 +1,45 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>page worker parity</title></head>
+<body><pre id="out">pending</pre>
+<script type="module">
+// The Space page's own worker (worker.js) on both backends, WebGPU and ?backend=wasm, with the 40
+// greedy requests of greedy.json: replies must be identical to each other and to ember CPU's.
+// Serve a built Space folder (tools/build_wasm_space.sh) with greedy.json copied in, then
+// PAGE=page_test.html python3 run.py PORT.
+const out = document.getElementById('out');
+function startWorker(qs) {
+  return new Promise((resolve, reject) => {
+    const w = new Worker('worker.js' + qs);
+    const pending = new Map();
+    let id = 0;
+    w.onmessage = (e) => {
+      const m = e.data;
+      if (m.type === 'ready') {
+        if (m.ok !== 1) reject(new Error('worker not ready: ' + (m.error || m.ok)));
+        else resolve({ backend: m.backend, ask: (req) => new Promise((r) => { pending.set(++id, r); w.postMessage({ id, req }); }) });
+      } else if (m.type === 'reply') { const r = pending.get(m.id); pending.delete(m.id); r(m.out); }
+    };
+  });
+}
+try {
+  const fx = await (await fetch('greedy.json')).json();
+  const prompts = await (await fetch('prompts.json')).json();   // [{user_input}] in greedy.json's order
+  const res = {};
+  for (const qs of ['', '?backend=wasm']) {
+    const w = await startWorker(qs);
+    const t0 = performance.now(), replies = [];
+    for (const p of prompts)
+      replies.push(await w.ask({ user_input: p.user_input, max_new_tokens: 60, temperature: 1.0, top_k: 1, top_p: 1.0, seed: 0 }));
+    res[w.backend] = { replies, ms_per_reply: (performance.now() - t0) / prompts.length };
+  }
+  const g = res.webgpu, c = res.wasm;
+  const same = (a, b) => a.reply === b.reply && a.stop_reason === b.stop_reason && a.tokens === b.tokens;
+  out.textContent = 'RESULT ' + JSON.stringify({
+    backends: Object.keys(res), n: prompts.length,
+    webgpu_vs_wasm: g && c ? g.replies.filter((r, i) => same(r, c.replies[i])).length : null,
+    webgpu_vs_ember_cpu: g ? g.replies.filter((r, i) => r.reply === fx.prompts[i].reply).length : null,
+    ms_per_reply: Object.fromEntries(Object.entries(res).map(([k, v]) => [k, v.ms_per_reply])),
+    first_diffs: g && c ? g.replies.map((r, i) => [i, r.reply, c.replies[i].reply]).filter(([, a, b]) => a !== b).slice(0, 3) : [],
+  });
+} catch (e) { out.textContent = 'ERROR ' + (e.stack || e); }
+</script></body></html>
