@@ -14,6 +14,7 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 cp "$REPO/deploy/wasm/README_space.md" "$OUT/README.md"
 cp "$REPO/deploy/wasm/web/index.html" "$REPO/deploy/wasm/web/chat.js" "$REPO/deploy/wasm/web/worker.js" "$OUT/"
+cp -r "$REPO/deploy/wasm/web/webgpu" "$OUT/webgpu"   # the WebGPU forward pass, used when the browser has it
 cp "$REPO/www/style.css" "$OUT/"
 cp "$WASM/ember.js" "$WASM/ember.wasm" "$OUT/"
 cp "$GGUF" "$OUT/chat.gguf"
