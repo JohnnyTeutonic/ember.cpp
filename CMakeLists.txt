@@ -290,6 +290,7 @@ add_library(tinyllama_core STATIC
     graph_ir.cpp
     graph_ir_ops.cpp
     graph_ir_expr.cpp
+    graph_ir_mamba.cpp
     parallel_for.cpp
     model_constants.h
     ${CUDA_SOURCES} # Conditionally include CUDA source file
@@ -302,7 +303,7 @@ set_target_properties(tinyllama_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 # a * b + c into a fused multiply-add, whatever -march a build adds. MSVC does
 # not contract without /fp:contract.
 if(NOT MSVC)
-    set_source_files_properties(graph_ir_ops.cpp graph_ir_expr.cpp PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")
+    set_source_files_properties(graph_ir_ops.cpp graph_ir_expr.cpp graph_ir_mamba.cpp PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")
 endif()
 
 # Set properties for the core library
@@ -421,6 +422,10 @@ if(MPI_ENABLED)
 endif()
 
 if(NOT SKBUILD)
+    # The IR interpreter on raw token ids, for gating a graph against a reference (tools/ir_logits.cpp).
+    add_executable(ir_logits tools/ir_logits.cpp)
+    target_link_libraries(ir_logits PRIVATE tinyllama_core)
+
     add_executable(tinyllama_server
         server.cpp
     )
