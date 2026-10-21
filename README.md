@@ -1,14 +1,15 @@
 # ember.cpp
 
 **A from-scratch C++ inference engine for Llama-family models and for every architecture
-[paperkiln](https://github.com/JohnnyTeutonic/paperkiln) trains, on CPU, CUDA and WebAssembly.**
+[paperkiln](https://github.com/JohnnyTeutonic/paperkiln) trains, on CPU, CUDA, WebAssembly
+and, in the browser, the visitor's own GPU.**
 
 *Formerly `tinyllama.cpp` (renamed 2026-08-01; GitHub redirects the old URL). The binaries
 keep their old names, `tinyllama` and `tinyllama_server`.*
 
 **[▶ Chat with a model trained from scratch, running in your browser](https://huggingface.co/spaces/johnnyteutonic/ember-chat)**:
-a 14.6M-parameter paperkiln model, compiled with ember.cpp to WebAssembly. Nothing you type
-leaves the page.
+a 14.6M-parameter paperkiln model, served by ember.cpp compiled to WebAssembly. Nothing you
+type leaves the page.
 
 ```mermaid
 flowchart LR
@@ -17,33 +18,39 @@ flowchart LR
     B --> D["paperkiln IR interpreter<br/>any family, from the<br/>graph in the GGUF"]
     C --> E["CPU · CUDA · WebAssembly"]
     D --> E
+    C --> W["WebGPU (browser):<br/>WGSL forward pass"]
     E --> F["HTTP server<br/>/chat · OpenAI API · SSE"]
     E --> G["Python bindings"]
     E --> H["in-browser chat"]
+    W --> H
 ```
 
 ## What it runs
 
-| Model family | How | CPU | CUDA | WASM |
-|---|---|:---:|:---:|:---:|
-| Llama 2/3, TinyLlama (GGUF, SafeTensors) | tuned path | ✅ | ✅ | ✅ |
-| paperkiln llama (byte-level BPE chat models) | tuned path | ✅ | ✅ | ✅ |
-| Mixture of experts (llama.cpp expert layout; a trained 70M model gated) | tuned path, routed experts | ✅ | ✅ | ✅ |
-| GPT-2 (layernorm, GELU, learned positions) | IR interpreter | ✅ | ✅ | ✅ |
-| Sliding-window attention with sinks | IR interpreter | ✅ | ✅ | ✅ |
-| Kimi linear attention (recurrent state) | IR interpreter | ✅ | ✅ | ✅ |
-| Mamba-style state-space scan | IR interpreter | ✅ | ✅ | ✅ |
-| SRD, AttnRes, flex (highway, plain residual) | IR interpreter | ✅ | ✅ | ✅ |
+| Model family | How | CPU | CUDA | WASM | WebGPU |
+|---|---|:---:|:---:|:---:|:---:|
+| Llama 2/3, TinyLlama (GGUF, SafeTensors) | tuned path | ✅ | ✅ | ✅ | ✅ (f32, Q8_0) |
+| paperkiln llama chat models | tuned path | ✅ | ✅ | ✅ | ✅ |
+| Mixture of experts (llama.cpp expert layout) | tuned path, routed experts | ✅ | ✅ | ✅ | ✅ |
+| GPT-2 (layernorm, GELU, learned positions) | IR interpreter | ✅ | ✅ | ✅ | |
+| Sliding-window attention with sinks | IR interpreter | ✅ | ✅ | ✅ | |
+| Kimi linear attention (recurrent state) | IR interpreter | ✅ | ✅ | ✅ | |
+| Mamba-style state-space scan | IR interpreter | ✅ | ✅ | ✅ | |
+| SRD, AttnRes, flex (highway, plain residual) | IR interpreter | ✅ | ✅ | ✅ | |
 
 Every paperkiln family is gated the same way: **greedy replies identical to paperkiln's own
-sampler on 40 frozen prompts**, on each backend, with the receipts in
-[`experiments/`](experiments/).
+sampler on 40 frozen prompts**, on each backend, including a trained 70M mixture-of-experts
+model. The receipts are in [`experiments/`](experiments/).
 
 **Highlights**
 
-- **Fast where it matters.** CUDA prefill 7.5x to 188x faster than the original path, up to
+- **Fast where it matters.** CUDA prefill is 7.5x to 188x faster than the original path, up to
   4,096 tokens ([docs/TTFT.md](docs/TTFT.md)). A whole decode step is captured as one CUDA
   graph: 2.7 ms/token and a first streamed word in 16-20 ms on a laptop RTX 4060.
+- **The visitor's GPU, in the browser.** The chat page runs the forward pass through WebGPU when
+  the browser has it, and falls back to WebAssembly when it does not. On an Intel laptop GPU it
+  answers in 166 ms per reply against 646 ms for WebAssembly, with replies identical to ember's
+  CPU on all 40 prompts. Q8_0 weights stay quantised on the GPU.
 - **Any paperkiln network, not just llama.** paperkiln writes the model's graph into the GGUF
   (`paperkiln.ir`). ember's interpreter runs it on the CPU or GPU, with a CUDA-graph decode of
   its own, and refuses at load any op it cannot run, naming it.
@@ -52,10 +59,10 @@ sampler on 40 frozen prompts**, on each backend, with the receipts in
 - **Serving features.** Server-sent-event streaming, an OpenAI-compatible API, KV prefix reuse
   across turns, a repetition penalty defined jointly with paperkiln, speculative decoding, and a
   hardened public mode.
-- **From checkpoint to the public chat in one command.** `tools/release_chat.py` exports,
-  gates, evaluates, builds the browser page and publishes only when told to.
-- **Proved, not assumed.** Parity tools in [`tools/`](tools/) compare ember with paperkiln
-  token by token. Kernel tests check the attention, MoE and recurrent kernels against
+- **From checkpoint to the public chat in one command.** `tools/release_chat.py` exports, gates,
+  evaluates and builds the browser page, and publishes only when told to.
+- **Proved, not assumed.** Parity tools in [`tools/`](tools/) compare ember with paperkiln token
+  by token. Kernel tests check the attention, MoE and recurrent kernels against
   double-precision references.
 
 ## Quick start: build and chat
@@ -99,17 +106,18 @@ print(s.generate("What is AI?", steps=64))
 
 ```bash
 JSON_INC=<dir with nlohmann/json.hpp> bash deploy/wasm/build.sh out/    # needs Emscripten
+bash tools/build_wasm_space.sh model.gguf out/ space/                   # the static chat page
 ```
 
-This produces `ember.js` and `ember.wasm` (WebAssembly SIMD, about 250 ms per reply in node for
-the 14.6M chat model). `deploy/wasm/web/` is the static chat page the live Space serves.
-`EMBER_WASM_THREADS=4` builds a pthreads variant for cross-origin-isolated pages, and
-`EMBER_WASM_MAX_MEMORY=4gb` raises the heap for larger models (a 70M f32 MoE needs it).
+`space/` is the whole site: open `index.html` from any static server.
+- **Backends:** the page's worker uses WebGPU when the browser offers it
+  (`deploy/wasm/web/webgpu/`) and otherwise WebAssembly SIMD; `?backend=wasm` forces the CPU.
+- **Larger models:** `EMBER_WASM_MAX_MEMORY=4gb` raises the WebAssembly heap (a 70M f32 MoE
+  needs it).
+- **Threads:** `EMBER_WASM_THREADS=4` builds a pthreads variant for cross-origin-isolated pages.
 
-In development: the forward pass on the visitor's GPU through WebGPU (`deploy/wasm/web/webgpu/`).
-On an Intel laptop GPU the prototype decodes the chat model at 5.2 ms per token, with
-first-token logits matching ember's CPU (`tools/webgpu_parity/`). It is not yet wired into the
-page.
+[`tools/webgpu_parity/`](tools/webgpu_parity/) checks that the page gives the same replies on
+both backends.
 
 ## Quick start: release a chat model
 
@@ -119,8 +127,14 @@ python3 tools/release_chat.py build --spec run/spec.json --ckpt run/model.safete
 python3 tools/release_chat.py publish --out rel/ --env-file .env --confirm ember-chat   # only on the go-ahead
 ```
 
-`build` runs export, the parity gate, evals, the WebAssembly build and the Space folder. Each
-stage leaves a receipt in `rel/release.json` and is skipped when rerun.
+`build` runs five stages:
+1. export;
+2. the parity gate, f32 40/40 against mtstudio and Q8 on logits;
+3. evals;
+4. the WebAssembly build;
+5. the Space folder.
+
+Each stage leaves a receipt in `rel/release.json` and is skipped when rerun.
 
 ## Quick start: any paperkiln architecture
 
@@ -148,6 +162,18 @@ python3 tools/chat_ctx_parity.py 8095 8096 256      # long replies, long histori
 python3 tools/quantize_gguf.py model.gguf model_q8.gguf --output-q8 --embed-q8   # Q8_0 (or --dequantize)
 ```
 
+## Landing next
+
+All of these are built or written; each is waiting on a model that is still training or on its gate run:
+- **A llama.cpp-compatible vocabulary.** paperkiln's next base model uses the Llama 3 scheme
+  (16,384 tokens), so llama.cpp, Ollama and LM Studio can tokenise it too. ember's chat mode
+  already loads that form, with paperkiln's exact Llama 3 encoder vendored. Its 40/40 gate runs
+  on the first model trained with it.
+- **New chat models.** These are training on Colab: a 70M mixture-of-experts fine-tune, a d768
+  L12 base and its fine-tune, and next a base trained on FineWeb-Edu plus conversational text.
+  Each is released through `release_chat.py` with the WebGPU page.
+- **The joint repetition-penalty gate** against paperkiln, at penalties 1.1 and 1.3.
+
 ## More
 
 | | |
@@ -155,7 +181,7 @@ python3 tools/quantize_gguf.py model.gguf model_q8.gguf --output-q8 --embed-q8  
 | Every option, endpoint, switch and the source layout | [docs/USAGE.md](docs/USAGE.md) |
 | Time-to-first-token work and its method | [docs/TTFT.md](docs/TTFT.md) |
 | Measured results, one folder per study | [experiments/](experiments/) |
-| API reference (Doxygen) | `./manage.sh docs`, published by the docs workflow |
+| API reference (Doxygen) | [johnnyteutonic.github.io/ember.cpp](https://johnnyteutonic.github.io/ember.cpp/), built by the docs workflow |
 | The training side | [paperkiln](https://github.com/JohnnyTeutonic/paperkiln) |
 
 ## License
