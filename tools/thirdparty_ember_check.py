@@ -25,8 +25,18 @@ import numpy as np
 
 def tiny_hf(family, seed):
     import torch
+    if family in ("mistral_swa", "gemma3"):  # paperkiln's own synthetic models (tools/thirdparty_synth.py)
+        import thirdparty_synth
+        return thirdparty_synth.hf_model(family, seed)
     torch.manual_seed(seed)
-    if family == "mamba":
+    if family == "gptneox":
+        from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
+        cfg = GPTNeoXConfig(vocab_size=512, hidden_size=64, intermediate_size=256, num_hidden_layers=3,
+                            num_attention_heads=4, rotary_pct=0.25, rotary_emb_base=10000, max_position_embeddings=256,
+                            use_parallel_residual=True, hidden_act="gelu", tie_word_embeddings=False,
+                            initializer_range=0.2, attn_implementation="eager")
+        model = GPTNeoXForCausalLM(cfg)
+    elif family == "mamba":
         from transformers import MambaConfig, MambaForCausalLM
         cfg = MambaConfig(vocab_size=512, hidden_size=64, state_size=16, num_hidden_layers=3, expand=2, conv_kernel=4,
                           time_step_rank=8, use_bias=False, use_conv_bias=True, tie_word_embeddings=True,
@@ -48,7 +58,7 @@ def rel(a, b):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--family", required=True, choices=("mamba",))
+    ap.add_argument("--family", required=True, choices=("mamba", "gptneox", "mistral_swa", "gemma3"))
     ap.add_argument("--paperkiln", required=True)
     ap.add_argument("--llamacpp", required=True)
     ap.add_argument("--bin", required=True)
