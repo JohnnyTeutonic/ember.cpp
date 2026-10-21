@@ -115,6 +115,26 @@ static void apply_repetition_penalty(std::vector<float>& logits,
   }
 }
 
+// The /chat contract's repetition penalty (LOCAL_LLM_STACK.md section 3, point
+// 4) over the id sequence a + b (prompt, then the reply so far): among its
+// last `last_n` ids, each distinct id outside the stop set has its logit l
+// replaced by l > 0 ? l / p : l * p, once. `seen` is scratch.
+template <class IsStop>
+static void apply_contract_penalty(std::vector<float>& lg, const std::vector<int>& a, const std::vector<int>& b,
+                                   float p, int last_n, IsStop is_stop, std::vector<char>& seen) {
+  if (p == 1.0f || last_n <= 0) return;
+  const size_t na = a.size(), total = na + b.size();
+  const size_t first = total > static_cast<size_t>(last_n) ? total - last_n : 0;
+  seen.assign(lg.size(), 0);
+  for (size_t i = first; i < total; ++i) {
+    const int id = i < na ? a[i] : b[i - na];
+    if (id < 0 || static_cast<size_t>(id) >= lg.size() || seen[id] || is_stop(id)) continue;
+    seen[id] = 1;
+    float& l = lg[id];
+    l = l > 0.0f ? l / p : l * p;
+  }
+}
+
 // TINYLLAMA_TOPK_DEBUG=1: dump the top-10 candidates (id, logit) at every
 // sampled position to stderr. The decoder-side counterpart of the trainer's
 // [TRACE] dumps — for asking "was the dropped word 2nd by a hair, or absent?"
@@ -750,25 +770,13 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   std::vector<float> logits; // Declare logits here, to be populated by prefill or loop
   std::vector<int> generated_token_ids; // Track generated tokens separately
 
-  // The /chat contract's repetition penalty (set_repeat_penalty): the window
-  // is the last repeat_last_n_ ids of prompt + reply so far, the token being
-  // sampled not included; each distinct id outside the stop set is scaled
-  // once, before sampling.
+  // The /chat contract's repetition penalty (set_repeat_penalty) over prompt
+  // + reply so far, the token being sampled not included.
   const bool repeat_on = repeat_penalty_ != 1.0f && repeat_last_n_ > 0;
-  std::vector<char> repeat_seen(repeat_on ? config_.vocab_size : 0);
+  std::vector<char> repeat_seen;
   auto apply_repeat_penalty = [&](std::vector<float>& lg) {
-    if (!repeat_on) return;
-    const size_t np = tokens.size(), total = np + generated_token_ids.size();
-    const size_t first = total > static_cast<size_t>(repeat_last_n_) ? total - repeat_last_n_ : 0;
-    if (repeat_seen.size() < lg.size()) repeat_seen.resize(lg.size());
-    std::fill(repeat_seen.begin(), repeat_seen.end(), 0);
-    for (size_t i = first; i < total; ++i) {
-      const int id = i < np ? tokens[i] : generated_token_ids[i - np];
-      if (id < 0 || static_cast<size_t>(id) >= lg.size() || repeat_seen[id] || is_stop(id)) continue;
-      repeat_seen[id] = 1;
-      float& l = lg[id];
-      l = l > 0.0f ? l / repeat_penalty_ : l * repeat_penalty_;
-    }
+    if (repeat_on)
+      apply_contract_penalty(lg, tokens, generated_token_ids, repeat_penalty_, repeat_last_n_, is_stop, repeat_seen);
   };
 
   auto t_kv_reset = ttft_clock::now();
@@ -1232,6 +1240,15 @@ if (prefill_enabled) {
   Logger::info("[INFO] Total generation processing time: " + time_ss.str() + " ms");
 
   return result;
+}
+
+int TinyLlamaSession::sample_step(std::vector<float>& logits, const std::vector<int>& context, float temperature,
+                                  int top_k, float top_p) {
+  if (!bpe_) throw std::runtime_error("sample_step: chat models only");
+  std::vector<char> seen;
+  apply_contract_penalty(logits, context, std::vector<int>(), repeat_penalty_, repeat_last_n_,
+                         [](int id) { return id == 1 || id == 2 || id == 3; }, seen);
+  return sample_top_k_top_p_temperature(logits, temperature, top_k, top_p, rng_);
 }
 
 std::vector<std::string> TinyLlamaSession::generate_batch(const std::vector<std::string>& prompts,

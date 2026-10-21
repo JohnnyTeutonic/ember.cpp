@@ -93,7 +93,8 @@
   input.placeholder = 'Type now; it answers once the model has loaded...';
   send.textContent = 'Send (loading)';
 
-  const worker = new Worker('worker.js');
+  // ?backend=wasm forces the CPU (WebAssembly) path; otherwise the worker uses WebGPU when it can.
+  const worker = new Worker('worker.js' + location.search);
   worker.onmessage = (e) => {
     const m = e.data;
     if (m.type === 'progress') {
@@ -107,7 +108,8 @@
       if (m.ok === 1) {
         ready = true;
         info.dataset.state = 'ready';
-        info.textContent = 'Ready. ember.cpp is running in your browser; nothing you type leaves this page.';
+        info.textContent = 'Ready. ember.cpp is running in your browser' +
+          (m.backend === 'webgpu' ? ' on your GPU' : '') + '; nothing you type leaves this page.';
         input.placeholder = 'Say something...';
         if (!busy) setBusy(false);
       } else {

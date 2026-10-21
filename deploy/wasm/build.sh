@@ -33,7 +33,7 @@ cd "$REPO"
 em++ -O3 $SIMD $THREADS -std=c++17 -DNDEBUG -I"$REPO" -I"$INC" -Wno-unknown-pragmas \
     $SRC deploy/wasm/ember_wasm.cpp \
     -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=${EMBER_WASM_MAX_MEMORY:-1gb} -sMODULARIZE=1 -sEXPORT_NAME=createEmber \
-    -sEXPORTED_FUNCTIONS=_ember_load,_ember_chat -sEXPORTED_RUNTIME_METHODS=ccall,FS \
+    -sEXPORTED_FUNCTIONS=_ember_load,_ember_chat,_ember_prepare,_ember_sample,_ember_finish,_malloc,_free -sEXPORTED_RUNTIME_METHODS=ccall,FS,HEAPF32 \
     -sFORCE_FILESYSTEM=1 -sENVIRONMENT=web,worker,node -sUSE_BOOST_HEADERS=1 -fexceptions \
     -o "$OUT/${EMBER_WASM_NAME:-ember}.js"
 rm -rf "$INC"

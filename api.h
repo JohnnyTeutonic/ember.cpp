@@ -205,6 +205,12 @@ class TinyLlamaSession {
   void set_token_callback(std::function<void(int)> cb) { token_callback_ = std::move(cb); }
   // BPE detokenization of ids (BPE chat models only; empty otherwise).
   std::string bpe_decode(const std::vector<int>& ids) const { return bpe_ ? bpe_->decode(ids) : std::string(); }
+  std::vector<int> bpe_encode(const std::string& text) const { return bpe_ ? bpe_->encode(text) : std::vector<int>(); }
+  // One sampling step outside generate(), for a caller that computes the logits itself (ember's
+  // WebGPU page): the contract repetition penalty (set_repeat_penalty) over `context` (prompt +
+  // reply so far, the stop set excluded), then the sampler and RNG generate() uses. Chat mode only.
+  int sample_step(std::vector<float>& logits, const std::vector<int>& context, float temperature, int top_k,
+                  float top_p);
 
  private:
   TinyLlamaSession(const TinyLlamaSession&) = delete;
