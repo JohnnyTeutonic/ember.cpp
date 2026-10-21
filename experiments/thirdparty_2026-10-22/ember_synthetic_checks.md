@@ -31,8 +31,18 @@ paperkiln's synthetic MistralForCausalLM (window 8, grouped-query 4/2 heads, 3 l
 model): ember's interpreter runs it with grouped-query attention and the window: ember vs numpy IR
 worst 1.4e-6 of the logit range, argmax agrees everywhere, decode equal to prefill.
 
-## Still to do on this branch (after paperkiln 0f3dc58, which added NEOX/partial RoPE and grouped RMSNorm)
+## GPT-NeoX / Pythia (`gptneox_synth_check.json`)
+
+A tiny random GPTNeoXForCausalLM (4 heads, 3 layers, rotary_pct 0.25, parallel residual, exact GELU,
+untied head) through llama.cpp b6000's convert and gguf_ir, on ember ir-ops rebased onto paperkiln
+369a54c (its NEOX and partial rotary): ember vs numpy IR worst 4.5e-7 of the logit range, vs HF 4.9e-7,
+argmax agrees everywhere, decode equal to prefill. The parallel residual needed nothing new: it is two
+adds in the graph.
+
+All gates rerun on the rebased branch (22 Oct, ~08:40): expr gpt2_tiny 40/40 (8.1e-7), Mamba 6.7e-7,
+Mistral SWA 1.4e-6, GPT-NeoX 4.5e-7.
+
+## Still to do on this branch
 
 - gemma3: per-layer attributes ({"per_layer": [...]}: attention and kv windows, RoPE theta per layer),
   rmsnorm weight_offset, Gemma's attention and embedding scales.
-- gptneox: parallel residual (graph wiring), re-check on top of 0f3dc58's NEOX/partial rotary.
