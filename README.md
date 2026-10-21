@@ -28,7 +28,7 @@ flowchart LR
 |---|---|:---:|:---:|:---:|
 | Llama 2/3, TinyLlama (GGUF, SafeTensors) | tuned path | ✅ | ✅ | ✅ |
 | paperkiln llama (byte-level BPE chat models) | tuned path | ✅ | ✅ | ✅ |
-| Mixture of experts (llama.cpp expert layout) | tuned path, routed experts | ✅ | ✅ | ✅ |
+| Mixture of experts (llama.cpp expert layout; a trained 70M model gated) | tuned path, routed experts | ✅ | ✅ | ✅ |
 | GPT-2 (layernorm, GELU, learned positions) | IR interpreter | ✅ | ✅ | ✅ |
 | Sliding-window attention with sinks | IR interpreter | ✅ | ✅ | ✅ |
 | Kimi linear attention (recurrent state) | IR interpreter | ✅ | ✅ | ✅ |
@@ -50,7 +50,10 @@ sampler on 40 frozen prompts**, on each backend, with the receipts in
 - **Quantised models.** Q8_0, K-quants, and Q4_0/Q4_1/Q5_0/Q5_1. The legacy formats are
   bit-identical to the reference dequantiser and can stay in their blocks for large models.
 - **Serving features.** Server-sent-event streaming, an OpenAI-compatible API, KV prefix reuse
-  across turns, speculative decoding, and a hardened public mode.
+  across turns, a repetition penalty defined jointly with paperkiln, speculative decoding, and a
+  hardened public mode.
+- **From checkpoint to the public chat in one command.** `tools/release_chat.py` exports,
+  gates, evaluates, builds the browser page and publishes only when told to.
 - **Proved, not assumed.** Parity tools in [`tools/`](tools/) compare ember with paperkiln
   token by token. Kernel tests check the attention, MoE and recurrent kernels against
   double-precision references.
@@ -77,7 +80,7 @@ curl http://127.0.0.1:8080/v1/chat/completions -H "Content-Type: application/jso
 
 `"stream": true` streams the reply token by token, and `GET /v1/models` lists the model. The
 native `POST /chat` takes `{user_input, history, temperature, top_k, top_p, seed,
-max_new_tokens}`, the same contract as paperkiln's `mtstudio chat`.
+max_new_tokens, repeat_penalty, repeat_last_n}`, the same contract as paperkiln's `mtstudio chat`.
 
 ## Quick start: Python
 
@@ -100,7 +103,24 @@ JSON_INC=<dir with nlohmann/json.hpp> bash deploy/wasm/build.sh out/    # needs 
 
 This produces `ember.js` and `ember.wasm` (WebAssembly SIMD, about 250 ms per reply in node for
 the 14.6M chat model). `deploy/wasm/web/` is the static chat page the live Space serves.
-`EMBER_WASM_THREADS=4` builds a pthreads variant for cross-origin-isolated pages.
+`EMBER_WASM_THREADS=4` builds a pthreads variant for cross-origin-isolated pages, and
+`EMBER_WASM_MAX_MEMORY=4gb` raises the heap for larger models (a 70M f32 MoE needs it).
+
+In development: the forward pass on the visitor's GPU through WebGPU (`deploy/wasm/web/webgpu/`).
+On an Intel laptop GPU the prototype decodes the chat model at 5.2 ms per token, with
+first-token logits matching ember's CPU (`tools/webgpu_parity/`). It is not yet wired into the
+page.
+
+## Quick start: release a chat model
+
+```bash
+python3 tools/release_chat.py build --spec run/spec.json --ckpt run/model.safetensors --out rel/ \
+  --mtstudio paperkiln/build/mtstudio --ember-cpu build/tinyllama_server --paperkiln paperkiln/
+python3 tools/release_chat.py publish --out rel/ --env-file .env --confirm ember-chat   # only on the go-ahead
+```
+
+`build` runs export, the parity gate, evals, the WebAssembly build and the Space folder. Each
+stage leaves a receipt in `rel/release.json` and is skipped when rerun.
 
 ## Quick start: any paperkiln architecture
 
