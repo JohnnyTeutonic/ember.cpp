@@ -46,8 +46,9 @@ const std::set<std::string> kRecurrentOps = {"linear_attention", "ssm_scan", "co
 // The ops run_nodes_device implements.
 const std::set<std::string> kCudaOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
                                         "attention", "add", "mul", "silu", "gelu", "moe_ffn",
-                                        "linear_attention", "ssm_scan",
-                                        "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend"};
+                                        "linear_attention", "ssm_scan", "conv1d_causal", "selective_scan",
+                                        "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
+                                        "expr"};
 const std::set<std::string> kRowWiseOps = {"rmsnorm", "layernorm", "linear", "add", "mul", "silu", "gelu",
                                            "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
                                            "expr"};
@@ -213,25 +214,22 @@ bool device_supported(const std::string& ir_json) {
   const json j = json::parse(ir_json);
   // depth_attend reads at most every tensor ever put in a list (list inputs
   // and appends, the block's once per repeat) plus its own extra inputs.
+  // Per-layer attributes (the ones the interpreter accepts: attention and
+  // kv-state window and sinks, RoPE theta and freq_scale) run on either path.
   size_t list_tensors = 0, extra = 0;
-  if (j.contains("block"))
-    for (const auto& s : j.at("block").value("state", json::array()))
-      for (const auto& kv : s.items())
-        if (is_per_layer(kv.value())) return false;
   for (const char* sub : {"embed", "block", "head"}) {
     if (!j.contains(sub)) continue;
     const size_t times = std::string(sub) == "block" ? j.at(sub).value("repeat", 1) : 1;
     for (const auto& n : j.at(sub).value("nodes", json::array())) {
       const std::string op = n.value("op", "");
       if (!kCudaOps.count(op)) return false;
-      for (const auto& kv : n.items())  // per-layer attributes run on the CPU interpreter only
-        if (is_per_layer(kv.value())) return false;
-      // NEOX pairing, partial rotary and grouped (per-head) RMSNorm have CPU
-      // kernels only so far.
-      if (op == "rope" && (n.value("pairing", "interleaved") != "interleaved" ||
-                           (has(n, "n_rot") && n.at("n_rot") != n.at("head_dim"))))
-        return false;
-      if (op == "rmsnorm" && has(n, "group")) return false;
+      if (op == "expr") {  // the CUDA form's limits (graph_ir_expr.h lower)
+        try {
+          expr::lower(expr::cached(n.at("expr").get<std::string>(), n.at("in").size()));
+        } catch (const std::exception&) {
+          return false;
+        }
+      }
       const size_t ins = n.contains("in") && n.at("in").is_array() ? n.at("in").size() : 1;
       if (op == "list") list_tensors += ins * times;
       if (op == "append") list_tensors += times;
@@ -1608,15 +1606,18 @@ void Interpreter::init_device() {
     gpuErrchk(cudaMemset(dk_[l], 0, kv_floats * sizeof(float)));
     gpuErrchk(cudaMemset(dv_[l], 0, kv_floats * sizeof(float)));
   }
-  if (!rope_freqs_.empty()) {
-    std::vector<float> flat(rope_freqs_.size() * 2);
-    for (size_t i = 0; i < rope_freqs_.size(); ++i) {
-      flat[2 * i] = rope_freqs_[i].first;
-      flat[2 * i + 1] = rope_freqs_[i].second;
+  for (const auto& tab : rope_tables_) {  // one per distinct (theta, freq_scale)
+    std::vector<float> flat(tab.second.size() * 2);
+    for (size_t i = 0; i < tab.second.size(); ++i) {
+      flat[2 * i] = tab.second[i].first;
+      flat[2 * i + 1] = tab.second[i].second;
     }
-    gpuErrchk(cudaMalloc(&drope_, flat.size() * sizeof(float)));
-    gpuErrchk(cudaMemcpy(drope_, flat.data(), flat.size() * sizeof(float), cudaMemcpyHostToDevice));
+    float* d = nullptr;
+    gpuErrchk(cudaMalloc(&d, flat.size() * sizeof(float)));
+    gpuErrchk(cudaMemcpy(d, flat.data(), flat.size() * sizeof(float), cudaMemcpyHostToDevice));
+    drope_tables_[tab.first] = d;
   }
+  if (rope_theta_ > 0.0f) drope_ = drope_tables_.at({rope_theta_, rope_freq_scale_});
   if (rec_floats_ > 0) {  // rec_ holds every block's initial state here
     const size_t bytes = rec_.size() * sizeof(float);
     gpuErrchk(cudaMalloc(&drec_, bytes));
@@ -1655,7 +1656,8 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
       {"silu", DOp::Silu},           {"sub", DOp::Sub},                    {"relu", DOp::Relu},
       {"sigmoid", DOp::Sigmoid},     {"affine", DOp::Affine},              {"mul_col", DOp::MulCol},
       {"rms_row", DOp::RmsRow},      {"list", DOp::List},                  {"append", DOp::Append},
-      {"depth_attend", DOp::DepthAttend}, {"linear_attention", DOp::LinearAttention}, {"ssm_scan", DOp::SsmScan}};
+      {"depth_attend", DOp::DepthAttend}, {"linear_attention", DOp::LinearAttention}, {"ssm_scan", DOp::SsmScan},
+      {"expr", DOp::Expr},           {"conv1d_causal", DOp::Conv1dCausal}, {"selective_scan", DOp::SelectiveScan}};
   auto wname = [&](const Node& n) {
     std::string w = layer_name(n.attrs.at("weight").get<std::string>(), layer);
     if (!weights_.count(w) && has(n.attrs, "tied_to")) w = layer_name(n.attrs.at("tied_to").get<std::string>(), layer);
@@ -1689,6 +1691,7 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
           s.b = dweight(layer_name(n.attrs.at("bias").get<std::string>(), layer));
         if (s.op == DOp::LayerNorm && !s.b) throw std::runtime_error("IR layernorm '" + s.wname + "' has no bias");
         s.eps = n.attrs.value("eps", 1e-5f);
+        if (s.op == DOp::RmsNorm && has(n.attrs, "group")) s.n = n.attrs.at("group").get<int>();
         break;
       case DOp::Split:
         s.sizes = n.attrs.at("sizes").get<std::vector<int>>();
@@ -1699,6 +1702,11 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
         break;
       case DOp::Rope:
         s.hd = n.attrs.at("head_dim").get<int>();
+        s.n_rot = rope_dim_;
+        s.neox = rope_neox_;
+        s.rope = layer < 0 || rope_theta_layer_.empty()
+                     ? drope_
+                     : drope_tables_.at({rope_theta_layer_.at(layer), rope_scale_layer_.at(layer)});
         break;
       case DOp::Attention:
         s.hd = n.attrs.at("head_dim").get<int>();
@@ -1706,10 +1714,12 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
         s.hkv = n.attrs.at("kv_heads").get<int>();
         if (s.hd != head_dim_ || s.hkv != kv_heads_) throw std::runtime_error("IR attention shape differs from its kv state");
         s.scale = n.attrs.contains("scale") ? n.attrs.at("scale").get<float>() : 1.0f / std::sqrt(float(s.hd));
-        attention_window(n, 0, s.window, s.sinks);  // device graphs have no per-layer attributes
-        if (s.window > 0 && layer == 0)
+        attention_window(n, layer < 0 ? 0 : layer, s.window, s.sinks);
+        if (s.window > 0 && layer <= 0)
           Logger::info("[IR] CUDA sliding-window attention (ir_window_attention_cuda): window " +
-                       std::to_string(s.window) + ", sinks " + std::to_string(s.sinks));
+                       std::to_string(s.window) + ", sinks " + std::to_string(s.sinks) +
+                       (window_layer_.empty() && !is_per_layer(n.attrs.value("window", json(0))) ? ""
+                                                                                                 : " (block 0)"));
         break;
       case DOp::MoeFfn: {
         const auto& ex = n.attrs.at("experts");
@@ -1764,6 +1774,32 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
         s.b = dweight(layer_name(ssm_weight(n.attrs, "b"), layer));
         s.ssm_c = dweight(layer_name(ssm_weight(n.attrs, "c"), layer));
         s.ssm_d = dweight(layer_name(ssm_weight(n.attrs, "d"), layer));
+        break;
+      case DOp::Expr:
+        s.expr = expr::lower(expr::cached(n.attrs.at("expr").get<std::string>(), n.in.size()));
+        break;
+      case DOp::Conv1dCausal:
+        s.rec = &rec_slot(n, "conv1d_causal");
+        s.n = n.attrs.at("channels").get<int>();
+        s.kernel = n.attrs.at("kernel").get<int>();
+        s.rec_a = drec_ + (rec_tensor(*s.rec, "x", layer, static_cast<size_t>(s.kernel - 1) * s.n) - rec_.data());
+        s.wname = layer_name(n.attrs.at("weight").get<std::string>(), layer);
+        s.w = dweight(s.wname);
+        if (elems(s.wname) != static_cast<size_t>(s.n) * s.kernel)
+          throw std::runtime_error("IR conv1d_causal '" + s.wname + "' is not [channels, kernel]");
+        if (has(n.attrs, "bias")) s.b = dweight(layer_name(n.attrs.at("bias").get<std::string>(), layer));
+        break;
+      case DOp::SelectiveScan:
+        s.rec = &rec_slot(n, "selective_scan");
+        s.n = n.attrs.at("channels").get<int>();
+        s.d_state = n.attrs.at("d_state").get<int>();
+        s.rec_a = drec_ + (rec_tensor(*s.rec, "s", layer, static_cast<size_t>(s.n) * s.d_state) - rec_.data());
+        s.wname = layer_name(n.attrs.at("a").get<std::string>(), layer);
+        s.w = dweight(s.wname);
+        if (elems(s.wname) != static_cast<size_t>(s.n) * s.d_state)
+          throw std::runtime_error("IR selective_scan '" + s.wname + "' is not [channels, d_state]");
+        if (has(n.attrs, "d")) s.ssm_d = dweight(layer_name(n.attrs.at("d").get<std::string>(), layer));
+        s.flag = n.attrs.value("dt_softplus", true);
         break;
       case DOp::Add:
       case DOp::Mul:
@@ -1822,10 +1858,12 @@ void Interpreter::free_device() {
   for (float* p : dsnap_pool_) cudaFree(p);
   dsnaps_.clear();
   dsnap_pool_.clear();
-  for (float* p : {drope_, drec_, drec_init_, drec_rows_.alloc, dmoe_.alloc})
+  for (auto& tab : drope_tables_) cudaFree(tab.second);
+  drope_tables_.clear();
+  for (float* p : {drec_, drec_init_, drec_rows_.alloc, dmoe_.alloc, dexpr_.alloc})
     if (p) cudaFree(p);
   drope_ = drec_ = drec_init_ = nullptr;
-  drec_rows_ = dmoe_ = DBuf{};
+  drec_rows_ = dmoe_ = dexpr_ = DBuf{};
   if (dtokens_) cudaFree(dtokens_);
   if (dstep_) cudaFree(dstep_);
   if (hstep_) cudaFreeHost(hstep_);
@@ -1982,10 +2020,14 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         ir_gelu_cuda(x.p, out.p, static_cast<size_t>(T) * x.width, s.flag, st);
         break;
       }
-      case DOp::RmsNorm: {
+      case DOp::RmsNorm: {  // group g: rows of width g, one weight [g] (per-head q/k norm)
         const DBuf& x = in(s, 0);
+        const int g = s.n ? s.n : x.width;
+        if (g <= 0 || x.width % g != 0 || s.w_elems != static_cast<size_t>(g))
+          throw std::runtime_error("IR rmsnorm '" + s.wname + "': group " + std::to_string(g) + " does not fit width " +
+                                   std::to_string(x.width) + " and weight [" + std::to_string(s.w_elems) + "]");
         DBuf& out = dout(s.out[0], T, x.width, {&x});
-        rmsnorm_batch_cuda(out.p, x.p, s.w, T, x.width, s.eps, st);
+        rmsnorm_batch_cuda(out.p, x.p, s.w, T * (x.width / g), g, s.eps, st);
         break;
       }
       case DOp::Linear: {
@@ -2000,7 +2042,7 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         break;
       }
       case DOp::Rope: {
-        if (start_pos + T > max_len_ || !drope_)
+        if (start_pos + T > max_len_ || !s.rope)
           throw std::runtime_error("IR rope: position " + std::to_string(start_pos + T - 1) + " exceeds the rope table");
         DBuf* q = &in(s, 0);
         DBuf* k = &in(s, 1);
@@ -2014,7 +2056,14 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
                                     cudaMemcpyDeviceToDevice, st));
           src = &dst;
         }
-        ir_rope_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, start_pos, drope_, st, dpos_);
+        if (!s.neox && s.n_rot == s.hd) {  // full interleaved: the llama path's form
+          ir_rope_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, start_pos, s.rope, st, dpos_);
+        } else {  // NEOX pairing or partial rotary (rope_rows_cpu)
+          if (q->width % s.hd != 0 || k->width % s.hd != 0)
+            throw std::runtime_error("IR rope: q/k widths are not whole heads");
+          ir_rope_rows_cuda(q->p, T, q->width / s.hd, s.hd, s.n_rot, s.neox, start_pos, s.rope, st, dpos_);
+          ir_rope_rows_cuda(k->p, T, k->width / s.hd, s.hd, s.n_rot, s.neox, start_pos, s.rope, st, dpos_);
+        }
         break;
       }
       case DOp::Attention: {
@@ -2171,6 +2220,46 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         rec_rows(s, [&](int t0, int n) {
           const size_t r = static_cast<size_t>(t0) * w;
           ir_linear_attention_cuda(q.p + r, k.p + r, v.p + r, s.rec_a, s.rec_b, out.p + r, n, w, s.eps, st);
+        });
+        break;
+      }
+      case DOp::Expr: {  // a runtime-defined elementwise op (graph_ir_expr.h)
+        const DBuf& x0 = in(s, 0);
+        std::vector<const float*> ins;
+        std::vector<const DBuf*> bufs;
+        for (size_t k = 0; k < s.in.size(); ++k) {
+          const DBuf& a = in(s, k);
+          if (a.width != x0.width || a.rows != x0.rows) throw std::runtime_error("IR expr: inputs must share one shape [T, w]");
+          ins.push_back(a.p);
+          bufs.push_back(&a);
+        }
+        if (x0.width <= 0 || x0.rows <= 0) throw std::runtime_error("IR expr: input is not [T, w]");
+        grow(dexpr_, ir_expr_scratch_floats(s.expr, x0.rows, x0.width));
+        DBuf& out = dout(s.out[0], x0.rows, x0.width, bufs);
+        ir_expr_cuda(s.expr, ins.data(), static_cast<int>(ins.size()), dexpr_.alloc, out.p, x0.rows, x0.width, st);
+        break;
+      }
+      case DOp::Conv1dCausal: {  // over the slot's x (device state)
+        const DBuf& x = in(s, 0);
+        if (x.width != s.n || x.rows != T) throw std::runtime_error("IR conv1d_causal: input width differs from channels");
+        DBuf& out = dout(s.out[0], T, s.n, {&x});
+        rec_rows(s, [&](int t0, int n) {
+          const size_t r = static_cast<size_t>(t0) * s.n;
+          ir_conv1d_causal_cuda(x.p + r, s.w, s.b, s.rec_a, out.p + r, n, s.n, s.kernel, st);
+        });
+        break;
+      }
+      case DOp::SelectiveScan: {  // Mamba-1's scan over the slot's s (device state)
+        const DBuf &x = in(s, 0), &dt = in(s, 1), &bm = in(s, 2), &cm = in(s, 3);
+        const int D = s.n, N = s.d_state;
+        if (x.width != D || dt.width != D || bm.width != N || cm.width != N || x.rows != T || dt.rows != T ||
+            bm.rows != T || cm.rows != T)
+          throw std::runtime_error("IR selective_scan: x/dt must be [T, channels] and B/C [T, d_state]");
+        DBuf& out = dout(s.out[0], T, D, {&x, &dt, &bm, &cm});
+        rec_rows(s, [&](int t0, int n) {
+          const size_t rd = static_cast<size_t>(t0) * D, rn = static_cast<size_t>(t0) * N;
+          ir_selective_scan_cuda(x.p + rd, dt.p + rd, bm.p + rn, cm.p + rn, s.w, s.ssm_d, s.rec_a, out.p + rd, n, D, N,
+                                 s.flag, st);
         });
         break;
       }

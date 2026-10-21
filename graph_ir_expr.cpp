@@ -397,7 +397,116 @@ class Evaluator {
   int T_, w_;
 };
 
+// ---- the device form (lower) ----
+
+Op op_of(Kind k) {
+  switch (k) {
+    case Kind::NEG: return Op::NEG;
+    case Kind::EXP: return Op::EXP;
+    case Kind::LOG: return Op::LOG;
+    case Kind::SQRT: return Op::SQRT;
+    case Kind::TANH: return Op::TANH;
+    case Kind::SIGMOID: return Op::SIGMOID;
+    case Kind::ERF: return Op::ERF;
+    case Kind::ABS: return Op::ABS;
+    case Kind::RELU: return Op::RELU;
+    case Kind::ADD: return Op::ADD;
+    case Kind::SUB: return Op::SUB;
+    case Kind::MUL: return Op::MUL;
+    case Kind::DIV: return Op::DIV;
+    case Kind::POW: return Op::POW;
+    case Kind::MAX: return Op::MAX;
+    case Kind::MIN: return Op::MIN;
+    case Kind::WHERE: return Op::WHERE;
+    default: throw std::logic_error("expr: no instruction");
+  }
+}
+
+class Lowering {
+ public:
+  explicit Lowering(const Expr& e) : e_(e) {}
+
+  std::vector<Stage> run() {
+    Stage last;
+    emit_stage(e_.root(), last);
+    stages_.push_back(std::move(last));
+    return std::move(stages_);
+  }
+
+ private:
+  // n's value when it is a constant in eval (every leaf a number, no row
+  // reduction), folded with eval's operations in eval's order.
+  static bool constant(const Node& n, float& v) {
+    switch (n.kind) {
+      case Kind::NUMBER: v = n.value; return true;
+      case Kind::INPUT: case Kind::ROWSUM: case Kind::ROWMEAN: case Kind::ROWMAX: return false;
+      case Kind::WHERE: {
+        float c, a, b;
+        if (!constant(n.args[0], c) || !constant(n.args[1], a) || !constant(n.args[2], b)) return false;
+        v = c > 0.0f ? a : b;
+        return true;
+      }
+      default: break;
+    }
+    float a, b;
+    if (!constant(n.args[0], a)) return false;
+    if (n.args.size() == 1) {
+      v = unary_op(n.kind, a);
+      return true;
+    }
+    if (!constant(n.args[1], b)) return false;
+    v = binary_op(n.kind, a, b);
+    return true;
+  }
+
+  void emit_stage(const Node& n, Stage& s) {
+    size_t depth = 0, peak = 0;
+    emit(n, s.code, depth, peak);
+    if (s.code.size() > kMaxCode || peak > kMaxStack)
+      throw std::invalid_argument("expr: \"" + e_.text() + "\" needs " + std::to_string(s.code.size()) +
+                                  " instructions and a stack of " + std::to_string(peak) + " in one stage (the CUDA form "
+                                  "takes " + std::to_string(kMaxCode) + " and " + std::to_string(kMaxStack) + ")");
+  }
+
+  void emit(const Node& n, std::vector<Instr>& code, size_t& depth, size_t& peak) {
+    auto push = [&](Op op, int idx = 0, float c = 0.0f) {
+      code.push_back({op, idx, c});
+      peak = std::max(peak, ++depth);
+    };
+    float v;
+    if (constant(n, v)) return push(Op::CONST, 0, v);
+    switch (n.kind) {
+      case Kind::INPUT: return push(Op::INPUT, static_cast<int>(n.input));
+      case Kind::ROWSUM: case Kind::ROWMEAN: case Kind::ROWMAX: {
+        Stage s;
+        s.reduce = n.kind == Kind::ROWMAX ? 2 : 1;
+        emit_stage(n.args[0], s);  // its own reductions become earlier stages
+        stages_.push_back(std::move(s));
+        if (stages_.size() > kMaxColumns)
+          throw std::invalid_argument("expr: \"" + e_.text() + "\" has more than " + std::to_string(kMaxColumns) +
+                                      " row reductions (the CUDA form's limit)");
+        push(Op::COL, static_cast<int>(stages_.size() - 1));
+        if (n.kind == Kind::ROWMEAN) {  // eval: the column divided by (float) w
+          push(Op::WIDTH);
+          code.push_back({Op::DIV, 0, 0.0f});
+          --depth;
+        }
+        return;
+      }
+      default: break;
+    }
+    for (const Node& a : n.args) emit(a, code, depth, peak);
+    code.push_back({op_of(n.kind), 0, 0.0f});
+    depth -= n.args.size() - 1;
+  }
+
+  const Expr& e_;
+  std::vector<Stage> stages_;
+};
+
 }  // namespace
+
+std::vector<Stage> lower(const Expr& e) { return Lowering(e).run(); }
 
 Expr Expr::parse(const std::string& text, size_t n_inputs) {
   if (n_inputs == 0 || n_inputs > kMaxInputs)

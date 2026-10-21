@@ -76,6 +76,7 @@
 #include <nlohmann/json.hpp>
 
 #include "ggml_types.h"
+#include "graph_ir_expr.h"
 #include "model.h"
 
 struct GGUFData;
@@ -227,7 +228,8 @@ class Interpreter {
   // the checks that depend on the call (widths, positions) remain per call.
   enum class DOp {
     Embedding, PosEmbedding, LayerNorm, Split, Gelu, RmsNorm, Linear, Rope, Attention, Add, Mul, MoeFfn, Silu,
-    Sub, Relu, Sigmoid, Affine, MulCol, RmsRow, List, Append, DepthAttend, LinearAttention, SsmScan
+    Sub, Relu, Sigmoid, Affine, MulCol, RmsRow, List, Append, DepthAttend, LinearAttention, SsmScan, Expr,
+    Conv1dCausal, SelectiveScan
   };
   struct DStep {
     DOp op = DOp::Add;
@@ -244,7 +246,11 @@ class Interpreter {
     int w_ne0 = 0;  // the weight's ne0 (rows of width ne0)
     int hd = 0, hq = 0, hkv = 0, window = 0, sinks = 0;  // rope, attention, linear_attention (hq heads)
     int E = 0, top_k = 0, d_ff = 0;                      // moe_ffn
-    int n = 0;                                           // ssm_scan state size
+    int n = 0;  // ssm_scan state size; rmsnorm group (0: the row); conv1d_causal, selective_scan channels
+    int n_rot = 0, kernel = 0, d_state = 0;  // rope n_rot; conv1d_causal kernel; selective_scan d_state
+    bool neox = false;                       // rope pairing
+    const float* rope = nullptr;             // rope: this block's (cos, sin) table on the device
+    std::vector<expr::Stage> expr;           // expr: the device program (graph_ir_expr.h lower)
     float eps = 1e-5f, scale = 0.0f, shift = 0.0f;       // eps: also linear_attention's den_floor
     bool flag = false;  // gelu: tanh form; moe_ffn: renorm gates
     std::vector<int> sizes;  // split
@@ -283,7 +289,9 @@ class Interpreter {
   std::vector<std::vector<DStep>> plan_block_;  // per block
   int logits_slot_ = -1;
   std::vector<float*> dk_, dv_;  // per block: [max_len][kv_heads][head_dim]
-  float* drope_ = nullptr;
+  float* drope_ = nullptr;  // the first block's table (one of drope_tables_)
+  std::map<std::pair<float, float>, float*> drope_tables_;  // rope_tables_ on the device
+  DBuf dexpr_;  // expr scratch (a reduction's argument and its columns)
   int* dtokens_ = nullptr;
   int dtokens_cap_ = 0;
   std::vector<int> htokens_;  // this call's tokens (range checks on the host)
