@@ -1,6 +1,7 @@
 // Vendored verbatim from paperkiln (microtorch) include/microtorch/llama3_tokenizer.hpp
-// at paperkiln e70f75d44f6e (include names .hpp -> .h). ember.cpp uses it for paperkiln chat GGUFs whose tokenizer.ggml.model
-// is "gpt2" with pre "llama-bpe" (the llama.cpp-compatible vocabulary, chat_tokenizer.h).
+// at paperkiln a8510d93 (include names .hpp -> .h). ember.cpp uses it for paperkiln chat GGUFs whose tokenizer.ggml.model
+// is "gpt2" with pre "llama-bpe" (the llama.cpp-compatible vocabulary, chat_tokenizer.h), and with
+// max_digits 1 for Qwen2/Qwen3 GGUFs (pre "qwen2").
 // Do not edit here: change it in paperkiln (its tests check C++/Python
 // parity) and re-vendor.
 #pragma once
@@ -25,6 +26,10 @@
 // token, merged by rank (lowest rank first, leftmost on ties). As in
 // llama.cpp, invalid UTF-8 becomes U+FFFD before splitting, so only valid
 // UTF-8 round-trips. No BOS or EOS is added.
+//
+// Qwen2 (tokenizer.ggml.pre "qwen2", llama.cpp's LLAMA_VOCAB_PRE_TYPE_QWEN2)
+// uses the same regex with \p{N} for \p{N}{1,3}: every digit its own word.
+// max_digits (split_words, Tokenizer) selects it: 3 is llama3, 1 is qwen2.
 #include <algorithm>
 #include <cstdint>
 #include <queue>
@@ -135,8 +140,9 @@ inline void append_utf8(uint32_t cpt, std::string& out) {
 }
 
 // The llama3 pre-tokeniser (unicode_regex_split_custom_llama3) on one
-// fragment with no special tokens in it: the words, as UTF-8.
-inline std::vector<std::string> split_words(const std::string& text) {
+// fragment with no special tokens in it: the words, as UTF-8. max_digits 1
+// gives the qwen2 regex (\p{N} in place of \p{N}{1,3}).
+inline std::vector<std::string> split_words(const std::string& text, size_t max_digits = 3) {
     const std::vector<uint32_t> cp = cpts_from_utf8(text);
     const size_t n = cp.size();
     constexpr uint32_t kOut = 0xFFFFFFFF;
@@ -183,11 +189,11 @@ inline std::vector<std::string> split_words(const std::string& text) {
                 continue;
             }
         }
-        // \p{N}{1,3}
+        // \p{N}{1,3} (\p{N} for qwen2)
         if (f.number) {
             size_t ini = pos;
             while (fl(pos).number) {
-                if (++pos - ini >= 3) {
+                if (++pos - ini >= max_digits) {
                     add(pos);
                     ini = pos;
                 }
@@ -257,10 +263,11 @@ class Tokenizer {
 public:
     // tokens: tokenizer.ggml.tokens (byte-encoded strings); merges: "a b"
     // in rank order; token_type: tokenizer.ggml.token_type (1 normal,
-    // 2 unknown, 3 control, 4 user-defined, ...), empty = all normal.
+    // 2 unknown, 3 control, 4 user-defined, ...), empty = all normal;
+    // max_digits: the pre-tokeniser's digit run (3 llama3, 1 qwen2).
     Tokenizer(std::vector<std::string> tokens, const std::vector<std::string>& merges,
-              const std::vector<int32_t>& token_type)
-        : tokens_(std::move(tokens)) {
+              const std::vector<int32_t>& token_type, size_t max_digits = 3)
+        : tokens_(std::move(tokens)), max_digits_(max_digits) {
         // A repeated string maps to its last id, as llama.cpp's token_to_id.
         for (size_t i = 0; i < tokens_.size(); ++i) id_[tokens_[i]] = static_cast<int>(i);
         for (size_t r = 0; r < merges.size(); ++r) rank_.emplace(merges[r], static_cast<int>(r));
@@ -304,7 +311,7 @@ public:
                 out.push_back(id);
                 continue;
             }
-            for (const std::string& w : split_words(t)) encode_word(byte_encode(w), out);
+            for (const std::string& w : split_words(t, max_digits_)) encode_word(byte_encode(w), out);
         }
         return out;
     }
@@ -403,18 +410,21 @@ private:
     }
 
     std::vector<std::string> tokens_;
+    size_t max_digits_ = 3;
     std::unordered_map<std::string, int> id_, rank_;
     std::vector<bool> special_;
     std::vector<int> specials_;
     std::unordered_map<std::string, unsigned char> unbyte_;
 };
 
-// A llama.cpp-compatible paperkiln vocabulary GGUF: model "gpt2", pre "llama-bpe".
+// A llama.cpp-compatible vocabulary GGUF: model "gpt2", pre "llama-bpe"
+// (paperkiln's) or "qwen2" (single digits).
 inline Tokenizer load_gguf(const std::string& path) {
     bpe::GgufTokenizer g = bpe::read_gguf_tokenizer(path);
-    if (g.model != "gpt2" || g.pre != "llama-bpe")
-        throw std::runtime_error(path + ": tokenizer is '" + g.model + "'/'" + g.pre + "', not 'gpt2'/'llama-bpe'");
-    return Tokenizer(std::move(g.tokens), g.merges, g.token_type);
+    if (g.model != "gpt2" || (g.pre != "llama-bpe" && g.pre != "qwen2"))
+        throw std::runtime_error(path + ": tokenizer is '" + g.model + "'/'" + g.pre +
+                                 "', not 'gpt2'/'llama-bpe' or 'gpt2'/'qwen2'");
+    return Tokenizer(std::move(g.tokens), g.merges, g.token_type, g.pre == "qwen2" ? 1 : 3);
 }
 
 }  // namespace llama3

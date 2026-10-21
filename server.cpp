@@ -76,10 +76,13 @@ static size_t utf8_complete_prefix(const std::string& s) {
 }
 
 // ---- BPE chat core, shared by /chat and /v1/chat/completions ------------
-// paperkiln byte-level BPE chat models: the prompt is exactly the SFT
-// template, each past turn <|user|>U<|assistant|>A<|endoftext|> then
-// <|user|>U<|assistant|> (no BOS, no separators), with the oldest turns
-// dropped until prompt + max_new_tokens fits the context.
+// Chat-mode models: the prompt is exactly the model's chat format
+// (chat_tokenizer.h). paperkiln's SFT template: each past turn
+// <|user|>U<|assistant|>A<|endoftext|> then <|user|>U<|assistant|> (no BOS,
+// no separators). ChatML (Qwen): an optional default system turn, then
+// <|im_start|>user\nU<|im_end|>\n<|im_start|>assistant\n per turn, as HF's
+// apply_chat_template writes it. The oldest turns are dropped until
+// prompt + max_new_tokens fits the context.
 struct BpeChatRequest {
   std::string user_input;
   std::vector<std::pair<std::string, std::string>> turns;  // (user, assistant), oldest first
@@ -125,13 +128,8 @@ struct BpePrompt {
 };
 
 static BpePrompt bpe_build_prompt(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r) {
-  const std::string tail = "<|user|>" + r.user_input + "<|assistant|>";
-  auto build = [&](size_t from) {
-    std::string p;
-    for (size_t i = from; i < r.turns.size(); ++i)
-      p += "<|user|>" + r.turns[i].first + "<|assistant|>" + r.turns[i].second + "<|endoftext|>";
-    return p + tail;
-  };
+  const ember::ChatFormat& fmt = *sess.chat_format();
+  auto build = [&](size_t from) { return fmt.prompt(r.turns, from, r.user_input); };
   const int ctx = sess.get_config().max_position_embeddings;
   size_t from = 0;
   BpePrompt out;

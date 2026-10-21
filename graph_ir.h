@@ -28,16 +28,30 @@
 // where a prefix can actually be resumed.
 //
 // CPU kernels, built from the same primitives as ember's llama CPU path so
-// the arithmetic matches it: embedding, pos_embedding, rmsnorm, layernorm,
-// linear (+ bias), split, rope (interleaved pairs), attention (causal, KV
-// state, optional sliding window + sinks as paperkiln's swa_attention), add, mul, silu, gelu (tanh or erf), moe_ffn (llama.cpp's expert
+// the arithmetic matches it: embedding, pos_embedding, rmsnorm (optionally
+// per group of `group` columns, one weight [group] shared: per-head q/k
+// norm), layernorm, linear (+ bias; tied_to names the weight a missing one
+// reads), split, rope (pairing "interleaved" (x[2j], x[2j+1]) or "neox"
+// (x[j], x[j + n_rot/2]); n_rot <= head_dim rotates each head's first n_rot
+// dims, angle pos * theta^(-2j/n_rot); k has kv_heads heads), attention
+// (causal, grouped-query: query head h reads kv head h / (heads / kv_heads);
+// KV state, optional sliding window + sinks as paperkiln's swa_attention), add, mul, silu, gelu (tanh or erf), moe_ffn (llama.cpp's expert
 // layout), linear_attention (elu+1, ops::kimi_attention) and ssm_scan
 // (ops::ssm_scan) over recurrent state; and for the gated and
 // attention-residual families (flex highway / plain, attnres, srd's router)
 // sub, relu, sigmoid, affine, mul_col, rms_row, list, append and depth_attend
 // (graph_ir_ops.h): a list is a value like a tensor (named by "out", read by
 // "in"), an ordered set of [T, d] tensors. Any other op fails at load,
-// naming the op and the backend.
+// naming the op and the backend. Weights may be F32, F16, BF16, Q8_0 or the
+// legacy 4/5-bit blocks.
+//
+// Third-party GGUFs (LOCAL_LLM_STACK.md section 7): a file with no
+// `paperkiln.ir` whose general.architecture is qwen2 or qwen3 gets the IR
+// that build_ir_from_gguf makes from its llama.cpp metadata, node for node
+// what paperkiln's tools/gguf_ir.py builds. llama and mistral files keep the
+// llama path (EMBER_IR_BUILD=1 builds their IR too); any other architecture
+// fails at load, naming it. EMBER_IR_CTX=N caps the positions the KV state
+// holds (a third-party IR declares the model's full trained context).
 //
 // CUDA builds add a device path, chosen at construction (use_gpu), for every
 // op above (device_supported): weights are uploaded once, the KV state, the
@@ -76,7 +90,9 @@ struct Node {
 class Interpreter {
  public:
   // Parses the IR JSON and binds every weight it names from the GGUF.
-  // Throws std::runtime_error naming the op, tensor or field at fault.
+  // Throws std::runtime_error naming the op, tensor or field at fault. A
+  // weight kept quantised may point into the GGUF's memory map, so `gguf`
+  // must outlive the interpreter.
   // use_gpu selects the device path (CUDA builds; ignored otherwise).
   Interpreter(const std::string& ir_json, const GGUFData& gguf, bool use_gpu = false);
   ~Interpreter();
@@ -110,13 +126,17 @@ class Interpreter {
     std::vector<Buf> items;  // in order; each a tensor
   };
   using Env = std::unordered_map<std::string, Buf>;
-  // A bound weight: f32 values, or (quantised) the tensor's raw GGUF bytes.
+  // A bound weight: f32 values, or (quantised) the tensor's raw GGUF bytes at qp: inside the
+  // GGUF's memory map when it is mapped (no copy; the GGUFData outlives the interpreter), else
+  // in q.
   struct Weight {
     std::vector<float> f32;
     std::vector<uint8_t> q;
+    const uint8_t* qp = nullptr;
+    size_t qbytes = 0;
     GGMLType type = GGMLType::GGML_TYPE_F32;
     size_t numel = 0;
-    bool quantised() const { return !q.empty(); }
+    bool quantised() const { return qp != nullptr; }
   };
 
   void run_nodes(const std::vector<Node>& nodes, int layer, Env& env, int T, int start_pos, bool head_last_only);
@@ -138,8 +158,10 @@ class Interpreter {
   std::vector<KVCacheLayer> kv_;  // per block: [max_len][kv_heads][head_dim]
   int kv_heads_ = 0, head_dim_ = 0;
   int window_ = 0, sinks_ = 0;  // kv state's sliding window (0 = unbounded) and sinks
-  std::vector<std::pair<float, float>> rope_freqs_;
+  std::vector<std::pair<float, float>> rope_freqs_;  // [max_len][rope_dim_ / 2]
   float rope_theta_ = 0.0f;
+  int rope_dim_ = 0;         // n_rot (head_dim_ when the rope node names none)
+  bool rope_neox_ = false;   // pairing "neox"
   bool gpu_ = false;
 
   // Recurrent slots: each block's state is rec_floats_ floats, slot after
@@ -286,8 +308,20 @@ class Interpreter {
 };
 
 // The IR for a GGUF: the EMBER_IR side file if set, else the `paperkiln.ir`
-// key, else empty.
+// key, else the IR build_ir_from_gguf makes for a qwen2 / qwen3 file (and
+// llama / mistral with EMBER_IR_BUILD=1), else empty (the llama path). Throws
+// for a file with no IR whose architecture ember cannot run, naming it.
 std::string find_ir(const GGUFData& gguf);
+
+// The IR of a third-party llama-like GGUF (general.architecture llama,
+// mistral, qwen2 or qwen3) from its metadata and tensor names, as paperkiln's
+// tools/gguf_ir.py builds it: pre-RMSNorm blocks, q/k/v biases when the file
+// has blk.0.attn_q.bias, per-head q/k RMSNorm (group head_dim) when it has
+// blk.0.attn_q_norm.weight, RoPE pairing "neox" for qwen2/qwen3 and
+// "interleaved" for llama/mistral, grouped-query attention, SwiGLU, and the
+// head tied to token_embd.weight when output.weight is absent. Throws naming
+// the architecture or the missing key otherwise.
+std::string build_ir_from_gguf(const GGUFData& gguf);
 
 // True when the IR declares sliding-window attention (a kv state or an
 // attention node with window != 0). Only the interpreter implements it, so

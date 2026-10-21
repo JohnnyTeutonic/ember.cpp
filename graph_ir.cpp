@@ -1,14 +1,18 @@
 #include "graph_ir.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <limits>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <type_traits>
+#include <variant>
 
 #include "cpu_attention.h"
 #include "gguf_structs.h"
@@ -68,6 +72,59 @@ std::string ssm_weight(const json& n, const char* part) {
   if (has(n, "weights") && n.at("weights").contains(part)) return n.at("weights").at(part).get<std::string>();
   if (!has(n, part)) throw std::runtime_error(std::string("IR ssm_scan names no '") + part + "' tensor");
   return n.at(part).get<std::string>();
+}
+
+// rope on q or k ([T, heads * hd]) for the forms apply_rope_batch_cpu does not
+// cover: pairing "neox" (x[j], x[j + n_rot/2]) and partial rotary (the first
+// n_rot dims of each head; the rest pass through). freqs: [max_len][n_rot/2]
+// (cos, sin), as the interleaved table. Same per-pair arithmetic as
+// apply_rope_batch_cpu.
+void rope_rows_cpu(std::vector<float>& x, int T, int heads, int hd, int n_rot, bool neox, int start_pos,
+                   const std::vector<std::pair<float, float>>& freqs) {
+  const int half = n_rot / 2;
+  for (int t = 0; t < T; ++t) {
+    const auto* f = freqs.data() + static_cast<size_t>(start_pos + t) * half;
+    for (int h = 0; h < heads; ++h) {
+      float* r = x.data() + (static_cast<size_t>(t) * heads + h) * hd;
+      for (int i = 0; i < half; ++i) {
+        const size_t i0 = neox ? i : 2 * i, i1 = neox ? i + half : 2 * i + 1;
+        const float v0 = r[i0], v1 = r[i1];
+        r[i0] = v0 * f[i].first - v1 * f[i].second;
+        r[i1] = v0 * f[i].second + v1 * f[i].first;
+      }
+    }
+  }
+}
+
+// ---- Third-party IR builder (build_ir_from_gguf) ----
+
+std::optional<double> meta_number(const GGUFData& g, const std::string& key) {
+  auto it = g.metadata.find(key);
+  if (it == g.metadata.end()) return std::nullopt;
+  return std::visit(
+      [](const auto& v) -> std::optional<double> {
+        using V = std::decay_t<decltype(v)>;
+        if constexpr (std::is_arithmetic_v<V> && !std::is_same_v<V, bool>)
+          return static_cast<double>(v);
+        else
+          return std::nullopt;
+      },
+      it->second);
+}
+
+std::optional<std::string> meta_string(const GGUFData& g, const std::string& key) {
+  auto it = g.metadata.find(key);
+  if (it == g.metadata.end()) return std::nullopt;
+  if (const auto* s = std::get_if<std::string>(&it->second)) return *s;
+  return std::nullopt;
+}
+
+// The value a float32 holds, as the shortest decimal that round-trips it,
+// read back as a double (paperkiln's ir::f32 / gguf_ir.py f32 convention).
+double f32_value(double v) {
+  char buf[64];
+  const auto r = std::to_chars(buf, buf + sizeof(buf), static_cast<float>(v));
+  return std::strtod(std::string(buf, r.ptr).c_str(), nullptr);
 }
 
 // elu(x) + 1 as KimiLinearAttention::feature_map: x + 1 for x > 0, else
@@ -135,6 +192,12 @@ bool device_supported(const std::string& ir_json) {
     for (const auto& n : j.at(sub).value("nodes", json::array())) {
       const std::string op = n.value("op", "");
       if (!kCudaOps.count(op)) return false;
+      // NEOX pairing, partial rotary and grouped (per-head) RMSNorm have CPU
+      // kernels only so far.
+      if (op == "rope" && (n.value("pairing", "interleaved") != "interleaved" ||
+                           (has(n, "n_rot") && n.at("n_rot") != n.at("head_dim"))))
+        return false;
+      if (op == "rmsnorm" && has(n, "group")) return false;
       const size_t ins = n.contains("in") && n.at("in").is_array() ? n.at("in").size() : 1;
       if (op == "list") list_tensors += ins * times;
       if (op == "append") list_tensors += times;
@@ -162,7 +225,132 @@ std::string find_ir(const GGUFData& gguf) {
   if (it != gguf.metadata.end()) {
     if (const auto* s = std::get_if<std::string>(&it->second)) return *s;
   }
-  return {};
+  // No IR in the file: qwen2/qwen3 get one built from their metadata; llama
+  // and mistral keep the llama path unless EMBER_IR_BUILD=1; anything else
+  // cannot run.
+  const std::string arch = meta_string(gguf, "general.architecture").value_or("llama");
+  if (arch == "qwen2" || arch == "qwen3") return build_ir_from_gguf(gguf);
+  if (arch == "llama" || arch == "mistral") {
+    const char* b = std::getenv("EMBER_IR_BUILD");
+    return b && std::string(b) == "1" ? build_ir_from_gguf(gguf) : std::string();
+  }
+  throw std::runtime_error("ember cannot run general.architecture = '" + arch +
+                           "': the GGUF has no paperkiln.ir and ember has no IR builder for that architecture "
+                           "(built: llama, mistral, qwen2, qwen3)");
+}
+
+std::string build_ir_from_gguf(const GGUFData& g) {
+  const std::string arch = meta_string(g, "general.architecture").value_or("");
+  if (arch != "llama" && arch != "mistral" && arch != "qwen2" && arch != "qwen3")
+    throw std::runtime_error("no IR builder for general.architecture = '" + arch + "'");
+  const std::string p = arch + ".";
+  auto get = [&](const std::string& key, std::optional<double> dflt = std::nullopt) -> double {
+    auto v = meta_number(g, p + key);
+    if (!v) v = dflt;
+    if (!v) throw std::runtime_error("IR builder: " + arch + " file has no " + p + key);
+    return *v;
+  };
+  auto shape_has = [&](const std::string& t) { return g.tensor_infos_map.count(t) > 0; };
+  const int d = static_cast<int>(get("embedding_length")), H = static_cast<int>(get("attention.head_count"));
+  const int KV = static_cast<int>(get("attention.head_count_kv", H));
+  const int hd = static_cast<int>(get("attention.key_length", d / H));
+  const int n_rot = static_cast<int>(get("rope.dimension_count", hd));
+  const int ctx = static_cast<int>(get("context_length"));
+  const double eps = get("attention.layer_norm_rms_epsilon");
+  const double theta = get("rope.freq_base", 10000.0);
+  const int n_layers = static_cast<int>(get("block_count"));
+  const auto scaling = meta_string(g, p + "rope.scaling.type");
+  if ((scaling && *scaling != "none") || shape_has("rope_freqs.weight"))
+    throw std::runtime_error("IR builder: " + arch + " with RoPE scaling is not built yet");
+  // HF Mistral's window (key j visible from query p iff p - w < j <= p); qwen2's
+  // GGUF does not say which layers a window would cover, so none.
+  int window = 0;
+  if (arch == "llama" || arch == "mistral") window = static_cast<int>(meta_number(g, p + "attention.sliding_window").value_or(0));
+  int vocab = static_cast<int>(g.tokenizer_tokens.size());
+  if (vocab == 0) {
+    auto it = g.tensor_infos_map.find("token_embd.weight");
+    if (it == g.tensor_infos_map.end() || it->second.shape.size() < 2)
+      throw std::runtime_error("IR builder: no tokens and no token_embd.weight");
+    vocab = static_cast<int>(it->second.shape[1]);
+  }
+  const bool bias = shape_has("blk.0.attn_q.bias"), qk_norm = shape_has("blk.0.attn_q_norm.weight");
+  const std::string pairing = arch == "qwen2" || arch == "qwen3" ? "neox" : "interleaved";
+  const std::string B = "blk.{i}.";
+
+  auto linear = [](const std::string& x, const std::string& w, const std::string& out, const std::string& b = "",
+                   const std::string& tied = "") {
+    json n = {{"op", "linear"}, {"in", {x}}, {"weight", w}, {"bias", nullptr}, {"out", out}};
+    if (!b.empty()) n["bias"] = b;
+    if (!tied.empty()) n["tied_to"] = tied;
+    return n;
+  };
+  auto rmsnorm = [&](const std::string& x, const std::string& w, const std::string& out, int group = 0) {
+    json n = {{"op", "rmsnorm"}, {"in", {x}}, {"weight", w}, {"eps", f32_value(eps)}, {"out", out}};
+    if (group) n["group"] = group;
+    return n;
+  };
+  auto op = [](const std::string& name, std::vector<std::string> in, const std::string& out) {
+    return json{{"op", name}, {"in", in}, {"out", out}};
+  };
+  auto proj = [&](const std::string& name, const std::string& out) {
+    return linear("h", B + name + ".weight", out, bias ? B + name + ".bias" : "");
+  };
+  json nodes = json::array({rmsnorm("x", B + "attn_norm.weight", "h"), proj("attn_q", "q"), proj("attn_k", "k"),
+                            proj("attn_v", "v")});
+  if (qk_norm) {
+    nodes.push_back(rmsnorm("q", B + "attn_q_norm.weight", "q", hd));
+    nodes.push_back(rmsnorm("k", B + "attn_k_norm.weight", "k", hd));
+  }
+  nodes.push_back({{"op", "rope"}, {"in", {"q", "k", "pos"}}, {"heads", H}, {"kv_heads", KV}, {"head_dim", hd},
+                   {"n_rot", n_rot}, {"theta", f32_value(theta)}, {"rope_heads", "all"}, {"pairing", pairing},
+                   {"out", {"q", "k"}}});
+  nodes.push_back({{"op", "attention"}, {"in", {"q", "k", "v"}}, {"state", "kv"}, {"heads", H}, {"kv_heads", KV},
+                   {"head_dim", hd}, {"causal", true}, {"scale", f32_value(1.0 / std::sqrt(static_cast<double>(hd)))},
+                   {"window", window}, {"sinks", 0}, {"softmax", "max-shifted, masked entries exactly zero"},
+                   {"out", "a"}});
+  nodes.push_back(linear("a", B + "attn_output.weight", "o"));
+  nodes.push_back(op("add", {"x", "o"}, "x"));
+  nodes.push_back(rmsnorm("x", B + "ffn_norm.weight", "h2"));
+  nodes.push_back(linear("h2", B + "ffn_gate.weight", "g"));
+  nodes.push_back(linear("h2", B + "ffn_up.weight", "u"));
+  nodes.push_back(op("silu", {"g"}, "g"));
+  nodes.push_back(op("mul", {"g", "u"}, "gu"));
+  nodes.push_back(linear("gu", B + "ffn_down.weight", "f"));
+  nodes.push_back(op("add", {"x", "f"}, "x"));
+  const bool tied = !shape_has("output.weight");
+  json head = json::array({rmsnorm("x", "output_norm.weight", "h"),
+                           linear("h", "output.weight", "logits", "", tied ? "token_embd.weight" : "")});
+  const auto eos = meta_number(g, "tokenizer.ggml.eos_token_id");
+  const auto bos = meta_number(g, "tokenizer.ggml.bos_token_id");
+  json doc;
+  doc["_comment"] = "built by ember's build_ir_from_gguf (graph_ir.cpp; paperkiln tools/gguf_ir.py's rules) from "
+                    "general.architecture = " + arch + " and its metadata";
+  doc["ir_version"] = 0;
+  doc["family_hint"] = arch;
+  doc["model"] = {{"vocab", vocab}, {"d", d}, {"n_layers", n_layers}, {"ctx", ctx}, {"dtype", "f32"}};
+  doc["tokenizer"] = {{"type", "gguf"},
+                      {"source", "gguf"},
+                      {"specials", eos ? json{{"eot", static_cast<int64_t>(*eos)}} : json::object()},
+                      {"bos", bos ? json(static_cast<int64_t>(*bos)) : json(nullptr)}};
+  doc["inputs"] = json::array({{{"name", "tokens"}, {"kind", "token_ids"}}, {{"name", "pos"}, {"kind", "positions"}}});
+  doc["embed"] = {{"nodes", json::array({{{"op", "embedding"}, {"in", {"tokens"}}, {"weight", "token_embd.weight"},
+                                          {"out", "x"}}})}};
+  doc["block"] = {{"repeat", n_layers},
+                  {"state", json::array({{{"name", "kv"}, {"kind", "kv"}, {"heads", H}, {"kv_heads", KV},
+                                          {"head_dim", hd}, {"max_len", ctx}, {"window", window}, {"sinks", 0},
+                                          {"dtype", "f32"}}})},
+                  {"nodes", nodes}};
+  doc["head"] = {{"nodes", head}};
+  doc["outputs"] = json::array({{{"name", "logits"}, {"kind", "logits"}}});
+  doc["modes"] = {{"prefill", "all nodes over T tokens"},
+                  {"decode", "the same graph with T = 1, attention reads and appends to the kv state, a recurrent op "
+                             "reads and replaces its recurrent state"}};
+  Logger::info("[IR] built the IR for general.architecture = " + arch + " from its metadata: d " + std::to_string(d) +
+               ", " + std::to_string(n_layers) + " layers, heads " + std::to_string(H) + "/" + std::to_string(KV) +
+               " x " + std::to_string(hd) + ", n_rot " + std::to_string(n_rot) + ", " + pairing + " RoPE" +
+               (bias ? ", q/k/v biases" : "") + (qk_norm ? ", per-head q/k RMSNorm" : "") +
+               (tied ? ", tied head" : ""));
+  return doc.dump();
 }
 
 Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool use_gpu) {
@@ -263,11 +451,56 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
 #endif
   for (const auto& n : block_) {
     if (n.op == "rope") {
-      if (n.attrs.value("pairing", "interleaved") != "interleaved")
-        throw std::runtime_error("IR rope pairing '" + n.attrs.value("pairing", "") + "' is not implemented in ember");
+      const std::string pairing = n.attrs.value("pairing", "interleaved");
+      if (pairing != "interleaved" && pairing != "neox")
+        throw std::runtime_error("IR rope pairing '" + pairing + "' is not implemented in ember");
       if (n.attrs.value("rope_heads", "all") != "all")
         throw std::runtime_error("IR rope_heads '" + n.attrs.value("rope_heads", "") + "' is not implemented in ember");
-      rope_theta_ = n.attrs.at("theta").get<float>();
+      if (!n.attrs.at("theta").is_number())
+        throw std::runtime_error("IR rope theta must be a number (per-layer RoPE bases are not implemented in ember)");
+      if (has(n.attrs, "freq_scale"))
+        throw std::runtime_error("IR rope freq_scale is not implemented in ember");
+      if (kv_heads_ > 0 && has(n.attrs, "kv_heads") && n.attrs.at("kv_heads").get<int>() != kv_heads_)
+        throw std::runtime_error("IR rope kv_heads differs from its kv state's");
+      // The table is the kv state's head_dim wide, as before, unless the node
+      // names its own n_rot (partial rotary) or NEOX pairing: then n_rot
+      // (default head_dim) must fit the kv state's heads.
+      const int hd = n.attrs.at("head_dim").get<int>();
+      int n_rot = head_dim_;
+      if (has(n.attrs, "n_rot") || pairing == "neox") {
+        n_rot = has(n.attrs, "n_rot") ? n.attrs.at("n_rot").get<int>() : hd;
+        if (hd != head_dim_ || n_rot <= 0 || n_rot % 2 != 0 || n_rot > hd)
+          throw std::runtime_error("IR rope: n_rot " + std::to_string(n_rot) + " / head_dim " + std::to_string(hd) +
+                                   " (kv state head_dim " + std::to_string(head_dim_) + ") is not usable");
+      }
+      const float theta = n.attrs.at("theta").get<float>();
+      if (rope_dim_ != 0 && (rope_theta_ != theta || rope_dim_ != n_rot || rope_neox_ != (pairing == "neox")))
+        throw std::runtime_error("IR rope nodes with different theta, n_rot or pairing are not implemented in ember");
+      rope_theta_ = theta;
+      rope_dim_ = n_rot;
+      rope_neox_ = pairing == "neox";
+    }
+  }
+  // The rmsnorm groups (per-head q/k norm) and the attention head counts.
+  for (const auto& n : block_) {
+    if (n.op == "rmsnorm" && has(n.attrs, "group") && n.attrs.at("group").get<int>() <= 0)
+      throw std::runtime_error("IR rmsnorm group must be positive");
+    if (n.op == "attention") {
+      const int hq = n.attrs.at("heads").get<int>(), hkv = n.attrs.at("kv_heads").get<int>();
+      if (hkv <= 0 || hq % hkv != 0)
+        throw std::runtime_error("IR attention: heads " + std::to_string(hq) + " is not a multiple of kv_heads " +
+                                 std::to_string(hkv));
+    }
+  }
+  // EMBER_IR_CTX=N: hold at most N positions (a third-party IR declares the
+  // model's whole trained context, e.g. 32768, which is ~0.8 GB of f32 KV for
+  // Qwen2.5-0.5B).
+  if (const char* c = std::getenv("EMBER_IR_CTX")) {
+    const int cap = std::atoi(c);
+    if (cap > 0 && max_len_ > cap) {
+      Logger::info("[IR] EMBER_IR_CTX: the kv state holds " + std::to_string(cap) + " of the IR's " +
+                   std::to_string(max_len_) + " positions");
+      max_len_ = cap;
     }
   }
   bool has_attention = false;
@@ -339,20 +572,22 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
   bind(embed_, -1, gguf);
   for (int l = 0; l < n_layers_; ++l) bind(block_, l, gguf);
   bind(head_, -1, gguf);
-  size_t n_quant = 0, bytes_quant = 0, bytes_f32 = 0;
+  size_t n_quant = 0, bytes_quant = 0, bytes_f32 = 0, n_mapped = 0;
   for (const auto& kv : weights_) {
     n_quant += kv.second.quantised();
-    bytes_quant += kv.second.q.size();
+    n_mapped += kv.second.quantised() && kv.second.q.empty();
+    bytes_quant += kv.second.qbytes;
     bytes_f32 += kv.second.f32.size() * sizeof(float);
   }
 
-  // RoPE table, computed exactly as TinyLlamaModel::initialize_rope_freqs.
-  if (rope_theta_ > 0.0f) rope_freqs_.resize(static_cast<size_t>(max_len_) * head_dim_ / 2);
+  // RoPE table, computed exactly as TinyLlamaModel::initialize_rope_freqs,
+  // over rope_dim_ (n_rot; head_dim for full rotary).
+  if (rope_theta_ > 0.0f) rope_freqs_.resize(static_cast<size_t>(max_len_) * rope_dim_ / 2);
   for (int pos = 0; rope_theta_ > 0.0f && pos < max_len_; ++pos) {
-    for (int i = 0; i < head_dim_; i += 2) {
-      float freq = 1.0f / std::pow(rope_theta_, float(i) / head_dim_);
+    for (int i = 0; i < rope_dim_; i += 2) {
+      float freq = 1.0f / std::pow(rope_theta_, float(i) / rope_dim_);
       float val = static_cast<float>(pos) * freq;
-      rope_freqs_[(static_cast<size_t>(pos) * head_dim_ / 2) + (i / 2)] = {std::cos(val), std::sin(val)};
+      rope_freqs_[(static_cast<size_t>(pos) * rope_dim_ / 2) + (i / 2)] = {std::cos(val), std::sin(val)};
     }
   }
 #ifdef HAS_CUDA
@@ -372,7 +607,9 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
   }
   Logger::info("[IR] interpreter ready: family_hint=" + family_hint_ + ", " + std::to_string(n_layers_) + " blocks of " +
                std::to_string(block_.size()) + " ops, " + std::to_string(weights_.size()) + " weights bound (" +
-               std::to_string(n_quant) + " kept quantised, " + std::to_string(bytes_quant >> 20) + " MiB; f32 " +
+               std::to_string(n_quant) + " kept quantised, " + std::to_string(bytes_quant >> 20) + " MiB" +
+               (n_mapped ? " (" + std::to_string(n_mapped) + " read in place from the memory map)" : std::string()) +
+               "; f32 " +
                std::to_string(bytes_f32 >> 20) + " MiB" + (dequant_all_ ? "; dequantised at load" : "") + "), device " +
                (gpu_ ? "cuda" : "cpu"));
   if (rec_floats_ > 0)
@@ -408,8 +645,10 @@ void Interpreter::bind_tensor(const std::string& name, const GGUFData& gguf, boo
     if (keep_quantised || !w.quantised()) return;
     // Bound quantised for a row-wise op, now needed whole (a norm, a bias): f32.
     w.f32.resize(w.numel);
-    dequant_span_to_f32(w.type, w.q.data(), 0, w.numel, w.f32.data());
+    dequant_span_to_f32(w.type, w.qp, 0, w.numel, w.f32.data());
     std::vector<uint8_t>().swap(w.q);
+    w.qp = nullptr;
+    w.qbytes = 0;
     return;
   }
   auto it = gguf.tensor_infos_map.find(name);
@@ -423,14 +662,21 @@ void Interpreter::bind_tensor(const std::string& name, const GGUFData& gguf, boo
   const GGMLType t = info.type;
   const bool block_type = t == GGMLType::GGML_TYPE_Q8_0 || t == GGMLType::GGML_TYPE_Q4_0 ||
                           t == GGMLType::GGML_TYPE_Q4_1 || t == GGMLType::GGML_TYPE_Q5_0 || t == GGMLType::GGML_TYPE_Q5_1;
-  if (keep_quantised && !dequant_all_ && !shape.empty() && (t == GGMLType::GGML_TYPE_F16 || (block_type && shape[0] % 32 == 0))) {
+  const bool half = t == GGMLType::GGML_TYPE_F16 || t == GGMLType::GGML_TYPE_BF16;
+  if (keep_quantised && !dequant_all_ && !shape.empty() && (half || (block_type && shape[0] % 32 == 0))) {
     // Rows (ne0 elements) start on block boundaries, so a row is a whole
     // number of blocks and dequantises on its own.
-    const size_t bytes = t == GGMLType::GGML_TYPE_F16 ? info.num_elements * 2 : info.num_elements / 32 * ggml_type_size(t);
+    const size_t bytes = half ? info.num_elements * 2 : info.num_elements / 32 * ggml_type_size(t);
     if (info.size_in_bytes < bytes)
       throw std::runtime_error("IR weight '" + name + "' is shorter than its element count implies");
     Weight w;
-    w.q.assign(src, src + bytes);
+    if (gguf.mapped_tensor_data) {
+      w.qp = src;  // read in place: the mapping lives as long as the GGUFData
+    } else {
+      w.q.assign(src, src + bytes);
+      w.qp = w.q.data();  // a vector's buffer survives the moves below
+    }
+    w.qbytes = bytes;
     w.type = t;
     w.numel = info.num_elements;
     shapes_[name] = shape;
@@ -675,7 +921,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
           throw std::runtime_error("IR embedding: token id " + std::to_string(id) + " out of range");
         float* dst = out.v.data() + static_cast<size_t>(t) * d;
         if (W.quantised())
-          dequant_span_to_f32(W.type, W.q.data(), static_cast<size_t>(id) * d, d, dst);
+          dequant_span_to_f32(W.type, W.qp, static_cast<size_t>(id) * d, d, dst);
         else
           std::memcpy(dst, W.f32.data() + static_cast<size_t>(id) * d, d * sizeof(float));
       }
@@ -741,7 +987,14 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       const Buf& x = in(n, 0);
       Buf out{{}, x.width};
       out.v.resize(x.v.size());
-      rmsnorm_batch_cpu(x.v, weight(wname(n)), out.v, T, x.width, n.attrs.value("eps", 1e-5f));
+      // group g: each consecutive g columns normalised on their own, one
+      // weight [g] shared (per-head q/k norm); a row of rows of width g.
+      const int g = has(n.attrs, "group") ? n.attrs.at("group").get<int>() : x.width;
+      const auto& w = weight(wname(n));
+      if (g <= 0 || x.width % g != 0 || w.size() != static_cast<size_t>(g))
+        throw std::runtime_error("IR rmsnorm '" + wname(n) + "': group " + std::to_string(g) + " does not fit width " +
+                                 std::to_string(x.width) + " and weight [" + std::to_string(w.size()) + "]");
+      rmsnorm_batch_cpu(x.v, w, out.v, T * (x.width / g), g, n.attrs.value("eps", 1e-5f));
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "linear") {
       const Buf& x = in(n, 0);
@@ -755,7 +1008,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       if (W.quantised())  // one row of blocks at a time; equal to the f32 path (graph_ir.h)
         matmul_rows_f32_batch_cpu(
             [&](int64_t o, float* row) {
-              dequant_span_to_f32(W.type, W.q.data(), static_cast<size_t>(o) * in_dim, in_dim, row);
+              dequant_span_to_f32(W.type, W.qp, static_cast<size_t>(o) * in_dim, in_dim, row);
             },
             x.v.data(), out.v.data(), T, out_dim, in_dim);
       else
@@ -769,8 +1022,17 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
     } else if (n.op == "rope") {
       Buf q = in(n, 0), k = in(n, 1);
       const int hd = n.attrs.at("head_dim").get<int>();
-      apply_rope_batch_cpu(q.v, k.v, T, q.width / hd, k.width / hd, hd, start_pos, rope_freqs_, max_len_,
-                           /*use_adjacent_pairing=*/true);
+      if (!rope_neox_ && rope_dim_ == head_dim_) {  // full interleaved: the llama path's kernel
+        apply_rope_batch_cpu(q.v, k.v, T, q.width / hd, k.width / hd, hd, start_pos, rope_freqs_, max_len_,
+                             /*use_adjacent_pairing=*/true);
+      } else {  // NEOX pairing or partial rotary
+        if (start_pos < 0 || start_pos + T > max_len_)
+          throw std::runtime_error("IR rope: position " + std::to_string(start_pos + T - 1) + " exceeds the rope table (" +
+                                   std::to_string(max_len_) + ")");
+        if (q.width % hd != 0 || k.width % hd != 0) throw std::runtime_error("IR rope: q/k widths are not whole heads");
+        rope_rows_cpu(q.v, T, q.width / hd, hd, rope_dim_, rope_neox_, start_pos, rope_freqs_);
+        rope_rows_cpu(k.v, T, k.width / hd, hd, rope_dim_, rope_neox_, start_pos, rope_freqs_);
+      }
       env[n.out.at(0)] = std::move(q);
       env[n.out.at(1)] = std::move(k);
     } else if (n.op == "attention") {
