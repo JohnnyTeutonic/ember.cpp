@@ -24,3 +24,15 @@ time-step rank 8, conv bias, tied embeddings, seed 0. Four random 40-token seque
 
 Not yet: an official checkpoint (state-spaces/mamba-130m) through ember's server (needs paperkiln's
 C++ IR builder for GGUFs without `paperkiln.ir`); CUDA and WASM kernels.
+
+## Mistral-style sliding window (`mistral_swa_synth_check.json`)
+
+paperkiln's synthetic MistralForCausalLM (window 8, grouped-query 4/2 heads, 3 layers; thirdparty_synth's
+model): ember's interpreter runs it with grouped-query attention and the window: ember vs numpy IR
+worst 1.4e-6 of the logit range, argmax agrees everywhere, decode equal to prefill.
+
+## Still to do on this branch (after paperkiln 0f3dc58, which added NEOX/partial RoPE and grouped RMSNorm)
+
+- gemma3: per-layer attributes ({"per_layer": [...]}: attention and kv windows, RoPE theta per layer),
+  rmsnorm weight_offset, Gemma's attention and embedding scales.
+- gptneox: parallel residual (graph wiring), re-check on top of 0f3dc58's NEOX/partial rotary.
