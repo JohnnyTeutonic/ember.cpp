@@ -10,6 +10,7 @@
 # <ids-dir> holds gemma3_270m_pastwin.ids.json, qwen25_long.ids.json and qwen3_long.ids.json
 # (tools/chat_prompt_ids.py --min-tokens 513). Only committed code ships: ember HEAD and paperkiln
 # HEAD's tools/ (git archive). The checkpoints are fetched on the VM; nothing large is uploaded.
+# GATE_ONLY=pythia runs only Pythia's part on the VM (colab_device_gate_vm.sh's third argument).
 # PRESTAGED=dir uses a stage made on Windows instead (ember.tgz, paperkiln.tgz, ids.tgz, the VM
 # script and COMMITS = "<ember> <paperkiln>"), so this script touches no OneDrive tree.
 # Results land in /mnt/c/ml_artifacts/devgate/<session>/ (outside OneDrive).
@@ -102,7 +103,7 @@ cat > "$STAGE/launch.py" <<EOF
 import os, subprocess
 if not os.path.exists("/content/gate_vm.log"):
     subprocess.run("cd /content && tar xzf ids.tgz", shell=True)
-    subprocess.Popen("cd /content && bash colab_device_gate_vm.sh $EC $PC", shell=True,
+    subprocess.Popen("cd /content && bash colab_device_gate_vm.sh $EC $PC ${GATE_ONLY:-}", shell=True,
                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                      stderr=subprocess.DEVNULL, close_fds=True, start_new_session=True)
 print("GATE_LAUNCH_SENT")

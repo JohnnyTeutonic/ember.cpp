@@ -3,7 +3,9 @@
 # third-party families, on a Colab L4 (local GPU work is off since the WSL service faults of 22 Oct
 # 2026). Launched detached by tools/colab_device_gate_drive.sh; never run locally.
 #
-#   bash colab_device_gate_vm.sh <ember_commit> <paperkiln_commit>
+#   bash colab_device_gate_vm.sh <ember_commit> <paperkiln_commit> [only]
+#
+# only = pythia: Pythia-160m's conversion, short gate and float64 tie check alone.
 #
 # Inputs in /content: ember.tgz, paperkiln.tgz (its tools/), ids/*.ids.json (tools/chat_prompt_ids.py:
 # chat prompts past a 512-token window), this script. The checkpoints are fetched here, never
@@ -15,7 +17,7 @@
 set -uo pipefail
 cd /content
 exec > /content/gate_vm.log 2>&1
-EMBER_COMMIT=${1:?ember commit}; PK_COMMIT=${2:?paperkiln commit}
+EMBER_COMMIT=${1:?ember commit}; PK_COMMIT=${2:?paperkiln commit}; ONLY=${3:-}
 OUT=/content/out; M=/content/models
 mkdir -p "$OUT" "$M" /content/src
 fail() { echo "FAILED: $*"; echo "$*" > /content/GATE_FAILED; exit 1; }
@@ -25,7 +27,9 @@ echo "=== device gate vm $(date -u) ember=$EMBER_COMMIT paperkiln=$PK_COMMIT ===
 echo "--- deps + build $(date -u +%T)"
 apt-get update -qq > /dev/null 2>&1
 apt-get install -y -q libboost-regex-dev > /dev/null 2>&1 || fail "apt libboost-regex-dev"
-pip install -q gguf sentencepiece > /dev/null 2>&1 || fail "pip gguf"
+# transformers as paperkiln converted the local copies (4.57.0): newer releases rename GPT-NeoX's
+# rotary_pct as they load the config, which b6000's convert reads (KeyError on 22 Oct 2026).
+pip install -q gguf sentencepiece "transformers==4.57.0" > /dev/null 2>&1 || fail "pip gguf, transformers"
 tar xzf ember.tgz -C /content/src && tar xzf paperkiln.tgz -C /content/src || fail "untar"
 git clone -q --depth 1 --branch b6000 https://github.com/ggml-org/llama.cpp /content/llamacpp_b6000 || fail "llama.cpp b6000"
 mkdir -p /content/build && cd /content/build
@@ -36,20 +40,24 @@ cd /content
 GATE=/content/build/ir_device_gate
 
 echo "--- checkpoints $(date -u +%T)"
-python3 - <<'PY' || fail "downloads"
+python3 - "$ONLY" <<'PY' || fail "downloads"
 from huggingface_hub import hf_hub_download, snapshot_download
-hf_hub_download("Qwen/Qwen3-0.6B-GGUF", "Qwen3-0.6B-Q8_0.gguf", local_dir="/content/models/qwen3")
-hf_hub_download("Qwen/Qwen2.5-0.5B-Instruct-GGUF", "qwen2.5-0.5b-instruct-fp16.gguf", local_dir="/content/models/qwen25")
-# The revision the local copy came from: the repository's current config.json has dropped rotary_pct,
-# which llama.cpp b6000's convert reads (KeyError on 22 Oct 2026).
+import sys
+only = sys.argv[1] if len(sys.argv) > 1 else ""
+if not only:
+    hf_hub_download("Qwen/Qwen3-0.6B-GGUF", "Qwen3-0.6B-Q8_0.gguf", local_dir="/content/models/qwen3")
+    hf_hub_download("Qwen/Qwen2.5-0.5B-Instruct-GGUF", "qwen2.5-0.5b-instruct-fp16.gguf", local_dir="/content/models/qwen25")
+# The revision the local copy came from (transformers is pinned above for the same reason).
 snapshot_download("EleutherAI/pythia-160m", revision="50f5173d932e8e61f858120bcb800b97af589f46",
                   local_dir="/content/models/pythia-160m", allow_patterns=["*.json", "*.safetensors", "*.txt"])
 # Google's repository needs a licence click; unsloth's copy of the same release does not.
-snapshot_download("unsloth/gemma-3-270m-it", local_dir="/content/models/gemma-3-270m-it", allow_patterns=["*.json", "*.safetensors", "*.model"])
+if not only:
+    snapshot_download("unsloth/gemma-3-270m-it", local_dir="/content/models/gemma-3-270m-it", allow_patterns=["*.json", "*.safetensors", "*.model"])
 print("downloads done")
 PY
 # The local copies' folder and file names, so the files can come out byte-identical.
-for m in pythia-160m gemma-3-270m-it; do
+MODELS="pythia-160m gemma-3-270m-it"; [ "$ONLY" = pythia ] && MODELS=pythia-160m
+for m in $MODELS; do
   # A failed conversion drops that model's gates only; the others still run.
   python3 /content/llamacpp_b6000/convert_hf_to_gguf.py $M/$m --outtype f32 --outfile $M/$m/$m-f32.gguf > $OUT/convert_$m.log 2>&1 \
     || { echo "convert $m failed: $(tail -1 $OUT/convert_$m.log)"; rm -f $M/$m/$m-f32.gguf; }
@@ -74,11 +82,11 @@ run() {  # name gguf args...: one gate, its receipt in $OUT/name.json
   python3 -c "import json,sys; d=json.load(open(sys.argv[1])); d.pop('rows',None); print(json.dumps(d))" $OUT/$name.json \
     || echo "$name: no receipt ($(tail -2 $OUT/$name.log))"
 }
-run qwen3_06b $QWEN3 --n 40 --len 24 --gen 32
+[ -z "$ONLY" ] && run qwen3_06b $QWEN3 --n 40 --len 24 --gen 32
 run pythia_160m_short $PYTHIA --n 40 --len 24 --gen 32
-run gemma3_270m_long $GEMMA --ids /content/ids/gemma3_270m_pastwin.ids.json --gen 32
-run qwen25_long $QWEN25 --ids /content/ids/qwen25_long.ids.json --gen 32
-run qwen3_long $QWEN3 --ids /content/ids/qwen3_long.ids.json --gen 32
+[ -z "$ONLY" ] && run gemma3_270m_long $GEMMA --ids /content/ids/gemma3_270m_pastwin.ids.json --gen 32
+[ -z "$ONLY" ] && run qwen25_long $QWEN25 --ids /content/ids/qwen25_long.ids.json --gen 32
+[ -z "$ONLY" ] && run qwen3_long $QWEN3 --ids /content/ids/qwen3_long.ids.json --gen 32
 
 echo "--- Pythia flips against float64 $(date -u +%T)"
 [ -s $OUT/pythia_160m_short.json ] && python3 /content/src/ember/tools/ir_float64_tie.py --gguf $PYTHIA --paperkiln /content/src/microtorch \
@@ -87,7 +95,7 @@ cat $OUT/pythia_flips_float64.json
 
 echo "--- Gemma past the window: ember CPU vs numpy and HF $(date -u +%T)"
 cd /content/src/ember
-[ -s $GEMMA ] && python3 tools/thirdparty_ember_check.py --gguf $GEMMA --paperkiln /content/src/microtorch --bin /content/build/ir_logits \
+[ -z "$ONLY" ] && [ -s $GEMMA ] && python3 tools/thirdparty_ember_check.py --gguf $GEMMA --paperkiln /content/src/microtorch --bin /content/build/ir_logits \
   --work $OUT/gemma3_270m_pastwin_cpu --ids /content/ids/gemma3_270m_pastwin.ids.json 2>&1 | grep -vE '^\{"i": ' | tail -16
 cd /content
 
