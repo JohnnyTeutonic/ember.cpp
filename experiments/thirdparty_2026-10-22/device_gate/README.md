@@ -25,6 +25,7 @@ every position; logit closeness judged against a float64 evaluation of the same 
 | Gemma-3-270m-it, 5 prompts of 794-1,324 tokens (past the 512 window) | Colab L4 | 5/5 | 10/10 | 2.9e-6 |
 | Qwen2.5-0.5B-Instruct, 6 prompts of 558-1,289 tokens | Colab L4 | 6/6 | 12/12 | 1.8e-6 |
 | Qwen3-0.6B, 6 prompts of 537-1,268 tokens | Colab L4 | 6/6 | 12/12 | 1.8e-6 |
+| Pythia-160m f32 (`colab_l4_pythia/`, session ember-gate-1023p) | Colab L4 | 40/40 | 960/960 | 3.9e-4 |
 
 Also on the Colab VM, on the CPU (`colab_l4/gemma_cpu/`; the Colab run is session ember-gate-1022d): Gemma-3-270m-it on the same five
 past-window prompts through `tools/thirdparty_ember_check.py --ids`: ember's built IR equal to
@@ -34,10 +35,13 @@ past-window prompts through `tools/thirdparty_ember_check.py --ids`: ember's bui
 Notes:
 - Local runs were on the laptop's RTX 4060 before GPU work moved to Colab (the WSL service faults of
   22 Oct). The local Qwen3 run was cut by the first fault; the Colab run replaces it.
-- Pythia's one flip (the row with top-1 23/24 in `local/pythia_160m.json`, recorded before the
-  gate saved flip positions and margins) is not yet settled against float64: on the VM, llama.cpp b6000's convert
-  failed on Pythia's config (KeyError rotary_pct, also at the local copy's revision 50f5173d), so the
-  rerun with margins and `tools/ir_float64_tie.py` did not run.
+- Pythia: on the RTX 4060 one position in 960 flipped (the row with top-1 23/24 in
+  `local/pythia_160m.json`, recorded before the gate saved flip positions and margins); on the L4,
+  the same prompts (same seed) with the file converted byte-identically (sha256 97522db7..., at
+  revision 50f5173d with transformers 4.57.0, as paperkiln converted the local copy) give 960/960 and
+  no flip, so `pythia_flips_float64.json` has none to settle. The worst difference, 3.9e-4 of the
+  range, sits on Pythia's ill-conditioned positions (LOCAL_LLM_STACK section 5.3: float32
+  conditioning at depth).
 - Checkpoints on the VM: the Qwen GGUFs from Qwen's repositories (Qwen3's sha256 equal to the local
   copy's; Qwen2.5's matching the recorded prefix 8e0ae260);
   Gemma-3-270m-it converted by b6000 from unsloth's ungated copy of the release (a different file
