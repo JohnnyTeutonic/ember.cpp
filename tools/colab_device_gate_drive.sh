@@ -10,6 +10,8 @@
 # <ids-dir> holds gemma3_270m_pastwin.ids.json, qwen25_long.ids.json and qwen3_long.ids.json
 # (tools/chat_prompt_ids.py --min-tokens 513). Only committed code ships: ember HEAD and paperkiln
 # HEAD's tools/ (git archive). The checkpoints are fetched on the VM; nothing large is uploaded.
+# PRESTAGED=dir uses a stage made on Windows instead (ember.tgz, paperkiln.tgz, ids.tgz, the VM
+# script and COMMITS = "<ember> <paperkiln>"), so this script touches no OneDrive tree.
 # Results land in /mnt/c/ml_artifacts/devgate/<session>/ (outside OneDrive).
 set -uo pipefail
 S=${1:?session}; MAXMIN=${2:?max minutes}; IDS=${3:?ids dir}
@@ -21,27 +23,33 @@ STAGE=~/devgate_stage/$S; OUT=/mnt/c/ml_artifacts/devgate/$S
 log() { echo "$(date +%H:%M:%S) $*"; }
 c() { local t=$1; shift; timeout "$t" $COL "$@"; }   # every CLI call carries a shell timeout
 
-for f in gemma3_270m_pastwin qwen25_long qwen3_long; do
-    [ -s "$IDS/$f.ids.json" ] || { log "missing $IDS/$f.ids.json"; exit 2; }
-done
-for repo in "$EMBER" "$PK"; do
-    git -c core.filemode=false -c core.autocrlf=true -C "$repo" diff --quiet HEAD ||
-        log "note: $repo has uncommitted changes; they are NOT shipped (HEAD is)"
-done
-EC=$(git -C "$EMBER" rev-parse --short=12 HEAD); PC=$(git -C "$PK" rev-parse --short=12 HEAD)
 [ -e "$OUT" ] && { log "$OUT exists: results are immutable, pick a new session name"; exit 2; }
+if [ -n "${PRESTAGED:-}" ]; then
+    # Staged on Windows (git archive with Windows git, outside OneDrive): WSL then reads nothing from
+    # the OneDrive trees. A WSL git diff across them preceded the WSL service fault of 22 Oct 18:13.
+    STAGE=$PRESTAGED
+    for f in ember.tgz paperkiln.tgz ids.tgz colab_device_gate_vm.sh COMMITS; do
+        [ -s "$STAGE/$f" ] || { log "PRESTAGED lacks $f"; exit 2; }
+    done
+    read -r EC PC < "$STAGE/COMMITS"
+else
+    for f in gemma3_270m_pastwin qwen25_long qwen3_long; do
+        [ -s "$IDS/$f.ids.json" ] || { log "missing $IDS/$f.ids.json"; exit 2; }
+    done
+    EC=$(git -C "$EMBER" rev-parse --short=12 HEAD); PC=$(git -C "$PK" rev-parse --short=12 HEAD)
+    rm -rf "$STAGE"; mkdir -p "$STAGE/ids"
+    git -C "$EMBER" archive --format=tar.gz --prefix=ember/ -o "$STAGE/ember.tgz" HEAD
+    git -C "$PK" archive --format=tar.gz --prefix=microtorch/ -o "$STAGE/paperkiln.tgz" HEAD tools
+    cp "$IDS"/gemma3_270m_pastwin.ids.json "$IDS"/qwen25_long.ids.json "$IDS"/qwen3_long.ids.json "$STAGE/ids/"
+    tar czf "$STAGE/ids.tgz" -C "$STAGE" ids
+    git -C "$EMBER" show HEAD:tools/colab_device_gate_vm.sh > "$STAGE/colab_device_gate_vm.sh"
+fi
+mkdir -p "$OUT"
+log "ember $EC, paperkiln $PC (HEADs; uncommitted edits are not shipped); staged $(du -sh "$STAGE" | cut -f1)"
 
 sessions=$(c 180 sessions 2>&1)
 echo "$sessions" | grep -q "\[$S\]" && { log "session $S already exists: someone owns it"; exit 2; }
 echo "$sessions" | grep -q "\[?\]" && { log "orphan [?] sessions present: resolve them first"; echo "$sessions"; exit 2; }
-
-rm -rf "$STAGE"; mkdir -p "$STAGE/ids" "$OUT"
-git -C "$EMBER" archive --format=tar.gz --prefix=ember/ -o "$STAGE/ember.tgz" HEAD
-git -C "$PK" archive --format=tar.gz --prefix=microtorch/ -o "$STAGE/paperkiln.tgz" HEAD tools
-cp "$IDS"/gemma3_270m_pastwin.ids.json "$IDS"/qwen25_long.ids.json "$IDS"/qwen3_long.ids.json "$STAGE/ids/"
-tar czf "$STAGE/ids.tgz" -C "$STAGE" ids
-git -C "$EMBER" show HEAD:tools/colab_device_gate_vm.sh > "$STAGE/colab_device_gate_vm.sh"
-log "ember $EC, paperkiln $PC; staged $(du -sh "$STAGE" | cut -f1)"
 
 stop_session() { log "stopping $S"; c 120 stop -s "$S" > /dev/null 2>&1; }
 trap stop_session EXIT
