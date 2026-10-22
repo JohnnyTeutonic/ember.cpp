@@ -40,19 +40,23 @@ python3 - <<'PY' || fail "downloads"
 from huggingface_hub import hf_hub_download, snapshot_download
 hf_hub_download("Qwen/Qwen3-0.6B-GGUF", "Qwen3-0.6B-Q8_0.gguf", local_dir="/content/models/qwen3")
 hf_hub_download("Qwen/Qwen2.5-0.5B-Instruct-GGUF", "qwen2.5-0.5b-instruct-fp16.gguf", local_dir="/content/models/qwen25")
-snapshot_download("EleutherAI/pythia-160m", local_dir="/content/models/pythia-160m", allow_patterns=["*.json", "*.safetensors", "*.txt"])
+# The revision the local copy came from: the repository's current config.json has dropped rotary_pct,
+# which llama.cpp b6000's convert reads (KeyError on 22 Oct 2026).
+snapshot_download("EleutherAI/pythia-160m", revision="50f5173d932e8e61f858120bcb800b97af589f46",
+                  local_dir="/content/models/pythia-160m", allow_patterns=["*.json", "*.safetensors", "*.txt"])
 # Google's repository needs a licence click; unsloth's copy of the same release does not.
 snapshot_download("unsloth/gemma-3-270m-it", local_dir="/content/models/gemma-3-270m-it", allow_patterns=["*.json", "*.safetensors", "*.model"])
 print("downloads done")
 PY
 # The local copies' folder and file names, so the files can come out byte-identical.
 for m in pythia-160m gemma-3-270m-it; do
+  # A failed conversion drops that model's gates only; the others still run.
   python3 /content/llamacpp_b6000/convert_hf_to_gguf.py $M/$m --outtype f32 --outfile $M/$m/$m-f32.gguf > $OUT/convert_$m.log 2>&1 \
-    || fail "convert $m"
+    || { echo "convert $m failed: $(tail -1 $OUT/convert_$m.log)"; rm -f $M/$m/$m-f32.gguf; }
 done
 QWEN3=$M/qwen3/Qwen3-0.6B-Q8_0.gguf; QWEN25=$M/qwen25/qwen2.5-0.5b-instruct-fp16.gguf
 PYTHIA=$M/pythia-160m/pythia-160m-f32.gguf; GEMMA=$M/gemma-3-270m-it/gemma-3-270m-it-f32.gguf
-sha256sum $QWEN3 $QWEN25 $PYTHIA $GEMMA > $OUT/models.sha256
+sha256sum $QWEN3 $QWEN25 $PYTHIA $GEMMA > $OUT/models.sha256 2>/dev/null
 cat >> $OUT/models.sha256 <<'EOF'
 # local copies (C:/ml_artifacts/thirdparty) for comparison:
 # 9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031  Qwen3-0.6B-Q8_0.gguf
@@ -64,6 +68,7 @@ cat $OUT/models.sha256
 
 run() {  # name gguf args...: one gate, its receipt in $OUT/name.json
   local name=$1 g=$2; shift 2
+  [ -s "$g" ] || { echo "--- $name skipped: no $g"; return; }
   echo "--- $name $(date -u +%T)"
   $GATE "$g" "$@" > $OUT/$name.json 2> $OUT/$name.log
   python3 -c "import json,sys; d=json.load(open(sys.argv[1])); d.pop('rows',None); print(json.dumps(d))" $OUT/$name.json \
@@ -76,13 +81,13 @@ run qwen25_long $QWEN25 --ids /content/ids/qwen25_long.ids.json --gen 32
 run qwen3_long $QWEN3 --ids /content/ids/qwen3_long.ids.json --gen 32
 
 echo "--- Pythia flips against float64 $(date -u +%T)"
-python3 /content/src/ember/tools/ir_float64_tie.py --gguf $PYTHIA --paperkiln /content/src/microtorch \
+[ -s $OUT/pythia_160m_short.json ] && python3 /content/src/ember/tools/ir_float64_tie.py --gguf $PYTHIA --paperkiln /content/src/microtorch \
   --gate $OUT/pythia_160m_short.json > $OUT/pythia_flips_float64.json 2> $OUT/pythia_flips_float64.log
 cat $OUT/pythia_flips_float64.json
 
 echo "--- Gemma past the window: ember CPU vs numpy and HF $(date -u +%T)"
 cd /content/src/ember
-python3 tools/thirdparty_ember_check.py --gguf $GEMMA --paperkiln /content/src/microtorch --bin /content/build/ir_logits \
+[ -s $GEMMA ] && python3 tools/thirdparty_ember_check.py --gguf $GEMMA --paperkiln /content/src/microtorch --bin /content/build/ir_logits \
   --work $OUT/gemma3_270m_pastwin_cpu --ids /content/ids/gemma3_270m_pastwin.ids.json 2>&1 | grep -vE '^\{"i": ' | tail -16
 cd /content
 
