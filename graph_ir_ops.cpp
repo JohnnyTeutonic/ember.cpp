@@ -30,6 +30,16 @@ void affine(const float* x, float* out, size_t n, float scale, float shift) {
   }
 }
 
+void scale(const float* x, const float* g, const float* b, float* out, int T, int w) {
+  for (int t = 0; t < T; ++t) {
+    const size_t r = static_cast<size_t>(t) * w;
+    if (b)
+      for (int j = 0; j < w; ++j) out[r + j] = x[r + j] * g[j] + b[j];
+    else
+      for (int j = 0; j < w; ++j) out[r + j] = x[r + j] * g[j];
+  }
+}
+
 void mul_col(const float* x, const float* c, float* out, int T, int w) {
   for (int t = 0; t < T; ++t) {
     const float ct = c[t];
