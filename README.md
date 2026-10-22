@@ -64,8 +64,8 @@ How they are checked:
   decode equals prefill. Qwen2.5 and Qwen3 also give greedy replies identical to HF transformers
   on 40/40 chat prompts, with ember's own tokeniser and template.
 - **CUDA.** CUDA against the CPU interpreter on 40 prompts: greedy replies identical (40/40) and
-  the top-1 agreeing at every position. Pythia has one exception, a near-tie at 1 position in 960,
-  not yet settled against a float64 reference.
+  the top-1 agreeing at every position, on a laptop RTX 4060 and a Colab L4. Pythia flipped one
+  position in 960 on the RTX 4060 and none on the L4, where it is 960/960.
 - **Long prompts.** Chat prompts past 512 tokens (up to 1,324), so Gemma 3's sliding window and
   long-context RoPE are in play: Gemma-3-270m, Qwen2.5 and Qwen3 give identical greedy replies on
   CUDA and the CPU, and Gemma's CPU top-1 agrees with numpy, closer to HF than numpy is. Receipts:
@@ -223,7 +223,7 @@ In progress, or built and waiting on a model that is still training or on its ga
   already loads that form, with paperkiln's exact Llama 3 encoder vendored. Its 40/40 gate runs
   on the first model trained with it.
 - **The third-party families on every backend.** The WebAssembly gate per family (a 0.5B model
-  needs the 4 GB heap), Pythia's near-tie against float64, and chat templates for Gemma 3.
+  needs the 4 GB heap), and chat templates for Gemma 3.
 - **New chat models.** These are training on Colab: a 70M mixture-of-experts fine-tune, a d768
   L12 base and its fine-tune, and next a base trained on FineWeb-Edu plus conversational text.
   Each is released through `release_chat.py` with the WebGPU page.
