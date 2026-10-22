@@ -108,6 +108,8 @@ Operational logs go to `debugging.log` in the working directory.
 | `EMBER_INTERPRETER=1/0` | force the IR interpreter on, or off, for a GGUF with `paperkiln.ir` |
 | `EMBER_IR=path` | run the interpreter from a side-file IR |
 | `EMBER_IR_ONLY=1` | load only through the interpreter (no llama weights) |
+| `EMBER_IR_BUILD=1` | build the IR from the metadata for a plain llama or mistral GGUF too (third-party families and windowed llama/mistral always get one) |
+| `EMBER_IR_CTX=N` | cap the interpreter's KV state at N positions (third-party files declare their whole trained context) |
 | `EMBER_IR_DEVICE=cpu` | keep the interpreter on the CPU in a CUDA build |
 | `EMBER_IR_GRAPH=0` | disable the interpreter's CUDA-graph decode |
 | `EMBER_IR_QUANT=1` / `EMBER_IR_DEQUANT=1` | interpreter weights kept quantised / dequantised at load (default: quantised above 64M parameters, CPU only) |
@@ -185,7 +187,9 @@ See `pytorch/README.md`.
 | `main.cpp` | the `tinyllama` command line |
 | `model.cpp/.h`, `cpu_batch_processor.cpp`, `cpu_attention.cpp` | the tuned llama path (CPU and CUDA forward, CUDA-graph decode, MoE) |
 | `cuda_kernels.cu/.h` | CUDA kernels: flash prefill attention, split-K decode attention, MoE, RoPE, norms |
-| `graph_ir.cpp/.h`, `graph_ir_ops.cpp/.h`, `graph_ir_cuda.cu/.h` | the paperkiln IR interpreter (CPU and CUDA) |
+| `graph_ir.cpp/.h`, `graph_ir_ops.cpp/.h`, `graph_ir_cuda.cu/.h` | the paperkiln IR interpreter (CPU and CUDA) and `build_ir_from_gguf`, the IR of a third-party GGUF from its metadata |
+| `graph_ir_expr.cpp/.h` | the `expr` op: paperkiln's parser (vendored), the CPU evaluator, the CUDA program it lowers to |
+| `graph_ir_mamba.cpp/.h` | Mamba-1's `conv1d_causal` and `selective_scan` on the CPU |
 | `gguf_parser.cpp`, `weight_management.cpp`, `safetensors_loader.cpp`, `quantization.cpp` | model loading and dequantisation |
 | `tokenizer.cpp`, `bpe_tokenizer.h` | Llama SentencePiece / tiktoken tokenizers; paperkiln byte-level BPE |
 | `parallel_for.h/.cpp` | OpenMP natively, a thread pool in WebAssembly pthread builds |

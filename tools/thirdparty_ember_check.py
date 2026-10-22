@@ -17,6 +17,11 @@ field, except _comment. The same random token sequences then run through:
 For every position: max |dlogit| over the range and argmax agreement, ember against numpy and
 against HF, prefill and decode. Writes DIR/check.json; exit 1 unless the IRs are equal, every argmax
 agrees and the worst ember-vs-numpy difference is within ROUNDING (--tol, 1e-5).
+
+--ids FILE (tools/chat_prompt_ids.py: long chat prompts, past a window) checks those sequences on
+their last row only (ember EMBER_IR_LAST=1, numpy last_only, HF logits_to_keep=1). For official
+checkpoints the agreed bar is top-1 everywhere and greedy N/N, closeness judged against float64,
+not the flat --tol (LOCAL_LLM_STACK section 5.3).
 """
 import argparse
 import json
@@ -78,6 +83,7 @@ def main():
     ap.add_argument("--len", type=int, default=40)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tol", type=float, default=1e-5)
+    ap.add_argument("--ids", help="a JSON list of id lists (long prompts): last rows only")
     a = ap.parse_args()
     sys.path.insert(0, os.path.join(os.path.expanduser(a.paperkiln), "tools"))
     import gguf_ir
@@ -109,10 +115,12 @@ def main():
     rng = np.random.default_rng(a.seed)
     hi = min(512, doc["model"]["vocab"]) if not a.gguf else min(doc["model"]["vocab"], hf_vocab)
     seqs = [rng.integers(0, hi, size=a.len).tolist() for _ in range(a.n)]
+    if a.ids:
+        seqs = json.load(open(a.ids))
     built_path = os.path.join(a.work, f"{family}.ember_built.ir.json")
     env = {k: v for k, v in os.environ.items() if k not in ("EMBER_IR", "EMBER_IR_BUILD")}
     r = subprocess.run([a.bin, gguf], input=json.dumps(seqs), capture_output=True, text=True,
-                       env={**env, "EMBER_IR_PRINT": built_path})
+                       env={**env, "EMBER_IR_PRINT": built_path, **({"EMBER_IR_LAST": "1"} if a.ids else {})})
     if r.returncode != 0:
         raise SystemExit(f"ir_logits failed: {r.stderr[-2000:]}")
     ember = json.loads(r.stdout)
@@ -127,10 +135,20 @@ def main():
     print(json.dumps({"ember_built_ir_equals_gguf_ir": ir_equal}), flush=True)
     rows = []
     for k, ids in enumerate(seqs):
-        hf = model(torch.tensor([ids])).logits[0].numpy()[:, :doc["model"]["vocab"]] if model is not None else None
-        ref = ir_numpy.forward(doc, W, ids)
+        if model is None:
+            hf = None
+        elif a.ids:
+            try:
+                hf = model(torch.tensor([ids]), logits_to_keep=1).logits[0, -1:].numpy()
+            except TypeError:
+                hf = model(torch.tensor([ids])).logits[0, -1:].numpy()
+        else:
+            hf = model(torch.tensor([ids])).logits[0].numpy()
+        if hf is not None:
+            hf = hf[:, :doc["model"]["vocab"]]
+        ref = ir_numpy.forward(doc, W, ids, last_only=bool(a.ids))
         pre, dec = np.array(ember[k]["prefill"]), np.array(ember[k]["decode"])
-        row = {"i": k, "positions": len(ids), "numpy_vs_hf_rel": rel(ref, hf) if hf is not None else None,
+        row = {"i": k, "positions": len(ref), "len": len(ids), "numpy_vs_hf_rel": rel(ref, hf) if hf is not None else None,
                "prefill_vs_numpy_rel": rel(pre, ref), "decode_vs_numpy_rel": rel(dec, ref),
                "prefill_vs_hf_rel": rel(pre, hf) if hf is not None else None, "decode_vs_prefill_rel": rel(dec, pre),
                "top1_prefill_vs_numpy": int((pre.argmax(1) == ref.argmax(1)).sum()),
@@ -140,7 +158,7 @@ def main():
         print(json.dumps(row), flush=True)
     extra = {}
     variants = []
-    if family == "gemma3":  # rmsnorm weight_offset: the same model with every norm read as w + 0.25
+    if family == "gemma3" and not a.ids:  # the variants dump every row: short sequences only  # rmsnorm weight_offset: the same model with every norm read as w + 0.25
         doc2 = json.loads(json.dumps(doc))
         for part in ("block", "head"):
             for nd in doc2[part]["nodes"]:

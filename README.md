@@ -1,6 +1,7 @@
 # ember.cpp
 
-**A from-scratch C++ inference engine for Llama-family models and for every architecture
+**A from-scratch C++ inference engine for Llama-family models, for third-party Qwen, Gemma 3,
+Pythia and Mamba GGUFs, and for every architecture
 [paperkiln](https://github.com/JohnnyTeutonic/paperkiln) trains, on CPU, CUDA, WebAssembly
 and, in the browser, the visitor's own GPU.**
 
@@ -13,9 +14,9 @@ type leaves the page.
 
 ```mermaid
 flowchart LR
-    A["GGUF / SafeTensors<br/>(Llama 2/3, TinyLlama,<br/>paperkiln exports)"] --> B["loader<br/>F32 · F16 · BF16 · Q8_0<br/>K-quants · Q4/Q5"]
+    A["GGUF / SafeTensors<br/>(Llama 2/3, TinyLlama, Qwen2.5/3,<br/>Gemma 3, Pythia, Mamba,<br/>paperkiln exports)"] --> B["loader<br/>F32 · F16 · BF16 · Q8_0<br/>K-quants · Q4/Q5"]
     B --> C["tuned llama path<br/>flash prefill · CUDA-graph decode<br/>KV reuse · MoE"]
-    B --> D["paperkiln IR interpreter<br/>any family, from the<br/>graph in the GGUF"]
+    B --> D["paperkiln IR interpreter<br/>any family, from the graph<br/>in the GGUF or built<br/>from its metadata"]
     C --> E["CPU · CUDA · WebAssembly"]
     D --> E
     C --> W["WebGPU (browser):<br/>WGSL forward pass"]
@@ -37,13 +38,41 @@ flowchart LR
 | Kimi linear attention (recurrent state) | IR interpreter | ✅ | ✅ | ✅ | |
 | Mamba-style state-space scan | IR interpreter | ✅ | ✅ | ✅ | |
 | SRD, AttnRes, flex (highway, plain residual) | IR interpreter | ✅ | ✅ | ✅ | |
-| Qwen2.5, Qwen3 (third-party llama.cpp GGUF; f16, bf16, Q8_0) | IR built from the GGUF's metadata | ✅ | CPU fallback | | |
+| Runtime-defined ops (`expr`: a paper's new activation or gate as a formula) | IR interpreter | ✅ | ✅ | not gated | |
 
 Every paperkiln family is gated the same way: **greedy replies identical to paperkiln's own
 sampler on 40 frozen prompts**, on each backend, including a trained 70M mixture-of-experts
-model. Third-party families are gated against HF transformers on the same GGUF: Qwen2.5-0.5B-Instruct
-and Qwen3-0.6B give greedy replies identical to HF on 40/40 prompts, with ember's own tokeniser and
-ChatML template. The receipts are in [`experiments/`](experiments/).
+model. The receipts are in [`experiments/`](experiments/).
+
+**Third-party GGUFs.** A llama.cpp GGUF with no `paperkiln.ir` gets its graph built from its
+metadata at load (`build_ir_from_gguf`, a C++ port of paperkiln's `tools/gguf_ir.py`, node for
+node) and runs on the interpreter:
+
+| Family (official checkpoint gated) | What the graph has | CPU | CUDA | WASM |
+|---|---|:---:|:---:|:---:|
+| Qwen2.5 (0.5B-Instruct, f16) | q/k/v biases, NEOX RoPE, tied head, ChatML | ✅ | ✅ | not gated |
+| Qwen3 (0.6B, Q8_0 read in place) | per-head q/k RMSNorm | ✅ | pending | not gated |
+| Gemma 3 (270m-it) | sliding window on 5 of every 6 layers, per-layer RoPE base, sandwich norms, GeGLU | ✅ | ✅ | not gated |
+| GPT-NeoX / Pythia (160m) | partial NEOX rotary, parallel residual, exact GELU | ✅ | ✅ | not gated |
+| Mamba-1 (130m) | causal depthwise convolution and selective scan, recurrent state | ✅ | ✅ | not gated |
+| Mistral (sliding window) | the window as an attribute on the llama graph | ✅ | ✅ | not gated |
+| GPT-2 | fused qkv, LayerNorm, learned positions | ✅ | ✅ | not gated |
+
+How they are checked:
+- **The graph.** The IR ember builds equals `gguf_ir.py`'s field by field, on every family.
+- **CPU.** Every position's top-1 agrees with paperkiln's numpy evaluation of the same IR, and
+  decode equals prefill. Qwen2.5 and Qwen3 also give greedy replies identical to HF transformers
+  on 40/40 chat prompts, with ember's own tokeniser and template.
+- **CUDA.** CUDA against the CPU interpreter on 40 prompts: greedy replies identical (40/40) and
+  the top-1 agreeing at every position. Pythia has one exception, a near-tie at 1 position in 960
+  that is being checked against a float64 reference.
+- **Real checkpoints and float32.** On real checkpoints, logit closeness is judged against a
+  float64 evaluation of the same graph, because float32 conditioning grows with depth: on
+  Mamba-130m ember is closer to float64 than numpy's float32 is.
+- **Scope.** The CPU column was checked on official checkpoints for every family except Mistral
+  and GPT-2, which were checked on tiny random models. The CUDA column covers both.
+- **WASM.** WebAssembly compiles the same CPU interpreter, but no third-party family has been
+  gated in the browser yet.
 
 **Highlights**
 
@@ -150,6 +179,8 @@ flowchart LR
     G[GGUF] --> Q{"paperkiln.ir<br/>present?"}
     Q -- "no, or family llama" --> L["tuned llama path"]
     Q -- "gpt2, swa, kimi, mamba,<br/>srd, attnres, flex" --> I["IR interpreter"]
+    G --> T{"third-party<br/>architecture?"}
+    T -- "qwen2/3, gemma3, gptneox,<br/>gpt2, mamba, windowed" --> B["IR built from<br/>the metadata"] --> I
     I -- "CUDA build, -1" --> GPU["device kernels<br/>+ CUDA-graph decode"]
     I -- "CPU build or 0" --> CPU["CPU kernels"]
 ```
@@ -157,12 +188,19 @@ flowchart LR
 `EMBER_INTERPRETER=1` runs a llama model through the interpreter too, which is how the
 interpreter is checked against the tuned path.
 
-A third-party GGUF with no `paperkiln.ir` whose `general.architecture` is `qwen2` or `qwen3` gets
-its IR built from the llama.cpp metadata at load (NEOX RoPE, q/k/v biases or per-head q/k norm,
-grouped-query attention) and runs on the interpreter, with Qwen's tokeniser and ChatML template:
-`./build/tinyllama_server qwen2.5-0.5b-instruct-fp16.gguf 8080 127.0.0.1 ./www 0`.
+A third-party GGUF with no `paperkiln.ir` gets its IR built from the llama.cpp metadata at load
+when its `general.architecture` is `qwen2`, `qwen3`, `gemma3`, `gptneox`, `gpt2` or `mamba`, or
+`llama`/`mistral` with an `attention.sliding_window` (a plain llama or mistral file keeps the tuned
+path; `EMBER_IR_BUILD=1` sends it through the interpreter as well). Qwen files chat with Qwen's
+tokeniser and ChatML template:
+`./build/tinyllama_server qwen2.5-0.5b-instruct-fp16.gguf 8080 127.0.0.1 ./www -1`.
 `EMBER_IR_CTX=N` caps the KV state, since these files declare their full trained context. Any other
 architecture without an IR is refused at load, naming it.
+
+A paper's new elementwise op travels as an `expr` node: a formula in paperkiln's closed grammar
+(`max(x, 0)^2`, `x * sigmoid(1.702 * x)`, row reductions such as `rowmax`). ember parses it at load
+with paperkiln's own parser and runs it on the CPU and, compiled to a small per-element program, on
+CUDA.
 
 ## Quick start: check a model against paperkiln
 
@@ -180,9 +218,9 @@ In progress, or built and waiting on a model that is still training or on its ga
   (16,384 tokens), so llama.cpp, Ollama and LM Studio can tokenise it too. ember's chat mode
   already loads that form, with paperkiln's exact Llama 3 encoder vendored. Its 40/40 gate runs
   on the first model trained with it.
-- **More third-party architectures through the IR.** After Qwen2.5 and Qwen3: Gemma 3, GPT-2 and
-  Pythia, Mistral's sliding window and Mamba, each gated 40/40 against HF transformers. CUDA and
-  WebAssembly kernels for NEOX RoPE and per-head RMSNorm come with them.
+- **The third-party families on every backend.** Qwen3 on CUDA; long prompts, past Gemma 3's
+  512-token window, on CPU and CUDA; then the WebAssembly gate per family (a 0.5B model needs the
+  4 GB heap) and chat templates for Gemma 3.
 - **New chat models.** These are training on Colab: a 70M mixture-of-experts fine-tune, a d768
   L12 base and its fine-tune, and next a base trained on FineWeb-Edu plus conversational text.
   Each is released through `release_chat.py` with the WebGPU page.
