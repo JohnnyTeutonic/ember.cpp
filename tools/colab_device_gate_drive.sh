@@ -119,8 +119,12 @@ done
 log "launched; deadline ${MAXMIN} min from session start"
 
 state=RUNNING
+first=1
 while :; do
-    sleep 90
+    # Check first, then wait: a restarted driver may live only minutes (22 Oct 2026, WSL clients killed
+    # every few minutes), so a finished job is noticed and downloaded at once.
+    [ $first = 1 ] || sleep 90
+    first=0
     maybe_refresh
     if c 300 download -s "$S" /content/GATE_DONE "$STAGE/GATE_DONE" > /dev/null 2>&1; then state=DONE
     elif c 300 download -s "$S" /content/GATE_FAILED "$STAGE/GATE_FAILED" > /dev/null 2>&1; then state=FAILED; fi
