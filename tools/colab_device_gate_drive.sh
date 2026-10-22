@@ -23,7 +23,14 @@ STAGE=~/devgate_stage/$S; OUT=/mnt/c/ml_artifacts/devgate/$S
 log() { echo "$(date +%H:%M:%S) $*"; }
 c() { local t=$1; shift; timeout "$t" $COL "$@"; }   # every CLI call carries a shell timeout
 
-[ -e "$OUT" ] && { log "$OUT exists: results are immutable, pick a new session name"; exit 2; }
+# RESUME=1 (the watchdog's form, scripts/colab_driver.json): adopt session S if it exists, so a driver
+# killed by a WSL fault is restarted and carries on with the same VM. GATE_STATE_DIR=dir mirrors the
+# log to dir/runner.log and ends it with the watchdog's "all jobs finished and home".
+RESUME=${RESUME:-0}; SD=${GATE_STATE_DIR:-}
+if [ -n "$SD" ]; then mkdir -p "$SD"; exec > >(tee -a "$SD/runner.log") 2>&1; fi
+if [ "$RESUME" != 1 ]; then
+    [ -e "$OUT" ] && { log "$OUT exists: results are immutable, pick a new session name"; exit 2; }
+fi
 if [ -n "${PRESTAGED:-}" ]; then
     # Staged on Windows (git archive with Windows git, outside OneDrive): WSL then reads nothing from
     # the OneDrive trees. A WSL git diff across them preceded the WSL service fault of 22 Oct 18:13.
@@ -47,9 +54,29 @@ fi
 mkdir -p "$OUT"
 log "ember $EC, paperkiln $PC (HEADs; uncommitted edits are not shipped); staged $(du -sh "$STAGE" | cut -f1)"
 
+ADOPTED=0
 sessions=$(c 180 sessions 2>&1)
-echo "$sessions" | grep -q "\[$S\]" && { log "session $S already exists: someone owns it"; exit 2; }
-echo "$sessions" | grep -q "\[?\]" && { log "orphan [?] sessions present: resolve them first"; echo "$sessions"; exit 2; }
+if [ "$RESUME" = 1 ]; then
+    if echo "$sessions" | grep -q "\[$S\]"; then
+        ADOPTED=1
+    else   # the CLI lost the name (its keep-alive died with WSL): find the VM by name server-side
+        ep=$(timeout 180 "$COLAB_PY" "$PK/tools/colab_adopt.py" --list 2>/dev/null | sed -n "s/^\[$S\] \([^ ]*\) .*/\1/p" | head -1)
+        if [ -n "$ep" ] && timeout 180 "$COLAB_PY" "$PK/tools/colab_adopt.py" --adopt "$ep=$S" > /dev/null 2>&1; then ADOPTED=1; fi
+    fi
+    if [ $ADOPTED = 1 ]; then
+        log "adopted session $S"
+        # Its keep-alive (started by `colab new`) dies with WSL too; without it the VM is reclaimed.
+        ep=$(c 180 sessions 2>/dev/null | sed -n "s/^\[$S\] \([^ ]*\) .*/\1/p" | head -1)
+        if [ -n "$ep" ] && ! pgrep -f "[k]eep-alive $ep" > /dev/null; then
+            setsid nohup "$COLAB_PY" -m colab_cli.cli --auth=oauth2 keep-alive "$ep" "$S" > /dev/null 2>&1 < /dev/null &
+            log "keep-alive restarted for $ep"
+        fi
+    fi
+fi
+if [ $ADOPTED = 0 ]; then
+    echo "$sessions" | grep -q "\[$S\]" && { log "session $S already exists: someone owns it"; exit 2; }
+    echo "$sessions" | grep -q "\[?\]" && { log "orphan [?] sessions present: resolve them first"; echo "$sessions"; exit 2; }
+fi
 
 stop_session() { log "stopping $S"; c 120 stop -s "$S" > /dev/null 2>&1; }
 trap stop_session EXIT
@@ -61,13 +88,15 @@ maybe_refresh() {   # the session key expires after ~1 h
         timeout 180 "$COLAB_PY" "$PK/tools/colab_adopt.py" --refresh > /dev/null 2>&1 && last_refresh=$(date +%s)
     fi
 }
-log "new L4 session $S"
-out=$(c 600 new -s "$S" --gpu L4 2>&1)
-echo "$out" | grep -q READY || { log "session not ready: ${out: -300}"; exit 1; }
-for f in ember.tgz paperkiln.tgz ids.tgz colab_device_gate_vm.sh; do
-    c 900 upload -s "$S" "$STAGE/$f" "/content/$f" > /dev/null 2>&1 || { log "upload $f failed"; exit 1; }
-done
-log "uploaded"
+if [ $ADOPTED = 0 ]; then
+    log "new L4 session $S"
+    out=$(c 600 new -s "$S" --gpu L4 2>&1)
+    echo "$out" | grep -q READY || { log "session not ready: ${out: -300}"; exit 1; }
+    for f in ember.tgz paperkiln.tgz ids.tgz colab_device_gate_vm.sh; do
+        c 900 upload -s "$S" "$STAGE/$f" "/content/$f" > /dev/null 2>&1 || { log "upload $f failed"; exit 1; }
+    done
+    log "uploaded"
+fi   # adopted: the launcher below is idempotent (no second job once the VM log exists)
 
 cat > "$STAGE/launch.py" <<EOF
 import os, subprocess
@@ -123,3 +152,5 @@ else
     log "no results downloaded ($state); log at $OUT/gate_vm.log"
 fi
 echo "$state" > "$OUT/DRIVER_STATE"
+# The watchdog disables this driver on this line (its campaign-home rule).
+[ -n "$SD" ] && log "$state: all jobs finished and home"
