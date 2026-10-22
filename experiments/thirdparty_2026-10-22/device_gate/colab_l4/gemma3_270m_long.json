@@ -1,0 +1,58 @@
+{
+ "device_supported": true,
+ "family_hint": "gemma3",
+ "gen": 32,
+ "gguf": "/content/models/gemma-3-270m-it/gemma-3-270m-it-f32.gguf",
+ "greedy_identical": "5/5",
+ "ids_file": "/content/ids/gemma3_270m_pastwin.ids.json",
+ "len": 1324,
+ "on_gpu": true,
+ "pass": true,
+ "prompts": 5,
+ "rows": [
+  {
+   "decode_rel": 1.2009210747418836e-06,
+   "greedy_first_diff": -1,
+   "i": 0,
+   "len": 1230,
+   "prefill_rel": 1.99398216183558e-06,
+   "top1": 2
+  },
+  {
+   "decode_rel": 1.1297885435617783e-06,
+   "greedy_first_diff": -1,
+   "i": 1,
+   "len": 794,
+   "prefill_rel": 1.3144655170286075e-06,
+   "top1": 2
+  },
+  {
+   "decode_rel": 1.0223854706755992e-06,
+   "greedy_first_diff": -1,
+   "i": 2,
+   "len": 834,
+   "prefill_rel": 2.8480738111677403e-06,
+   "top1": 2
+  },
+  {
+   "decode_rel": 1.1665797627462763e-06,
+   "greedy_first_diff": -1,
+   "i": 3,
+   "len": 875,
+   "prefill_rel": 1.366497665636263e-06,
+   "top1": 2
+  },
+  {
+   "decode_rel": 1.1445444277370306e-06,
+   "greedy_first_diff": -1,
+   "i": 4,
+   "len": 1324,
+   "prefill_rel": 2.8613610693425765e-06,
+   "top1": 2
+  }
+ ],
+ "tol": 0.0001,
+ "top1_agree": "10/10",
+ "worst_decode_rel": 1.2009210747418836e-06,
+ "worst_prefill_rel": 2.8613610693425765e-06
+}

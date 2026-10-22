@@ -1,0 +1,66 @@
+{
+ "device_supported": true,
+ "family_hint": "qwen3",
+ "gen": 32,
+ "gguf": "/content/models/qwen3/Qwen3-0.6B-Q8_0.gguf",
+ "greedy_identical": "6/6",
+ "ids_file": "/content/ids/qwen3_long.ids.json",
+ "len": 1268,
+ "on_gpu": true,
+ "pass": true,
+ "prompts": 6,
+ "rows": [
+  {
+   "decode_rel": 1.1625239479933287e-06,
+   "greedy_first_diff": -1,
+   "i": 0,
+   "len": 1200,
+   "prefill_rel": 1.8151689714281798e-06,
+   "top1": 2
+  },
+  {
+   "decode_rel": 7.240914643374093e-07,
+   "greedy_first_diff": -1,
+   "i": 1,
+   "len": 537,
+   "prefill_rel": 8.950575045281865e-07,
+   "top1": 2
+  },
+  {
+   "decode_rel": 9.541803412213865e-07,
+   "greedy_first_diff": -1,
+   "i": 2,
+   "len": 829,
+   "prefill_rel": 1.3297619648936344e-06,
+   "top1": 2
+  },
+  {
+   "decode_rel": 9.216326312419304e-07,
+   "greedy_first_diff": -1,
+   "i": 3,
+   "len": 822,
+   "prefill_rel": 1.0724452436269736e-06,
+   "top1": 2
+  },
+  {
+   "decode_rel": 9.969730237377615e-07,
+   "greedy_first_diff": -1,
+   "i": 4,
+   "len": 918,
+   "prefill_rel": 1.0592838377213717e-06,
+   "top1": 2
+  },
+  {
+   "decode_rel": 1.5979343246268232e-06,
+   "greedy_first_diff": -1,
+   "i": 5,
+   "len": 1268,
+   "prefill_rel": 1.4983908748959718e-06,
+   "top1": 2
+  }
+ ],
+ "tol": 0.0001,
+ "top1_agree": "12/12",
+ "worst_decode_rel": 1.5979343246268232e-06,
+ "worst_prefill_rel": 1.8151689714281798e-06
+}

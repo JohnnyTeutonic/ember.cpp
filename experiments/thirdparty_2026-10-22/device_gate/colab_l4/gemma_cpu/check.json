@@ -1,0 +1,80 @@
+{
+ "family": "gemma3",
+ "gguf": "/content/models/gemma-3-270m-it/gemma-3-270m-it-f32.gguf",
+ "gguf_arch": "gemma3",
+ "ember_built_ir_equals_gguf_ir": true,
+ "sequences": 5,
+ "len": 40,
+ "worst_ember_vs_numpy_rel": 7.087351608575695e-06,
+ "worst_ember_vs_hf_rel": 2.0691124452099023e-06,
+ "worst_numpy_vs_hf_rel": 6.757211689201454e-06,
+ "all_top1_agree": true,
+ "pass": true,
+ "rows": [
+  {
+   "i": 0,
+   "positions": 1,
+   "len": 1230,
+   "numpy_vs_hf_rel": 5.1662229983842865e-06,
+   "prefill_vs_numpy_rel": 4.585587096992888e-06,
+   "decode_vs_numpy_rel": 4.585587096992888e-06,
+   "prefill_vs_hf_rel": 1.8580275695943486e-06,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 1,
+   "top1_decode_vs_numpy": 1,
+   "top1_prefill_vs_hf": 1
+  },
+  {
+   "i": 1,
+   "positions": 1,
+   "len": 794,
+   "numpy_vs_hf_rel": 2.2134065934161434e-06,
+   "prefill_vs_numpy_rel": 2.6214555314018027e-06,
+   "decode_vs_numpy_rel": 2.6214555314018027e-06,
+   "prefill_vs_hf_rel": 1.9879921796081192e-06,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 1,
+   "top1_decode_vs_numpy": 1,
+   "top1_prefill_vs_hf": 1
+  },
+  {
+   "i": 2,
+   "positions": 1,
+   "len": 834,
+   "numpy_vs_hf_rel": 4.698102375594249e-06,
+   "prefill_vs_numpy_rel": 3.7487449919870577e-06,
+   "decode_vs_numpy_rel": 3.7487449919870577e-06,
+   "prefill_vs_hf_rel": 2.0691124452099023e-06,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 1,
+   "top1_decode_vs_numpy": 1,
+   "top1_prefill_vs_hf": 1
+  },
+  {
+   "i": 3,
+   "positions": 1,
+   "len": 875,
+   "numpy_vs_hf_rel": 2.257896739834187e-06,
+   "prefill_vs_numpy_rel": 2.220265127503617e-06,
+   "decode_vs_numpy_rel": 2.220265127503617e-06,
+   "prefill_vs_hf_rel": 1.542896105553361e-06,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 1,
+   "top1_decode_vs_numpy": 1,
+   "top1_prefill_vs_hf": 1
+  },
+  {
+   "i": 4,
+   "positions": 1,
+   "len": 1324,
+   "numpy_vs_hf_rel": 6.757211689201454e-06,
+   "prefill_vs_numpy_rel": 7.087351608575695e-06,
+   "decode_vs_numpy_rel": 7.087351608575695e-06,
+   "prefill_vs_hf_rel": 1.4526904608706709e-06,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 1,
+   "top1_decode_vs_numpy": 1,
+   "top1_prefill_vs_hf": 1
+  }
+ ]
+}

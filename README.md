@@ -51,7 +51,7 @@ node) and runs on the interpreter:
 | Family (official checkpoint gated) | What the graph has | CPU | CUDA | WASM |
 |---|---|:---:|:---:|:---:|
 | Qwen2.5 (0.5B-Instruct, f16) | q/k/v biases, NEOX RoPE, tied head, ChatML | ✅ | ✅ | not gated |
-| Qwen3 (0.6B, Q8_0 read in place) | per-head q/k RMSNorm | ✅ | pending | not gated |
+| Qwen3 (0.6B, Q8_0 read in place) | per-head q/k RMSNorm | ✅ | ✅ | not gated |
 | Gemma 3 (270m-it) | sliding window on 5 of every 6 layers, per-layer RoPE base, sandwich norms, GeGLU | ✅ | ✅ | not gated |
 | GPT-NeoX / Pythia (160m) | partial NEOX rotary, parallel residual, exact GELU | ✅ | ✅ | not gated |
 | Mamba-1 (130m) | causal depthwise convolution and selective scan, recurrent state | ✅ | ✅ | not gated |
@@ -64,8 +64,12 @@ How they are checked:
   decode equals prefill. Qwen2.5 and Qwen3 also give greedy replies identical to HF transformers
   on 40/40 chat prompts, with ember's own tokeniser and template.
 - **CUDA.** CUDA against the CPU interpreter on 40 prompts: greedy replies identical (40/40) and
-  the top-1 agreeing at every position. Pythia has one exception, a near-tie at 1 position in 960
-  that is being checked against a float64 reference.
+  the top-1 agreeing at every position. Pythia has one exception, a near-tie at 1 position in 960,
+  not yet settled against a float64 reference.
+- **Long prompts.** Chat prompts past 512 tokens (up to 1,324), so Gemma 3's sliding window and
+  long-context RoPE are in play: Gemma-3-270m, Qwen2.5 and Qwen3 give identical greedy replies on
+  CUDA and the CPU, and Gemma's CPU top-1 agrees with numpy, closer to HF than numpy is. Receipts:
+  [`experiments/thirdparty_2026-10-22/device_gate/`](experiments/thirdparty_2026-10-22/device_gate/).
 - **Real checkpoints and float32.** On real checkpoints, logit closeness is judged against a
   float64 evaluation of the same graph, because float32 conditioning grows with depth: on
   Mamba-130m ember is closer to float64 than numpy's float32 is.
@@ -218,9 +222,8 @@ In progress, or built and waiting on a model that is still training or on its ga
   (16,384 tokens), so llama.cpp, Ollama and LM Studio can tokenise it too. ember's chat mode
   already loads that form, with paperkiln's exact Llama 3 encoder vendored. Its 40/40 gate runs
   on the first model trained with it.
-- **The third-party families on every backend.** Qwen3 on CUDA; long prompts, past Gemma 3's
-  512-token window, on CPU and CUDA; then the WebAssembly gate per family (a 0.5B model needs the
-  4 GB heap) and chat templates for Gemma 3.
+- **The third-party families on every backend.** The WebAssembly gate per family (a 0.5B model
+  needs the 4 GB heap), Pythia's near-tie against float64, and chat templates for Gemma 3.
 - **New chat models.** These are training on Colab: a 70M mixture-of-experts fine-tune, a d768
   L12 base and its fine-tune, and next a base trained on FineWeb-Edu plus conversational text.
   Each is released through `release_chat.py` with the WebGPU page.

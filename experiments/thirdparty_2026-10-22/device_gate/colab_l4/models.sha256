@@ -1,0 +1,8 @@
+9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031  /content/models/qwen3/Qwen3-0.6B-Q8_0.gguf
+8e0ae26000627ed62de0e78e41860af70094558b9d2913385c842a6aa06cf3fc  /content/models/qwen25/qwen2.5-0.5b-instruct-fp16.gguf
+36b7792e106eaba963e59a443e65326fd6edabd875317e5112eaac489f1f2a71  /content/models/gemma-3-270m-it/gemma-3-270m-it-f32.gguf
+# local copies (C:/ml_artifacts/thirdparty) for comparison:
+# 9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031  Qwen3-0.6B-Q8_0.gguf
+# 8e0ae260...  qwen2.5-0.5b-instruct-fp16.gguf (prefix as recorded)
+# 97522db7c8b426c8ae91ee23697a7ea9c56fa51bf05736b62824476daabf08f3  pythia-160m-f32.gguf
+# 0a174d42ccd7de15688e50dc044ea8006db31ee3bc6dc7e838f8a360ca46cdaa  gemma-3-270m-it-f32.gguf
