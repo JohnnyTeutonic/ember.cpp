@@ -95,6 +95,15 @@ __global__ void mul_col_kernel(const float* __restrict__ x, const float* __restr
   if (i < n) out[i] = __fmul_rn(x[i], c[i / w]);
 }
 
+__global__ void scale_kernel(const float* __restrict__ x, const float* __restrict__ g, const float* __restrict__ b,
+                             float* __restrict__ out, size_t n, int w) {
+  const size_t i = (size_t)blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= n) return;
+  const int j = (int)(i % w);
+  const float p = __fmul_rn(x[i], g[j]);
+  out[i] = b ? __fadd_rn(p, b[j]) : p;
+}
+
 // One thread per row: the CPU's ascending sum.
 __global__ void rms_row_kernel(const float* __restrict__ x, float* __restrict__ out, int T, int w, float eps) {
   const int t = blockIdx.x * blockDim.x + threadIdx.x;
@@ -516,6 +525,12 @@ void ir_mul_col_cuda(const float* x, const float* c, float* out, int T, int w, c
   const size_t n = (size_t)T * w;
   mul_col_kernel<<<blocks_for(n), kThreads, 0, stream>>>(x, c, out, n, w);
   check_launch("mul_col");
+}
+
+void ir_scale_cuda(const float* x, const float* g, const float* b, float* out, int T, int w, cudaStream_t stream) {
+  const size_t n = (size_t)T * w;
+  scale_kernel<<<blocks_for(n), kThreads, 0, stream>>>(x, g, b, out, n, w);
+  check_launch("scale");
 }
 
 void ir_rms_row_cuda(const float* x, float* out, int T, int w, float eps, cudaStream_t stream) {

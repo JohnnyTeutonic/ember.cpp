@@ -24,6 +24,10 @@ void sigmoid(const float* x, float* out, size_t n);
 void affine(const float* x, float* out, size_t n, float scale, float shift);
 // x [T, w] times the column c [T, 1]: out[t, j] = x[t, j] * c[t]. EXACT.
 void mul_col(const float* x, const float* c, float* out, int T, int w);
+// Per feature: out[t, j] = (x[t, j] * g[j]) + b[j], the product rounded, then
+// the sum; b null: the product alone (ops `scale`, a gain without a [d, d]
+// diagonal linear). EXACT.
+void scale(const float* x, const float* g, const float* b, float* out, int T, int w);
 // [T, w] -> [T, 1]: sqrt(ss / w + eps), ss = sum of x[t, j]^2 in ascending j
 // (ops::rms_row). ROUNDING.
 void rms_row(const float* x, float* out, int T, int w, float eps);

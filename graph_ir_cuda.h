@@ -69,6 +69,8 @@ void ir_sigmoid_cuda(const float* x, float* out, size_t n, cudaStream_t stream);
 void ir_affine_cuda(const float* x, float* out, size_t n, float scale, float shift, cudaStream_t stream);
 // x [T, w] times the column c [T, 1]. EXACT.
 void ir_mul_col_cuda(const float* x, const float* c, float* out, int T, int w, cudaStream_t stream);
+// Per feature: out[t, j] = (x[t, j] * g[j]) + b[j] (b null: the product alone). EXACT.
+void ir_scale_cuda(const float* x, const float* g, const float* b, float* out, int T, int w, cudaStream_t stream);
 // [T, w] -> [T, 1]: sqrt(ss / w + eps), ss summed in ascending j (one thread
 // per row, the CPU order). Bitwise equal to the CPU form.
 void ir_rms_row_cuda(const float* x, float* out, int T, int w, float eps, cudaStream_t stream);

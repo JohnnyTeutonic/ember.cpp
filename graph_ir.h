@@ -229,7 +229,7 @@ class Interpreter {
   enum class DOp {
     Embedding, PosEmbedding, LayerNorm, Split, Gelu, RmsNorm, Linear, Rope, Attention, Add, Mul, MoeFfn, Silu,
     Sub, Relu, Sigmoid, Affine, MulCol, RmsRow, List, Append, DepthAttend, LinearAttention, SsmScan, Expr,
-    Conv1dCausal, SelectiveScan
+    Conv1dCausal, SelectiveScan, Scale
   };
   struct DStep {
     DOp op = DOp::Add;

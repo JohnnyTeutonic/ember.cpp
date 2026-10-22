@@ -40,18 +40,18 @@ const std::set<std::string> kCpuOps = {"embedding", "pos_embedding", "rmsnorm", 
                                        "conv1d_causal", "selective_scan",
                                        // gated and attention-residual families (graph_ir_ops.h)
                                        "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
-                                       // runtime-defined elementwise ops (graph_ir_expr.h)
-                                       "expr"};
+                                       // runtime-defined elementwise ops (graph_ir_expr.h) and the per-feature gain
+                                       "expr", "scale"};
 const std::set<std::string> kRecurrentOps = {"linear_attention", "ssm_scan", "conv1d_causal", "selective_scan"};
 // The ops run_nodes_device implements.
 const std::set<std::string> kCudaOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
                                         "attention", "add", "mul", "silu", "gelu", "moe_ffn",
                                         "linear_attention", "ssm_scan", "conv1d_causal", "selective_scan",
                                         "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
-                                        "expr"};
+                                        "expr", "scale"};
 const std::set<std::string> kRowWiseOps = {"rmsnorm", "layernorm", "linear", "add", "mul", "silu", "gelu",
                                            "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
-                                           "expr"};
+                                           "expr", "scale"};
 
 std::vector<std::string> names(const json& j) {
   if (j.is_string()) return {j.get<std::string>()};
@@ -649,7 +649,8 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
         if (n.out.size() != 1) throw std::runtime_error("IR " + n.op + " needs one output");
       };
       if (n.op == "sub" || n.op == "mul_col" || n.op == "append") arity(2, false);
-      if (n.op == "relu" || n.op == "sigmoid" || n.op == "affine" || n.op == "rms_row") arity(1, false);
+      if (n.op == "relu" || n.op == "sigmoid" || n.op == "affine" || n.op == "rms_row" || n.op == "scale") arity(1, false);
+      if (n.op == "scale" && !has(n.attrs, "weight")) throw std::runtime_error("IR scale needs its weight [d]");
       if (n.op == "list" || n.op == "depth_attend") arity(1, true);
       if (n.op == "affine" && (!has(n.attrs, "scale") || !has(n.attrs, "shift")))
         throw std::runtime_error("IR affine needs float attributes scale and shift");
@@ -1405,6 +1406,26 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       cpu::affine(x.v.data(), out.v.data(), x.v.size(), n.attrs.at("scale").get<float>(),
                   n.attrs.at("shift").get<float>());
       env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "scale") {  // (x * g) + b per feature, g and b [d]. EXACT.
+      const Buf& x = in(n, 0);
+      const std::string wn = wname(n);
+      const auto& g = weight(wn);
+      const int d = x.width;
+      if (d <= 0 || g.size() != static_cast<size_t>(d))
+        throw std::runtime_error("IR scale '" + wn + "' has " + std::to_string(g.size()) + " values for width " +
+                                 std::to_string(d));
+      const float* b = nullptr;
+      if (has(n.attrs, "bias")) {
+        const std::string bn = layer_name(n.attrs.at("bias").get<std::string>(), layer);
+        const auto& B = weight(bn);
+        if (B.size() != static_cast<size_t>(d))
+          throw std::runtime_error("IR scale bias '" + bn + "' has " + std::to_string(B.size()) + " values for width " +
+                                   std::to_string(d));
+        b = B.data();
+      }
+      Buf out{std::vector<float>(x.v.size()), d};
+      cpu::scale(x.v.data(), g.data(), b, out.v.data(), static_cast<int>(x.v.size() / d), d);
+      env[n.out.at(0)] = std::move(out);
     } else if (n.op == "mul_col") {  // x [T, w] * c [T, 1]. EXACT.
       const Buf &x = in(n, 0), &c = in(n, 1);
       if (c.width != 1 || c.v.size() != static_cast<size_t>(T) || x.v.size() != static_cast<size_t>(T) * x.width)
@@ -1657,7 +1678,8 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
       {"sigmoid", DOp::Sigmoid},     {"affine", DOp::Affine},              {"mul_col", DOp::MulCol},
       {"rms_row", DOp::RmsRow},      {"list", DOp::List},                  {"append", DOp::Append},
       {"depth_attend", DOp::DepthAttend}, {"linear_attention", DOp::LinearAttention}, {"ssm_scan", DOp::SsmScan},
-      {"expr", DOp::Expr},           {"conv1d_causal", DOp::Conv1dCausal}, {"selective_scan", DOp::SelectiveScan}};
+      {"expr", DOp::Expr},           {"conv1d_causal", DOp::Conv1dCausal}, {"selective_scan", DOp::SelectiveScan},
+      {"scale", DOp::Scale}};
   auto wname = [&](const Node& n) {
     std::string w = layer_name(n.attrs.at("weight").get<std::string>(), layer);
     if (!weights_.count(w) && has(n.attrs, "tied_to")) w = layer_name(n.attrs.at("tied_to").get<std::string>(), layer);
@@ -1774,6 +1796,12 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
         s.b = dweight(layer_name(ssm_weight(n.attrs, "b"), layer));
         s.ssm_c = dweight(layer_name(ssm_weight(n.attrs, "c"), layer));
         s.ssm_d = dweight(layer_name(ssm_weight(n.attrs, "d"), layer));
+        break;
+      case DOp::Scale:
+        s.wname = wname(n);
+        s.w = dweight(s.wname);
+        s.w_elems = elems(s.wname);
+        if (has(n.attrs, "bias")) s.b = dweight(layer_name(n.attrs.at("bias").get<std::string>(), layer));
         break;
       case DOp::Expr:
         s.expr = expr::lower(expr::cached(n.attrs.at("expr").get<std::string>(), n.in.size()));
@@ -2135,6 +2163,15 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
           ir_sigmoid_cuda(x.p, out.p, n, st);
         else
           ir_affine_cuda(x.p, out.p, n, s.scale, s.shift, st);
+        break;
+      }
+      case DOp::Scale: {
+        const DBuf& x = in(s, 0);
+        if (s.w_elems != static_cast<size_t>(x.width))
+          throw std::runtime_error("IR scale '" + s.wname + "' has " + std::to_string(s.w_elems) + " values for width " +
+                                   std::to_string(x.width));
+        DBuf& out = dout(s.out[0], x.rows, x.width, {&x});
+        ir_scale_cuda(x.p, s.w, s.b, out.p, x.rows, x.width, st);
         break;
       }
       case DOp::MulCol: {
