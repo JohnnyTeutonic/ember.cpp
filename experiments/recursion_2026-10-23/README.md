@@ -31,7 +31,6 @@ the range, top-1 at every position, decode equal to prefill, logits moved by up 
 plain model (the map is read). The four malformed maps above are each refused at load.
 
 CUDA: the interpreter compiles with HAS_CUDA; the device run waits for the next Colab device gate.
-Reserved, not built: paperkiln's step 2 (per-token recursion depth, Mixture-of-Recursions).
 
 ## Mixture-of-Recursions: `depth_route` and kv_rows "active" (causal token choice)
 
