@@ -560,6 +560,36 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
   for (const auto& n : head_)
     if (!kRowWiseOps.count(n.op)) throw std::runtime_error("IR head op '" + n.op + "' is not row-wise");
   n_layers_ = j.at("block").at("repeat").get<int>();
+  // Tied-block recursion (paperkiln ir.hpp weight_index): application i reads
+  // stored layer m_i's tensors; its state slots, kv cache and per-layer
+  // attributes stay its own (indexed by i). Stored layers are 0 .. max m_i, each
+  // used, and their count is the file's <arch>.block_count.
+  if (j.at("block").contains("weight_index")) {
+    const json& wi = j.at("block").at("weight_index");
+    if (!is_per_layer(wi) || !wi.at("per_layer").is_array())
+      throw std::runtime_error("IR block weight_index must be {\"per_layer\": [m_0, ..]}");
+    for (const auto& e : wi.at("per_layer")) {
+      if (!e.is_number_integer() || e.get<int>() < 0)
+        throw std::runtime_error("IR block weight_index entries must be integers >= 0");
+      weight_map_.push_back(e.get<int>());
+    }
+    if (static_cast<int>(weight_map_.size()) != n_layers_)
+      throw std::runtime_error("IR block weight_index has " + std::to_string(weight_map_.size()) + " entries for " +
+                               std::to_string(n_layers_) + " block applications");
+    const int stored = *std::max_element(weight_map_.begin(), weight_map_.end()) + 1;
+    std::vector<bool> used(static_cast<size_t>(stored), false);
+    for (int m : weight_map_) used[m] = true;
+    for (int m = 0; m < stored; ++m)
+      if (!used[m]) throw std::runtime_error("IR block weight_index never uses stored layer " + std::to_string(m));
+    const std::string arch = meta_string(gguf, "general.architecture").value_or("");
+    if (const auto bc = meta_number(gguf, arch + ".block_count"); bc && static_cast<int>(*bc) != stored)
+      throw std::runtime_error("IR block weight_index uses " + std::to_string(stored) + " stored layers, the file's " +
+                               arch + ".block_count is " + std::to_string(static_cast<int>(*bc)));
+    std::string m;
+    for (int v : weight_map_) m += (m.empty() ? "" : ", ") + std::to_string(v);
+    Logger::info("[IR] tied-block recursion: " + std::to_string(n_layers_) + " applications of " +
+                 std::to_string(stored) + " stored layers, weight_index [" + m + "]");
+  }
   vocab_ = j.at("model").at("vocab").get<int>();
   max_len_ = j.at("model").value("ctx", 0);
 
@@ -658,7 +688,8 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
       for (const auto& kv : n.attrs.items()) {  // per-layer attributes: block nodes, the attributes ember reads per block
         if (!is_per_layer(kv.value())) continue;
         const bool ok = sub == &block_ && ((n.op == "attention" && (kv.key() == "window" || kv.key() == "sinks")) ||
-                                           (n.op == "rope" && (kv.key() == "theta" || kv.key() == "freq_scale")));
+                                           (n.op == "rope" && (kv.key() == "theta" || kv.key() == "freq_scale")) ||
+                                           (n.op == "affine" && (kv.key() == "scale" || kv.key() == "shift")));
         if (!ok)
           throw std::runtime_error("IR " + n.op + ": a per-layer '" + kv.key() + "' is not implemented in ember");
         if (static_cast<int>(kv.value().at("per_layer").size()) != n_layers_)
@@ -902,7 +933,7 @@ std::string Interpreter::layer_name(const std::string& pattern, int layer) const
   const auto p = s.find("{i}");
   if (p != std::string::npos) {
     if (layer < 0) throw std::runtime_error("IR weight '" + pattern + "' uses {i} outside the block");
-    s.replace(p, 3, std::to_string(layer));
+    s.replace(p, 3, std::to_string(weight_map_.empty() ? layer : weight_map_.at(layer)));
   }
   return s;
 }
@@ -1403,8 +1434,8 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
     } else if (n.op == "affine") {  // (x * scale) + shift. EXACT.
       const Buf& x = in(n, 0);
       Buf out{std::vector<float>(x.v.size()), x.width};
-      cpu::affine(x.v.data(), out.v.data(), x.v.size(), n.attrs.at("scale").get<float>(),
-                  n.attrs.at("shift").get<float>());
+      cpu::affine(x.v.data(), out.v.data(), x.v.size(), at_layer(n.attrs.at("scale"), layer).get<float>(),
+                  at_layer(n.attrs.at("shift"), layer).get<float>());
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "scale") {  // (x * g) + b per feature, g and b [d]. EXACT.
       const Buf& x = in(n, 0);
@@ -1761,8 +1792,8 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
         break;
       }
       case DOp::Affine:
-        s.scale = n.attrs.at("scale").get<float>();
-        s.shift = n.attrs.at("shift").get<float>();
+        s.scale = at_layer(n.attrs.at("scale"), layer).get<float>();
+        s.shift = at_layer(n.attrs.at("shift"), layer).get<float>();
         break;
       case DOp::RmsRow:
         s.eps = n.attrs.at("eps").get<float>();

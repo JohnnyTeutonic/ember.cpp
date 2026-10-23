@@ -30,15 +30,17 @@ W = ir_numpy.load_weights(GGUF)
 orig = ir_numpy.run_nodes
 
 
-def run_nodes(ns, env, W_, i=None, no_window=False):
+def run_nodes(ns, env, W_, i=None, no_window=False, wi=None):
     for nd in ns:
         if nd["op"] == "scale":
-            g = W_[nd["weight"].replace("{i}", str(i))]
-            b = W_[nd["bias"].replace("{i}", str(i))]
+            g = W_[nd["weight"].replace("{i}", str(i if wi is None else wi))]
+            b = W_[nd["bias"].replace("{i}", str(i if wi is None else wi))]
             x = env[nd["in"][0]]
             env[nd["out"]] = ((x * g).astype(np.float32) + b).astype(np.float32)
-        else:
+        elif wi is None:
             orig([nd], env, W_, i, no_window=no_window)
+        else:
+            orig([nd], env, W_, i, no_window=no_window, wi=wi)
 
 
 ir_numpy.run_nodes = run_nodes
