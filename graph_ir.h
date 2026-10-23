@@ -156,6 +156,9 @@ class Interpreter {
 
   std::vector<Node> embed_, block_, head_;
   int n_layers_ = 0, vocab_ = 0, max_len_ = 0;
+  // block.weight_index (paperkiln ir.hpp; tied-block recursion): application i
+  // reads stored layer weight_map_[i]'s tensors. Empty: the identity.
+  std::vector<int> weight_map_;
   std::string family_hint_;
   bool dequant_all_ = false;  // every weight f32 at load (see the header comment)
   std::unordered_map<std::string, Weight> weights_;

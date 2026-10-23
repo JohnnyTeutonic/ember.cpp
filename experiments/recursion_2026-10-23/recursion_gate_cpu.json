@@ -1,0 +1,63 @@
+{
+ "bin": "/home/jonat/ember_wt/build_cpu/ir_logits",
+ "models": {
+  "p1_b2x3_c1": {
+   "gguf_sha256": "1c4be4dd95835a9084a2df92af14de99bd31d2f98aee604a22c05f2569cef84f",
+   "rows": 40,
+   "logprob_worst_rel": 2.039958538719393e-07,
+   "greedy": "40/40",
+   "decode_eq_prefill": true,
+   "applications": 8,
+   "weight_index": [
+    0,
+    1,
+    2,
+    1,
+    2,
+    1,
+    2,
+    3
+   ],
+   "pass": true
+  },
+  "p1_b2x3_c1_inject": {
+   "gguf_sha256": "75507475c383423e37fecdf45e294adc741d7337ac289892f3b2572484e4d082",
+   "rows": 40,
+   "logprob_worst_rel": 1.842347453941174e-07,
+   "greedy": "40/40",
+   "decode_eq_prefill": true,
+   "applications": 8,
+   "weight_index": [
+    0,
+    1,
+    2,
+    1,
+    2,
+    1,
+    2,
+    3
+   ],
+   "pass": true
+  },
+  "b2x4": {
+   "gguf_sha256": "bb3fdd5d268791317601abdba0186d198cc41e91e70c06ba19a02cccaac4fe62",
+   "rows": 40,
+   "logprob_worst_rel": 2.7217633883736364e-07,
+   "greedy": "40/40",
+   "decode_eq_prefill": true,
+   "applications": 8,
+   "weight_index": [
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1
+   ],
+   "pass": true
+  }
+ },
+ "pass": true
+}
