@@ -1,0 +1,37 @@
+{
+ "arch": {
+  "preset": "llama-tiny",
+  "custom": {
+   "d": 256,
+   "layers": 4,
+   "heads": 4,
+   "d_ff": 768
+  }
+ },
+ "data": {
+  "corpus": "/content/chat/data/mix.main.ids",
+  "vocab": "/mnt/c/ml_artifacts/next_base/gate/gate_llama3.gguf",
+  "vocab_cap": 16384,
+  "max_tokens": 20000000,
+  "T": 256
+ },
+ "train": {
+  "steps": 400,
+  "lr": 0.001,
+  "batch": 16,
+  "eval_every": 200,
+  "checkpoint_every": 200,
+  "gradmap_every": 0,
+  "seed": 1,
+  "optimizer": "adamw"
+ },
+ "export": {
+  "formats": [
+   "safetensors",
+   "gguf",
+   "gguf_q8_0_all"
+  ]
+ },
+ "name": "gate_llama3",
+ "out_dir": "/mnt/c/ml_artifacts/next_base/gate"
+}

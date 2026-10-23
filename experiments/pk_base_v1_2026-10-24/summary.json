@@ -1,0 +1,124 @@
+{
+ "arxiv_2302_13971_demo.jsonl": {
+  "n": 5,
+  "reply_identical": 5,
+  "token_count_identical": 5,
+  "stop_reason_identical": 5,
+  "prompt_tokens_equal_paperkiln_tokeniser": 5,
+  "distinct_replies": 5,
+  "stops": {
+   "eos": 3,
+   "length": 2
+  },
+  "tokens_mean": 63.4
+ },
+ "arxiv_2302_13971_parity.jsonl": {
+  "n": 40,
+  "reply_identical": 40,
+  "token_count_identical": 40,
+  "stop_reason_identical": 40,
+  "prompt_tokens_equal_paperkiln_tokeniser": 40,
+  "distinct_replies": 39,
+  "stops": {
+   "eos": 40
+  },
+  "tokens_mean": 16.6
+ },
+ "arxiv_2304_03208_demo.jsonl": {
+  "n": 5,
+  "reply_identical": 5,
+  "token_count_identical": 5,
+  "stop_reason_identical": 5,
+  "prompt_tokens_equal_paperkiln_tokeniser": 5,
+  "distinct_replies": 5,
+  "stops": {
+   "eos": 3,
+   "length": 2
+  },
+  "tokens_mean": 56.0
+ },
+ "arxiv_2304_03208_parity.jsonl": {
+  "n": 40,
+  "reply_identical": 40,
+  "token_count_identical": 40,
+  "stop_reason_identical": 40,
+  "prompt_tokens_equal_paperkiln_tokeniser": 40,
+  "distinct_replies": 40,
+  "stops": {
+   "eos": 40
+  },
+  "tokens_mean": 16.5
+ },
+ "gate_llama3_parity.jsonl": {
+  "n": 40,
+  "reply_identical": 40,
+  "token_count_identical": 40,
+  "stop_reason_identical": 40,
+  "prompt_tokens_equal_paperkiln_tokeniser": 40,
+  "distinct_replies": 6,
+  "stops": {
+   "eos": 40
+  },
+  "tokens_mean": 10.2
+ },
+ "pk_base_v1_parity.jsonl": {
+  "n": 40,
+  "reply_identical": 40,
+  "token_count_identical": 40,
+  "stop_reason_identical": 40,
+  "prompt_tokens_equal_paperkiln_tokeniser": 40,
+  "distinct_replies": 40,
+  "stops": {
+   "eos": 36,
+   "length": 4
+  },
+  "tokens_mean": 23.6
+ },
+ "pk_base_v1_q8_0_all_parity.jsonl": {
+  "n": 40,
+  "reply_identical": 36,
+  "token_count_identical": 36,
+  "stop_reason_identical": 39,
+  "prompt_tokens_equal_paperkiln_tokeniser": 40,
+  "distinct_replies": 40,
+  "stops": {
+   "eos": 37,
+   "length": 3
+  },
+  "tokens_mean": 23.0,
+  "diffs": [
+   {
+    "i": 9,
+    "common_prefix_chars": 31,
+    "ember": "Yes, sometimes I do. It's like there's a constant buzzing in my stomach that I can't shake.",
+    "mtstudio": "Yes, sometimes I do. It's like a part of me is trying to keep it clean and fresh.",
+    "ember_tokens": 25,
+    "mts_tokens": 22
+   },
+   {
+    "i": 10,
+    "common_prefix_chars": 11,
+    "ember": "The leaves change color before they fall this time of year, and it's a natural phenomenon. The leaves change color before they fall, and it's a natural phenomenon. The leaves change color before they fall, and it's a natural phenomenon.",
+    "mtstudio": "The leaves of trees change color before they fall this time of year, and it's a natural phenomenon. The leaves of trees change color before they fall, and it's a natural phenomenon. The leaves of trees change color before they fall this time of year, and it's a natural phenomenon.",
+    "ember_tokens": 49,
+    "mts_tokens": 59
+   },
+   {
+    "i": 12,
+    "common_prefix_chars": 139,
+    "ember": "I understand how you feel, but we need to take a step back and assess the situation. We can't just ignore the changes happening in our land.",
+    "mtstudio": "I understand how you feel, but we need to take a step back and assess the situation. We can't just ignore the changes happening in our land, we need to take action.",
+    "ember_tokens": 31,
+    "mts_tokens": 37
+   },
+   {
+    "i": 34,
+    "common_prefix_chars": 89,
+    "ember": "Yes, I definitely do. I think that's part of what makes it so interesting and interesting. It's like, every time you see a farm, you're just seeing the world around you and it's all just a bunch of plastic waste.",
+    "mtstudio": "Yes, I definitely do. I think that's part of what makes it so interesting and interesting to see how our farms are being used. We're just trying to make the world a better place, and it's not always easy. But I think it's important to try to do our part to",
+    "ember_tokens": 50,
+    "mts_tokens": 60
+   }
+  ]
+ }
+}
