@@ -1,0 +1,46 @@
+{
+ "arch": {
+  "preset": "llama-tiny",
+  "custom": {
+   "d": 768,
+   "layers": 12,
+   "heads": 12,
+   "d_ff": 2048
+  }
+ },
+ "data": {
+  "corpus": "/content/chat/data/mix.main.ids",
+  "vocab": "/mnt/c/ml_artifacts/next_base/base/pk_base_v1.gguf",
+  "vocab_cap": 16384,
+  "max_tokens": 0,
+  "T": 512,
+  "anneal": {
+   "corpus": "/content/chat/data/mix.tail.ids",
+   "from_fraction": 0.85
+  }
+ },
+ "train": {
+  "steps": 120000,
+  "lr": 0.0006,
+  "batch": 16,
+  "eval_every": 1000,
+  "checkpoint_every": 1000,
+  "gradmap_every": 0,
+  "seed": 1,
+  "optimizer": "adamw",
+  "lr_schedule": {
+   "warmup_steps": 2000,
+   "decay": "cosine",
+   "min_lr_frac": 0.1
+  }
+ },
+ "export": {
+  "formats": [
+   "safetensors",
+   "gguf",
+   "gguf_q8_0_all"
+  ]
+ },
+ "name": "pk_base_v1",
+ "out_dir": "/mnt/c/ml_artifacts/next_base/base"
+}

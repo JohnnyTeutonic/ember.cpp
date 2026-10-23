@@ -2,7 +2,11 @@
 
 Both servers get the same /chat requests with top_k=1 (argmax in both
 samplers). Compares reply text, generated token count and stop reason, and
-checks ember's prompt token count against tools/bpe.py on the same template.
+checks ember's prompt token count against paperkiln's tokeniser on the same
+template: tools/bpe.py for a paperkiln "bpe" vocabulary, tools/llama3_bpe.py
+(HF tokenizers, configured as llama.cpp encodes) for the Llama 3-scheme
+"gpt2"/"llama-bpe" vocabulary. The record field keeps its old name,
+bpe_py_prompt_tokens, whichever tokeniser counted it.
 """
 import json
 import os
@@ -25,7 +29,10 @@ import bpe  # noqa: E402
 EMBER = f"http://127.0.0.1:{os.environ.get('PARITY_EMBER_PORT', '8090')}/chat"
 MTS = f"http://127.0.0.1:{os.environ.get('PARITY_MTS_PORT', '8091')}/chat"
 GGUF = os.environ.get("PARITY_GGUF", "/home/jonat/ember_ttft/chat/chat_sft_bpe.gguf")
-PROMPTS = "/mnt/c/ml_artifacts/chat_base/sft/tinychat_hf_prompts_v1.jsonl"
+# PARITY_PROMPTS (a jsonl with a "prompt" field per line) and PARITY_MAX_NEW
+# override the frozen prompt file and the 60-token reply cap.
+PROMPTS = os.environ.get("PARITY_PROMPTS", "/mnt/c/ml_artifacts/chat_base/sft/tinychat_hf_prompts_v1.jsonl")
+MAX_NEW = int(os.environ.get("PARITY_MAX_NEW", "60"))
 # PARITY_REPEAT_PENALTY / PARITY_REPEAT_LAST_N: the /chat contract's repetition
 # penalty (point 4), sent to both servers; unset leaves the fields out (off).
 REPEAT = {k: f(os.environ[e]) for k, e, f in (("repeat_penalty", "PARITY_REPEAT_PENALTY", float),
@@ -41,16 +48,22 @@ def post(url, body):
     return json.load(urllib.request.urlopen(req, timeout=300))
 
 
-tok = bpe.read_gguf(GGUF)
+import llama3_bpe  # noqa: E402
+
+if llama3_bpe.read_gguf_kv(GGUF, {"tokenizer.ggml.model"}).get("tokenizer.ggml.model") == "gpt2":
+    _hf = llama3_bpe.from_gguf(GGUF)
+    encode, TOKREF = (lambda s: _hf.encode(s, add_special_tokens=False).ids), "llama3_bpe.py"
+else:
+    encode, TOKREF = bpe.read_gguf(GGUF).encode, "bpe.py"
 rows = [json.loads(l) for l in open(PROMPTS, encoding="utf-8")][:N]
 same_text = same_tok = same_stop = tok_ok = 0
 records = []
 for i, r in enumerate(rows):
-    body = {"user_input": r["prompt"], "max_new_tokens": 60, "temperature": 1.0,
+    body = {"user_input": r["prompt"], "max_new_tokens": MAX_NEW,"temperature": 1.0,
             "top_k": 1, "top_p": 1.0, "seed": 0, **REPEAT}
     e = post(EMBER, body)
     m = post(MTS, body)
-    py_n = len(tok.encode("<|user|>" + r["prompt"] + "<|assistant|>"))
+    py_n = len(encode("<|user|>" + r["prompt"] + "<|assistant|>"))
     rec = {"i": i, "prompt": r["prompt"], "ember": e["reply"], "mtstudio": m["reply"],
            "ember_tokens": e["tokens"], "mts_tokens": m["tokens"],
            "ember_stop": e["stop_reason"], "mts_stop": m["stop_reason"],
@@ -63,7 +76,7 @@ for i, r in enumerate(rows):
     if e["reply"] != m["reply"]:
         print(f"[{i}] DIFF\n  ember: {e['reply']!r}\n  mts:   {m['reply']!r}")
 print(f"n={len(rows)} reply identical {same_text}, token count {same_tok}, "
-      f"stop reason {same_stop}, prompt tokens == bpe.py {tok_ok}")
+      f"stop reason {same_stop}, prompt tokens == {TOKREF} {tok_ok}")
 if OUT:
     with open(OUT, "w", encoding="utf-8") as f:
         for rec in records:

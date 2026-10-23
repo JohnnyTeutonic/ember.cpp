@@ -1,0 +1,45 @@
+{
+ "arch": {
+  "custom": {
+   "norm": "layernorm",
+   "activation": "gelu",
+   "position": "learned",
+   "residual": "residual",
+   "attention": "exact",
+   "d": 384,
+   "layers": 6,
+   "heads": 6
+  }
+ },
+ "data": {
+  "vocab": "/mnt/c/ml_artifacts/next_base/sft_2304_03208/arxiv_2304_03208.gguf",
+  "vocab_cap": 16384,
+  "T": 512,
+  "sft_examples": "/content/chat/lever1/lever1_sft_v1.jsonl"
+ },
+ "train": {
+  "steps": 1500,
+  "lr": 0.001,
+  "batch": 16,
+  "eval_every": 750,
+  "checkpoint_every": 500,
+  "gradmap_every": 0,
+  "seed": 1,
+  "optimizer": "adamw",
+  "objective": "sft",
+  "lr_schedule": {
+   "warmup_steps": 0,
+   "decay": "cosine",
+   "min_lr_frac": 0.1
+  },
+  "init_from": "/content/chat/base_2304_03208/arxiv_2304_03208_base.safetensors"
+ },
+ "export": {
+  "formats": [
+   "safetensors",
+   "gguf"
+  ]
+ },
+ "name": "arxiv_2304_03208",
+ "out_dir": "/mnt/c/ml_artifacts/next_base/sft_2304_03208"
+}
