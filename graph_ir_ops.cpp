@@ -30,6 +30,24 @@ void affine(const float* x, float* out, size_t n, float scale, float shift) {
   }
 }
 
+void mor_route(const float* l, int R, int& depth, float& gate) {
+  int j_max = 0;
+  for (int j = 1; j < R; ++j)
+    if (l[j] > l[j_max]) j_max = j;  // strict: a tie keeps the lower index
+  float z = 0.0f;
+  for (int j = 0; j < R; ++j) z += std::exp(l[j] - l[j_max]);
+  depth = j_max + 1;
+  gate = std::exp(l[j_max] - l[j_max]) / z;
+}
+
+void mor_gate(const float* x_in, float* x, size_t n, float g) {
+  for (size_t i = 0; i < n; ++i) {
+    const float diff = x[i] - x_in[i];
+    const float p = g * diff;
+    x[i] = x_in[i] + p;
+  }
+}
+
 void scale(const float* x, const float* g, const float* b, float* out, int T, int w) {
   for (int t = 0; t < T; ++t) {
     const size_t r = static_cast<size_t>(t) * w;

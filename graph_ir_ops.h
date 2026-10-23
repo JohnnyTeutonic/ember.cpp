@@ -38,6 +38,14 @@ void rms_row(const float* x, float* out, int T, int w, float eps);
 // a = max-shifted softmax over i (z summed in ascending i, a_i = e_i / z),
 // out = s_0 a_0 + s_1 a_1 + ... in ascending i. ROUNDING.
 void depth_attend(const std::vector<const float*>& sources, const float* w, float* out, int T, int d, float eps);
+// Mixture-of-Recursions token-choice routing (ir.hpp depth_route) from one token's router logits
+// l [R]: depth = 1 + the index of the largest logit (ties to the lower index); gate = p[depth - 1],
+// p the max-shifted softmax (e_j = exp(l_j - max), z summed in ascending j, p_j = e_j / z).
+// EXACT given the logits for the depth; ROUNDING for the gate.
+void mor_route(const float* l, int R, int& depth, float& gate);
+// MoR gate "score" after a recursion step: x = x_in + g (x - x_in) per element, the difference
+// rounded, then the product, then the sum. EXACT.
+void mor_gate(const float* x_in, float* x, size_t n, float g);
 
 }  // namespace cpu
 }  // namespace ember_ir

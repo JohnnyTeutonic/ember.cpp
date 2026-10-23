@@ -5,6 +5,7 @@
 //
 //   stdin:  [[id, id, ...], ...]               token sequences
 //   stdout: [{"prefill": [[logit, ...] per position], "decode": [[...] per position]}, ...]
+//           (a Mixture-of-Recursions IR adds "prefill_depth" and "decode_depth": each position's depth)
 //
 // "prefill" runs each sequence as one forward from position 0 (all rows); "decode" runs it one
 // token at a time through the KV / recurrent state, as generation does. Both start fresh. The IR
@@ -56,17 +57,21 @@ int main(int argc, char** argv) {
         for (size_t t = 0; t < ids.size(); ++t)
           rows.push_back(std::vector<float>(all.begin() + t * V, all.begin() + (t + 1) * V));
       rec["prefill"] = std::move(rows);
+      if (!m.last_depths().empty()) rec["prefill_depth"] = m.last_depths();
     }
     {
       ember_ir::Interpreter m(ir, gguf, false);
       json rows = json::array();
       std::vector<float> d;
+      std::vector<int> depths;
       for (size_t t = 0; t < ids.size(); ++t) {
         d = m.forward({ids[t]}, static_cast<int>(t), false);
         if (!last) rows.push_back(d);
+        if (!m.last_depths().empty()) depths.push_back(m.last_depths().at(0));
       }
       if (last) rows.push_back(d);
       rec["decode"] = std::move(rows);
+      if (!depths.empty()) rec["decode_depth"] = depths;
     }
     out.push_back(std::move(rec));
   }

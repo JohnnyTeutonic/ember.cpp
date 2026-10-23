@@ -1,0 +1,39 @@
+{
+ "route_not_first": {
+  "refused": true,
+  "message": "IR depth_route must be the block's first node"
+ },
+ "expert_choice": {
+  "refused": true,
+  "message": "IR depth_route route 'expert_choice' is not implemented in ember (causal token choice only)"
+ },
+ "unequal_steps": {
+  "refused": true,
+  "message": "IR depth_route step: application 3 has step 0, expected 1 (consecutive, ascending, equal-length steps)"
+ },
+ "steps_descending": {
+  "refused": true,
+  "message": "IR depth_route step: application 1 has step 2, expected 0 (consecutive, ascending, equal-length steps)"
+ },
+ "step_length_wrong": {
+  "refused": true,
+  "message": "IR depth_route: per-layer 'step' has 7 entries for 8 blocks"
+ },
+ "no_kv_rows_active": {
+  "refused": true,
+  "message": "IR depth_route needs a kv state with kv_rows \"active\""
+ },
+ "kv_from": {
+  "refused": true,
+  "message": "IR kv state: kv_from (recursive KV sharing) is not implemented in ember"
+ },
+ "gate_unknown": {
+  "refused": true,
+  "message": "IR depth_route gate 'sigmoid' is not score or none"
+ },
+ "router_with_i": {
+  "refused": true,
+  "message": "IR depth_route weight names its tensor in full (no {i})"
+ },
+ "all_refused": true
+}
