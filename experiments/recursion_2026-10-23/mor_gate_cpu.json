@@ -1,0 +1,58 @@
+{
+ "bin": "/home/jonat/ember_wt/build_cpu/ir_logits",
+ "models": {
+  "mor3": {
+   "gguf_sha256": "c7a30e8d0d9195f18b9e4a878aacf97fbb92887879f81e25a6205e3b64f18437",
+   "recursion": {
+    "prelude": 1,
+    "block": 2,
+    "repeats": 3,
+    "coda": 1,
+    "schedule": "mor",
+    "inject": "none",
+    "stored_layers": 4,
+    "mor": {
+     "route": "token_choice",
+     "gate": "score",
+     "kv_rows": "active"
+    }
+   },
+   "rows": 40,
+   "logprob_worst_rel": 2.276596107274384e-07,
+   "greedy": "40/40",
+   "depth_prefill": "40/40",
+   "depth_decode": "40/40",
+   "decode_vs_prefill_rel": 0.0,
+   "smallest_router_margin": 2.933293581008911e-05,
+   "depth_mismatches": [],
+   "pass": true
+  },
+  "mor2p0": {
+   "gguf_sha256": "397bc147f3763a73fb055c884e20100f0f4186bf1a7264bb5a426fa62b2950ab",
+   "recursion": {
+    "prelude": 0,
+    "block": 3,
+    "repeats": 2,
+    "coda": 1,
+    "schedule": "mor",
+    "inject": "none",
+    "stored_layers": 4,
+    "mor": {
+     "route": "token_choice",
+     "gate": "score",
+     "kv_rows": "active"
+    }
+   },
+   "rows": 40,
+   "logprob_worst_rel": 1.8675111025817043e-07,
+   "greedy": "40/40",
+   "depth_prefill": "40/40",
+   "depth_decode": "40/40",
+   "decode_vs_prefill_rel": 0.0,
+   "smallest_router_margin": 0.006447046063840389,
+   "depth_mismatches": [],
+   "pass": true
+  }
+ },
+ "pass": true
+}

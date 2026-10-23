@@ -32,3 +32,38 @@ plain model (the map is read). The four malformed maps above are each refused at
 
 CUDA: the interpreter compiles with HAS_CUDA; the device run waits for the next Colab device gate.
 Reserved, not built: paperkiln's step 2 (per-token recursion depth, Mixture-of-Recursions).
+
+## Mixture-of-Recursions: `depth_route` and kv_rows "active" (causal token choice)
+
+paperkiln's spec (ir.hpp at paperkiln c4427679; tiny-chat amendment 4, 63d9ffe9, registered before the
+engine code), family_hint `llama_mor`. ember (CPU):
+- **Routing.** At the first application of step 0, each token's router logits are x W^T, W =
+  `rec.0.router.weight` [n_rec, d], computed as linear computes it. The depth is 1 + argmax, ties to the
+  lower index. The gate is the max-shifted softmax's p[depth - 1], with z summed in ascending order
+  (`cpu::mor_route`).
+- **Running a step.** Step k keeps its input x_in and runs only on the tokens deeper than k: one at a
+  time, in position order, at their absolute positions. Each step application keeps a compact kv
+  cache of just the rows written there, with their positions, so attention's causal kernel and RoPE
+  run unchanged.
+- **Gate.** After the step's last application, gate "score" sets x = x_in + g (x - x_in): the
+  difference rounded, then the product, then the sum, compiled without contraction (`cpu::mor_gate`).
+  Inactive tokens keep x_in. A step with no active token runs nothing.
+- **Resuming.** A forward at start_pos (a new sequence, prefix reuse, a rewind) keeps each compact
+  cache's rows below start_pos.
+- **Load checks.** Load refuses a depth_route that isn't the block's first node, any route except
+  token_choice, steps that aren't consecutive, ascending and of equal length, a kv state without
+  kv_rows "active", kv_from (reserved), recurrent state or windowed attention alongside it, and a
+  router name with {i}.
+- **CUDA.** A CUDA build serves these files on the CPU (depth_route has no device kernel yet).
+
+Gate (`mor_gate.py`, receipt `mor_gate_cpu.json`) on paperkiln's two MoR models
+(`/mnt/c/ml_artifacts/mor_gate/`):
+
+| model | recursion | log-prob worst (rel.) | greedy | depth, prefill | depth, decode | decode vs prefill | smallest router margin |
+|---|---|---:|---|---|---|---:|---:|
+| mor3 | 1 + [2] x 3 + 1, gate score | 2.3e-7 | 40/40 | 40/40 | 40/40 | 0.0 | 2.9e-5 |
+| mor2p0 | 0 + [3] x 2 + 1, gate score | 1.9e-7 | 40/40 | 40/40 | 40/40 | 0.0 | 6.4e-3 |
+
+The depths are mtstudio's per-token trace, token for token. Nine malformed variants of mor3's IR are
+each refused at load (`mor_refusals.py`, `mor_refusals.json`). The weight_index gate, the recursion
+smoke test and the scale smoke test give the same numbers as before.

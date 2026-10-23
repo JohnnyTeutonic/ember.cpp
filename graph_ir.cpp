@@ -41,7 +41,9 @@ const std::set<std::string> kCpuOps = {"embedding", "pos_embedding", "rmsnorm", 
                                        // gated and attention-residual families (graph_ir_ops.h)
                                        "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
                                        // runtime-defined elementwise ops (graph_ir_expr.h) and the per-feature gain
-                                       "expr", "scale"};
+                                       "expr", "scale",
+                                       // Mixture-of-Recursions' control node (forward's mor_step runs it)
+                                       "depth_route"};
 const std::set<std::string> kRecurrentOps = {"linear_attention", "ssm_scan", "conv1d_causal", "selective_scan"};
 // The ops run_nodes_device implements.
 const std::set<std::string> kCudaOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
@@ -593,7 +595,7 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
   vocab_ = j.at("model").at("vocab").get<int>();
   max_len_ = j.at("model").value("ctx", 0);
 
-  bool has_kv = false;
+  bool has_kv = false, kv_rows_active = false;
   for (const auto& s : j.at("block").value("state", json::array())) {
     const std::string kind = s.at("kind").get<std::string>();
     if (kind == "recurrent") {
@@ -625,6 +627,12 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
     }
     if (kind != "kv") throw std::runtime_error("IR state kind '" + kind + "' has no CPU implementation in ember");
     has_kv = true;
+    if (s.contains("kv_from")) throw std::runtime_error("IR kv state: kv_from (recursive KV sharing) is not implemented in ember");
+    if (s.contains("kv_rows")) {
+      if (s.at("kv_rows") != "active")
+        throw std::runtime_error("IR kv state: kv_rows '" + s.at("kv_rows").dump() + "' is not implemented in ember");
+      kv_rows_active = true;
+    }
     kv_heads_ = s.at("kv_heads").get<int>();
     head_dim_ = s.at("head_dim").get<int>();
     max_len_ = s.at("max_len").get<int>();
@@ -689,7 +697,8 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
         if (!is_per_layer(kv.value())) continue;
         const bool ok = sub == &block_ && ((n.op == "attention" && (kv.key() == "window" || kv.key() == "sinks")) ||
                                            (n.op == "rope" && (kv.key() == "theta" || kv.key() == "freq_scale")) ||
-                                           (n.op == "affine" && (kv.key() == "scale" || kv.key() == "shift")));
+                                           (n.op == "affine" && (kv.key() == "scale" || kv.key() == "shift")) ||
+                                           (n.op == "depth_route" && kv.key() == "step"));
         if (!ok)
           throw std::runtime_error("IR " + n.op + ": a per-layer '" + kv.key() + "' is not implemented in ember");
         if (static_cast<int>(kv.value().at("per_layer").size()) != n_layers_)
@@ -761,6 +770,59 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
         throw std::runtime_error("IR attention: heads " + std::to_string(hq) + " is not a multiple of kv_heads " +
                                  std::to_string(hkv));
     }
+  }
+  // Mixture-of-Recursions (ir.hpp depth_route, llama_mor): one depth_route node, the block's
+  // first, outside it nowhere; its steps one consecutive run of equal-length steps 0 .. R-1; causal
+  // token choice; a kv state with kv_rows "active"; no recurrent state or windowed attention.
+  for (const auto* sub : {&embed_, &head_})
+    for (const auto& n : *sub)
+      if (n.op == "depth_route") throw std::runtime_error("IR depth_route outside the block");
+  for (size_t k = 0; k < block_.size(); ++k) {
+    const Node& n = block_[k];
+    if (n.op != "depth_route") continue;
+    if (k != 0) throw std::runtime_error("IR depth_route must be the block's first node");
+    if (n.in.size() != 1 || n.out.size() != 1) throw std::runtime_error("IR depth_route reads [x] and writes one output");
+    if (n.attrs.value("route", "") != "token_choice")
+      throw std::runtime_error("IR depth_route route '" + n.attrs.value("route", "") +
+                               "' is not implemented in ember (causal token choice only)");
+    const std::string gate = n.attrs.value("gate", "");
+    if (gate != "score" && gate != "none") throw std::runtime_error("IR depth_route gate '" + gate + "' is not score or none");
+    mor_R_ = n.attrs.at("n_rec").get<int>();
+    if (mor_R_ < 1) throw std::runtime_error("IR depth_route n_rec must be at least 1");
+    if (!is_per_layer(n.attrs.at("step"))) throw std::runtime_error("IR depth_route step must be {\"per_layer\": [...]}");
+    mor_step_ = n.attrs.at("step").at("per_layer").get<std::vector<int>>();
+    if (static_cast<int>(mor_step_.size()) != n_layers_)
+      throw std::runtime_error("IR depth_route step has " + std::to_string(mor_step_.size()) + " entries for " +
+                               std::to_string(n_layers_) + " block applications");
+    // One run of applications with steps 0, 0, .., 1, 1, .., R-1, all steps the same length.
+    int first = -1, last = -1;
+    for (int i = 0; i < n_layers_; ++i)
+      if (mor_step_[i] >= 0) {
+        if (first < 0) first = i;
+        last = i;
+      }
+    const int span = first < 0 ? 0 : last - first + 1;
+    if (first < 0 || span % mor_R_ != 0) throw std::runtime_error("IR depth_route step: the recursion is not R equal steps");
+    for (int i = 0; i < n_layers_; ++i) {
+      const int want = i < first || i > last ? -1 : (i - first) / (span / mor_R_);
+      if (mor_step_[i] != want)
+        throw std::runtime_error("IR depth_route step: application " + std::to_string(i) + " has step " +
+                                 std::to_string(mor_step_[i]) + ", expected " + std::to_string(want) +
+                                 " (consecutive, ascending, equal-length steps)");
+    }
+    mor_gate_score_ = gate == "score";
+    mor_x_ = n.in[0];
+    mor_out_ = n.out[0];
+    mor_router_ = n.attrs.at("weight").get<std::string>();
+    if (mor_router_.find("{i}") != std::string::npos)
+      throw std::runtime_error("IR depth_route weight names its tensor in full (no {i})");
+  }
+  if (!mor_step_.empty()) {
+    if (!kv_rows_active) throw std::runtime_error("IR depth_route needs a kv state with kv_rows \"active\"");
+    if (!rec_slots_.empty()) throw std::runtime_error("IR depth_route with recurrent state is not implemented in ember");
+    if (window_ > 0 || !window_layer_.empty() || sinks_ > 0)
+      throw std::runtime_error("IR depth_route with windowed attention is not implemented in ember");
+    mor_rows_.assign(n_layers_, {});
   }
   // EMBER_IR_CTX=N: hold at most N positions (a third-party IR declares the
   // model's whole trained context, e.g. 32768, which is ~0.8 GB of f32 KV for
@@ -1370,13 +1432,16 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       const int hd = n.attrs.at("head_dim").get<int>(), hq = n.attrs.at("heads").get<int>();
       const int hkv = n.attrs.at("kv_heads").get<int>();
       if (hd != head_dim_ || hkv != kv_heads_) throw std::runtime_error("IR attention shape differs from its kv state");
-      if (start_pos + T > max_len_)
-        throw std::runtime_error("IR attention: position " + std::to_string(start_pos + T) + " exceeds the kv state (" +
+      // Under a recursion step (mor_step) the rows go to the application's compact cache, at
+      // attn_row_, and the query reads the rows before and at it; elsewhere rows sit at their positions.
+      const int kpos = attn_row_ >= 0 ? attn_row_ : start_pos;
+      if (kpos + T > max_len_)
+        throw std::runtime_error("IR attention: position " + std::to_string(kpos + T) + " exceeds the kv state (" +
                                  std::to_string(max_len_) + ")");
       KVCacheLayer& cache = kv_.at(layer);
       const size_t row = static_cast<size_t>(hkv) * hd;
-      std::memcpy(cache.k.data() + start_pos * row, k.v.data(), static_cast<size_t>(T) * row * sizeof(float));
-      std::memcpy(cache.v.data() + start_pos * row, v.v.data(), static_cast<size_t>(T) * row * sizeof(float));
+      std::memcpy(cache.k.data() + kpos * row, k.v.data(), static_cast<size_t>(T) * row * sizeof(float));
+      std::memcpy(cache.v.data() + kpos * row, v.v.data(), static_cast<size_t>(T) * row * sizeof(float));
       const float scale = n.attrs.contains("scale") ? n.attrs.at("scale").get<float>() : 1.0f / std::sqrt(float(hd));
       Buf out{{}, hq * hd};
       int window = 0, sinks = 0;
@@ -1384,7 +1449,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       if (window > 0)
         attention_window_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale, window, sinks);
       else
-        attention_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale);
+        attention_batch_cpu(q.v, cache, out.v, T, kpos, hq, hkv, hd, scale);
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "add" || n.op == "mul") {
       const Buf &a = in(n, 0), &b = in(n, 1);
@@ -1597,6 +1662,59 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
   }
 }
 
+// One application of a recursion step (ir.hpp depth_route (a)-(d)). The first application of step
+// 0 routes every row; the first of step k keeps the step's input x_in; every application runs the
+// block's other nodes on the tokens deeper than k, one at a time in position order (T = 1 at its
+// absolute position, its k/v row appended to this application's compact cache); after the step's
+// last application gate "score" blends each active row with its x_in. Inactive rows keep x_in.
+void Interpreter::mor_step(int layer, Env& env, int T, int start_pos) {
+  const int s = mor_step_[layer];
+  const bool first = layer == 0 || mor_step_[layer - 1] != s;
+  const bool last = layer == n_layers_ - 1 || mor_step_[layer + 1] != s;
+  auto it = env.find(mor_x_);
+  if (it == env.end() || it->second.is_list) throw std::runtime_error("IR depth_route: input '" + mor_x_ + "' is not a tensor");
+  Buf& x = it->second;
+  const int d = x.width;
+  if (s == 0 && first) {
+    const auto& W = weight(mor_router_);
+    if (shapes_.at(mor_router_).at(0) != d || W.size() != static_cast<size_t>(mor_R_) * d)
+      throw std::runtime_error("IR depth_route '" + mor_router_ + "' is not [n_rec, d]");
+    std::vector<float> logits(static_cast<size_t>(T) * mor_R_);
+    matmul_f32_f32_batch_cpu(W, x.v, logits, T, mor_R_, d);  // x W^T, as linear
+    mor_depth_.assign(T, 0);
+    mor_g_.assign(T, 0.0f);
+    for (int t = 0; t < T; ++t) cpu::mor_route(logits.data() + static_cast<size_t>(t) * mor_R_, mor_R_, mor_depth_[t], mor_g_[t]);
+    env[mor_out_] = Buf{std::vector<float>(mor_depth_.begin(), mor_depth_.end()), 1};
+  }
+  if (first) mor_xin_ = x.v;
+  std::vector<int> active;
+  for (int t = 0; t < T; ++t)
+    if (mor_depth_.at(t) > s) active.push_back(t);
+  for (int t : active) {
+    Env row;
+    for (const auto& kv : env)
+      if (!kv.second.is_list && kv.second.width > 0 && kv.second.v.size() == static_cast<size_t>(T) * kv.second.width) {
+        const auto b = kv.second.v.begin() + static_cast<size_t>(t) * kv.second.width;
+        row[kv.first] = Buf{std::vector<float>(b, b + kv.second.width), kv.second.width};
+      }
+    attn_row_ = static_cast<int>(mor_rows_[layer].size());
+    try {
+      run_nodes(block_, layer, row, 1, start_pos + t, false);
+    } catch (...) {
+      attn_row_ = -1;
+      throw;
+    }
+    attn_row_ = -1;
+    mor_rows_[layer].push_back(start_pos + t);
+    const Buf& y = row.at(mor_x_);
+    if (y.width != d) throw std::runtime_error("IR depth_route: the block changes the width of '" + mor_x_ + "'");
+    std::copy(y.v.begin(), y.v.end(), x.v.begin() + static_cast<size_t>(t) * d);
+  }
+  if (last && mor_gate_score_)
+    for (int t : active)
+      cpu::mor_gate(mor_xin_.data() + static_cast<size_t>(t) * d, x.v.data() + static_cast<size_t>(t) * d, d, mor_g_[t]);
+}
+
 std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int start_pos, bool all_rows) {
   const int T = static_cast<int>(tokens.size());
   if (T == 0) return {};
@@ -1610,7 +1728,19 @@ std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int star
   Env env;
   env["tokens"] = Buf{std::vector<float>(tokens.begin(), tokens.end()), 1};
   run_nodes(embed_, -1, env, T, start_pos, false);
-  for (int l = 0; l < n_layers_; ++l) run_nodes(block_, l, env, T, start_pos, false);
+  if (!mor_step_.empty()) {
+    // Resuming at start_pos (a new sequence, prefix reuse, a rewind): each compact cache keeps
+    // the rows of positions below it.
+    for (auto& rows : mor_rows_)
+      while (!rows.empty() && rows.back() >= start_pos) rows.pop_back();
+    mor_depth_.clear();
+  }
+  for (int l = 0; l < n_layers_; ++l) {
+    if (!mor_step_.empty() && mor_step_[l] >= 0)
+      mor_step(l, env, T, start_pos);
+    else
+      run_nodes(block_, l, env, T, start_pos, false);
+  }
   if (rec_floats_ > 0) rec_end(start_pos, T);
   int rows = T;
   if (!all_rows && T > 1) {  // head ops are row-wise: run them on the last row only

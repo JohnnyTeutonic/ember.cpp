@@ -118,6 +118,9 @@ class Interpreter {
   int max_len() const { return max_len_; }
   int n_layers() const { return n_layers_; }
   const std::string& family_hint() const { return family_hint_; }
+  // Mixture-of-Recursions (depth_route): the recursion depth of each row of the last forward
+  // (1 .. n_rec), its routing trace; empty when the block has no depth_route.
+  const std::vector<int>& last_depths() const { return mor_depth_; }
   bool on_gpu() const { return gpu_; }
 
  private:
@@ -159,6 +162,22 @@ class Interpreter {
   // block.weight_index (paperkiln ir.hpp; tied-block recursion): application i
   // reads stored layer weight_map_[i]'s tensors. Empty: the identity.
   std::vector<int> weight_map_;
+  // Mixture-of-Recursions (paperkiln ir.hpp depth_route, causal token choice). mor_step_[i]: the
+  // recursion step of application i, -1 outside it (empty: no depth_route). A step's applications
+  // run on its active tokens only (depth > step), one at a time in position order; each such
+  // application keeps a compact kv cache holding just the rows written there, mor_rows_[i] their
+  // absolute positions (kv_rows "active"), so attention's causal kernel reads exactly those rows
+  // and RoPE keeps the absolute position. attn_row_ >= 0 places the next kv row (and the query's
+  // causal limit) in that compact cache.
+  void mor_step(int layer, Env& env, int T, int start_pos);
+  std::vector<int> mor_step_;
+  std::vector<std::vector<int>> mor_rows_;
+  int mor_R_ = 0;
+  bool mor_gate_score_ = false;
+  std::string mor_x_, mor_out_, mor_router_;
+  std::vector<int> mor_depth_;
+  std::vector<float> mor_g_, mor_xin_;
+  int attn_row_ = -1;
   std::string family_hint_;
   bool dequant_all_ = false;  // every weight f32 at load (see the header comment)
   std::unordered_map<std::string, Weight> weights_;
