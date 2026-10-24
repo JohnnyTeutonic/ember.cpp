@@ -428,6 +428,9 @@ if(NOT SKBUILD)
     # Per-turn state tokens: template rule, eviction on/off, rewinds (tools/state_tokens_test.cpp).
     add_executable(state_tokens_test tools/state_tokens_test.cpp)
     target_link_libraries(state_tokens_test PRIVATE tinyllama_core)
+    # Chat templates: paperkiln's conformance file and ember's rendering paths (tools/chat_template_check.cpp).
+    add_executable(chat_template_check tools/chat_template_check.cpp)
+    target_link_libraries(chat_template_check PRIVATE tinyllama_core)
     if(HAS_CUDA)
         # The interpreter on the CUDA device against the CPU (tools/ir_device_gate.cpp).
         add_executable(ir_device_gate tools/ir_device_gate.cpp)
