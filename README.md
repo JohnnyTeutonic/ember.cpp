@@ -39,10 +39,21 @@ flowchart LR
 | Mamba-style state-space scan | IR interpreter | ✅ | ✅ | ✅ | |
 | SRD, AttnRes, flex (highway, plain residual) | IR interpreter | ✅ | ✅ | ✅ | |
 | Runtime-defined ops (`expr`: a paper's new activation or gate as a formula) | IR interpreter | ✅ | ✅ | not gated | |
+| Tied-block recursion (`weight_index`: one stored block applied several times) | IR interpreter | ✅ | not gated | not gated | |
+| Mixture-of-Recursions (`depth_route`: each token picks its depth) | IR interpreter | ✅ | runs on the CPU | not gated | |
+| Per-turn state tokens with eviction (`turn_state`) | IR interpreter | ✅ | runs on the CPU | not gated | |
+| Attention residuals over depth (`llama_attnres`) | IR interpreter | ✅ | not gated | not gated | |
 
 Every paperkiln family is gated the same way: **greedy replies identical to paperkiln's own
 sampler on 40 frozen prompts**, on each backend, including a trained 70M mixture-of-experts
-model. The receipts are in [`experiments/`](experiments/).
+model. The receipts are in [`experiments/`](experiments/). "Runs on the CPU" means a CUDA build
+serves that family on its CPU path, because the device kernels for it are not written yet.
+
+The last four rows serve paperkiln's research programme,
+[tiny chat from scratch](https://github.com/JohnnyTeutonic/paperkiln#research-programme-tiny-chat-from-scratch):
+pre-registered studies of how small models, trained only on human-written text, carry a
+conversation over 5 and then 12 turns (data mix, depth against width, recursion, state tokens).
+ember serves every arm's models and checks paperkiln's generation in its post jobs.
 
 **Third-party GGUFs.** A llama.cpp GGUF with no `paperkiln.ir` gets its graph built from its
 metadata at load (`build_ir_from_gguf`, a C++ port of paperkiln's `tools/gguf_ir.py`, node for
@@ -123,8 +134,18 @@ curl http://127.0.0.1:8080/v1/chat/completions -H "Content-Type: application/jso
 ```
 
 `"stream": true` streams the reply token by token, and `GET /v1/models` lists the model. The
-native `POST /chat` takes `{user_input, history, temperature, top_k, top_p, seed,
-max_new_tokens, repeat_penalty, repeat_last_n}`, the same contract as paperkiln's `mtstudio chat`.
+native `POST /chat` takes `{user_input, history, system, thinking, temperature, top_k, top_p,
+seed, max_new_tokens, repeat_penalty, repeat_last_n}`, the same contract as paperkiln's
+`mtstudio chat`.
+
+**One conversation schema.** The chat template is data in the GGUF (`paperkiln.chat_template`,
+plus the standard `tokenizer.chat_template` for llama.cpp, Ollama and LM Studio), shared with
+paperkiln through one header, so both engines render every prompt identically.
+- **System messages:** a system message works on `/chat`, the OpenAI endpoint and the browser.
+  On paperkiln's v1 template it is folded into the first user turn, as Gemma does.
+- **Thinking:** Qwen3's thinking switch is `thinking` (or `chat_template_kwargs.enable_thinking`).
+- **Malformed histories:** these are refused, with the rule named.
+- **Status:** `/health` reports which template a model resolved to, and why.
 
 ## Quick start: Python
 
@@ -182,7 +203,7 @@ as above. ember picks the engine itself:
 flowchart LR
     G[GGUF] --> Q{"paperkiln.ir<br/>present?"}
     Q -- "no, or family llama" --> L["tuned llama path"]
-    Q -- "gpt2, swa, kimi, mamba,<br/>srd, attnres, flex" --> I["IR interpreter"]
+    Q -- "gpt2, swa, kimi, mamba,<br/>srd, attnres, flex, recursive,<br/>mor, state, llama_attnres" --> I["IR interpreter"]
     G --> T{"third-party<br/>architecture?"}
     T -- "qwen2/3, gemma3, gptneox,<br/>gpt2, mamba, windowed" --> B["IR built from<br/>the metadata"] --> I
     I -- "CUDA build, -1" --> GPU["device kernels<br/>+ CUDA-graph decode"]
@@ -222,16 +243,23 @@ python3 tools/quantize_gguf.py model.gguf model_q8.gguf --output-q8 --embed-q8  
 
 ## Landing next
 
-In progress, or built and waiting on a model that is still training or on its gate run:
-- **A llama.cpp-compatible vocabulary.** paperkiln's next base model uses the Llama 3 scheme
-  (16,384 tokens), so llama.cpp, Ollama and LM Studio can tokenise it too. ember's chat mode
-  already loads that form, with paperkiln's exact Llama 3 encoder vendored. Its 40/40 gate runs
-  on the first model trained with it.
+Recently landed:
+- **A llama.cpp-compatible vocabulary.** paperkiln's 97.5M base (pk_base_v1, d768 L12) and its
+  chat fine-tunes use the 16,384-token Llama 3 scheme, so llama.cpp, Ollama and LM Studio can
+  tokenise them too. They give ember chat replies identical to mtstudio's, 40/40.
+- **The conversation schema** (above), gated against mtstudio and against HF's
+  `apply_chat_template` for Qwen2.5, Qwen3 and Gemma 3.
+
+In progress:
+- **The research programme's models.** These are training on Colab and RunPod: the 20M and 60M
+  depth sweeps, recursion and Mixture-of-Recursions arms, and then a 12-turn model.
+- **CUDA kernels for the new mechanisms.** The turn_state mask and eviction come first, and
+  then Mixture-of-Recursions, so CUDA builds stop serving them on the CPU.
+- **Recursion combined with attention residuals** (`"tensor_index": "application"`).
 - **The third-party families on every backend.** The WebAssembly gate per family (a 0.5B model
   needs the 4 GB heap).
-- **New chat models.** These are training on Colab: a 70M mixture-of-experts fine-tune, a d768
-  L12 base and its fine-tune, and next a base trained on FineWeb-Edu plus conversational text.
-  Each is released through `release_chat.py` with the WebGPU page.
+- **A new public chat model.** pk_base_v1's chat model, released through `release_chat.py`
+  with the WebGPU page.
 
 ## More
 
@@ -242,6 +270,7 @@ In progress, or built and waiting on a model that is still training or on its ga
 | Measured results, one folder per study | [experiments/](experiments/) |
 | API reference (Doxygen) | [johnnyteutonic.github.io/ember.cpp](https://johnnyteutonic.github.io/ember.cpp/), built by the docs workflow |
 | The training side | [paperkiln](https://github.com/JohnnyTeutonic/paperkiln) |
+| The research programme ember serves | [paperkiln: tiny chat from scratch](https://github.com/JohnnyTeutonic/paperkiln#research-programme-tiny-chat-from-scratch) |
 
 ## License
 
