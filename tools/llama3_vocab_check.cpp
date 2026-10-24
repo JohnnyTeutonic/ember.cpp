@@ -17,9 +17,12 @@ int main(int argc, char** argv) {
         std::cerr << "usage: llama3_vocab_check VOCAB.gguf [ARCH] < NUL-separated texts\n";
         return 2;
     }
-    auto tok = ember::make_chat_tokenizer(microtorch::bpe::read_gguf_tokenizer(argv[1]), argc == 3 ? argv[2] : "");
+    ember::ChatVocab v;
+    v.g = microtorch::bpe::read_gguf_tokenizer(argv[1]);
+    v.arch = argc == 3 ? argv[2] : "";  // resolves a Qwen vocabulary by its markers and architecture
+    auto tok = ember::make_chat_setup(std::move(v)).tok;
     if (!tok) {
-        std::cerr << argv[1] << ": not a paperkiln chat vocabulary\n";
+        std::cerr << argv[1] << ": not a chat vocabulary ember tokenises\n";
         return 1;
     }
     std::cerr << "chat tokenizer: " << tok->kind() << ", " << tok->size() << " tokens\n";

@@ -177,16 +177,27 @@ class TinyLlamaSession {
   // Timing of the most recent generate() call up to its first token.
   const TtftBreakdown& last_ttft() const { return last_ttft_; }
 
-  // paperkiln chat models (a GGUF with tokenizer.ggml.model "bpe", or "gpt2"
-  // with pre "llama-bpe" and the chat specials at ids 0-3; chat_tokenizer.h).
-  // In this mode generate() takes the prompt verbatim
-  // (the caller builds the chat template), encodes it with the GGUF's own
-  // merges and no BOS, stops at <|endoftext|> or at a generated <|user|> or
-  // <|assistant|> (the marker is cut), and strips the reply's leading and
-  // trailing whitespace. Repetition penalty is off, matching mtstudio chat.
+  // Chat mode: a GGUF whose chat template resolved at load (paperkiln.chat_template, paperkiln's
+  // specials at ids 0-3, or a third-party record) and whose vocabulary ember tokenises
+  // (chat_tokenizer.h). In this mode generate() takes the prompt verbatim (the caller renders
+  // the template; chat_request.h), encodes it with the GGUF's own tokenizer and no added BOS,
+  // stops at the record's stop ids (stop.eos "eos", stop.turn "turn"; the stop id is cut), and
+  // strips the reply's leading and trailing whitespace. Repetition penalty is off, matching
+  // mtstudio chat.
   bool is_bpe() const { return bpe_ != nullptr; }
   // The chat format of chat mode (template and stop ids; chat_tokenizer.h), or nullptr.
   const ember::ChatFormat* chat_format() const { return bpe_ ? &bpe_->format() : nullptr; }
+  // The chat template the GGUF resolved to at load (chat_tokenizer.h): chat mode's, or
+  // paperkiln/legacy-word for a word-level vocabulary (the server's word-level path); nullptr
+  // when the model serves raw completion only. chat_template_why() says how it was resolved, or
+  // why there is none.
+  const microtorch::chat::Template* chat_template() const {
+    return bpe_ ? &bpe_->format().tmpl : word_template_ ? word_template_.get() : nullptr;
+  }
+  const std::string& chat_template_why() const { return chat_template_why_; }
+  // Chat mode's stop set (the record's stop.eos and stop.turn ids).
+  bool is_chat_stop(int id) const { return bpe_ && bpe_->format().is_stop(id); }
+  bool is_chat_eos(int id) const { return bpe_ && bpe_->format().is_eos(id); }
   int bpe_token_count(const std::string& text) const {
     return bpe_ ? static_cast<int>(bpe_prompt_ids(text).size()) : 0;
   }
@@ -261,7 +272,9 @@ class TinyLlamaSession {
   std::string generated_text_for_api_return_; // Added to accumulate full response
   TtftBreakdown last_ttft_;            // see last_ttft()
   std::vector<int> kv_token_history_;  // token ids the previous generate() left in the KV cache
-  std::unique_ptr<ember::ChatTokenizer> bpe_;  // set for paperkiln chat GGUFs; see is_bpe()
+  std::unique_ptr<ember::ChatTokenizer> bpe_;  // set in chat mode; see is_bpe()
+  std::unique_ptr<microtorch::chat::Template> word_template_;  // see chat_template()
+  std::string chat_template_why_;
   std::string last_stop_reason_;
   int last_generated_tokens_ = 0;
   std::vector<int> last_prompt_ids_, last_generated_ids_;

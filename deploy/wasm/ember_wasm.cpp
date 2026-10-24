@@ -1,16 +1,19 @@
 // ember chat in the browser: ember.cpp's own TinyLlamaSession compiled to
-// WebAssembly (deploy/wasm/build.sh), so a free static page can serve the
-// paperkiln BPE chat model with no server. Same contract as the server's
-// /chat for BPE models (server.cpp): the prompt is exactly the model's chat
-// format (chat_tokenizer.h; paperkiln's SFT template is
+// WebAssembly (deploy/wasm/build.sh), so a free static page can serve a
+// chat model with no server. Same contract as the server's /chat
+// (server.cpp; LOCAL_LLM_STACK.md section 3, points 3-5): the request is a
+// prompt conversation (chat_request.h) rendered by the model's chat template
+// (the record resolved at load, chat_tokenizer.h; paperkiln/1 writes
 // <|user|>U<|assistant|>A<|endoftext|> per past turn then <|user|>U<|assistant|>),
-// with the oldest turns dropped until prompt + max_new_tokens fits the
-// context; a request's seed reseeds the sampler before generating.
+// with the oldest whole exchanges dropped until prompt + max_new_tokens fits
+// the context and the system message pinned; a request's seed reseeds the
+// sampler before generating.
 //
-//   ember_load(path)        load a GGUF from the in-memory filesystem; 1 if BPE
-//   ember_chat(json)        {"user_input", "history": [{"user","assistant"}],
-//                            "temperature", "top_k", "top_p", "seed",
-//                            "max_new_tokens", "repeat_penalty",
+//   ember_load(path)        load a GGUF from the in-memory filesystem; 1 in chat mode
+//   ember_chat(json)        {"user_input", "system", "history": [{"user","assistant"}]
+//                            or [{"role","content"}] (a leading {"role": "system"} entry
+//                            instead of "system"), "thinking", "temperature", "top_k",
+//                            "top_p", "seed", "max_new_tokens", "repeat_penalty",
 //                            "repeat_last_n"} -> {"reply", "stop_reason",
 //                            "tokens", "prompt_tokens", "history_turns_used"}
 //                            or {"error"}
@@ -18,12 +21,12 @@
 // Step by step, for a page that computes the logits itself (the WebGPU
 // forward pass in web/webgpu/): the same request rules, sampler and stops,
 // with the forward pass outside.
-//   ember_prepare(json)     the ember_chat request -> {"prompt_ids", "max_new_tokens",
+//   ember_prepare(json)     the ember_chat request -> {"prompt_ids", "stop_ids", "max_new_tokens",
 //                            "ctx", "prompt_tokens", "history_turns_used"} or {"error"};
 //                            starts a reply (reseeds, sets the penalty)
 //   ember_sample(ptr, n)    next token from n float logits at ptr (penalty over prompt +
-//                            reply so far, then the session's sampler); a stop id (1-3)
-//                            ends the reply and is not part of it
+//                            reply so far, then the session's sampler); an id in stop_ids
+//                            (the template's stop set) ends the reply and is not part of it
 //   ember_finish(stop_id)   -> {"reply", "stop_reason", "tokens", "prompt_tokens",
 //                            "history_turns_used"}; stop_id -1 means the length limit
 #include <emscripten/emscripten.h>
@@ -37,6 +40,7 @@
 #include <nlohmann/json.hpp>
 
 #include "api.h"
+#include "chat_request.h"
 
 using json = nlohmann::json;
 
@@ -57,28 +61,23 @@ struct Request {
 // prompt that alone fills the context rejected.
 Request parse_request(const json& r) {
     Request q;
-    const std::string user = r.value("user_input", "");
-    if (user.empty() || user.size() > 600) throw std::runtime_error("message must be 1-600 characters");
+    if (!g_session->chat_format()) throw std::runtime_error("the model has no chat template (raw completion only)");
+    ember::Conversation c = ember::chat_conversation(r);
+    if (c.user.empty() || c.user.size() > 600) throw std::runtime_error("message must be 1-600 characters");
+    if (c.system.size() > 600) throw std::runtime_error("system message must be at most 600 characters");
     q.max_new = std::max(1, std::min(r.value("max_new_tokens", 64), 64));
     q.temperature = std::max(0.0f, std::min(r.value("temperature", 0.7f), 1.5f));
     q.top_k = std::max(0, std::min(r.value("top_k", 40), 200));
     q.top_p = std::max(0.0f, std::min(r.value("top_p", 0.9f), 1.0f));
-    std::vector<std::pair<std::string, std::string>> turns;
-    if (r.contains("history") && r["history"].is_array())
-        for (const auto& h : r["history"]) turns.emplace_back(h.value("user", ""), h.value("assistant", ""));
     // Public-page cap: the NEWEST 16 turns (the contract drops the oldest).
-    if (turns.size() > 16) turns.erase(turns.begin(), turns.end() - 16);
-    const ember::ChatFormat& fmt = *g_session->chat_format();
-    auto build = [&](size_t from) { return fmt.prompt(turns, from, user); };
+    if (c.turns.size() > 16) c.turns.erase(c.turns.begin(), c.turns.end() - 16);
     q.ctx = g_session->get_config().max_position_embeddings;
-    size_t from = 0;
-    q.prompt = build(from);
-    while (from < turns.size() && g_session->bpe_token_count(q.prompt) + q.max_new > q.ctx) q.prompt = build(++from);
-    q.prompt_tokens = g_session->bpe_token_count(q.prompt);
-    if (q.prompt_tokens >= q.ctx)
-        throw std::runtime_error("message is " + std::to_string(q.prompt_tokens) + " tokens; the model's context is " +
-                                 std::to_string(q.ctx));
-    q.turns_used = static_cast<int>(turns.size() - from);
+    const ember::ChatPrompt p = ember::build_chat_prompt(*g_session->chat_format(), c, q.max_new, q.ctx,
+                                                         [](const std::string& t) { return g_session->bpe_token_count(t); });
+    if (!p.error.empty()) throw std::runtime_error(p.error);
+    q.prompt = p.prompt;
+    q.prompt_tokens = p.prompt_tokens;
+    q.turns_used = p.turns_used;
     q.has_seed = r.contains("seed");
     if (q.has_seed) q.seed = r["seed"].get<unsigned>();
     // The contract's repetition penalty (point 4), clamped as a public page: p in [1, 2], n in [0, ctx].
@@ -142,6 +141,7 @@ EMSCRIPTEN_KEEPALIVE const char* ember_prepare(const char* request) {
         g_context = g_session->bpe_encode(g_req.prompt);
         g_prompt_len = g_context.size();
         out["prompt_ids"] = g_context;
+        out["stop_ids"] = g_session->chat_format()->stop_ids();
         out["max_new_tokens"] = g_req.max_new;
         out["ctx"] = g_req.ctx;
         out["prompt_tokens"] = g_req.prompt_tokens;
@@ -157,7 +157,7 @@ EMSCRIPTEN_KEEPALIVE int ember_sample(const float* logits, int n) {
     if (!g_session || n <= 0) return -1;
     std::vector<float> lg(logits, logits + n);
     const int t = g_session->sample_step(lg, g_context, g_req.temperature, g_req.top_k, g_req.top_p);
-    if (t != 1 && t != 2 && t != 3) g_context.push_back(t);
+    if (!g_session->is_chat_stop(t)) g_context.push_back(t);
     return t;
 }
 
@@ -167,7 +167,9 @@ EMSCRIPTEN_KEEPALIVE const char* ember_finish(int stop_id) {
         if (!g_session) throw std::runtime_error("no model loaded");
         const std::vector<int> reply(g_context.begin() + static_cast<long>(g_prompt_len), g_context.end());
         out["reply"] = strip(g_session->bpe_decode(reply));
-        out["stop_reason"] = stop_id == 1 ? "eos" : (stop_id == 2 || stop_id == 3) ? "turn" : "length";
+        out["stop_reason"] = g_session->is_chat_eos(stop_id)    ? "eos"
+                             : g_session->is_chat_stop(stop_id) ? "turn"
+                                                                : "length";
         out["tokens"] = static_cast<int>(reply.size());
         out["prompt_tokens"] = g_req.prompt_tokens;
         out["history_turns_used"] = g_req.turns_used;
