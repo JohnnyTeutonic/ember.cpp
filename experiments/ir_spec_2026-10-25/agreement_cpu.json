@@ -983,12 +983,12 @@
    "rule": "-",
    "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_llama_attnres_rec/pk_llama_attnres_rec.gguf",
    "ir": null,
-   "expected": "capability",
+   "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
-   "ember": "refuse",
-   "ember_message": "IR depth_attend: tensor_index (IR_SPEC 7.2) is not implemented in ember yet",
-   "result": "expected (capability)"
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
   },
   {
    "case": "suite:pk_mamba.gguf",
@@ -2975,7 +2975,7 @@
     "IR_SPEC 10.1 rule 1: doc.block.nodes[0].tensor_index \"stored\" is not one of ['application']"
    ],
    "ember": "refuse",
-   "ember_message": "IR_SPEC 10.1 rule 1: doc.block.nodes[0].tensor_index \"stored\" is not one of [\"application\"]",
+   "ember_message": "IR weight 'blk.2.attn_norm.weight' is not in the GGUF",
    "result": "agree"
   },
   {
@@ -3231,17 +3231,17 @@
    "result": "agree"
   },
   {
-   "case": "cap_tensor_index",
-   "kind": "capability",
-   "rule": "7.2",
+   "case": "v_tensor_index_under_weight_index",
+   "kind": "accept",
+   "rule": "7.2 (valid)",
    "gguf": "/home/jonat/ember_wt/adapter_models/b2x4/r.gguf",
-   "ir": "/home/jonat/ember_wt/spec_scratch/cap_tensor_index.ir.json",
-   "expected": "capability",
+   "ir": "/home/jonat/ember_wt/spec_scratch/v_tensor_index_under_weight_index.ir.json",
+   "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
-   "ember": "refuse",
-   "ember_message": "IR rmsnorm: tensor_index (IR_SPEC 7.2) is not implemented in ember yet",
-   "result": "expected (capability)"
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
   },
   {
    "case": "cap_two_kv_slots",
@@ -5229,7 +5229,7 @@
    "result": "agree"
   },
   {
-   "doc": "/home/jonat/ember_wt/spec_scratch/doc_cap_tensor_index.ir.json",
+   "doc": "/home/jonat/ember_wt/spec_scratch/doc_v_tensor_index_under_weight_index.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -5274,8 +5274,8 @@
  "summary": {
   "load_cases": 248,
   "doc_cases": 166,
-  "load_agree": 244,
-  "load_expected_differences": 4,
+  "load_agree": 246,
+  "load_expected_differences": 2,
   "doc_agree": 166,
   "disagree": 0
  },

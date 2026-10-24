@@ -219,6 +219,15 @@ class Interpreter {
   const std::vector<float>& weight(const std::string& name) const;  // f32 weights only
   const Weight& bound(const std::string& name) const;
   std::string layer_name(const std::string& pattern, int layer) const;
+  // The node being bound, run or compiled carries "tensor_index": "application" (IR_SPEC 7.2): its tensor
+  // names' {i} is the application index, not the stored layer m_i (layer_name). Set per node by AppIndex.
+  bool app_index_ = false;
+  struct AppIndex {
+    bool& flag;
+    bool saved;
+    AppIndex(bool& f, const Node& n) : flag(f), saved(f) { flag = n.attrs.contains("tensor_index"); }
+    ~AppIndex() { flag = saved; }
+  };
   void bind(const std::vector<Node>& nodes, int layer, const GGUFData& gguf);
   // keep_quantised: the tensor is only read row-wise (linear, embedding).
   void bind_tensor(const std::string& name, const GGUFData& gguf, bool keep_quantised = false);

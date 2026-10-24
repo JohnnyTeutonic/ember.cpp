@@ -1281,10 +1281,6 @@
    "message": "IR_SPEC 7.2: block[0] depth_attend: tensor_index needs a block with weight_index",
    "pass": true
   },
-  "check/refuse/tensor_index_not_implemented": {
-   "message": "IR rmsnorm: tensor_index (IR_SPEC 7.2) is not implemented in ember yet",
-   "pass": true
-  },
   "check/refuse/rule3_n_layers_ne_repeat": {
    "message": "IR_SPEC 3.3: block.repeat 2 != model.n_layers 3",
    "pass": true
@@ -1354,6 +1350,12 @@
    "pass": true
   },
   "check/accept/underscore_keys": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "check/accept/tensor_index_under_weight_index": {
    "reply": {
     "accepted": true
    },

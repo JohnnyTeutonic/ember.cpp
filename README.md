@@ -265,8 +265,6 @@ In progress:
   depth sweeps, recursion and Mixture-of-Recursions arms, and then a 12-turn model.
 - **CUDA kernels for the new mechanisms.** The turn_state mask and eviction come first, and
   then Mixture-of-Recursions, so CUDA builds stop serving them on the CPU.
-- **Recursion combined with attention residuals** (`"tensor_index": "application"`, refused at
-  load until it lands).
 - **The third-party families on every backend.** The WebAssembly gate per family (a 0.5B model
   needs the 4 GB heap).
 - **A new public chat model.** pk_base_v1's chat model, released through `release_chat.py`
