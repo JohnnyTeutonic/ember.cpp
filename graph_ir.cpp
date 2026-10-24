@@ -647,6 +647,7 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
     }
     if (kind != "kv") throw std::runtime_error("IR state kind '" + kind + "' has no CPU implementation in ember");
     has_kv = true;
+    kv_slot_ = s.value("name", "kv");
     if (s.contains("kv_from")) throw std::runtime_error("IR kv state: kv_from (recursive KV sharing) is not implemented in ember");
     if (s.contains("kv_rows")) {
       if (s.at("kv_rows") != "active")
@@ -893,6 +894,7 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
     if (evict_declared && (!turn_state_ || !all_turn_state))
       throw std::runtime_error("IR kv state evict turn_state needs every attention node to have mask turn_state");
     evict_ = evict_declared;
+    evict_declared_ = evict_declared;
     if (const char* e = std::getenv("EMBER_EVICT")) {
       if (std::string(e) == "0") evict_ = false;
       if (std::string(e) == "1" && turn_state_) {
@@ -1964,7 +1966,11 @@ std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int star
     throw std::runtime_error("IR recurrent state: positions " + std::to_string(start_pos) + ".." +
                              std::to_string(start_pos + T - 1) + " exceed model.ctx (" + std::to_string(max_len_) + ")");
 #ifdef HAS_CUDA
-  if (gpu_) return forward_device(tokens, start_pos, all_rows);
+  if (gpu_) {
+    std::vector<float> out = forward_device(tokens, start_pos, all_rows);
+    seq_len_ = start_pos + T;
+    return out;
+  }
 #endif
   if (state_k_ > 0 || turn_state_) ts_begin(tokens, start_pos);
   if (rec_floats_ > 0) rec_begin(start_pos, T, all_rows);
@@ -2005,7 +2011,135 @@ std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int star
   run_nodes(head_, -1, env, rows, start_pos, !all_rows);
   auto it = env.find("logits");
   if (it == env.end()) throw std::runtime_error("IR head produced no 'logits'");
+  seq_len_ = start_pos + T;
   return std::move(it->second.v);
+}
+
+// Conformance hooks (graph_ir.h). Each reads or sets the CPU state only.
+static void cpu_only(bool gpu, const char* what) {
+  if (gpu) throw std::runtime_error(std::string("IR ") + what + " is implemented for the CPU path only");
+}
+
+int Interpreter::kv_rows_in_use(int application) const {
+  if (kv_.empty()) return 0;
+  if (turn_state_) return static_cast<int>(kv_pos_.size());
+  if (!mor_step_.empty() && mor_step_.at(application) >= 0) return static_cast<int>(mor_rows_.at(application).size());
+  return seq_len_;
+}
+
+std::vector<int> Interpreter::kv_positions(int application) const {
+  cpu_only(gpu_, "kv_positions");
+  if (application < 0 || application >= n_layers_)
+    throw std::runtime_error("IR kv_positions: application " + std::to_string(application) + " of " +
+                             std::to_string(n_layers_));
+  if (kv_.empty()) return {};
+  if (turn_state_) return kv_pos_;
+  if (!mor_step_.empty() && mor_step_[application] >= 0) return mor_rows_[application];
+  std::vector<int> p(static_cast<size_t>(seq_len_));
+  for (int i = 0; i < seq_len_; ++i) p[i] = i;
+  return p;
+}
+
+std::vector<Interpreter::RecurrentTensorInfo> Interpreter::recurrent_tensors() const {
+  std::vector<RecurrentTensorInfo> out;
+  for (const auto& slot : rec_slots_)
+    for (const auto& rt : slot.tensors) out.push_back({slot.name, rt.name, rt.shape});
+  return out;
+}
+
+std::vector<float> Interpreter::recurrent_values(const std::string& slot, const std::string& tensor,
+                                                 int application) const {
+  cpu_only(gpu_, "recurrent_values");
+  if (application < 0 || application >= n_layers_)
+    throw std::runtime_error("IR recurrent_values: application " + std::to_string(application) + " of " +
+                             std::to_string(n_layers_));
+  for (const auto& s : rec_slots_)
+    if (s.name == slot)
+      for (const auto& rt : s.tensors)
+        if (rt.name == tensor) {
+          const auto b = rec_.begin() + static_cast<size_t>(application) * rec_floats_ + rt.offset;
+          return std::vector<float>(b, b + rt.floats);
+        }
+  throw std::runtime_error("IR recurrent_values: no tensor '" + tensor + "' in a slot '" + slot + "'");
+}
+
+void Interpreter::truncate(int n) {
+  cpu_only(gpu_, "truncate");
+  if (n < 0 || n > seq_len_)
+    throw std::runtime_error("IR truncate to " + std::to_string(n) + ": the state covers " + std::to_string(seq_len_) +
+                             " positions");
+  if (rec_floats_ > 0 && rec_pos_ < 0) throw std::runtime_error("IR truncate: the recurrent state is not usable (a call failed)");
+  if (resume_point(n) != n)
+    throw std::runtime_error("IR truncate to " + std::to_string(n) + ": the state can resume only at " +
+                             std::to_string(resume_point(n)) + " (re-prefill from there)");
+  if (n == seq_len_) return;
+  if (state_k_ > 0 || turn_state_) {
+    // n is its segment's start when that segment's text rows are gone (resume_point): every row
+    // of segments >= m lies at or past n, so dropping positions >= n leaves segments < m only.
+    const int m = n > 0 ? ts_seg_after(n - 1) : 0;
+    if (turn_state_ && m < evicted_below_) evicted_below_ = m;
+    ts_seg_.resize(n);
+    ts_sidx_.resize(n);
+    while (!kv_pos_.empty() && kv_pos_.back() >= n) kv_pos_.pop_back();
+  }
+  for (auto& rows : mor_rows_)
+    while (!rows.empty() && rows.back() >= n) rows.pop_back();
+  if (rec_floats_ > 0 && n != rec_pos_) {
+    if (n == 0) {
+      for (int l = 0; l < n_layers_; ++l) std::copy(rec_init_.begin(), rec_init_.end(), rec_.begin() + l * rec_floats_);
+      rec_snaps_.clear();
+    } else {
+      rec_ = rec_snaps_.at(n);
+      rec_snaps_.erase(rec_snaps_.upper_bound(n), rec_snaps_.end());
+    }
+    rec_pos_ = n;
+  }
+  seq_len_ = n;
+}
+
+Interpreter::State Interpreter::save_state() const {
+  cpu_only(gpu_, "save_state");
+  State s;
+  s.seq_len = seq_len_;
+  const size_t row = static_cast<size_t>(kv_heads_) * head_dim_;
+  for (int l = 0; l < static_cast<int>(kv_.size()); ++l) {
+    const size_t n = static_cast<size_t>(kv_rows_in_use(l)) * row;
+    s.k.emplace_back(kv_[l].k.begin(), kv_[l].k.begin() + n);
+    s.v.emplace_back(kv_[l].v.begin(), kv_[l].v.begin() + n);
+  }
+  s.ts_seg = ts_seg_;
+  s.ts_sidx = ts_sidx_;
+  s.kv_pos = kv_pos_;
+  s.evicted_below = evicted_below_;
+  s.mor_rows = mor_rows_;
+  s.mor_depth = mor_depth_;
+  s.rec = rec_;
+  s.rec_pos = rec_pos_;
+  s.rec_snaps = rec_snaps_;
+  return s;
+}
+
+void Interpreter::load_state(const State& s) {
+  cpu_only(gpu_, "load_state");
+  if (s.k.size() != kv_.size() || s.v.size() != kv_.size() || s.rec.size() != rec_.size() ||
+      s.mor_rows.size() != mor_rows_.size())
+    throw std::runtime_error("IR load_state: the state is not this interpreter's");
+  for (size_t l = 0; l < kv_.size(); ++l) {
+    if (s.k[l].size() > kv_[l].k.size() || s.v[l].size() != s.k[l].size())
+      throw std::runtime_error("IR load_state: the kv rows do not fit the cache");
+    std::copy(s.k[l].begin(), s.k[l].end(), kv_[l].k.begin());
+    std::copy(s.v[l].begin(), s.v[l].end(), kv_[l].v.begin());
+  }
+  seq_len_ = s.seq_len;
+  ts_seg_ = s.ts_seg;
+  ts_sidx_ = s.ts_sidx;
+  kv_pos_ = s.kv_pos;
+  evicted_below_ = s.evicted_below;
+  mor_rows_ = s.mor_rows;
+  mor_depth_ = s.mor_depth;
+  rec_ = s.rec;
+  rec_pos_ = s.rec_pos;
+  rec_snaps_ = s.rec_snaps;
 }
 
 #ifdef HAS_CUDA

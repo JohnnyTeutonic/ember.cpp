@@ -425,6 +425,9 @@ if(NOT SKBUILD)
     # The IR interpreter on raw token ids, for gating a graph against a reference (tools/ir_logits.cpp).
     add_executable(ir_logits tools/ir_logits.cpp)
     target_link_libraries(ir_logits PRIVATE tinyllama_core)
+    # The interpreter behind paperkiln's IR conformance protocol, JSON Lines (tools/ir_adapter.cpp).
+    add_executable(ir_adapter tools/ir_adapter.cpp)
+    target_link_libraries(ir_adapter PRIVATE tinyllama_core)
     # Per-turn state tokens: template rule, eviction on/off, rewinds (tools/state_tokens_test.cpp).
     add_executable(state_tokens_test tools/state_tokens_test.cpp)
     target_link_libraries(state_tokens_test PRIVATE tinyllama_core)

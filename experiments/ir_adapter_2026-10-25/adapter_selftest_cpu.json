@@ -1,0 +1,1280 @@
+{
+ "bin": "/home/jonat/ember_wt/build_cpu/ir_adapter",
+ "hello": {
+  "backend": "cpu",
+  "engine": "ember.cpp",
+  "exact": true,
+  "methods": [
+   "hello",
+   "check",
+   "open",
+   "forward",
+   "truncate",
+   "snapshot",
+   "restore",
+   "close"
+  ],
+  "profiles": [
+   "core",
+   "state",
+   "recursion",
+   "thirdparty"
+  ],
+  "version": "ir_adapter 1 (IR versions 0 and 1)"
+ },
+ "checks": {
+  "prefill/state4/0": {
+   "positions": 91,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     28,
+     28
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/state4/1": {
+   "positions": 51,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     21,
+     21
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/state4/2": {
+   "positions": 89,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     29,
+     29
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/ar3/0": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     12,
+     12,
+     12
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/ar3/1": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     12,
+     12,
+     12
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/ar3/2": {
+   "positions": 13,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     13,
+     13,
+     13
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/b2x4/0": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     12,
+     12,
+     12,
+     12,
+     12,
+     12,
+     12,
+     12
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/b2x4/1": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     12,
+     12,
+     12,
+     12,
+     12,
+     12,
+     12,
+     12
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/b2x4/2": {
+   "positions": 13,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     13,
+     13,
+     13,
+     13,
+     13,
+     13,
+     13,
+     13
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/mor3/0": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     12,
+     12,
+     12,
+     9,
+     9,
+     7,
+     7,
+     12
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/mor3/1": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     12,
+     12,
+     12,
+     9,
+     9,
+     5,
+     5,
+     12
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/mor3/2": {
+   "positions": 13,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     13,
+     13,
+     13,
+     7,
+     7,
+     4,
+     4,
+     13
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/mor2p0/0": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     12,
+     12,
+     12,
+     4,
+     4,
+     4,
+     12
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/mor2p0/1": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     12,
+     12,
+     12,
+     5,
+     5,
+     5,
+     12
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/mor2p0/2": {
+   "positions": 13,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     13,
+     13,
+     13,
+     8,
+     8,
+     8,
+     13
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/kimi_tiny/0": {
+   "positions": 8,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {},
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/kimi_tiny/1": {
+   "positions": 8,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {},
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/kimi_tiny/2": {
+   "positions": 100,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {},
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/mamba_tiny/0": {
+   "positions": 8,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {},
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/mamba_tiny/1": {
+   "positions": 8,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {},
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/swa_tiny/0": {
+   "positions": 8,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     8,
+     8
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/swa_tiny/1": {
+   "positions": 8,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     8,
+     8
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "prefill/swa_tiny/2": {
+   "positions": 60,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "decode_rel": 0.0,
+   "chunks_rel": 0.0,
+   "kv_rows": {
+    "kv": [
+     60,
+     60
+    ]
+   },
+   "kv_rows_equal": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/state4/0": {
+   "cut": 45,
+   "len": 91,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     14,
+     14
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/state4/1": {
+   "cut": 25,
+   "len": 51,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     9,
+     9
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/state4/2": {
+   "cut": 44,
+   "len": 89,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     13,
+     13
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/ar3/0": {
+   "cut": 6,
+   "len": 12,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/ar3/1": {
+   "cut": 6,
+   "len": 12,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/ar3/2": {
+   "cut": 6,
+   "len": 13,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/b2x4/0": {
+   "cut": 6,
+   "len": 12,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/b2x4/1": {
+   "cut": 6,
+   "len": 12,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/b2x4/2": {
+   "cut": 6,
+   "len": 13,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/mor3/0": {
+   "cut": 6,
+   "len": 12,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6,
+     5,
+     5,
+     5,
+     5,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/mor3/1": {
+   "cut": 6,
+   "len": 12,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6,
+     4,
+     4,
+     2,
+     2,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/mor3/2": {
+   "cut": 6,
+   "len": 13,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6,
+     1,
+     1,
+     1,
+     1,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/mor2p0/0": {
+   "cut": 6,
+   "len": 12,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6,
+     1,
+     1,
+     1,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/mor2p0/1": {
+   "cut": 6,
+   "len": 12,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6,
+     3,
+     3,
+     3,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/mor2p0/2": {
+   "cut": 6,
+   "len": 13,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     6,
+     6,
+     6,
+     5,
+     5,
+     5,
+     6
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/kimi_tiny/0": {
+   "cut": 4,
+   "len": 8,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {},
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/kimi_tiny/1": {
+   "cut": 4,
+   "len": 8,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {},
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/kimi_tiny/2": {
+   "cut": 50,
+   "len": 100,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {},
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/mamba_tiny/0": {
+   "cut": 4,
+   "len": 8,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {},
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/mamba_tiny/1": {
+   "cut": 4,
+   "len": 8,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {},
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/swa_tiny/0": {
+   "cut": 4,
+   "len": 8,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     4,
+     4
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/swa_tiny/1": {
+   "cut": 4,
+   "len": 8,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     4,
+     4
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/swa_tiny/2": {
+   "cut": 30,
+   "len": 60,
+   "fresh_bits": true,
+   "one_call_rel": 0.0,
+   "kv_rows_after_truncate": {
+    "kv": [
+     30,
+     30
+    ]
+   },
+   "kv_rows_equal_fresh": true,
+   "recurrent_bits": true,
+   "depth_equal": true,
+   "pass": true
+  },
+  "truncate/kimi_tiny/past_snapshots": {
+   "cut": 10,
+   "len": 100,
+   "pass": true
+  },
+  "snapshot/state4": {
+   "at": 30,
+   "len": 91,
+   "restore_reports_equal": true,
+   "forward_bits": true,
+   "pass": true
+  },
+  "snapshot/ar3": {
+   "at": 4,
+   "len": 13,
+   "restore_reports_equal": true,
+   "forward_bits": true,
+   "pass": true
+  },
+  "snapshot/b2x4": {
+   "at": 4,
+   "len": 13,
+   "restore_reports_equal": true,
+   "forward_bits": true,
+   "pass": true
+  },
+  "snapshot/mor3": {
+   "at": 4,
+   "len": 13,
+   "restore_reports_equal": true,
+   "forward_bits": true,
+   "pass": true
+  },
+  "snapshot/mor2p0": {
+   "at": 4,
+   "len": 13,
+   "restore_reports_equal": true,
+   "forward_bits": true,
+   "pass": true
+  },
+  "snapshot/kimi_tiny": {
+   "at": 33,
+   "len": 100,
+   "restore_reports_equal": true,
+   "forward_bits": true,
+   "pass": true
+  },
+  "snapshot/mamba_tiny": {
+   "at": 2,
+   "len": 8,
+   "restore_reports_equal": true,
+   "forward_bits": true,
+   "pass": true
+  },
+  "snapshot/swa_tiny": {
+   "at": 20,
+   "len": 60,
+   "restore_reports_equal": true,
+   "forward_bits": true,
+   "pass": true
+  },
+  "evict/state4/0/turns": {
+   "calls": 5,
+   "held_evict": [
+    20,
+    23,
+    28,
+    32,
+    28
+   ],
+   "held_keep": [
+    20,
+    39,
+    59,
+    79,
+    91
+   ],
+   "ember_lazy_rule": [
+    20,
+    23,
+    28,
+    32,
+    28
+   ],
+   "allowed_11_3": [
+    [
+     4,
+     20
+    ],
+    [
+     8,
+     23
+    ],
+    [
+     12,
+     28
+    ],
+    [
+     16,
+     32
+    ],
+    [
+     28
+    ]
+   ],
+   "legal_11_3": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "eager_count_calls": 1,
+   "decode_rows_evict": 28,
+   "prefill_rows_evict": 28,
+   "pass": true
+  },
+  "evict/state4/0/decode_legal_rows": {
+   "positions": 91,
+   "legal": 91,
+   "pass": true
+  },
+  "evict/state4/0/rewind_turn0": {
+   "n": 3,
+   "segment": 0,
+   "rows_after_truncate": 3,
+   "rows_expected": 3,
+   "keep_rows_after_truncate": 3,
+   "pass": true
+  },
+  "evict/state4/0/rewind_turn1": {
+   "n": 23,
+   "segment": 1,
+   "rows_after_truncate": 7,
+   "rows_expected": 7,
+   "keep_rows_after_truncate": 23,
+   "pass": true
+  },
+  "evict/state4/1/turns": {
+   "calls": 3,
+   "held_evict": [
+    20,
+    22,
+    21
+   ],
+   "held_keep": [
+    20,
+    38,
+    51
+   ],
+   "ember_lazy_rule": [
+    20,
+    22,
+    21
+   ],
+   "allowed_11_3": [
+    [
+     4,
+     20
+    ],
+    [
+     8,
+     22
+    ],
+    [
+     21
+    ]
+   ],
+   "legal_11_3": [
+    true,
+    true,
+    true
+   ],
+   "eager_count_calls": 1,
+   "decode_rows_evict": 21,
+   "prefill_rows_evict": 21,
+   "pass": true
+  },
+  "evict/state4/1/decode_legal_rows": {
+   "positions": 51,
+   "legal": 51,
+   "pass": true
+  },
+  "evict/state4/1/rewind_turn0": {
+   "n": 3,
+   "segment": 0,
+   "rows_after_truncate": 3,
+   "rows_expected": 3,
+   "keep_rows_after_truncate": 3,
+   "pass": true
+  },
+  "evict/state4/1/rewind_turn1": {
+   "n": 23,
+   "segment": 1,
+   "rows_after_truncate": 7,
+   "rows_expected": 7,
+   "keep_rows_after_truncate": 23,
+   "pass": true
+  },
+  "evict/state4/2/turns": {
+   "calls": 5,
+   "held_evict": [
+    20,
+    23,
+    26,
+    31,
+    29
+   ],
+   "held_keep": [
+    20,
+    39,
+    57,
+    76,
+    89
+   ],
+   "ember_lazy_rule": [
+    20,
+    23,
+    26,
+    31,
+    29
+   ],
+   "allowed_11_3": [
+    [
+     4,
+     20
+    ],
+    [
+     8,
+     23
+    ],
+    [
+     12,
+     26
+    ],
+    [
+     16,
+     31
+    ],
+    [
+     29
+    ]
+   ],
+   "legal_11_3": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "eager_count_calls": 1,
+   "decode_rows_evict": 29,
+   "prefill_rows_evict": 29,
+   "pass": true
+  },
+  "evict/state4/2/decode_legal_rows": {
+   "positions": 89,
+   "legal": 89,
+   "pass": true
+  },
+  "evict/state4/2/rewind_turn0": {
+   "n": 3,
+   "segment": 0,
+   "rows_after_truncate": 3,
+   "rows_expected": 3,
+   "keep_rows_after_truncate": 3,
+   "pass": true
+  },
+  "evict/state4/2/rewind_turn1": {
+   "n": 23,
+   "segment": 1,
+   "rows_after_truncate": 7,
+   "rows_expected": 7,
+   "keep_rows_after_truncate": 23,
+   "pass": true
+  },
+  "evict/true_on_declared": {
+   "reply": {
+    "applications": 2,
+    "session": "s170",
+    "state_k": 4,
+    "vocab": 400
+   },
+   "pass": true
+  },
+  "evict/true_on_undeclared_is_error": {
+   "reply": {
+    "error": "evict true: the document's kv slot declares no \"evict\": \"turn_state\"",
+    "id": 1976
+   },
+   "pass": true
+  },
+  "mor/mor2p0": {
+   "prompts": 10,
+   "equal": 10,
+   "step": [
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    -1
+   ],
+   "pass": true
+  },
+  "mor/mor3": {
+   "prompts": 10,
+   "equal": 10,
+   "step": [
+    -1,
+    0,
+    0,
+    1,
+    1,
+    2,
+    2,
+    -1
+   ],
+   "pass": true
+  },
+  "check/accept/state4": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "check/accept/ar3": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "check/accept/b2x4": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "check/accept/mor3": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "check/accept/mor2p0": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "check/accept/kimi_tiny": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "check/accept/mamba_tiny": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "check/accept/swa_tiny": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "check/refuse/ir_version_2": {
+   "message": "IR version 2 is not supported (ember reads 0 and 1)",
+   "pass": true
+  },
+  "check/refuse/evict_lru": {
+   "message": "IR kv state: evict \"lru\" is not implemented in ember (turn_state only)",
+   "pass": true
+  },
+  "check/refuse/kv_from": {
+   "message": "IR kv state: kv_from (recursive KV sharing) is not implemented in ember",
+   "pass": true
+  },
+  "check/refuse/route_expert_choice": {
+   "message": "IR depth_route route 'expert_choice' is not implemented in ember (causal token choice only)",
+   "pass": true
+  },
+  "check/refuse/depth_route_without_kv_rows": {
+   "message": "IR depth_route needs a kv state with kv_rows \"active\"",
+   "pass": true
+  },
+  "check/refuse/mask_bidirectional": {
+   "message": "IR attention mask \"bidirectional\" is not implemented in ember (causal or turn_state)",
+   "pass": true
+  },
+  "check/accept/state4_side_file": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "check/accept/mor3_side_file": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "check/refuse/missing_gguf": {
+   "message": "Failed to open file for metadata: /nonexistent/model.gguf",
+   "pass": true
+  },
+  "skip/depth_without_depth_route": {
+   "reply": {
+    "id": 2332,
+    "skip": "depth: the document has no depth_route"
+   },
+   "pass": true
+  },
+  "error/logits_on_truncate": {
+   "reply": {
+    "error": "'logits' is a forward report",
+    "id": 2334
+   },
+   "pass": true
+  },
+  "skip/run_node": {
+   "reply": {
+    "id": 2335,
+    "skip": "run_node is not implemented by ember's adapter (whole-model methods only)"
+   },
+   "pass": true
+  }
+ },
+ "tensor_index_on_ar3": {
+  "accepted": true
+ },
+ "requests": 2336,
+ "failures": [],
+ "pass": true
+}
