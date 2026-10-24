@@ -36,8 +36,11 @@ inline int thinking_field(const nlohmann::json& v, const char* name) {
 }
 }  // namespace detail
 
-// POST /chat (point 4): user_input; history as [{"role", "content"}] (an assistant message pairs
-// with the user message before it) or [{"user", "assistant"}]; the system message as "system" or
+// POST /chat (point 4): user_input; history as [{"role", "content"}] or [{"user", "assistant"}]. A
+// role-form history pairs strictly, as mtstudio's history_turns (paperkiln 7a6c7659; section 3 point
+// 3a): after an optional leading system entry, user and assistant alternate, starting with user and
+// ending with assistant; anything else is a 400 naming the rule, in mtstudio's words. Pair-form
+// entries are whole turns. The system message as "system" or
 // a leading {"role": "system"} history entry, not both and nowhere else (empty means none); and
 // "thinking" (a template's no-think generation prompt when false).
 inline Conversation chat_conversation(const nlohmann::json& r) {
@@ -67,16 +70,32 @@ inline Conversation chat_conversation(const nlohmann::json& r) {
                     c.system = content;
                     c.has_system = true;
                 } else if (role == "user") {
+                    if (have_user)
+                        throw RequestError("history has two user messages in a row: user and assistant messages "
+                                           "must alternate (section 3 point 3a)");
                     pending_user = content;
                     have_user = true;
-                } else if (role == "assistant" && have_user) {
+                } else if (role == "assistant") {
+                    if (!have_user)
+                        throw RequestError("history has an assistant message without a user message before it: user "
+                                           "and assistant messages must alternate, starting with user (section 3 "
+                                           "point 3a)");
                     c.turns.emplace_back(pending_user, content);
                     have_user = false;
+                } else {
+                    throw RequestError("history role '" + role +
+                                       "' is not allowed here (user, assistant; system only first)");
                 }
             } else {
+                if (have_user)
+                    throw RequestError("history has a user message without its assistant reply before a {user, "
+                                       "assistant} pair");
                 c.turns.emplace_back(h.value("user", ""), h.value("assistant", ""));
             }
         }
+        if (have_user)
+            throw RequestError("history ends with a user message: it must end with an assistant reply (the new "
+                               "message goes in user_input)");
     }
     c.has_system = c.has_system && !c.system.empty();
     if (r.contains("thinking")) c.thinking = detail::thinking_field(r["thinking"], "thinking");

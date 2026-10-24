@@ -201,8 +201,7 @@ each GGUF's template resolves at load to a record (paperkiln's `chat_template.h`
 `tokenizer.chat_template` or by its markers and architecture), and every prompt is rendered from
 it. Qwen2.5 and Qwen3 files chat with Qwen's tokeniser and their ChatML records (Qwen3 with its
 thinking switch), Gemma 3 with its SentencePiece vocabulary and turn template, each equal to HF's
-`apply_chat_template` token for token (Gemma's trim of Unicode whitespace at a message's edges aside;
-experiments/chat_template_2026-10-24):
+`apply_chat_template` token for token (experiments/chat_template_2026-10-24):
 `./build/tinyllama_server qwen2.5-0.5b-instruct-fp16.gguf 8080 127.0.0.1 ./www -1`.
 `EMBER_IR_CTX=N` caps the KV state, since these files declare their full trained context. Any other
 architecture without an IR is refused at load, naming it.

@@ -67,6 +67,10 @@ existed); `paperkiln/legacy-word` for a word-level vocabulary; a third-party rec
 (`chatml-qwen2.5`, `chatml-qwen3`, `gemma3`) by the sha256 of `tokenizer.chat_template`, else by
 its markers and `general.architecture`; otherwise none, and the model serves raw completion only.
 The log and `/health` say which. Generation stops at the record's stop tokens.
+- A role-form `history` (`[{"role", "content"}]`) pairs strictly, as mtstudio's: after an optional
+  leading system entry, user and assistant alternate, starting with user and ending with assistant
+  (the new message is `user_input`); anything else is a 400 naming the rule. Pair-form entries
+  (`[{"user", "assistant"}]`) are whole exchanges.
 - `system` (or a leading `{"role": "system"}` history entry, not both, nowhere else) is the system
   message, rendered by the template's system mode: `paperkiln/1` and Gemma 3 fold it into the first
   kept user message, ChatML writes a system turn. A template without a system role refuses it (400).
