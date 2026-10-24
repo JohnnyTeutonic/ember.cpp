@@ -1,0 +1,4 @@
+fp-contract proof, 2026-10-24T22:49:37Z, c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, x86_64
+flags:  -fopenmp -O3 -DNDEBUG -std=gnu++17 -fPIC -fopenmp
+graph_ir.cpp: disassembly identical (107147 lines; default b57c5d45b199394b8b31b998ba4849414c5c9e50ad20a9444f2a353f5bd804d2, -ffp-contract=off b57c5d45b199394b8b31b998ba4849414c5c9e50ad20a9444f2a353f5bd804d2; FMA instructions in the default build: 0)
+utils.cpp: disassembly identical (24754 lines; default 3f589f6e8ea648b8426d848d15aa8e7c64d9c44f67a5896ab3c12fbcd72b7d5a, -ffp-contract=off 3f589f6e8ea648b8426d848d15aa8e7c64d9c44f67a5896ab3c12fbcd72b7d5a; FMA instructions in the default build: 0)
