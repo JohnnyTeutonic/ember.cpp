@@ -111,7 +111,8 @@ class Interpreter {
   // The largest position <= want from which forward() can resume the current
   // sequence: want itself without recurrent state; else want when the state
   // or a snapshot is there, otherwise the nearest snapshot below it (0 at
-  // worst: a fresh start).
+  // worst: a fresh start). Under turn_state eviction: want, unless want lies
+  // inside a segment m whose text rows were evicted; then the start of m.
   int resume_point(int want) const;
 
   int vocab() const { return vocab_; }
@@ -122,6 +123,23 @@ class Interpreter {
   // (1 .. n_rec), its routing trace; empty when the block has no depth_route.
   const std::vector<int>& last_depths() const { return mor_depth_; }
   bool on_gpu() const { return gpu_; }
+
+  // Per-turn state tokens (paperkiln IR_SPEC_DRAFT.md section 1, tiny_chat_long_2026-10).
+  // state_k(): the k state slots of the extended embedding ("state_weight", [k, d]); ids vocab ..
+  // vocab + k - 1 read its rows; 0 without one. A state block is exactly those k ids in ascending
+  // order; forward() refuses a state id out of order and a text id inside an open block.
+  // Attention "mask": "turn_state": a key j is visible from the query at p iff s(j) == s(p), or j
+  // is a state position with s(j) < s(p), s(p) being the number of complete state blocks before p.
+  // evicts(): the kv slot's "evict": "turn_state" is in force (EMBER_EVICT=0 keeps every row;
+  // EMBER_EVICT=1 evicts for any turn_state IR): once a later segment starts, the text rows of
+  // the finished segments are dropped and their state rows kept, positions absolute. A forward
+  // from a position inside a segment whose text rows are gone throws; resume_point() then names
+  // that segment's start, where the caller re-prefills from.
+  int state_k() const { return state_k_; }
+  bool turn_state() const { return turn_state_; }
+  bool evicts() const { return evict_; }
+  // kv rows held per block (turn_state IRs; else the positions written so far).
+  int kv_rows_held() const { return turn_state_ ? static_cast<int>(kv_pos_.size()) : static_cast<int>(ts_seg_.size()); }
 
  private:
   struct Buf {
@@ -178,6 +196,21 @@ class Interpreter {
   std::vector<int> mor_depth_;
   std::vector<float> mor_g_, mor_xin_;
   int attn_row_ = -1;
+  // Per-turn state tokens (see state_k()). ts_seg_[p] = s(p), ts_sidx_[p] = j for the state id
+  // vocab + j, -1 for text, over the positions of the current sequence. Under turn_state the kv
+  // cache is compact: row r holds position kv_pos_[r] (ascending; the identity without eviction),
+  // a call's rows start at kv_row0_, and ts_vis_[t] lists the rows its token t sees, ascending.
+  // Text rows of segments below evicted_below_ are gone.
+  void ts_begin(const std::vector<int>& tokens, int start_pos);
+  void ts_evict_below(int seg);
+  int ts_seg_after(int p) const;  // s of a token placed at position p + 1
+  int ts_segment_start(int m) const;
+  int state_k_ = 0;
+  std::string state_weight_;
+  bool turn_state_ = false, evict_ = false;
+  std::vector<int> ts_seg_, ts_sidx_, kv_pos_;
+  std::vector<std::vector<int>> ts_vis_;
+  int kv_row0_ = 0, evicted_below_ = 0;
   std::string family_hint_;
   bool dequant_all_ = false;  // every weight f32 at load (see the header comment)
   std::unordered_map<std::string, Weight> weights_;
@@ -385,8 +418,14 @@ bool has_recurrent_state(const std::string& ir_json);
 
 // True when the CUDA path has a kernel for every op of the IR (recurrent
 // state included) within its limits (depth_attend sources, ssm_scan n);
-// otherwise the interpreter must run on the CPU.
+// otherwise the interpreter must run on the CPU. Per-turn state tokens
+// (state_weight, mask "turn_state", evict) have no device kernel yet.
 bool device_supported(const std::string& ir_json);
+
+// True when the IR uses per-turn state tokens: an embedding with
+// "state_weight" or an attention node with "mask": "turn_state". Only the
+// interpreter implements them, so such a GGUF never runs on the llama path.
+bool has_state_tokens(const std::string& ir_json);
 
 // The recurrent ops for one token (row), in paperkiln's order of operations
 // (graph_ir.cpp); the state is updated in place. Exposed for the op tests.

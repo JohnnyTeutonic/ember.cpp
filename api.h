@@ -12,6 +12,7 @@
 #include <sstream>
 
 #include "chat_tokenizer.h"
+#include "state_tokens.h"
 #include "model.h"
 #include "tokenizer.h"
 
@@ -187,8 +188,22 @@ class TinyLlamaSession {
   // The chat format of chat mode (template and stop ids; chat_tokenizer.h), or nullptr.
   const ember::ChatFormat* chat_format() const { return bpe_ ? &bpe_->format() : nullptr; }
   int bpe_token_count(const std::string& text) const {
-    return bpe_ ? static_cast<int>(bpe_->encode(text).size()) : 0;
+    return bpe_ ? static_cast<int>(bpe_prompt_ids(text).size()) : 0;
   }
+  // The ids generate() runs for a chat-mode prompt: the encoding, with the per-turn state ids
+  // inserted when the model has them (state_tokens.h).
+  std::vector<int> bpe_prompt_ids(const std::string& text) const {
+    if (!bpe_) return {};
+    std::vector<int> ids = bpe_->encode(text);
+    if (state_k_ > 0) {
+      const ember::ChatFormat& f = bpe_->format();
+      ids = ember::insert_state_blocks(ids, state_vocab_, state_k_, f.eos_ids.at(0), f.turn_ids.at(0),
+                                       f.turn_ids.at(1));
+    }
+    return ids;
+  }
+  // Per-turn state tokens (paperkiln.state_tokens.k; state_tokens.h): k, 0 without.
+  int state_k() const { return state_k_; }
   // How the last generate() ended ("eos", "turn" or "length") and how many
   // tokens it produced, the stop marker excluded. Set in BPE mode.
   const std::string& last_stop_reason() const { return last_stop_reason_; }
@@ -252,6 +267,7 @@ class TinyLlamaSession {
   std::vector<int> last_prompt_ids_, last_generated_ids_;
   int last_stop_id_ = -1;
   std::function<void(int)> token_callback_;
+  int state_k_ = 0, state_vocab_ = 0;  // see state_k(); the state ids are state_vocab_ + j
 
   // Batch processing support
   int max_batch_size_ = 1;  // Maximum number of sequences for batch processing

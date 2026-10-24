@@ -1,0 +1,713 @@
+{
+ "gguf": "/home/jonat/ember_wt/state_tokens/chat_state_k4.gguf",
+ "k": 4,
+ "vocab": 8192,
+ "a_no_state_ids_equals_causal": {
+  "ts": {
+   "prefill_bit_equal": true,
+   "decode_bit_equal": true
+  },
+  "ts_noevict": {
+   "prefill_bit_equal": true,
+   "decode_bit_equal": true
+  },
+  "pass": true
+ },
+ "b_prefill_eq_decode_and_mask": {
+  "ts": [
+   {
+    "length": 84,
+    "decode_eq_prefill": true,
+    "vs_numpy_rel": 6.42312500076514e-07,
+    "top1_vs_numpy": "84/84"
+   },
+   {
+    "length": 31,
+    "decode_eq_prefill": true,
+    "vs_numpy_rel": 4.289853450245573e-07,
+    "top1_vs_numpy": "31/31"
+   },
+   {
+    "length": 55,
+    "decode_eq_prefill": true,
+    "vs_numpy_rel": 6.202349140949082e-07,
+    "top1_vs_numpy": "55/55"
+   }
+  ],
+  "ts_noevict": [
+   {
+    "length": 84,
+    "decode_eq_prefill": true,
+    "vs_numpy_rel": 6.42312500076514e-07,
+    "top1_vs_numpy": "84/84"
+   },
+   {
+    "length": 31,
+    "decode_eq_prefill": true,
+    "vs_numpy_rel": 4.289853450245573e-07,
+    "top1_vs_numpy": "31/31"
+   },
+   {
+    "length": 55,
+    "decode_eq_prefill": true,
+    "vs_numpy_rel": 6.202349140949082e-07,
+    "top1_vs_numpy": "55/55"
+   }
+  ],
+  "ts_noevict_eq_ts": true,
+  "mask_is_read": [
+   {
+    "causal_vs_numpy_rel": 5.629371457871457e-07,
+    "segment0_equal_to_causal": true,
+    "later_max_change_vs_causal": 10.055082321166992
+   },
+   {
+    "causal_vs_numpy_rel": 4.234285881921096e-07,
+    "segment0_equal_to_causal": true,
+    "later_max_change_vs_causal": 7.415785789489746
+   },
+   {
+    "causal_vs_numpy_rel": 6.202349140949082e-07,
+    "segment0_equal_to_causal": true,
+    "later_max_change_vs_causal": 13.579330444335938
+   }
+  ],
+  "pass": true
+ },
+ "refusals": {
+  "window": {
+   "refused": true,
+   "message_has": "turn_state",
+   "pass": true,
+   "message": "  what():  IR attention mask turn_state needs window 0 and sinks 0 (block 0 has window 8, sinks 0)"
+  },
+  "sinks": {
+   "refused": true,
+   "message_has": "sinks",
+   "pass": true,
+   "message": "  what():  IR attention mask turn_state needs window 0 and sinks 0 (block 0 has window 0, sinks 2)"
+  },
+  "evict_without_mask": {
+   "refused": true,
+   "message_has": "evict",
+   "pass": true,
+   "message": "  what():  IR kv state evict turn_state needs every attention node to have mask turn_state"
+  },
+  "evict_unknown": {
+   "refused": true,
+   "message_has": "evict",
+   "pass": true,
+   "message": "  what():  IR kv state: evict \"lru\" is not implemented in ember (turn_state only)"
+  },
+  "mask_unknown": {
+   "refused": true,
+   "message_has": "mask",
+   "pass": true,
+   "message": "  what():  IR attention mask \"bidirectional\" is not implemented in ember (causal or turn_state)"
+  },
+  "metadata_k_without_state_weight": {
+   "refused": true,
+   "message_has": "state_tokens.k",
+   "pass": true,
+   "message": "  what():  paperkiln.state_tokens.k is 4 but the IR's embedding has no state_weight"
+  },
+  "state_weight_rows_differ_from_k": {
+   "refused": true,
+   "message_has": "state_tokens.k",
+   "pass": true,
+   "message": "  what():  paperkiln.state_tokens.k is 4, the IR's state_weight 'blk.0.ffn_gate.weight' has 1152 rows"
+  },
+  "state_weight_wrong_width": {
+   "refused": true,
+   "message_has": "not [k, d]",
+   "pass": true,
+   "message": "  what():  IR embedding state_weight 'blk.0.ffn_down.weight' is not [k, d] with d 384 (the token embedding's width)"
+  },
+  "block_out_of_order": {
+   "refused": true,
+   "message_has": "expected S_1",
+   "pass": true,
+   "message": "  what():  IR state tokens: state id S_2 at position 6, expected S_1"
+  },
+  "text_inside_block": {
+   "refused": true,
+   "message_has": "incomplete state block",
+   "pass": true,
+   "message": "  what():  IR state tokens: text id 2 at position 7 inside an incomplete state block (S_0 .. S_1 of 4)"
+  },
+  "block_not_from_S0": {
+   "refused": true,
+   "message_has": "S_0",
+   "pass": true,
+   "message": "  what():  IR state tokens: state id S_1 at position 5, expected S_0 to open a block"
+  },
+  "id_past_k": {
+   "refused": true,
+   "message_has": "past the",
+   "pass": true,
+   "message": "  what():  IR state tokens: id 8196 is past the 4 state slots (vocab 8192)"
+  },
+  "state_id_without_state_weight": {
+   "refused": true,
+   "message_has": "out of range",
+   "pass": true,
+   "message": "  what():  IR embedding: token id 8192 out of range"
+  }
+ },
+ "refusals_pass": true,
+ "c_evict_on_eq_off": {
+  "calls": [
+   {
+    "from": 0,
+    "kv_rows_held": {
+     "off": 11,
+     "on": 11
+    },
+    "length": 11,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 0,
+     "on": 0
+    },
+    "step": false
+   },
+   {
+    "from": 11,
+    "kv_rows_held": {
+     "off": 27,
+     "on": 27
+    },
+    "length": 27,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 11,
+     "on": 11
+    },
+    "step": true
+   },
+   {
+    "from": 27,
+    "kv_rows_held": {
+     "off": 36,
+     "on": 13
+    },
+    "length": 36,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 27,
+     "on": 27
+    },
+    "step": false
+   },
+   {
+    "from": 36,
+    "kv_rows_held": {
+     "off": 54,
+     "on": 31
+    },
+    "length": 54,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 36,
+     "on": 36
+    },
+    "step": true
+   },
+   {
+    "from": 54,
+    "kv_rows_held": {
+     "off": 66,
+     "on": 20
+    },
+    "length": 66,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 54,
+     "on": 54
+    },
+    "step": false
+   },
+   {
+    "from": 66,
+    "kv_rows_held": {
+     "off": 79,
+     "on": 33
+    },
+    "length": 79,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 66,
+     "on": 66
+    },
+    "step": true
+   },
+   {
+    "from": 66,
+    "kv_rows_held": {
+     "off": 77,
+     "on": 31
+    },
+    "length": 77,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 66,
+     "on": 66
+    },
+    "step": true
+   },
+   {
+    "direct_rewind_message": "IR state tokens: position 31 is inside turn 1, whose text rows were evicted; resume from its start, position 27 (resume_point)",
+    "direct_rewind_refused": true,
+    "from": 31,
+    "kv_rows_held": {
+     "off": 86,
+     "on": 19
+    },
+    "length": 86,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 31,
+     "on": 27
+    },
+    "step": false
+   },
+   {
+    "from": 86,
+    "kv_rows_held": {
+     "off": 96,
+     "on": 29
+    },
+    "length": 96,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 86,
+     "on": 86
+    },
+    "step": true
+   },
+   {
+    "from": 0,
+    "kv_rows_held": {
+     "off": 132,
+     "on": 26
+    },
+    "length": 132,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 0,
+     "on": 0
+    },
+    "step": false
+   },
+   {
+    "direct_rewind_message": "IR state tokens: position 3 is inside turn 0, whose text rows were evicted; resume from its start, position 0 (resume_point)",
+    "direct_rewind_refused": true,
+    "from": 3,
+    "kv_rows_held": {
+     "off": 55,
+     "on": 13
+    },
+    "length": 55,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 3,
+     "on": 0
+    },
+    "step": false
+   },
+   {
+    "from": 55,
+    "kv_rows_held": {
+     "off": 59,
+     "on": 17
+    },
+    "length": 59,
+    "max_diff_off_fresh": 0.0,
+    "max_diff_off_on": 0.0,
+    "off_eq_fresh": true,
+    "off_eq_on": true,
+    "on_eq_fresh": true,
+    "resumed_at": {
+     "off": 55,
+     "on": 55
+    },
+    "step": true
+   }
+  ],
+  "ir_default": {
+   "evicts": true,
+   "state_k": 4,
+   "turn_state": true
+  },
+  "pass": true,
+  "evicting_holds_fewer_rows": true,
+  "rewinds_resumed_at_turn_start": [
+   27,
+   0
+  ]
+ },
+ "d_template_rule": {
+  "block_cut_at_end": {
+   "pass": true,
+   "refused": "the state block after the <|endoftext|> at position 4 is not the 3 ids 10 .. 12 in order"
+  },
+  "block_given": {
+   "out": [
+    2,
+    5,
+    3,
+    6,
+    1,
+    10,
+    11,
+    12,
+    2,
+    8,
+    3
+   ],
+   "pass": true
+  },
+  "block_incomplete": {
+   "pass": true,
+   "refused": "the state block after the <|endoftext|> at position 4 is not the 3 ids 10 .. 12 in order"
+  },
+  "block_out_of_order": {
+   "pass": true,
+   "refused": "the state block after the <|endoftext|> at position 4 is not the 3 ids 10 .. 12 in order"
+  },
+  "closed_reply": {
+   "out": [
+    2,
+    5,
+    3,
+    6,
+    7,
+    1,
+    10,
+    11,
+    12,
+    2,
+    8,
+    3
+   ],
+   "pass": true
+  },
+  "closed_reply_at_end": {
+   "out": [
+    2,
+    5,
+    3,
+    6,
+    1,
+    10,
+    11,
+    12
+   ],
+   "pass": true
+  },
+  "empty_reply_stopped_early": {
+   "out": [
+    2,
+    5,
+    3,
+    1,
+    10,
+    11,
+    12,
+    2,
+    8,
+    3
+   ],
+   "pass": true
+  },
+  "eot_after_user_only": {
+   "out": [
+    2,
+    5,
+    1,
+    2,
+    8,
+    3
+   ],
+   "pass": true
+  },
+  "eot_outside_exchange": {
+   "out": [
+    5,
+    6,
+    1,
+    7,
+    2,
+    8,
+    3
+   ],
+   "pass": true
+  },
+  "open_reply_at_end": {
+   "out": [
+    2,
+    5,
+    3,
+    6
+   ],
+   "pass": true
+  },
+  "pass": true,
+  "reply_stopped_early": {
+   "out": [
+    2,
+    5,
+    3,
+    6,
+    7,
+    1,
+    10,
+    11,
+    12,
+    2,
+    8,
+    3
+   ],
+   "pass": true
+  },
+  "state_id_after_text": {
+   "pass": true,
+   "refused": "state id 10 at position 4 is not part of a complete state block directly after an <|endoftext|> that ends an assistant reply"
+  },
+  "state_id_after_unclosing_eot": {
+   "pass": true,
+   "refused": "state id 10 at position 2 is not part of a complete state block directly after an <|endoftext|> that ends an assistant reply"
+  },
+  "state_id_past_k": {
+   "pass": true,
+   "refused": "the state block after the <|endoftext|> at position 4 is not the 3 ids 10 .. 12 in order"
+  },
+  "two_closed_replies": {
+   "out": [
+    2,
+    5,
+    3,
+    6,
+    1,
+    10,
+    11,
+    12,
+    2,
+    7,
+    3,
+    8,
+    1,
+    10,
+    11,
+    12,
+    2,
+    9,
+    3
+   ],
+   "pass": true
+  }
+ },
+ "d_server": {
+  "requests": [
+   {
+    "name": "r1_cut_by_max_new_tokens",
+    "evict_on": {
+     "stop_reason": "length",
+     "tokens": 6,
+     "prompt_tokens": 9,
+     "prefix_reused_tokens": 0,
+     "state_blocks": 0,
+     "blocks_well_placed": true
+    },
+    "evict_off": {
+     "stop_reason": "length",
+     "tokens": 6,
+     "prompt_tokens": 9,
+     "prefix_reused_tokens": 0,
+     "state_blocks": 0,
+     "blocks_well_placed": true
+    },
+    "no_prefix_reuse": {
+     "stop_reason": "length",
+     "tokens": 6,
+     "prompt_tokens": 9,
+     "prefix_reused_tokens": 0,
+     "state_blocks": 0,
+     "blocks_well_placed": true
+    },
+    "ids_equal": true,
+    "prompt_ids_equal": true
+   },
+   {
+    "name": "r2",
+    "evict_on": {
+     "stop_reason": "eos",
+     "tokens": 13,
+     "prompt_tokens": 31,
+     "prefix_reused_tokens": 14,
+     "state_blocks": 1,
+     "blocks_well_placed": true
+    },
+    "evict_off": {
+     "stop_reason": "eos",
+     "tokens": 13,
+     "prompt_tokens": 31,
+     "prefix_reused_tokens": 14,
+     "state_blocks": 1,
+     "blocks_well_placed": true
+    },
+    "no_prefix_reuse": {
+     "stop_reason": "eos",
+     "tokens": 13,
+     "prompt_tokens": 31,
+     "prefix_reused_tokens": 0,
+     "state_blocks": 1,
+     "blocks_well_placed": true
+    },
+    "ids_equal": true,
+    "prompt_ids_equal": true
+   },
+   {
+    "name": "r3",
+    "evict_on": {
+     "stop_reason": "eos",
+     "tokens": 14,
+     "prompt_tokens": 61,
+     "prefix_reused_tokens": 49,
+     "state_blocks": 2,
+     "blocks_well_placed": true
+    },
+    "evict_off": {
+     "stop_reason": "eos",
+     "tokens": 14,
+     "prompt_tokens": 61,
+     "prefix_reused_tokens": 49,
+     "state_blocks": 2,
+     "blocks_well_placed": true
+    },
+    "no_prefix_reuse": {
+     "stop_reason": "eos",
+     "tokens": 14,
+     "prompt_tokens": 61,
+     "prefix_reused_tokens": 0,
+     "state_blocks": 2,
+     "blocks_well_placed": true
+    },
+    "ids_equal": true,
+    "prompt_ids_equal": true
+   },
+   {
+    "name": "r3_regenerated",
+    "evict_on": {
+     "stop_reason": "eos",
+     "tokens": 14,
+     "prompt_tokens": 61,
+     "prefix_reused_tokens": 60,
+     "state_blocks": 2,
+     "blocks_well_placed": true
+    },
+    "evict_off": {
+     "stop_reason": "eos",
+     "tokens": 14,
+     "prompt_tokens": 61,
+     "prefix_reused_tokens": 60,
+     "state_blocks": 2,
+     "blocks_well_placed": true
+    },
+    "no_prefix_reuse": {
+     "stop_reason": "eos",
+     "tokens": 14,
+     "prompt_tokens": 61,
+     "prefix_reused_tokens": 0,
+     "state_blocks": 2,
+     "blocks_well_placed": true
+    },
+    "ids_equal": true,
+    "prompt_ids_equal": true
+   },
+   {
+    "name": "r4_edited_turn1",
+    "evict_on": {
+     "stop_reason": "eos",
+     "tokens": 14,
+     "prompt_tokens": 62,
+     "prefix_reused_tokens": 20,
+     "state_blocks": 2,
+     "blocks_well_placed": true
+    },
+    "evict_off": {
+     "stop_reason": "eos",
+     "tokens": 14,
+     "prompt_tokens": 62,
+     "prefix_reused_tokens": 25,
+     "state_blocks": 2,
+     "blocks_well_placed": true
+    },
+    "no_prefix_reuse": {
+     "stop_reason": "eos",
+     "tokens": 14,
+     "prompt_tokens": 62,
+     "prefix_reused_tokens": 0,
+     "state_blocks": 2,
+     "blocks_well_placed": true
+    },
+    "ids_equal": true,
+    "prompt_ids_equal": true
+   }
+  ],
+  "r1_reply_cut": true,
+  "r2_prompt_has_eot_and_block_after_cut_reply": true,
+  "r4_edit_position": 25,
+  "r4_turn1_start": 20,
+  "r4_resumed_at_turn_start": true,
+  "r4_without_eviction_reuses_to_edit": true,
+  "r2_ended_eos": true,
+  "r3_reused_through_generated_block": true,
+  "pass": true
+ },
+ "pass": true
+}

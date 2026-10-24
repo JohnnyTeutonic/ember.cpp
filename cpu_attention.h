@@ -49,6 +49,24 @@ void attention_window_batch_cpu(
     int sinks
 );
 
+// Attention over an explicit list of visible kv rows per query: token t of
+// the batch sees rows[t] (ascending), each scored, softmaxed (maximum and sum
+// over the listed rows only, in list order) and accumulated exactly as
+// attention_window_batch_cpu does, so a list holding rows 0 .. pos performs
+// attention_batch_cpu's operations in its order. Used by the IR's
+// turn_state mask (graph_ir.cpp), whose rows may be a compact cache.
+void attention_rows_batch_cpu(
+    const std::vector<float>& q_batch_roped,
+    const KVCacheLayer& current_layer_kv_cache,
+    std::vector<float>& batch_attn_output,
+    int num_tokens_in_batch,
+    const std::vector<std::vector<int>>& rows,
+    int num_q_heads,
+    int num_kv_heads,
+    int head_dim,
+    float attention_scale
+);
+
 void update_kv_cache_batch_cpu_sequence_aware(
     KVCache* kv_cache,
     int layer_idx,

@@ -17,6 +17,8 @@
 #include "graph_ir.h"
 #include <numeric>
 #include <random>
+#include <type_traits>
+#include <variant>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -518,7 +520,7 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
     if (!ir.empty() && !(force && std::string(force) == "0")) {
       const std::string family = nlohmann::json::parse(ir).value("family_hint", "");
       if ((force && std::string(force) == "1") || std::getenv("EMBER_IR") || family != "llama" || model_->ir_only() ||
-          ember_ir::has_windowed_attention(ir)) {
+          ember_ir::has_windowed_attention(ir) || ember_ir::has_state_tokens(ir)) {
         // CUDA builds run the interpreter on the device when the CLI asked for
         // GPU layers (any nonzero count: the interpreter does not split
         // layers); EMBER_IR_DEVICE=cpu keeps it on the CPU. Every op the
@@ -586,6 +588,32 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
                      " tokens, " + std::to_string(n_merges) + " merges (chat mode, " + bpe_->format().name +
                      " template)");
       }
+    }
+  }
+  // Per-turn state tokens (state_tokens.h): k from the GGUF's paperkiln.state_tokens.k (absent =
+  // 0); the interpreter has already checked it against its state_weight. The template contract
+  // needs paperkiln's chat format and the interpreter.
+  if (const GGUFData* gd = model_->get_gguf_data()) {
+    auto it = gd->metadata.find("paperkiln.state_tokens.k");
+    int k = 0;
+    if (it != gd->metadata.end())
+      std::visit(
+          [&](const auto& v) {
+            using V = std::decay_t<decltype(v)>;
+            if constexpr (std::is_arithmetic_v<V> && !std::is_same_v<V, bool>) k = static_cast<int>(v);
+          },
+          it->second);
+    if (k > 0) {
+      if (!ir_ || ir_->state_k() != k)
+        throw std::runtime_error("paperkiln.state_tokens.k is " + std::to_string(k) +
+                                 ": the model must run through the IR interpreter with a state_weight of k rows");
+      if (!bpe_ || bpe_->format().name != "paperkiln")
+        throw std::runtime_error("paperkiln.state_tokens.k > 0 needs paperkiln's chat template");
+      state_k_ = k;
+      state_vocab_ = ir_->vocab();
+      Logger::info("Per-turn state tokens: k " + std::to_string(k) + " (ids " + std::to_string(state_vocab_) + " .. " +
+                   std::to_string(state_vocab_ + k - 1) + ") after every <|endoftext|> that ends a reply" +
+                   (ir_->evicts() ? "; kv eviction on" : "; every kv row kept"));
     }
   }
 
@@ -735,7 +763,9 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   Logger::debug("[Generate API] Final prompt for encoding (first 100 chars): \\\"" + final_prompt_for_encoding.substr(0, 100) + "\\\"");
 
   // BPE chat models take no BOS (the SFT template starts at <|user|>).
-  std::vector<int> tokens = bpe_ ? bpe_->encode(final_prompt_for_encoding)
+  // Per-turn state tokens: the k state ids after every <|endoftext|> that ends a reply, and
+  // <|endoftext|> + the state ids for a reply that stopped early (bpe_prompt_ids, state_tokens.h).
+  std::vector<int> tokens = bpe_ ? bpe_prompt_ids(final_prompt_for_encoding)
                                  : tokenizer_->encode(final_prompt_for_encoding, true, false, Tokenizer::PreTokenizeMethod::DEFAULT); // add_bos=true, add_eos=false (EOS handled by loop)
   // Stop tokens: in chat mode the chat format's (paperkiln: <|endoftext|>, or a
   // generated <|user|> or <|assistant|>, the model starting the next turn;
@@ -794,7 +824,9 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   // Recurrent IR state (linear attention, state-space scans) cannot drop
   // tokens: resume where the interpreter holds the state after the prefix
   // (the live state or a snapshot), else nearer the start or from 0.
-  if (ir_ && ir_->has_recurrent()) reuse = ir_->resume_point(reuse);
+  // Under turn_state eviction, a prefix ending inside a turn whose text rows were dropped (an
+  // edited earlier message) resumes from that turn's start, which is re-prefilled.
+  if (ir_ && (ir_->has_recurrent() || ir_->evicts())) reuse = ir_->resume_point(reuse);
   kv_token_history_.clear();  // refilled only if this request completes
 
   int total_steps = num_prompt_tokens + steps -1; // Max total tokens including prompt
@@ -1044,7 +1076,13 @@ if (prefill_enabled) {
                                  config_.max_position_embeddings - pos - 1});
       std::vector<int> hist(tokens.begin(), tokens.begin() + num_prompt_tokens);
       hist.insert(hist.end(), generated_token_ids.begin(), generated_token_ids.end());
-      const std::vector<int> draft = room > 0 ? prompt_lookup_draft(hist, room) : std::vector<int>{};
+      std::vector<int> draft = room > 0 ? prompt_lookup_draft(hist, room) : std::vector<int>{};
+      // A draft never proposes a state id (the head has no logits for them).
+      for (size_t i = 0; i < draft.size(); ++i)
+        if (state_k_ > 0 && draft[i] >= state_vocab_) {
+          draft.resize(i);
+          break;
+        }
       if (!draft.empty()) {
         std::vector<int> batch = {input_token_id};
         batch.insert(batch.end(), draft.begin(), draft.end());
@@ -1263,6 +1301,19 @@ if (prefill_enabled) {
   if (!generated_token_ids.empty()) {
     kv_token_history_.insert(kv_token_history_.end(), generated_token_ids.begin(),
                              generated_token_ids.end() - 1);
+  }
+  // Per-turn state tokens: a reply that ended with a generated <|endoftext|> is followed by the k
+  // state ids, prefilled with it (no sampling), so the cache holds the finished exchange as the
+  // next request's prompt writes it. A reply that stopped early gets <|endoftext|> and the state
+  // ids from the next prompt instead (state_tokens.h).
+  if (ir_ && state_k_ > 0 && !generated_token_ids.empty() && bpe_->format().is_eos(generated_token_ids.back())) {
+    const int at = static_cast<int>(kv_token_history_.size());
+    if (at + 1 + state_k_ <= config_.max_position_embeddings) {
+      std::vector<int> close = {generated_token_ids.back()};
+      for (int j = 0; j < state_k_; ++j) close.push_back(state_vocab_ + j);
+      ir_->forward(close, at);
+      kv_token_history_.insert(kv_token_history_.end(), close.begin(), close.end());
+    }
   }
 
   auto t_end = std::chrono::high_resolution_clock::now(); // End timing
