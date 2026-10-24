@@ -6,7 +6,8 @@ agreed amendments in paperkiln's frozen header. Everything here runs on the CPU 
 ## What ember does
 
 - **The header.** `chat_template.h` is paperkiln's `include/microtorch/chat_template.hpp`, vendored verbatim
-  at paperkiln ae126f1e (unchanged at 28d53ca7, whose conformance file runs here).
+  at paperkiln 7a6c7659 (first at ae126f1e; 7a6c7659's content "trim" strips what Python's str.strip()
+  strips, and its conformance file runs here).
 - **Resolution at load** (`chat_gguf.h`, `chat_tokenizer.h` `make_chat_setup`): `chat::resolve` on the
   GGUF's `paperkiln.chat_template`, its tokens, `tokenizer.ggml.model`, `tokenizer.chat_template` and
   `general.architecture`. The log and `/health` (`chat_template` {name, version}, `chat_template_why`)
@@ -23,7 +24,11 @@ agreed amendments in paperkiln's frozen header. Everything here runs on the CPU 
   SPM session. It cuts out the special tokens (control, user-defined and unknown types, longest first),
   merges score-ordered bigrams and falls back to bytes.
 - **/chat.** It takes `system`, or a leading `{"role": "system"}` history entry. Giving both, or a system
-  entry anywhere else, is a 400. An empty system message counts as none. `thinking` is a boolean.
+  entry anywhere else, is a 400. An empty system message counts as none. `thinking` is a boolean. A
+  role-form history pairs strictly, as mtstudio's does (paperkiln 7a6c7659): after the optional system
+  entry, user and assistant alternate, starting with user and ending with assistant. An assistant
+  message without a user before it, two user messages in a row, a history ending on a user message and
+  any other role are each a 400 naming the rule, in mtstudio's words. Pair-form entries are unchanged.
   Template refusals (a system message on a template without one, content holding the template's own
   markers) are 400s with the header's message. In public mode a leading system entry survives the
   history trim.
@@ -45,27 +50,24 @@ agreed amendments in paperkiln's frozen header. Everything here runs on the CPU 
 
 | Gate | Result |
 |---|---|
-| (a) conformance file, vendored header (`conformance_cases.json`) | 14 cases rendered and 15 refused as in Python; 5 records; Jinja (3) and Modelfile identical; 2 sha256 vectors; 7/7 resolutions; 30 legacy prompts, also through `/chat` in both history forms |
-| (a) the 29 cases through ember's request paths, offline | 52 path results: 49 as the Python twin, 3 by design (below); 4 cases are not requests (training conversations, a loss flag) |
-| (a) the same requests on live servers (`conformance_live.json`) | 50/50 match the offline path (prompt ids against `bpe.py` / HF encodings of the text, 400 where refused); legacy-word offline only |
+| (a) conformance file at paperkiln 7a6c7659, vendored header (`conformance_cases.json`) | 17 cases rendered and 15 refused as in Python; 5 records; Jinja (3) and Modelfile identical; 2 sha256 vectors; 7/7 resolutions; 30 legacy prompts, also through `/chat` in both history forms |
+| (a) the 32 cases through ember's request paths, offline | 59 path results: 58 as the Python twin, 1 by design (below); 4 cases are not requests (training conversations, a loss flag) |
+| (a) the same requests on live servers (`conformance_live.json`) | 57/57 match the offline path (prompt ids against `bpe.py` / HF encodings of the text, 400 where refused); legacy-word offline only |
+| strict role-form pairing (`history_strict.json`; offline in `conformance_cases.json` `history_strict`) | live on chat_sftfinal_v3: role history = pair form (reply, prompt ids, ids, stop) 3/3 (plain, with a leading system entry, two exchanges); the four violations and a late system entry refused naming the rule 5/5; offline 4/4 and role = pair |
 | G4 declared vs absent (`g4_declared.json`) | 40/40 prompt ids, reply ids, stop id, reply, stop reason, tokens, identical across 4 servers: this change and 69d7ca2, each on chat_sftfinal_v3 and on its copy with both template keys (tensor data byte-identical) |
 | G5 ember vs mtstudio, chat_sftfinal_v3, 8k "bpe" (`g5_mtstudio_sftfinal_v3.json`) | frozen 40: prompt ids, replies, token counts, stop reasons, history_turns_used 40/40; system set 60: all 60/60 |
 | G5 ember vs mtstudio, arxiv_2302_13971, 16k "llama-bpe" (`g5_mtstudio_arxiv_2302_13971.json`) | frozen 40: all 40/40; system set 60: all 60/60 (4 replies reach 60 tokens, same in both) |
-| G5 third-party ids vs HF `apply_chat_template` (`g5_thirdparty.json`) | Qwen2.5 405/405, Qwen3 905/905, Gemma 3 405/405, text and ids |
+| G5 third-party ids vs HF `apply_chat_template` (`g5_thirdparty.json`) | Qwen2.5 409/409, Qwen3 909/909, Gemma 3 409/409, text and ids (the 4 Unicode-edge cases included: Gemma 4/4 since 7a6c7659, 0/4 under ae126f1e's ASCII trim) |
 | state-token refusal (`state_refusal.json`) | state4 declaring paperkiln/1: loads, 5/5 requests identical to the original; "custom/1" with v1's markers: refused at load; chatml-qwen3: refused at load |
 | (d) gate scripts rerun in place | recursion_gate, mor_gate, mor_refusals, attnres_gate, state_tokens_gate (after make_state_gguf.py), state4_gate: every receipt rewritten byte-identical |
 | (d) parity receipts replayed (`regress_parity.json`) | 10/10 byte-identical (chat_2026-10-18 n40; gate_llama3, pk_base_v1 f32 and Q8_0, both arXiv-chain models with their demos; repeat p1.1 and p1.3) |
 | (d) ir_logits 69d7ca2 vs this change (`regress_bits.json`) | 16/16 bit-equal (bit_regression.py's list plus ar3, state4, the recursion and MoR gate models) |
 | WebAssembly `ember_chat`, this change built by `deploy/wasm/build.sh` (`wasm_gate.sh`; one em++ process, about 2 min on one core) | chat_sftfinal_v3 against mtstudio's replies: frozen 40 and system set 60, reply, token count and stop reason 40/40 and 60/60 (`wasm_frozen40.json`, `wasm_system_set_v1.json`). The WebGPU path (`ember_prepare` / `ember_sample` with `stop_ids`, worker.js) needs a browser and is not run here |
 
-The three by-design path differences:
-- *Two system messages*, OpenAI path: joined with "\n\n" (the agreed amendment); the header refuses a
-  conversation with two.
-- *The assistant first* and *two user messages in a row*, `/chat` with a role-form history: the history
-  parser pairs each assistant message with the user message before it, as mtstudio's `history_turns`
-  does. An unpaired assistant message is dropped, and of two user messages the later one is kept, so the
-  rendered prompt is the user message alone. The OpenAI path refuses both. (mtstudio pairs an unpaired
-  assistant message with an empty user message instead: an existing difference, left open.)
+The one by-design path difference: *two system messages* on the OpenAI path are joined with "\n\n" (the
+agreed amendment); the header refuses a conversation with two. (Under the first, lenient `/chat` pairing,
+*the assistant first* and *two user messages in a row* also rendered on `/chat`; both are refused since
+strict pairing, as in Python.)
 
 ### G5 details
 
@@ -97,18 +99,19 @@ The three by-design path differences:
   - 40 through the OpenAI mapping (developer messages included);
   - Qwen3's three sets again with thinking on and off (enable_thinking);
   - 20 with thinking false on Qwen2.5 and Gemma, which their templates ignore.
-- **Not gated.** 4 messages with Unicode whitespace at their edges: Gemma 0/4, Qwen 4/4. HF's Jinja `trim`
-  strips Unicode whitespace; the record's `content: "trim"` strips ASCII whitespace only. The header's
-  own comment documents this ("no record here meets it"). The fix belongs in paperkiln's header, and the
-  set is in the receipt.
+- **Unicode edge whitespace.** 4 messages with Unicode whitespace at their edges. HF's Jinja `trim` strips
+  what Python's str.strip() strips. Under the header at ae126f1e (ASCII trim) Gemma gave 0/4 and the set
+  was reported ungated; at 7a6c7659 the record strips the same, Gemma gives 4/4 and the set is gated.
 
 ## Files
 
 - Drivers: `build_base.sh` (ember 69d7ca2, `~/ember_69d7ca2`), `build_cpu.sh`, `build_mtstudio.sh`
   (`~/pk_cpu_ct`), `common.py`, `add_template_keys.py` (a GGUF with string keys added, tensor data copied
   byte for byte and checked), `conformance.py`, `g4_declared.py`, `make_system_set.py`, `g5_mtstudio.py`,
-  `g5_thirdparty.py`, `state_refusal.py`, `regress_inplace.sh`, `regress.py`, `wasm_gate.sh`,
-  `baseline_check.sh`.
+  `g5_thirdparty.py`, `state_refusal.py`, `history_strict.py`, `regress_inplace.sh`, `regress.py`,
+  `wasm_gate.sh`, `baseline_check.sh`, and `rerun_all.sh` (the reruns after the 7a6c7659 re-vendor and
+  strict pairing: G5 third party, the in-place gates, parity replays from scratch, bits, WebAssembly; G4,
+  the conformance run and `history_strict.py` ran beside it, all as in the table).
 - Receipts: `conformance_cases.json`, `conformance_live.json`, `g4_declared.json` + `g4_rows.jsonl`,
   `g5_mtstudio_*.json` + `_rows.jsonl`, `g5_thirdparty.json`, `state_refusal.json`,
   `regress_parity.json`, `regress_bits.json`, `wasm_*.json`.

@@ -1,0 +1,166 @@
+{
+ "model": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+ "same_as_pair": [
+  {
+   "role_history": [
+    {
+     "role": "user",
+     "content": "hi"
+    },
+    {
+     "role": "assistant",
+     "content": "hello there"
+    }
+   ],
+   "status": [
+    200,
+    200
+   ],
+   "reply": "I think it is a good idea to explore new ideas together",
+   "same": true
+  },
+  {
+   "role_history": [
+    {
+     "role": "system",
+     "content": "Be kind."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    },
+    {
+     "role": "assistant",
+     "content": "hello there"
+    }
+   ],
+   "status": [
+    200,
+    200
+   ],
+   "reply": "I think it is a good idea to learn more about plants",
+   "same": true
+  },
+  {
+   "role_history": [
+    {
+     "role": "user",
+     "content": "hi"
+    },
+    {
+     "role": "assistant",
+     "content": "hello there"
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    },
+    {
+     "role": "assistant",
+     "content": "hello there"
+    }
+   ],
+   "status": [
+    200,
+    200
+   ],
+   "reply": "I think it is a good idea to explore new ideas together",
+   "same": true
+  }
+ ],
+ "refused": [
+  {
+   "history": [
+    {
+     "role": "assistant",
+     "content": "hello there"
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "rule": "without a user message before it",
+   "status": 400,
+   "error": "history has an assistant message without a user message before it: user and assistant messages must alternate, starting with user (section 3 point 3a)",
+   "ok": true
+  },
+  {
+   "history": [
+    {
+     "role": "user",
+     "content": "hi"
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    },
+    {
+     "role": "assistant",
+     "content": "hello there"
+    }
+   ],
+   "rule": "two user messages",
+   "status": 400,
+   "error": "history has two user messages in a row: user and assistant messages must alternate (section 3 point 3a)",
+   "ok": true
+  },
+  {
+   "history": [
+    {
+     "role": "user",
+     "content": "hi"
+    },
+    {
+     "role": "assistant",
+     "content": "hello there"
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "rule": "ends with a user message",
+   "status": 400,
+   "error": "history ends with a user message: it must end with an assistant reply (the new message goes in user_input)",
+   "ok": true
+  },
+  {
+   "history": [
+    {
+     "role": "user",
+     "content": "hi"
+    },
+    {
+     "role": "narrator",
+     "content": "x"
+    }
+   ],
+   "rule": "role",
+   "status": 400,
+   "error": "history role 'narrator' is not allowed here (user, assistant; system only first)",
+   "ok": true
+  },
+  {
+   "history": [
+    {
+     "role": "user",
+     "content": "hi"
+    },
+    {
+     "role": "assistant",
+     "content": "hello there"
+    },
+    {
+     "role": "system",
+     "content": "Be kind."
+    }
+   ],
+   "rule": "first history entry",
+   "status": 400,
+   "error": "a system message is allowed only as the first history entry",
+   "ok": true
+  }
+ ],
+ "pass": true
+}

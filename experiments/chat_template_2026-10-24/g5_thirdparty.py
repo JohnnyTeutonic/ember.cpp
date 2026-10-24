@@ -12,8 +12,8 @@ HF transformers' apply_chat_template, with no model.
   and text.
 - Conversations: the 200 test prompts of chat_prompts_v1.jsonl (one user message); 25 tokeniser hard
   cases (non-ASCII scripts, emoji, whitespace and newline runs, CRLF, digits, added-token text), and 4
-  with Unicode whitespace at a message's edges, reported and not gated (Gemma 3's HF trim strips it, the
-  record's ASCII trim does not: a gap paperkiln's header documents); 40 with a system
+  with Unicode whitespace at a message's edges (Gemma 3's trim, Python str.strip() in both HF's Jinja and
+  the record since paperkiln 7a6c7659); 40 with a system
   message (half as "system", half as a leading history entry; on the OpenAI path, half as developer
   messages); 40 with two exchanges of history (the prompts' reference replies; for Qwen3 half of them
   carry <think> reasoning, the case strip_think handles); 20 with a system message and two exchanges;
@@ -47,9 +47,8 @@ HARD = [
     "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nthirty-four newlines", "<unk> <mask> <pad> text",
     "x<unused0>y", "▁already▁escaped", "zero​width", "in between nbsp", "a　ideographic space",
 ]
-# Unicode (non-ASCII) whitespace at a message's edges: HF's Jinja trim (Gemma 3) strips it, the record's
-# content "trim" strips ASCII whitespace only (paperkiln's chat_template.hpp documents the gap: "no record
-# here meets it"). Reported, not gated; the fix belongs in paperkiln's header.
+# Unicode (non-ASCII) whitespace at a message's edges: HF's Jinja trim (Gemma 3) strips it, and since
+# paperkiln 7a6c7659 the record's content "trim" strips exactly what Python's str.strip() strips (gated).
 UNICODE_EDGE = [" nbsp ", "　ideographic　", " em space", "x "]
 
 
@@ -65,7 +64,7 @@ def conversations(model):
     for h in HARD:
         out.append(("hard25", [{"role": "user", "content": h}], None, "chat", False))
     for h in UNICODE_EDGE:
-        out.append(("unicode_edge_whitespace4_not_gated", [{"role": "user", "content": h}], None, "chat", False))
+        out.append(("unicode_edge_whitespace4", [{"role": "user", "content": h}], None, "chat", False))
     for i in range(40):
         out.append(("system40", [{"role": "system", "content": SYSTEMS[i % 4]},
                                  {"role": "user", "content": P[i]["prompt"]}], None, "chat", i % 2 == 1))
