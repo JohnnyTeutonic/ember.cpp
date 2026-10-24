@@ -18,7 +18,8 @@ models copied to ext4 (copy_models.sh: ~/ember_wt/adapter_models). Checks:
   mor        depths equal mtstudio's trace (score_out.jsonl) in prefill and decode; kv rows per application
              #{t : step_i = -1 or depth_t > step_i} at those tokens' positions;
   refuse     check accepts every gate model and refuses broken documents (accepted false); depth on a model
-             without depth_route and run_node skip; tensor_index reported, not gated.
+             without depth_route and run_node skip; keys outside the schema's closed sets (IR_SPEC 10.1 rules
+             1, 4) and tensor_index (not implemented yet) refused, naming the key; "_" keys accepted.
 Writes adapter_selftest_cpu.json beside this file; exits 1 on any failure."""
 import copy
 import json
@@ -412,9 +413,41 @@ for name, (gguf, base) in (("state4_side_file", S4), ("mor3_side_file", MR)):
     record(f"check/accept/{name}", r["accepted"], reply=r)
 r = ad.ok("check", gguf="/nonexistent/model.gguf", ir=None)
 record("check/refuse/missing_gguf", not r["accepted"], message=r.get("message"))
-# tensor_index (section 7.2) is not implemented by ember: reported, not gated
-ti = variant(AR[1], "tensor_index", lambda d: [set_(n, "tensor_index", "application") for n in d["block"]["nodes"][:1]])
-report["tensor_index_on_ar3"] = ad.ok("check", gguf=AR[0], ir=ti)
+# Closed sets (IR_SPEC 10.1 rules 1 and 4) and tensor_index (section 7.2: not implemented by ember yet, a
+# capability refusal of a valid document): refused at load, the message naming the key.
+B2 = (MODELS["b2x4"][0], f"{M}/b2x4/r.ir.json")
+
+
+def attn(d):
+    return [n for n in d["block"]["nodes"] if n["op"] == "attention"][0]
+
+
+def tensor_index_valid(d):
+    # A node with a tensor name without {i} under weight_index: the document stays valid (every name binds).
+    n = d["block"]["nodes"][0]
+    n["weight"] = n["weight"].replace("{i}", "0")
+    n["tensor_index"] = "application"
+
+
+closed = {
+    "unknown_attribute": (S4, lambda d: set_(attn(d), "flavour", "vanilla"), "'flavour'"),
+    "unknown_top_level_key": (S4, lambda d: set_(d, "extras", {}), "'extras'"),
+    "unknown_model_key": (S4, lambda d: set_(d["model"], "hidden", 64), "'hidden'"),
+    "unknown_slot_key": (S4, lambda d: set_(kv(d), "pages", 4), "'pages'"),
+    "unknown_block_key": (S4, lambda d: set_(d["block"], "loop", 2), "'loop'"),
+    "attribute_of_another_op": (S4, lambda d: set_(d["block"]["nodes"][0], "theta", 10000.0), "'theta'"),
+    "required_attribute_missing": (S4, lambda d: [n.pop("theta") for n in d["block"]["nodes"] if n["op"] == "rope"],
+                                   "'theta'"),
+    "tensor_index_without_weight_index": (AR, lambda d: set_(d["block"]["nodes"][0], "tensor_index", "application"),
+                                          "tensor_index"),
+    "tensor_index_not_implemented": (B2, tensor_index_valid, "tensor_index"),
+}
+for name, ((gguf, base), edit, want) in closed.items():
+    r = ad.ok("check", gguf=gguf, ir=variant(base, name, edit))
+    record(f"check/refuse/{name}", not r["accepted"] and want in r.get("message", ""), message=r.get("message"))
+r = ad.ok("check", gguf=S4[0], ir=variant(S4[1], "prose_keys", lambda d: [set_(attn(d), "_why", "prose"),
+                                                                      set_(d["model"], "_note", "prose")]))
+record("check/accept/underscore_keys", r["accepted"], reply=r)
 
 s = ad.ok("open", gguf=MODELS["ar3"][0], ir=None, evict=None)["session"]
 r = ad.call("forward", session=s, ids=[1, 2], report=["depth"])

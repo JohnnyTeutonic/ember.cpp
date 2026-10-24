@@ -92,7 +92,8 @@ struct Node {
 class Interpreter {
  public:
   // Parses the IR JSON and binds every weight it names from the GGUF.
-  // Throws std::runtime_error naming the op, tensor or field at fault. A
+  // Throws std::runtime_error naming the op, tensor or field at fault, or the
+  // IR_SPEC rule a document breaks (graph_ir_validate.h). A
   // weight kept quantised may point into the GGUF's memory map, so `gguf`
   // must outlive the interpreter.
   // use_gpu selects the device path (CUDA builds; ignored otherwise).
@@ -184,6 +185,7 @@ class Interpreter {
   void load_state(const State& s);
 
  private:
+  void init(const nlohmann::json& j, const std::string& ir_json, const GGUFData& gguf, bool use_gpu);
   int kv_rows_in_use(int application) const;  // rows 0 .. n-1 of the application's cache are live
   std::string kv_slot_;
   bool evict_declared_ = false;

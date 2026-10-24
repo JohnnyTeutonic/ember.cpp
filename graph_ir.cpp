@@ -19,6 +19,7 @@
 #include "graph_ir_expr.h"
 #include "graph_ir_mamba.h"
 #include "graph_ir_ops.h"
+#include "graph_ir_validate.h"
 #include "logger.h"
 #include "quantization.h"
 #include "utils.h"
@@ -90,10 +91,8 @@ bool any_nonzero(const json& n, const char* key) {
   return false;
 }
 
-// ssm_scan names its tensors by attributes a, b, c, d (or a "weights" object
-// holding them).
+// ssm_scan names its tensors by attributes a, b, c, d.
 std::string ssm_weight(const json& n, const char* part) {
-  if (has(n, "weights") && n.at("weights").contains(part)) return n.at("weights").at(part).get<std::string>();
   if (!has(n, part)) throw std::runtime_error(std::string("IR ssm_scan names no '") + part + "' tensor");
   return n.at(part).get<std::string>();
 }
@@ -571,6 +570,17 @@ std::string build_ir_from_gguf(const GGUFData& g) {
 
 Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool use_gpu) {
   const json j = json::parse(ir_json);
+  try {
+    init(j, ir_json, gguf, use_gpu);
+  } catch (const json::exception&) {
+    // ember's own checks read the document as its schema shapes it: a document that is not is
+    // refused naming the rules it breaks (IR_SPEC 10.1), not a JSON accessor's message.
+    validate_ir(j, gguf);
+    throw;
+  }
+}
+
+void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData& gguf, bool use_gpu) {
   const int version = j.at("ir_version").get<int>();
   // 1 is spec/IR_SPEC.md's first normative text of the same document as 0 (paperkiln, 25 Oct 2026)
   if (version != 0 && version != 1)
@@ -582,6 +592,7 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
   for (const auto& n : head_)
     if (!kRowWiseOps.count(n.op)) throw std::runtime_error("IR head op '" + n.op + "' is not row-wise");
   n_layers_ = j.at("block").at("repeat").get<int>();
+  if (n_layers_ < 1) throw std::runtime_error("IR_SPEC 3.3: block.repeat " + std::to_string(n_layers_) + " is not a positive integer");
   // Tied-block recursion (paperkiln ir.hpp weight_index): application i reads
   // stored layer m_i's tensors; its state slots, kv cache and per-layer
   // attributes stay its own (indexed by i). Stored layers are 0 .. max m_i, each
@@ -1032,6 +1043,14 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
                                " but the IR's embedding has no state_weight");
     }
   }
+  // paperkiln spec/IR_SPEC.md section 10.1 (graph_ir_validate.h): after ember's own checks above, so a
+  // document they refuse keeps their message; then what ember does not implement among valid
+  // documents (section 10.3).
+  validate_ir(j, gguf);
+  for (const auto* sub : {&embed_, &block_, &head_})
+    for (const auto& n : *sub)
+      if (n.attrs.contains("tensor_index"))
+        throw std::runtime_error("IR " + n.op + ": tensor_index (IR_SPEC 7.2) is not implemented in ember yet");
   size_t n_quant = 0, bytes_quant = 0, bytes_f32 = 0, n_mapped = 0;
   for (const auto& kv : weights_) {
     n_quant += kv.second.quantised();
