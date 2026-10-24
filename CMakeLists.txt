@@ -442,6 +442,9 @@ if(NOT SKBUILD)
     # Which path serves a GGUF: the tuned llama path or the interpreter (tools/ir_path_check.cpp).
     add_executable(ir_path_check tools/ir_path_check.cpp)
     target_link_libraries(ir_path_check PRIVATE tinyllama_core)
+    # NaN and signed zero in the EXACT CPU ops, bit for bit (IR_SPEC 4.2; tools/ir_numerics_test.cpp).
+    add_executable(ir_numerics_test tools/ir_numerics_test.cpp)
+    target_link_libraries(ir_numerics_test PRIVATE tinyllama_core)
     # Per-turn state tokens: template rule, eviction on/off, rewinds (tools/state_tokens_test.cpp).
     add_executable(state_tokens_test tools/state_tokens_test.cpp)
     target_link_libraries(state_tokens_test PRIVATE tinyllama_core)
