@@ -1,0 +1,109 @@
+{
+ "model": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+ "model_sha256": "a9d5ba5e4f86e279e73df81fea69b5d342b9379ffd2e8741b277d02ef4b90c70",
+ "copy_sha256": "005cf68359dccd1846beda47686830147813cf933684343e0b20a5efe0914511",
+ "keys": {
+  "paperkiln.chat_template": "{\"name\":\"paperkiln\",\"version\":1,\"bos\":\"\",\"content\":\"raw\",\"system\":{\"mode\":\"fold\",\"join\":\"\\n\\n\"},\"user\":{\"open\":\"<|user|>\",\"close\":\"\"},\"assistant\":{\"open\":\"<|assistant|>\",\"close\":\"<|endoftext|>\"},\"generation_prompt\":\"<|assistant|>\",\"stop\":{\"eos\":[\"<|endoftext|>\"],\"turn\":[\"<|user|>\",\"<|assistant|>\"]},\"past_assistant\":\"keep\",\"reserved\":[\"<|endoftext|>\",\"<|user|>\",\"<|assistant|>\"]}",
+  "tokenizer.chat_template": "{%- if messages and messages[0]['role'] == 'system' -%}{%- set sys = messages[0]['content'] -%}{%- set msgs = messages[1:] -%}{%- else -%}{%- set sys = none -%}{%- set msgs = messages -%}{%- endif -%}{%- for m in msgs -%}{%- if (m['role'] == 'user') != (loop.index0 % 2 == 0) -%}{{ raise_exception('user and assistant messages alternate from the user') }}{%- endif -%}{%- if m['role'] == 'user' -%}{{- '<|user|>' -}}{%- if loop.first and sys is not none -%}{{- sys + '\\n\\n' -}}{%- endif -%}{{- m['content'] + '' -}}{%- else -%}{{- '<|assistant|>' + m['content'] + '<|endoftext|>' -}}{%- endif -%}{%- endfor -%}{%- if add_generation_prompt -%}{{- '<|assistant|>' -}}{%- endif -%}"
+ },
+ "rewrite": {
+  "src": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+  "dst": "/home/jonat/ct24/chat_sftfinal_v3_declared.gguf",
+  "added": [
+   "paperkiln.chat_template",
+   "tokenizer.chat_template"
+  ],
+  "tensor_data_sha256_src": "c788b8a02b33a8867f3b3bf2877d43b4c9307b613e23c8a8350fd6148cb74945",
+  "tensor_data_sha256_dst": "c788b8a02b33a8867f3b3bf2877d43b4c9307b613e23c8a8350fd6148cb74945",
+  "tensor_data_equal": true,
+  "kv_count": [
+   23,
+   25
+  ],
+  "alignment": 32
+ },
+ "rewrite_none": {
+  "src": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+  "dst": "/home/jonat/ct24/chat_sftfinal_v3_sysnone.gguf",
+  "added": [
+   "paperkiln.chat_template",
+   "tokenizer.chat_template"
+  ],
+  "tensor_data_sha256_src": "c788b8a02b33a8867f3b3bf2877d43b4c9307b613e23c8a8350fd6148cb74945",
+  "tensor_data_sha256_dst": "c788b8a02b33a8867f3b3bf2877d43b4c9307b613e23c8a8350fd6148cb74945",
+  "tensor_data_equal": true,
+  "kv_count": [
+   23,
+   25
+  ],
+  "alignment": 32
+ },
+ "prompts": "/mnt/c/ml_artifacts/chat_base/sft/tinychat_hf_prompts_v1.jsonl",
+ "prompts_sha256": "a906b25aaf9f32848f83e8b87c8ad95e7eb8d5802129635f7e55fc62a68b3132",
+ "ember_new": "69d7ca26d5cd4eaf3773a8baf49f6c885c6e7706 + working tree (this change)",
+ "ember_base": "69d7ca2",
+ "health": {
+  "new_original": {
+   "chat_template": {
+    "name": "paperkiln",
+    "version": 1
+   },
+   "chat_template_why": "paperkiln specials at ids 0-3",
+   "context": 256,
+   "hidden_size": 384,
+   "layers": 6,
+   "model": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "status": "ok",
+   "tokenizer": "bpe",
+   "vocab_size": 8192
+  },
+  "new_declared": {
+   "chat_template": {
+    "name": "paperkiln",
+    "version": 1
+   },
+   "chat_template_why": "declared",
+   "context": 256,
+   "hidden_size": 384,
+   "layers": 6,
+   "model": "/home/jonat/ct24/chat_sftfinal_v3_declared.gguf",
+   "status": "ok",
+   "tokenizer": "bpe",
+   "vocab_size": 8192
+  },
+  "base_original": {
+   "context": 256,
+   "hidden_size": 384,
+   "layers": 6,
+   "model": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "status": "ok",
+   "tokenizer": "bpe",
+   "vocab_size": 8192
+  },
+  "base_declared": {
+   "context": 256,
+   "hidden_size": 384,
+   "layers": 6,
+   "model": "/home/jonat/ct24/chat_sftfinal_v3_declared.gguf",
+   "status": "ok",
+   "tokenizer": "bpe",
+   "vocab_size": 8192
+  }
+ },
+ "n": 40,
+ "identical_across_all": {
+  "prompt_ids": 40,
+  "ids": 40,
+  "stop_id": 40,
+  "reply": 40,
+  "stop_reason": 40,
+  "tokens": 40
+ },
+ "stops": {
+  "eos": 40,
+  "turn": 0,
+  "length": 0
+ },
+ "distinct_replies": 40,
+ "pass": true
+}

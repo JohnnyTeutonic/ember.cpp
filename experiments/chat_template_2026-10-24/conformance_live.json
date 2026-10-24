@@ -1,0 +1,730 @@
+{
+ "servers": {
+  "paperkiln/1": {
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "health": {
+    "chat_template": {
+     "name": "paperkiln",
+     "version": 1
+    },
+    "chat_template_why": "paperkiln specials at ids 0-3",
+    "context": 256,
+    "hidden_size": 384,
+    "layers": 6,
+    "model": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+    "status": "ok",
+    "tokenizer": "bpe",
+    "vocab_size": 8192
+   }
+  },
+  "paperkiln/1 none": {
+   "gguf": "/home/jonat/ct24/chat_sftfinal_v3_sysnone.gguf",
+   "health": {
+    "chat_template": {
+     "name": "paperkiln",
+     "version": 1
+    },
+    "chat_template_why": "declared",
+    "context": 256,
+    "hidden_size": 384,
+    "layers": 6,
+    "model": "/home/jonat/ct24/chat_sftfinal_v3_sysnone.gguf",
+    "status": "ok",
+    "tokenizer": "bpe",
+    "vocab_size": 8192
+   }
+  },
+  "chatml-qwen2.5/1": {
+   "gguf": "/mnt/c/ml_artifacts/thirdparty/qwen2.5-0.5b-instruct/qwen2.5-0.5b-instruct-fp16.gguf",
+   "health": {
+    "chat_template": {
+     "name": "chatml-qwen2.5",
+     "version": 1
+    },
+    "chat_template_why": "tokenizer.chat_template sha256 d5495a1e5db0",
+    "context": 1024,
+    "hidden_size": 896,
+    "layers": 24,
+    "model": "/mnt/c/ml_artifacts/thirdparty/qwen2.5-0.5b-instruct/qwen2.5-0.5b-instruct-fp16.gguf",
+    "status": "ok",
+    "tokenizer": "bpe",
+    "vocab_size": 151936
+   }
+  },
+  "chatml-qwen3/1": {
+   "gguf": "/mnt/c/ml_artifacts/thirdparty/qwen3-0.6b/Qwen3-0.6B-Q8_0.gguf",
+   "health": {
+    "chat_template": {
+     "name": "chatml-qwen3",
+     "version": 1
+    },
+    "chat_template_why": "tokenizer.chat_template sha256 57f1fd00f001",
+    "context": 1024,
+    "hidden_size": 1024,
+    "layers": 28,
+    "model": "/mnt/c/ml_artifacts/thirdparty/qwen3-0.6b/Qwen3-0.6B-Q8_0.gguf",
+    "status": "ok",
+    "tokenizer": "bpe",
+    "vocab_size": 151936
+   }
+  },
+  "gemma3/1": {
+   "gguf": "/mnt/c/ml_artifacts/thirdparty/gemma-3-270m-it/gemma-3-270m-it-f32.gguf",
+   "health": {
+    "chat_template": {
+     "name": "gemma3",
+     "version": 1
+    },
+    "chat_template_why": "markers and architecture gemma3",
+    "context": 1024,
+    "hidden_size": 640,
+    "layers": 18,
+    "model": "/mnt/c/ml_artifacts/thirdparty/gemma-3-270m-it/gemma-3-270m-it-f32.gguf",
+    "status": "ok",
+    "tokenizer": "bpe",
+    "vocab_size": 262144
+   }
+  }
+ },
+ "rows": [
+  {
+   "case": "one user prompt",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|user|>Hi<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "one user prompt",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "text": "<|user|>Hi<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "system folds into the first user turn",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|user|>Be brief.\n\nHi<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "system folds into the first user turn",
+   "template": "paperkiln/1",
+   "path": "chat_system_field",
+   "offline": {
+    "text": "<|user|>Be brief.\n\nHi<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "system folds into the first user turn",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "text": "<|user|>Be brief.\n\nHi<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "a lone system message",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "refused": "the last message must be from the user"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": {
+    "message": "the last message must be from the user",
+    "type": "invalid_request_error"
+   },
+   "live_matches_offline": true
+  },
+  {
+   "case": "two system messages",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "refused": "a system message is allowed only as the first history entry"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": "a system message is allowed only as the first history entry",
+   "live_matches_offline": true
+  },
+  {
+   "case": "two system messages",
+   "template": "paperkiln/1",
+   "path": "chat_system_field",
+   "offline": {
+    "refused": "give the system message once: the 'system' field or a leading history entry"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": "give the system message once: the 'system' field or a leading history entry",
+   "live_matches_offline": true
+  },
+  {
+   "case": "two system messages",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "text": "<|user|>a\n\nb\n\nHi<|assistant|>"
+   },
+   "same_as_python_twin": false,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "a system message mid-conversation",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "refused": "a system message is allowed only as the first history entry"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": "a system message is allowed only as the first history entry",
+   "live_matches_offline": true
+  },
+  {
+   "case": "a system message mid-conversation",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "refused": "a system message is allowed only before the first user message (this model's chat template has one system message, first)"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": {
+    "message": "a system message is allowed only before the first user message (this model's chat template has one system message, first)",
+    "type": "invalid_request_error"
+   },
+   "live_matches_offline": true
+  },
+  {
+   "case": "the assistant first",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|user|>Hi<|assistant|>"
+   },
+   "same_as_python_twin": false,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "the assistant first",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "refused": "messages must alternate user and assistant, starting from the user (message 0 is assistant)"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": {
+    "message": "messages must alternate user and assistant, starting from the user (message 0 is assistant)",
+    "type": "invalid_request_error"
+   },
+   "live_matches_offline": true
+  },
+  {
+   "case": "two user messages in a row",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|user|>b<|assistant|>"
+   },
+   "same_as_python_twin": false,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "two user messages in a row",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "refused": "messages must alternate user and assistant, starting from the user (message 1 is user)"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": {
+    "message": "messages must alternate user and assistant, starting from the user (message 1 is user)",
+    "type": "invalid_request_error"
+   },
+   "live_matches_offline": true
+  },
+  {
+   "case": "a prompt ending on an assistant message",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "refused": "the last message must be from the user"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": {
+    "message": "the last message must be from the user",
+    "type": "invalid_request_error"
+   },
+   "live_matches_offline": true
+  },
+  {
+   "case": "user content holding a role marker",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "refused": "content holds the template's reserved text '<|user|>'"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": "content holds the template's reserved text '<|user|>'",
+   "live_matches_offline": true
+  },
+  {
+   "case": "user content holding a role marker",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "refused": "content holds the template's reserved text '<|user|>'"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": {
+    "message": "content holds the template's reserved text '<|user|>'",
+    "type": "invalid_request_error"
+   },
+   "live_matches_offline": true
+  },
+  {
+   "case": "system content holding end-of-text",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "refused": "content holds the template's reserved text '<|endoftext|>'"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": "content holds the template's reserved text '<|endoftext|>'",
+   "live_matches_offline": true
+  },
+  {
+   "case": "system content holding end-of-text",
+   "template": "paperkiln/1",
+   "path": "chat_system_field",
+   "offline": {
+    "refused": "content holds the template's reserved text '<|endoftext|>'"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": "content holds the template's reserved text '<|endoftext|>'",
+   "live_matches_offline": true
+  },
+  {
+   "case": "system content holding end-of-text",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "refused": "content holds the template's reserved text '<|endoftext|>'"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": {
+    "message": "content holds the template's reserved text '<|endoftext|>'",
+    "type": "invalid_request_error"
+   },
+   "live_matches_offline": true
+  },
+  {
+   "case": "assistant content holding a marker",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "refused": "content holds the template's reserved text '<|assistant|>'"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": "content holds the template's reserved text '<|assistant|>'",
+   "live_matches_offline": true
+  },
+  {
+   "case": "assistant content holding a marker",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "refused": "content holds the template's reserved text '<|assistant|>'"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": {
+    "message": "content holds the template's reserved text '<|assistant|>'",
+    "type": "invalid_request_error"
+   },
+   "live_matches_offline": true
+  },
+  {
+   "case": "<unk> text is ordinary content",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|user|>the <unk> token<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "<unk> text is ordinary content",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "text": "<|user|>the <unk> token<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "newline-only user content",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|user|>\n<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "newline-only user content",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "text": "<|user|>\n<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "newline-only and empty replies in the history",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|user|>a<|assistant|>\n<|endoftext|><|user|>b<|assistant|><|endoftext|><|user|>c<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "newline-only and empty replies in the history",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "text": "<|user|>a<|assistant|>\n<|endoftext|><|user|>b<|assistant|><|endoftext|><|user|>c<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "the tool role is reserved",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "refused": "tool messages are not supported: this model's chat template has no tool role"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": {
+    "message": "tool messages are not supported: this model's chat template has no tool role",
+    "type": "invalid_request_error"
+   },
+   "live_matches_offline": true
+  },
+  {
+   "case": "an unknown role",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "refused": "messages[0] has unknown role 'narrator'"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": {
+    "message": "messages[0] has unknown role 'narrator'",
+    "type": "invalid_request_error"
+   },
+   "live_matches_offline": true
+  },
+  {
+   "case": "three exchanges with a system message",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "three exchanges with a system message",
+   "template": "paperkiln/1",
+   "path": "chat_system_field",
+   "offline": {
+    "text": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "three exchanges with a system message",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "text": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "unicode content",
+   "template": "paperkiln/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|user|>Grüße, 東京, 🙂<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "unicode content",
+   "template": "paperkiln/1",
+   "path": "openai",
+   "offline": {
+    "text": "<|user|>Grüße, 東京, 🙂<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "system mode none refuses a system message",
+   "template": "paperkiln/1 none",
+   "path": "chat_history_system",
+   "offline": {
+    "refused": "this model's template has no system role"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": "this model's template has no system role",
+   "live_matches_offline": true
+  },
+  {
+   "case": "system mode none refuses a system message",
+   "template": "paperkiln/1 none",
+   "path": "chat_system_field",
+   "offline": {
+    "refused": "this model's template has no system role"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": "this model's template has no system role",
+   "live_matches_offline": true
+  },
+  {
+   "case": "system mode none refuses a system message",
+   "template": "paperkiln/1 none",
+   "path": "openai",
+   "offline": {
+    "refused": "this model's template has no system role"
+   },
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": {
+    "message": "this model's template has no system role",
+    "type": "invalid_request_error"
+   },
+   "live_matches_offline": true
+  },
+  {
+   "case": "system mode none without one",
+   "template": "paperkiln/1 none",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|user|>Hi<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "system mode none without one",
+   "template": "paperkiln/1 none",
+   "path": "openai",
+   "offline": {
+    "text": "<|user|>Hi<|assistant|>"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "qwen2.5 writes its default system turn",
+   "template": "chatml-qwen2.5/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "qwen2.5 writes its default system turn",
+   "template": "chatml-qwen2.5/1",
+   "path": "openai",
+   "offline": {
+    "text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "qwen3 strips past reasoning",
+   "template": "chatml-qwen3/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|im_start|>user\na<|im_end|>\n<|im_start|>assistant\nb<|im_end|>\n<|im_start|>user\nc<|im_end|>\n<|im_start|>assistant\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "qwen3 strips past reasoning",
+   "template": "chatml-qwen3/1",
+   "path": "openai",
+   "offline": {
+    "text": "<|im_start|>user\na<|im_end|>\n<|im_start|>assistant\nb<|im_end|>\n<|im_start|>user\nc<|im_end|>\n<|im_start|>assistant\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "qwen3 thinking off",
+   "template": "chatml-qwen3/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "qwen3 thinking off",
+   "template": "chatml-qwen3/1",
+   "path": "openai",
+   "offline": {
+    "text": "<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "gemma3 trims and folds",
+   "template": "gemma3/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "gemma3 trims and folds",
+   "template": "gemma3/1",
+   "path": "chat_system_field",
+   "offline": {
+    "text": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "gemma3 trims and folds",
+   "template": "gemma3/1",
+   "path": "openai",
+   "offline": {
+    "text": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  }
+ ],
+ "offline_only": {
+  "legacy word-level prompt": "paperkiln/legacy-word: no chat path with history serves it"
+ },
+ "n": 50,
+ "live_matches_offline": 50,
+ "pass": true
+}

@@ -1,0 +1,119 @@
+{
+ "tag": "sftfinal_v3",
+ "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+ "gguf_sha256": "a9d5ba5e4f86e279e73df81fea69b5d342b9379ffd2e8741b277d02ef4b90c70",
+ "spec": {
+  "name": "chat_sftfinal",
+  "arch": {
+   "preset": "llama-tiny",
+   "custom": {
+    "d": 384,
+    "layers": 6,
+    "heads": 6
+   }
+  },
+  "data": {
+   "vocab": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal.gguf",
+   "vocab_cap": 8192,
+   "T": 256,
+   "sft_examples": "/content/chat/sft_examples.jsonl"
+  },
+  "train": {
+   "steps": 1500,
+   "lr": 0.0003,
+   "batch": 16,
+   "eval_every": 250,
+   "checkpoint_every": 250,
+   "gradmap_every": 0,
+   "seed": 1,
+   "optimizer": "adamw",
+   "objective": "sft",
+   "init_from": "/content/chat/sftfinal_init/base_step12000.safetensors"
+  },
+  "export": {
+   "formats": [
+    "safetensors",
+    "gguf"
+   ]
+  },
+  "out_dir": "/mnt/c/ml_artifacts/chat_base/sftfinal"
+ },
+ "spec_source": "/mnt/c/ml_artifacts/chat_base/sftfinal/sftfinal_spec.json",
+ "paperkiln_mtstudio_build": "28d53ca713ef58f9f9a6262c92b2af5e96ac986f",
+ "paperkiln_head_now": "76e1e12bae708bff05d516b1df384b539edfdbad",
+ "mtstudio": "/home/jonat/pk_cpu_ct/build/mtstudio",
+ "ember": "/home/jonat/ember_wt/build_cpu",
+ "sets": {
+  "frozen40": {
+   "n": 40,
+   "prompt_ids_identical": 40,
+   "reply_identical": 40,
+   "token_count_identical": 40,
+   "stop_reason_identical": 40,
+   "history_turns_used_identical": 40,
+   "distinct_replies": 40,
+   "stops": {
+    "eos": 40,
+    "turn": 0,
+    "length": 0
+   }
+  },
+  "system_set_v1": {
+   "n": 60,
+   "prompt_ids_identical": 60,
+   "reply_identical": 60,
+   "token_count_identical": 60,
+   "stop_reason_identical": 60,
+   "history_turns_used_identical": 60,
+   "distinct_replies": 60,
+   "stops": {
+    "eos": 60,
+    "turn": 0,
+    "length": 0
+   }
+  }
+ },
+ "health": {
+  "ember": {
+   "chat_template": {
+    "name": "paperkiln",
+    "version": 1
+   },
+   "chat_template_why": "paperkiln specials at ids 0-3",
+   "context": 256,
+   "hidden_size": 384,
+   "layers": 6,
+   "model": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "status": "ok",
+   "tokenizer": "bpe",
+   "vocab_size": 8192
+  },
+  "mtstudio": {
+   "attention": "exact",
+   "chat_template": {
+    "name": "paperkiln",
+    "version": 1
+   },
+   "context": 256,
+   "eos": true,
+   "family": "llama",
+   "model": "chat_sftfinal",
+   "params": 14652288,
+   "rope_heads": "all",
+   "state_tokens": 0,
+   "status": "ok",
+   "vocab": 8192
+  }
+ },
+ "template_reported": {
+  "ember": {
+   "name": "paperkiln",
+   "version": 1
+  },
+  "mtstudio": {
+   "name": "paperkiln",
+   "version": 1
+  }
+ },
+ "pass": true
+}

@@ -1,0 +1,125 @@
+{
+ "tag": "arxiv_2302_13971",
+ "gguf": "/mnt/c/ml_artifacts/next_base/sft_2302_13971/arxiv_2302_13971.gguf",
+ "gguf_sha256": "1b231df76c47d27defafcf763ac51ae48e740c5dc238070e4a82d695bfc89400",
+ "spec": {
+  "arch": {
+   "custom": {
+    "position": "rope",
+    "d": 384,
+    "layers": 6,
+    "heads": 6
+   },
+   "rope_heads": "all"
+  },
+  "data": {
+   "vocab": "/mnt/c/ml_artifacts/next_base/sft_2302_13971/arxiv_2302_13971.gguf",
+   "vocab_cap": 16384,
+   "T": 512,
+   "sft_examples": "/content/chat/lever1/lever1_sft_v1.jsonl"
+  },
+  "train": {
+   "steps": 1500,
+   "lr": 0.001,
+   "batch": 16,
+   "eval_every": 750,
+   "checkpoint_every": 500,
+   "gradmap_every": 0,
+   "seed": 1,
+   "optimizer": "adamw",
+   "objective": "sft",
+   "lr_schedule": {
+    "warmup_steps": 0,
+    "decay": "cosine",
+    "min_lr_frac": 0.1
+   },
+   "init_from": "/content/chat/base_2302_13971/arxiv_2302_13971_base.safetensors"
+  },
+  "export": {
+   "formats": [
+    "safetensors",
+    "gguf"
+   ]
+  },
+  "name": "arxiv_2302_13971",
+  "out_dir": "/mnt/c/ml_artifacts/next_base/sft_2302_13971"
+ },
+ "spec_source": "/mnt/c/ml_artifacts/next_base/sft_2302_13971/sft_2302_13971_spec.json",
+ "paperkiln_mtstudio_build": "28d53ca713ef58f9f9a6262c92b2af5e96ac986f",
+ "paperkiln_head_now": "76e1e12bae708bff05d516b1df384b539edfdbad",
+ "mtstudio": "/home/jonat/pk_cpu_ct/build/mtstudio",
+ "ember": "/home/jonat/ember_wt/build_cpu",
+ "sets": {
+  "frozen40": {
+   "n": 40,
+   "prompt_ids_identical": 40,
+   "reply_identical": 40,
+   "token_count_identical": 40,
+   "stop_reason_identical": 40,
+   "history_turns_used_identical": 40,
+   "distinct_replies": 39,
+   "stops": {
+    "eos": 40,
+    "turn": 0,
+    "length": 0
+   }
+  },
+  "system_set_v1": {
+   "n": 60,
+   "prompt_ids_identical": 60,
+   "reply_identical": 60,
+   "token_count_identical": 60,
+   "stop_reason_identical": 60,
+   "history_turns_used_identical": 60,
+   "distinct_replies": 60,
+   "stops": {
+    "eos": 56,
+    "turn": 0,
+    "length": 4
+   }
+  }
+ },
+ "health": {
+  "ember": {
+   "chat_template": {
+    "name": "paperkiln",
+    "version": 1
+   },
+   "chat_template_why": "paperkiln specials at ids 0-3",
+   "context": 512,
+   "hidden_size": 384,
+   "layers": 6,
+   "model": "/mnt/c/ml_artifacts/next_base/sft_2302_13971/arxiv_2302_13971.gguf",
+   "status": "ok",
+   "tokenizer": "bpe",
+   "vocab_size": 16384
+  },
+  "mtstudio": {
+   "attention": "exact",
+   "chat_template": {
+    "name": "paperkiln",
+    "version": 1
+   },
+   "context": 512,
+   "eos": true,
+   "family": "llama",
+   "model": "arxiv_2302_13971",
+   "params": 17798016,
+   "rope_heads": "all",
+   "state_tokens": 0,
+   "status": "ok",
+   "vocab": 16384
+  }
+ },
+ "template_reported": {
+  "ember": {
+   "name": "paperkiln",
+   "version": 1
+  },
+  "mtstudio": {
+   "name": "paperkiln",
+   "version": 1
+  }
+ },
+ "pass": true
+}

@@ -1,0 +1,404 @@
+{
+ "prompts": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/corpus/eval/chat_prompts_v1.jsonl",
+ "prompts_sha256": "7272020cadc6a8f50c73aecb72fae3034a5385a33760a75dc99b2b86ac4b0e8c",
+ "transformers": "4.57.0",
+ "models": {
+  "qwen2.5-0.5b-instruct": {
+   "gguf": "/mnt/c/ml_artifacts/thirdparty/qwen2.5-0.5b-instruct/qwen2.5-0.5b-instruct-fp16.gguf",
+   "gguf_sha256": "8e0ae26000627ed62de0e78e41860af70094558b9d2913385c842a6aa06cf3fc",
+   "ember": {
+    "kind": "qwen2_bpe",
+    "resolved": true,
+    "stop_ids": [
+     151645,
+     151643
+    ],
+    "template": "chatml-qwen2.5/1",
+    "why": "tokenizer.chat_template sha256 d5495a1e5db0"
+   },
+   "template_expected": "chatml-qwen2.5/1",
+   "template_resolved_ok": true,
+   "sets": {
+    "single200": {
+     "n": 200,
+     "text_same": 200,
+     "ids_same": 200,
+     "errors": 0,
+     "first_differences": []
+    },
+    "hard25": {
+     "n": 25,
+     "text_same": 25,
+     "ids_same": 25,
+     "errors": 0,
+     "first_differences": []
+    },
+    "unicode_edge_whitespace4_not_gated": {
+     "n": 4,
+     "text_same": 4,
+     "ids_same": 4,
+     "errors": 0,
+     "first_differences": []
+    },
+    "system40": {
+     "n": 40,
+     "text_same": 40,
+     "ids_same": 40,
+     "errors": 0,
+     "first_differences": []
+    },
+    "history40": {
+     "n": 40,
+     "text_same": 40,
+     "ids_same": 40,
+     "errors": 0,
+     "first_differences": []
+    },
+    "system_history20": {
+     "n": 20,
+     "text_same": 20,
+     "ids_same": 20,
+     "errors": 0,
+     "first_differences": []
+    },
+    "whitespace20": {
+     "n": 20,
+     "text_same": 20,
+     "ids_same": 20,
+     "errors": 0,
+     "first_differences": []
+    },
+    "openai40": {
+     "n": 40,
+     "text_same": 40,
+     "ids_same": 40,
+     "errors": 0,
+     "first_differences": []
+    },
+    "thinking_false_ignored20": {
+     "n": 20,
+     "text_same": 20,
+     "ids_same": 20,
+     "errors": 0,
+     "first_differences": []
+    }
+   },
+   "total": {
+    "n": 405,
+    "text_same": 405,
+    "ids_same": 405,
+    "errors": 0
+   },
+   "pass": true
+  },
+  "qwen3-0.6b": {
+   "gguf": "/mnt/c/ml_artifacts/thirdparty/qwen3-0.6b/Qwen3-0.6B-Q8_0.gguf",
+   "gguf_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+   "ember": {
+    "kind": "qwen2_bpe",
+    "resolved": true,
+    "stop_ids": [
+     151645,
+     151643
+    ],
+    "template": "chatml-qwen3/1",
+    "why": "tokenizer.chat_template sha256 57f1fd00f001"
+   },
+   "template_expected": "chatml-qwen3/1",
+   "template_resolved_ok": true,
+   "sets": {
+    "single200": {
+     "n": 200,
+     "text_same": 200,
+     "ids_same": 200,
+     "errors": 0,
+     "first_differences": []
+    },
+    "hard25": {
+     "n": 25,
+     "text_same": 25,
+     "ids_same": 25,
+     "errors": 0,
+     "first_differences": []
+    },
+    "unicode_edge_whitespace4_not_gated": {
+     "n": 4,
+     "text_same": 4,
+     "ids_same": 4,
+     "errors": 0,
+     "first_differences": []
+    },
+    "system40": {
+     "n": 40,
+     "text_same": 40,
+     "ids_same": 40,
+     "errors": 0,
+     "first_differences": []
+    },
+    "history40": {
+     "n": 40,
+     "text_same": 40,
+     "ids_same": 40,
+     "errors": 0,
+     "first_differences": []
+    },
+    "system_history20": {
+     "n": 20,
+     "text_same": 20,
+     "ids_same": 20,
+     "errors": 0,
+     "first_differences": []
+    },
+    "whitespace20": {
+     "n": 20,
+     "text_same": 20,
+     "ids_same": 20,
+     "errors": 0,
+     "first_differences": []
+    },
+    "openai40": {
+     "n": 40,
+     "text_same": 40,
+     "ids_same": 40,
+     "errors": 0,
+     "first_differences": []
+    },
+    "single200_thinking_on": {
+     "n": 200,
+     "text_same": 200,
+     "ids_same": 200,
+     "errors": 0,
+     "first_differences": []
+    },
+    "single200_thinking_off": {
+     "n": 200,
+     "text_same": 200,
+     "ids_same": 200,
+     "errors": 0,
+     "first_differences": []
+    },
+    "history40_thinking_on": {
+     "n": 40,
+     "text_same": 40,
+     "ids_same": 40,
+     "errors": 0,
+     "first_differences": []
+    },
+    "history40_thinking_off": {
+     "n": 40,
+     "text_same": 40,
+     "ids_same": 40,
+     "errors": 0,
+     "first_differences": []
+    },
+    "system_history20_thinking_on": {
+     "n": 20,
+     "text_same": 20,
+     "ids_same": 20,
+     "errors": 0,
+     "first_differences": []
+    },
+    "system_history20_thinking_off": {
+     "n": 20,
+     "text_same": 20,
+     "ids_same": 20,
+     "errors": 0,
+     "first_differences": []
+    }
+   },
+   "total": {
+    "n": 905,
+    "text_same": 905,
+    "ids_same": 905,
+    "errors": 0
+   },
+   "pass": true
+  },
+  "gemma-3-270m-it": {
+   "gguf": "/mnt/c/ml_artifacts/thirdparty/gemma-3-270m-it/gemma-3-270m-it-f32.gguf",
+   "gguf_sha256": "0a174d42ccd7de15688e50dc044ea8006db31ee3bc6dc7e838f8a360ca46cdaa",
+   "ember": {
+    "kind": "spm",
+    "resolved": true,
+    "stop_ids": [
+     106,
+     1
+    ],
+    "template": "gemma3/1",
+    "why": "markers and architecture gemma3"
+   },
+   "template_expected": "gemma3/1",
+   "template_resolved_ok": true,
+   "sets": {
+    "single200": {
+     "n": 200,
+     "text_same": 200,
+     "ids_same": 200,
+     "errors": 0,
+     "first_differences": []
+    },
+    "hard25": {
+     "n": 25,
+     "text_same": 25,
+     "ids_same": 25,
+     "errors": 0,
+     "first_differences": []
+    },
+    "unicode_edge_whitespace4_not_gated": {
+     "n": 4,
+     "text_same": 0,
+     "ids_same": 0,
+     "errors": 0,
+     "first_differences": [
+      {
+       "messages": [
+        {
+         "role": "user",
+         "content": " nbsp "
+        }
+       ],
+       "thinking": null,
+       "ember_text": "<bos><start_of_turn>user\n nbsp <end_of_turn>\n<start_of_turn>model\n",
+       "hf_text": "<bos><start_of_turn>user\nnbsp<end_of_turn>\n<start_of_turn>model\n",
+       "first_id_difference": 4,
+       "ember_ids": [
+        105,
+        2364,
+        107,
+        432,
+        398,
+        11539,
+        432,
+        398
+       ],
+       "hf_ids": [
+        105,
+        2364,
+        107,
+        11539,
+        106,
+        107,
+        105,
+        4368
+       ]
+      },
+      {
+       "messages": [
+        {
+         "role": "user",
+         "content": "　ideographic　"
+        }
+       ],
+       "thinking": null,
+       "ember_text": "<bos><start_of_turn>user\n　ideographic　<end_of_turn>\n<start_of_turn>model\n",
+       "hf_text": "<bos><start_of_turn>user\nideographic<end_of_turn>\n<start_of_turn>model\n",
+       "first_id_difference": 4,
+       "ember_ids": [
+        105,
+        2364,
+        107,
+        465,
+        366,
+        366,
+        754,
+        9814
+       ],
+       "hf_ids": [
+        105,
+        2364,
+        107,
+        754,
+        9814,
+        106,
+        107,
+        105
+       ]
+      },
+      {
+       "messages": [
+        {
+         "role": "user",
+         "content": " em space"
+        }
+       ],
+       "thinking": null,
+       "ember_text": "<bos><start_of_turn>user\n em space<end_of_turn>\n<start_of_turn>model\n",
+       "hf_text": "<bos><start_of_turn>user\nem space<end_of_turn>\n<start_of_turn>model\n",
+       "first_id_difference": 4,
+       "ember_ids": [
+        105,
+        2364,
+        107,
+        464,
+        366,
+        369,
+        581,
+        2557
+       ],
+       "hf_ids": [
+        105,
+        2364,
+        107,
+        581,
+        2557,
+        106,
+        107,
+        105
+       ]
+      }
+     ]
+    },
+    "system40": {
+     "n": 40,
+     "text_same": 40,
+     "ids_same": 40,
+     "errors": 0,
+     "first_differences": []
+    },
+    "history40": {
+     "n": 40,
+     "text_same": 40,
+     "ids_same": 40,
+     "errors": 0,
+     "first_differences": []
+    },
+    "system_history20": {
+     "n": 20,
+     "text_same": 20,
+     "ids_same": 20,
+     "errors": 0,
+     "first_differences": []
+    },
+    "whitespace20": {
+     "n": 20,
+     "text_same": 20,
+     "ids_same": 20,
+     "errors": 0,
+     "first_differences": []
+    },
+    "openai40": {
+     "n": 40,
+     "text_same": 40,
+     "ids_same": 40,
+     "errors": 0,
+     "first_differences": []
+    },
+    "thinking_false_ignored20": {
+     "n": 20,
+     "text_same": 20,
+     "ids_same": 20,
+     "errors": 0,
+     "first_differences": []
+    }
+   },
+   "total": {
+    "n": 405,
+    "text_same": 405,
+    "ids_same": 405,
+    "errors": 0
+   },
+   "pass": true
+  }
+ },
+ "pass": true
+}
