@@ -19,7 +19,7 @@ models copied to ext4 (copy_models.sh: ~/ember_wt/adapter_models). Checks:
              #{t : step_i = -1 or depth_t > step_i} at those tokens' positions;
   refuse     check accepts every gate model and refuses broken documents (accepted false); depth on a model
              without depth_route and run_node skip; keys outside the schema's closed sets (IR_SPEC 10.1 rules
-             1, 4) and tensor_index (not implemented yet) refused, naming the key; "_" keys accepted.
+             1, 4) refused, naming the key; "_" keys and tensor_index under weight_index accepted.
 Writes adapter_selftest_cpu.json beside this file; exits 1 on any failure."""
 import copy
 import json
@@ -414,8 +414,8 @@ for name, (gguf, base) in (("state4_side_file", S4), ("mor3_side_file", MR)):
     record(f"check/accept/{name}", r["accepted"], reply=r)
 r = ad.ok("check", gguf="/nonexistent/model.gguf", ir=None)
 record("check/refuse/missing_gguf", not r["accepted"], message=r.get("message"))
-# Closed sets (IR_SPEC 10.1 rules 1 and 4) and tensor_index (section 7.2: not implemented by ember yet, a
-# capability refusal of a valid document): refused at load, the message naming the key.
+# Closed sets (IR_SPEC 10.1 rules 1 and 4) refused at load, the message naming the key; tensor_index outside a
+# weight_index block refused (rule 19), and accepted in one (section 7.2).
 B2 = (MODELS["b2x4"][0], f"{M}/b2x4/r.ir.json")
 
 
@@ -441,7 +441,6 @@ closed = {
                                    "'theta'"),
     "tensor_index_without_weight_index": (AR, lambda d: set_(d["block"]["nodes"][0], "tensor_index", "application"),
                                           "tensor_index"),
-    "tensor_index_not_implemented": (B2, tensor_index_valid, "tensor_index"),
 }
 # The load-time refusals of IR_SPEC 10.1 that ember lacked before (each previously loaded, or failed only at the
 # first forward); the container rules on edited GGUFs are in ../ir_spec_2026-10-25/agreement.py.
@@ -490,6 +489,8 @@ for name, drop, accept in (("s1_pseudo_query_absent", "blk.0.attnres_attn_q.weig
 r = ad.ok("check", gguf=S4[0], ir=variant(S4[1], "prose_keys", lambda d: [set_(attn(d), "_why", "prose"),
                                                                       set_(d["model"], "_note", "prose")]))
 record("check/accept/underscore_keys", r["accepted"], reply=r)
+r = ad.ok("check", gguf=B2[0], ir=variant(B2[1], "tensor_index_valid", tensor_index_valid))
+record("check/accept/tensor_index_under_weight_index", r["accepted"], reply=r)
 
 s = ad.ok("open", gguf=MODELS["ar3"][0], ir=None, evict=None)["session"]
 r = ad.call("forward", session=s, ids=[1, 2], report=["depth"])

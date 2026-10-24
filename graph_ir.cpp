@@ -1264,10 +1264,6 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
   // document they refuse keeps their message; then what ember does not implement among valid
   // documents (section 10.3).
   validate_ir(j, gguf);
-  for (const auto* sub : {&embed_, &block_, &head_})
-    for (const auto& n : *sub)
-      if (n.attrs.contains("tensor_index"))
-        throw std::runtime_error("IR " + n.op + ": tensor_index (IR_SPEC 7.2) is not implemented in ember yet");
   {
     int kv_slots = 0;
     for (const auto& s : j.at("block").value("state", json::array())) kv_slots += s.value("kind", "") == "kv";
@@ -1351,7 +1347,8 @@ std::string Interpreter::layer_name(const std::string& pattern, int layer) const
   const auto p = s.find("{i}");
   if (p != std::string::npos) {
     if (layer < 0) throw std::runtime_error("IR weight '" + pattern + "' uses {i} outside the block");
-    s.replace(p, 3, std::to_string(weight_map_.empty() ? layer : weight_map_.at(layer)));
+    // m_i under weight_index, except in a node tagged "tensor_index": "application" (IR_SPEC 7.2): i.
+    s.replace(p, 3, std::to_string(weight_map_.empty() || app_index_ ? layer : weight_map_.at(layer)));
   }
   return s;
 }
@@ -1421,6 +1418,7 @@ void Interpreter::bind_tensor(const std::string& name, const GGUFData& gguf, boo
 
 void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData& gguf) {
   for (const auto& n : nodes) {
+    AppIndex ti(app_index_, n);
     // depth_attend over one source never reads its pseudo-query (IR_SPEC 5.18), so a file may leave it
     // out; with S >= 2 sources a missing one is refused here, at load (rule 25).
     if (n.op == "depth_attend" && has(n.attrs, "weight")) {
@@ -1778,6 +1776,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
     return w;
   };
   for (const auto& n : nodes) {
+    AppIndex ti(app_index_, n);
     if (n.op == "embedding") {
       const auto& tokens = in(n, 0);  // token ids carried as floats (exact below 2^24)
       const std::string wn = wname(n);
@@ -2487,6 +2486,7 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
   };
   std::vector<DStep> steps;
   for (const auto& n : nodes) {
+    AppIndex ti(app_index_, n);
     DStep s;
     auto op = kOps.find(n.op);
     if (op == kOps.end()) throw std::runtime_error("IR op '" + n.op + "' has no CUDA kernel in ember's interpreter");

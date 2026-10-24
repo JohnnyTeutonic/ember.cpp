@@ -325,15 +325,14 @@ DOC_CASES = [
     ("r28_specials_name_other_ids", "28", "S4", lambda d: put(d["tokenizer"]["specials"], eot=5)),
     ("r28_state_weight_without_k_metadata_doc", "28", "AR",
      lambda d: put(first(d, "embedding", "embed"), state_weight="blk.0.attnres_attn_q.weight")),
-    # Valid documents ember does not run (section 10.3, Appendix C).
-    ("cap_tensor_index", "7.2", "B2",
+    ("v_tensor_index_under_weight_index", "7.2 (valid)", "B2",
      lambda d: put(first(d, "rmsnorm"), weight=first(d, "rmsnorm")["weight"].replace("{i}", "0"), tensor_index="application")),
     ("cap_two_kv_slots", "6.1", "AR",
      lambda d: (d["block"]["state"].append(dict(copy.deepcopy(kv(d)), name="kv2")),
                 insert(d["block"]["nodes"], d["block"]["nodes"].index(first(d, "attention")) + 1,
                        dict(copy.deepcopy(first(d, "attention")), state="kv2", out="a2")))),
 ]
-EXPECT = {"cap_tensor_index": "capability", "cap_two_kv_slots": "capability", "r9_expr_parses": "accept"}
+EXPECT = {"v_tensor_index_under_weight_index": "accept", "cap_two_kv_slots": "capability", "r9_expr_parses": "accept"}
 
 
 def gguf_cases():
@@ -434,15 +433,11 @@ def main():
         print(f"{row['result']:22s} {name}: validator {row['validator']}, ember {row['ember']}"
               + ("" if row["result"] == "agree" and ok else f" | {msg[:150]}"), flush=True)
 
-    def uses_tensor_index(g):  # a valid document ember does not run yet (section 7.2, Appendix C)
-        d = embedded(g)
-        return d is not None and any("tensor_index" in n for _, _, n in V._sections(d))
-
     for g in pk:
-        run("gguf:" + os.path.relpath(g, A), "valid", "-", g, None, "capability" if uses_tensor_index(g) else "accept")
+        run("gguf:" + os.path.relpath(g, A), "valid", "-", g, None, "accept")
     for g in third_party_ggufs():
         tag = "suite:" if g.startswith(PK) else "thirdparty:"
-        run(tag + os.path.basename(g), "valid", "-", g, None, "capability" if uses_tensor_index(g) else "accept")
+        run(tag + os.path.basename(g), "valid", "-", g, None, "accept")
     stored = [p for p in V.corpus() if p.endswith(".ir.json")]
     unpaired = []
     for p in stored:

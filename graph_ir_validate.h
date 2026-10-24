@@ -29,7 +29,7 @@
 //
 // The Interpreter calls validate_ir after its own load checks (so a document those refuse keeps their
 // message), then refuses what ember does not implement among valid documents (section 10.3, Appendix C:
-// tensor_index until it lands, more than one kv slot per block).
+// more than one kv slot per block).
 #include <string>
 #include <vector>
 
