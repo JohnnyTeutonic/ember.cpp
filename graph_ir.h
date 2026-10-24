@@ -224,6 +224,9 @@ class Interpreter {
   void bind_tensor(const std::string& name, const GGUFData& gguf, bool keep_quantised = false);
 
   std::vector<Node> embed_, block_, head_;
+  // depth_attend's source count S per node and application (-1 outside the block), fixed at load by the
+  // lists' construction (IR_SPEC 5.18).
+  std::map<std::pair<const Node*, int>, int> da_sources_;
   int n_layers_ = 0, vocab_ = 0, max_len_ = 0;
   // block.weight_index (paperkiln ir.hpp; tied-block recursion): application i
   // reads stored layer weight_map_[i]'s tensors. Empty: the identity.

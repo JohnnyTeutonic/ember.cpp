@@ -470,6 +470,22 @@ closed.update({
 for name, ((gguf, base), edit, want) in closed.items():
     r = ad.ok("check", gguf=gguf, ir=variant(base, name, edit))
     record(f"check/refuse/{name}", not r["accepted"] and want in r.get("message", ""), message=r.get("message"))
+# depth_attend's S is structural (IR_SPEC 5.18): ar3 without its S = 1 pseudo-query (blk.0.attnres_attn_q, never
+# read) loads; without an S = 2 one (blk.1.attnres_attn_q) it is refused at load, not at the first forward.
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "ir_spec_2026-10-25"))
+from agreement import copy_gguf  # noqa: E402
+for name, drop, accept in (("s1_pseudo_query_absent", "blk.0.attnres_attn_q.weight", True),
+                           ("s2_pseudo_query_absent", "blk.1.attnres_attn_q.weight", False)):
+    g = copy_gguf(AR[0], os.path.join(SCRATCH, f"adapter_{name}.gguf"), drop_tensors=(drop,))
+    r = ad.ok("check", gguf=g, ir=None)
+    ok = r["accepted"] if accept else (not r["accepted"] and "5.18" in r.get("message", ""))
+    record(f"check/{'accept' if accept else 'refuse'}/{name}", ok, reply=r)
+    if accept:  # and it runs: the logits equal ar3's own
+        s1, o1 = run(g, [MODELS["ar3"][1][0]], "ar3")
+        s2, o2 = run(AR[0], [MODELS["ar3"][1][0]], "ar3")
+        record(f"forward/{name}", bits_equal(stack(o1), stack(o2)))
+        ad.ok("close", session=s1)
+        ad.ok("close", session=s2)
 r = ad.ok("check", gguf=S4[0], ir=variant(S4[1], "prose_keys", lambda d: [set_(attn(d), "_why", "prose"),
                                                                       set_(d["model"], "_note", "prose")]))
 record("check/accept/underscore_keys", r["accepted"], reply=r)

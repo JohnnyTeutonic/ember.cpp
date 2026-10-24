@@ -1012,6 +1012,30 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
     if (q && std::string(q) == "1" && !device) dequant_all_ = false;
     if (const char* dq = std::getenv("EMBER_IR_DEQUANT")) dequant_all_ = dequant_all_ || std::string(dq) == "1";
   }
+  // depth_attend's source count S (IR_SPEC 5.18) is structural: the entries list and append put in its list
+  // before the node, in run order (embed once, the block per application, the head), plus its other inputs.
+  {
+    std::unordered_map<std::string, int> entries;  // list values: their tensor count
+    auto walk = [&](const std::vector<Node>& nodes, int layer) {
+      for (const auto& n : nodes) {
+        const auto held = [&](const std::string& v) {
+          const auto it = entries.find(v);
+          return it == entries.end() ? 0 : it->second;
+        };
+        if (n.op == "list") {
+          entries[n.out.at(0)] = static_cast<int>(n.in.size());
+        } else if (n.op == "append") {
+          entries[n.out.at(0)] = held(n.in.at(0)) + 1;
+        } else {
+          if (n.op == "depth_attend") da_sources_[{&n, layer}] = held(n.in.at(0)) + static_cast<int>(n.in.size()) - 1;
+          for (const auto& o : n.out) entries.erase(o);
+        }
+      }
+    };
+    walk(embed_, -1);
+    for (int l = 0; l < n_layers_; ++l) walk(block_, l);
+    walk(head_, -1);
+  }
   bind(embed_, -1, gguf);
   for (int l = 0; l < n_layers_; ++l) bind(block_, l, gguf);
   bind(head_, -1, gguf);
@@ -1207,11 +1231,19 @@ void Interpreter::bind_tensor(const std::string& name, const GGUFData& gguf, boo
 
 void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData& gguf) {
   for (const auto& n : nodes) {
-    // depth_attend over one source never reads its pseudo-query (ir.hpp), so
-    // a file may leave it out; run_nodes refuses a missing one for S >= 2.
-    if (n.op == "depth_attend" && has(n.attrs, "weight") &&
-        !gguf.tensor_infos_map.count(layer_name(n.attrs.at("weight").get<std::string>(), layer)))
-      continue;
+    // depth_attend over one source never reads its pseudo-query (IR_SPEC 5.18), so a file may leave it
+    // out; with S >= 2 sources a missing one is refused here, at load (rule 25).
+    if (n.op == "depth_attend" && has(n.attrs, "weight")) {
+      const std::string w = layer_name(n.attrs.at("weight").get<std::string>(), layer);
+      if (!gguf.tensor_infos_map.count(w)) {
+        const auto it = da_sources_.find({&n, layer});
+        const int S = it == da_sources_.end() ? 0 : it->second;
+        if (S == 1) continue;
+        throw std::runtime_error("IR_SPEC 5.18: depth_attend" +
+                                 (layer >= 0 ? " at application " + std::to_string(layer) : std::string()) + " has " +
+                                 std::to_string(S) + " sources, and its pseudo-query '" + w + "' is not in the GGUF");
+      }
+    }
     if (has(n.attrs, "weight")) {
       std::string w = layer_name(n.attrs.at("weight").get<std::string>(), layer);
       if (!gguf.tensor_infos_map.count(w) && has(n.attrs, "tied_to"))
