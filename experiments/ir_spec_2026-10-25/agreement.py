@@ -115,8 +115,10 @@ def validator(doc, gguf):
 class Adapter:
     def __init__(self):
         self.log = open(os.path.join(SCR, "adapter_stderr.log"), "w")
+        # EMBER_IR_CTX caps the kv cache a load allocates (a third-party document declares the full trained
+        # context, 40960 positions for Qwen3): loading is what is compared, and WSL has 8 GB.
         self.p = subprocess.Popen([B + "/ir_adapter"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                  stderr=self.log, text=True, bufsize=1)
+                                  stderr=self.log, text=True, bufsize=1, env={**os.environ, "EMBER_IR_CTX": "1024"})
         self.n = 0
 
     def check(self, gguf, ir):
@@ -253,6 +255,14 @@ DOC_CASES = [
     ("r8_attention_scale_missing", "8", "AR", lambda d: pop(first(d, "attention"), "scale")),
     ("r8_rmsnorm_eps_missing", "8", "S4", lambda d: pop(first(d, "rmsnorm"), "eps")),
     ("r8_gelu_approx_missing", "8", "GP", lambda d: pop(first(d, "gelu"), "approx")),
+    ("r9_expr_does_not_parse", "9", "GP",
+     lambda d: d["block"]["nodes"].__setitem__(d["block"]["nodes"].index(first(d, "gelu")),
+                                               {"op": "expr", "in": first(d, "gelu")["in"], "expr": "x + * 2",
+                                                "out": first(d, "gelu")["out"]})),
+    ("r9_expr_parses", "9 (valid)", "GP",
+     lambda d: d["block"]["nodes"].__setitem__(d["block"]["nodes"].index(first(d, "gelu")),
+                                               {"op": "expr", "in": first(d, "gelu")["in"], "expr": "x * sigmoid(1.702 * x)",
+                                                "out": first(d, "gelu")["out"]})),
     ("r10_split_count", "10", "GP", lambda d: put(first(d, "split"), out=["q", "k"])),
     ("r10_rope_n_rot_odd", "10", "S4", lambda d: put(first(d, "rope"), n_rot=31)),
     ("r10_heads_not_multiple", "10", "AR", lambda d: put(first(d, "attention"), heads=3)),
@@ -323,7 +333,7 @@ DOC_CASES = [
                 insert(d["block"]["nodes"], d["block"]["nodes"].index(first(d, "attention")) + 1,
                        dict(copy.deepcopy(first(d, "attention")), state="kv2", out="a2")))),
 ]
-EXPECT = {"cap_tensor_index": "capability", "cap_two_kv_slots": "capability"}
+EXPECT = {"cap_tensor_index": "capability", "cap_two_kv_slots": "capability", "r9_expr_parses": "accept"}
 
 
 def gguf_cases():
