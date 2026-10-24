@@ -391,6 +391,36 @@
   ]
  },
  "d_template_rule": {
+  "assistant_after_closed_exchange": {
+   "out": [
+    2,
+    5,
+    3,
+    6,
+    1,
+    10,
+    11,
+    12,
+    3,
+    7,
+    1,
+    2,
+    8,
+    3
+   ],
+   "pass": true
+  },
+  "assistant_without_user": {
+   "out": [
+    3,
+    6,
+    1,
+    2,
+    8,
+    3
+   ],
+   "pass": true
+  },
   "block_cut_at_end": {
    "pass": true,
    "refused": "the state block after the <|endoftext|> at position 4 is not the 3 ids 10 .. 12 in order"
