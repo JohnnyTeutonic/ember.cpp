@@ -195,8 +195,14 @@ interpreter is checked against the tuned path.
 A third-party GGUF with no `paperkiln.ir` gets its IR built from the llama.cpp metadata at load
 when its `general.architecture` is `qwen2`, `qwen3`, `gemma3`, `gptneox`, `gpt2` or `mamba`, or
 `llama`/`mistral` with an `attention.sliding_window` (a plain llama or mistral file keeps the tuned
-path; `EMBER_IR_BUILD=1` sends it through the interpreter as well). Qwen files chat with Qwen's
-tokeniser and ChatML template:
+path; `EMBER_IR_BUILD=1` sends it through the interpreter as well). Chat templates are data:
+each GGUF's template resolves at load to a record (paperkiln's `chat_template.h`: a declared
+`paperkiln.chat_template`, paperkiln's specials, or a third-party record matched by
+`tokenizer.chat_template` or by its markers and architecture), and every prompt is rendered from
+it. Qwen2.5 and Qwen3 files chat with Qwen's tokeniser and their ChatML records (Qwen3 with its
+thinking switch), Gemma 3 with its SentencePiece vocabulary and turn template, each equal to HF's
+`apply_chat_template` token for token (Gemma's trim of Unicode whitespace at a message's edges aside;
+experiments/chat_template_2026-10-24):
 `./build/tinyllama_server qwen2.5-0.5b-instruct-fp16.gguf 8080 127.0.0.1 ./www -1`.
 `EMBER_IR_CTX=N` caps the KV state, since these files declare their full trained context. Any other
 architecture without an IR is refused at load, naming it.
@@ -223,7 +229,7 @@ In progress, or built and waiting on a model that is still training or on its ga
   already loads that form, with paperkiln's exact Llama 3 encoder vendored. Its 40/40 gate runs
   on the first model trained with it.
 - **The third-party families on every backend.** The WebAssembly gate per family (a 0.5B model
-  needs the 4 GB heap), and chat templates for Gemma 3.
+  needs the 4 GB heap).
 - **New chat models.** These are training on Colab: a 70M mixture-of-experts fine-tune, a d768
   L12 base and its fine-tune, and next a base trained on FineWeb-Edu plus conversational text.
   Each is released through `release_chat.py` with the WebGPU page.
