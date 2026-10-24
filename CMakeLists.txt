@@ -439,6 +439,9 @@ if(NOT SKBUILD)
     # IR documents against IR_SPEC section 10.1's document rules, without a GGUF (tools/ir_doc_check.cpp).
     add_executable(ir_doc_check tools/ir_doc_check.cpp)
     target_link_libraries(ir_doc_check PRIVATE tinyllama_core)
+    # Which path serves a GGUF: the tuned llama path or the interpreter (tools/ir_path_check.cpp).
+    add_executable(ir_path_check tools/ir_path_check.cpp)
+    target_link_libraries(ir_path_check PRIVATE tinyllama_core)
     # Per-turn state tokens: template rule, eviction on/off, rewinds (tools/state_tokens_test.cpp).
     add_executable(state_tokens_test tools/state_tokens_test.cpp)
     target_link_libraries(state_tokens_test PRIVATE tinyllama_core)

@@ -179,16 +179,21 @@ TinyLlamaModel::TinyLlamaModel(const ModelConfig& initial_config,
       this->gguf_data_ = std::make_unique<GGUFData>(load_gguf_meta(this->model_path_, force_mmap_for_gguf_load));
 
       ModelConfig config_from_gguf = parse_model_config_from_gguf(*(this->gguf_data_));
-      // A paperkiln IR for a non-llama family (or EMBER_IR_ONLY=1): the
-      // interpreter serves it, so the dimensions come from the IR and the
-      // llama loader is skipped below.
+      // A paperkiln IR that is not the graph the tuned llama path implements
+      // (ember_ir::tuned_llama_match: a structural match, family_hint only
+      // its pre-filter; or EMBER_IR_ONLY=1): the interpreter serves it, so
+      // the dimensions come from the IR and the llama loader is skipped below.
       {
         const std::string ir = ember_ir::find_ir(*this->gguf_data_);
         const char* only = std::getenv("EMBER_IR_ONLY");
         if (!ir.empty()) {
           const auto j = nlohmann::json::parse(ir);
-          if (j.value("family_hint", "") != "llama" || (only && std::string(only) == "1") ||
-              ember_ir::has_windowed_attention(ir) || ember_ir::has_state_tokens(ir)) {
+          std::string why;
+          const bool tuned = ember_ir::tuned_llama_match(ir, *this->gguf_data_, &why);
+          if (!tuned && j.value("family_hint", "") == "llama")
+            Logger::info("[IR] family_hint llama, but not the tuned llama path's graph (" + why +
+                         "): the interpreter runs it");
+          if (!tuned || (only && std::string(only) == "1")) {
             this->ir_only_ = true;
             const auto& m = j.at("model");
             config_from_gguf.hidden_size = m.at("d").get<int>();

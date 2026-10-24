@@ -227,6 +227,196 @@ bool has_state_tokens(const std::string& ir_json) {
   return false;
 }
 
+namespace {
+
+// The structural match of tuned_llama_match (graph_ir.h): node by node against the graph the tuned llama path
+// implements, tracking the role of every value name (so names are free, the data flow is not).
+class LlamaMatch {
+ public:
+  LlamaMatch(const json& doc, const ModelConfig& cfg) : doc_(doc), cfg_(cfg) {}
+  std::string why;
+
+  bool run() {
+    const json& m = doc_.at("model");
+    d_ = m.at("d").get<int>();
+    if (d_ != cfg_.hidden_size) return fail("model.d " + std::to_string(d_) + " != the file's embedding_length");
+    if (m.at("n_layers").get<int>() != cfg_.num_hidden_layers) return fail("n_layers differs from the file's block_count");
+    if (cfg_.hidden_act != "silu") return fail("the file's hidden_act is " + cfg_.hidden_act);
+    const json& blk = doc_.at("block");
+    if (blk.contains("weight_index")) return fail("weight_index");
+    const json& state = blk.value("state", json::array());
+    if (state.size() != 1 || state[0].at("kind") != "kv") return fail("the block's state is not one kv slot");
+    const json& s = state[0];
+    if (!keys(s, {"name", "kind", "heads", "kv_heads", "head_dim", "max_len", "window", "sinks", "dtype"}, "kv slot"))
+      return false;
+    H_ = s.at("heads").is_number_integer() ? s.at("heads").get<int>() : -1;
+    KV_ = s.at("kv_heads").is_number_integer() ? s.at("kv_heads").get<int>() : -1;
+    hd_ = s.at("head_dim").is_number_integer() ? s.at("head_dim").get<int>() : -1;
+    if (H_ != cfg_.num_attention_heads || KV_ != cfg_.num_key_value_heads || cfg_.num_attention_heads <= 0 ||
+        hd_ != cfg_.hidden_size / cfg_.num_attention_heads || H_ * hd_ != d_)
+      return fail("kv slot heads / kv_heads / head_dim " + std::to_string(H_) + " / " + std::to_string(KV_) + " / " +
+                  std::to_string(hd_) + " differ from the file's " + std::to_string(cfg_.num_attention_heads) + " / " +
+                  std::to_string(cfg_.num_key_value_heads) + " (head_dim = d / heads)");
+    if (s.at("window") != 0 || s.at("sinks") != 0) return fail("a windowed kv slot");
+    slot_ = s.at("name").get<std::string>();
+    // embed
+    const json& emb = doc_.at("embed").at("nodes");
+    if (emb.size() != 1) return fail("embed is not one embedding");
+    if (!node(emb[0], "embedding", {"tokens"}, {"x_in"}, {"weight"}) || !weight(emb[0], "weight", "token_embd.weight"))
+      return false;
+    x_ = emb[0].at("out").get<std::string>();
+    // block
+    const json& n = blk.at("nodes");
+    const bool moe = cfg_.num_experts > 0;
+    if (n.size() != (moe ? 11u : 15u)) return fail("the block has " + std::to_string(n.size()) + " nodes");
+    if (!norm(n[0], "x_in", "n1", "blk.{i}.attn_norm.weight") || !lin(n[1], "n1", "q", "blk.{i}.attn_q.weight") ||
+        !lin(n[2], "n1", "k", "blk.{i}.attn_k.weight") || !lin(n[3], "n1", "v", "blk.{i}.attn_v.weight") ||
+        !rope(n[4]) || !attention(n[5]) || !lin(n[6], "a", "o", "blk.{i}.attn_output.weight") ||
+        !node(n[7], "add", {"x_in", "o"}, {"x_mid"}, {}, true) || !norm(n[8], "x_mid", "n2", "blk.{i}.ffn_norm.weight"))
+      return false;
+    if (moe) {
+      if (!moe_ffn(n[9]) || !node(n[10], "add", {"x_mid", "f"}, {"x_out"}, {}, true)) return false;
+    } else if (!lin(n[9], "n2", "g", "blk.{i}.ffn_gate.weight") || !lin(n[10], "n2", "u", "blk.{i}.ffn_up.weight") ||
+               !node(n[11], "silu", {"g"}, {"g_act"}, {}) || !node(n[12], "mul", {"g_act", "u"}, {"gu"}, {}, true) ||
+               !lin(n[13], "gu", "f", "blk.{i}.ffn_down.weight") ||
+               !node(n[14], "add", {"x_mid", "f"}, {"x_out"}, {}, true)) {
+      return false;
+    }
+    if (n.back().at("out") != x_) return fail("the block does not write the residual stream back to '" + x_ + "'");
+    // head: the next application and the head read x_out under the embedding's name
+    role_.clear();
+    role_[x_] = "x_in";
+    const json& h = doc_.at("head").at("nodes");
+    if (h.size() != 2 || !norm(h[0], "x_in", "n3", "output_norm.weight")) return h.size() == 2 ? false : fail("head");
+    if (!node(h[1], "linear", {"n3"}, {"logits"}, {"weight", "bias", "tied_to"}) || !weight(h[1], "weight", "output.weight") ||
+        !h[1].value("bias", json()).is_null() || (h[1].contains("tied_to") && h[1].at("tied_to") != "token_embd.weight"))
+      return fail("head linear: output.weight, no bias, tied to token_embd.weight or not");
+    if (h[1].at("out") != "logits") return fail("head output is not logits");
+    return true;
+  }
+
+ private:
+  bool fail(const std::string& m) {
+    if (why.empty()) why = m;
+    return false;
+  }
+  bool keys(const json& o, std::initializer_list<const char*> allowed, const std::string& where) {
+    for (const auto& kv : o.items()) {
+      if (!kv.key().empty() && kv.key()[0] == '_') continue;
+      bool ok = false;
+      for (const char* a : allowed) ok = ok || kv.key() == a;
+      if (!ok) return fail(where + ": '" + kv.key() + "'");
+    }
+    return true;
+  }
+  bool weight(const json& n, const char* key, const std::string& name) {
+    return n.value(key, json()) == name ? true : fail(n.at("op").get<std::string>() + " " + key + " is not " + name);
+  }
+  bool eps(const json& n) {
+    return n.at("eps").is_number() && n.at("eps").get<float>() == cfg_.rms_norm_eps
+               ? true
+               : fail("an rmsnorm eps differs from the file's layer_norm_rms_epsilon");
+  }
+  // op, input roles (commutative: either order of two), output roles, the keys besides op / in / out.
+  bool node(const json& n, const char* op, std::vector<std::string> ins, std::vector<std::string> outs,
+            std::initializer_list<const char*> attrs, bool commutative = false) {
+    const std::string where = std::string(op) + " node";
+    if (n.at("op") != op) return fail("expected " + where + ", found " + n.at("op").get<std::string>());
+    std::vector<const char*> allowed = {"op", "in", "out"};
+    allowed.insert(allowed.end(), attrs.begin(), attrs.end());
+    for (const auto& kv : n.items()) {
+      if (!kv.key().empty() && kv.key()[0] == '_') continue;
+      bool ok = false;
+      for (const char* a : allowed) ok = ok || kv.key() == a;
+      if (!ok) return fail(where + ": '" + kv.key() + "'");
+    }
+    std::vector<std::string> got;
+    for (const auto& x : n.at("in")) {
+      const auto it = role_.find(x.get<std::string>());
+      got.push_back(it == role_.end() ? "?" : it->second);
+    }
+    const bool same = got == ins || (commutative && ins.size() == 2 && got == std::vector<std::string>{ins[1], ins[0]});
+    if (!same) return fail(where + " reads the wrong values");
+    const std::vector<std::string> on = names(n.at("out"));
+    if (on.size() != outs.size()) return fail(where + " writes the wrong number of values");
+    for (size_t i = 0; i < on.size(); ++i) role_[on[i]] = outs[i];
+    return true;
+  }
+  bool norm(const json& n, const char* in, const char* out, const std::string& w) {
+    return node(n, "rmsnorm", {in}, {out}, {"weight", "eps"}) && weight(n, "weight", w) && eps(n);
+  }
+  bool lin(const json& n, const char* in, const char* out, const std::string& w) {
+    if (!node(n, "linear", {in}, {out}, {"weight", "bias"}) || !weight(n, "weight", w)) return false;
+    return n.value("bias", json()).is_null() ? true : fail("a biased linear");
+  }
+  bool rope(const json& n) {
+    if (!node(n, "rope", {"q", "k", "pos"}, {"q_rot", "k_rot"},
+              {"heads", "kv_heads", "head_dim", "theta", "rope_heads", "pairing", "n_rot", "freq_scale"}))
+      return false;
+    if (n.at("heads") != H_ || n.at("head_dim") != hd_ || n.value("kv_heads", json(KV_)) != KV_ ||
+        n.value("n_rot", json(hd_)) != hd_ || n.at("rope_heads") != "all" || n.at("pairing") != "interleaved" ||
+        !n.value("freq_scale", json(1.0)).is_number() || n.value("freq_scale", json(1.0)).get<double>() != 1.0)
+      return fail("rope is not interleaved on every head, n_rot = head_dim, freq_scale 1");
+    if (!n.at("theta").is_number() || n.at("theta").get<float>() != cfg_.rope_theta)
+      return fail("rope theta differs from the file's rope.freq_base");
+    return true;
+  }
+  bool attention(const json& n) {
+    if (!node(n, "attention", {"q_rot", "k_rot", "v"}, {"a"},
+              {"state", "heads", "kv_heads", "head_dim", "scale", "causal", "window", "sinks", "mask", "softmax"}))
+      return false;
+    if (n.at("state") != slot_ || n.at("heads") != H_ || n.at("kv_heads") != KV_ || n.at("head_dim") != hd_ ||
+        n.at("causal") != true || n.at("window") != 0 || n.at("sinks") != 0 || n.value("mask", json("causal")) != "causal")
+      return fail("attention is not causal over the kv slot with window 0, sinks 0");
+    if (!n.at("scale").is_number() || n.at("scale").get<float>() != 1.0f / std::sqrt(static_cast<float>(hd_)))
+      return fail("attention scale is not 1/sqrt(head_dim)");
+    return true;
+  }
+  bool moe_ffn(const json& n) {
+    if (!node(n, "moe_ffn", {"n2"}, {"f"}, {"router", "experts", "n_experts", "top_k", "gate_norm", "activation", "routing"}))
+      return false;
+    const json& e = n.at("experts");
+    if (n.at("router") != "blk.{i}.ffn_gate_inp.weight" || e.value("gate", "") != "blk.{i}.ffn_gate_exps.weight" ||
+        e.value("up", "") != "blk.{i}.ffn_up_exps.weight" || e.value("down", "") != "blk.{i}.ffn_down_exps.weight")
+      return fail("moe_ffn tensors are not llama.cpp's ffn_gate_inp / ffn_*_exps");
+    if (n.at("n_experts") != cfg_.num_experts || n.at("top_k") != cfg_.num_experts_used || n.at("gate_norm") != "renorm" ||
+        n.at("activation") != "silu")
+      return fail("moe_ffn: n_experts / top_k differ from the file's expert_count / expert_used_count, or not renorm silu");
+    return true;
+  }
+
+  const json& doc_;
+  const ModelConfig cfg_;  // a copy: the caller's may be a temporary
+  std::map<std::string, std::string> role_ = {{"tokens", "tokens"}, {"pos", "pos"}};
+  std::string x_, slot_;
+  int d_ = 0, H_ = 0, KV_ = 0, hd_ = 0;
+};
+
+}  // namespace
+
+bool tuned_llama_match(const std::string& ir_json, const GGUFData& gguf, std::string* why) {
+  auto no = [&](const std::string& m) {
+    if (why) *why = m;
+    return false;
+  };
+  json j;
+  try {
+    j = json::parse(ir_json);
+  } catch (const std::exception& e) {
+    return no(std::string("the document does not parse: ") + e.what());
+  }
+  if (!j.is_object() || j.value("family_hint", json()) != "llama") return no("family_hint is not llama");
+  try {
+    validate_ir(j, gguf);  // an invalid document goes to the interpreter, which refuses it
+    LlamaMatch m(j, parse_model_config_from_gguf(gguf));
+    if (!m.run()) return no(m.why);
+  } catch (const std::exception& e) {
+    return no(e.what());
+  }
+  if (why) why->clear();
+  return true;
+}
+
 bool device_supported(const std::string& ir_json) {
   // Per-turn state tokens have no device kernel yet: the CPU serves them.
   if (has_state_tokens(ir_json)) return false;

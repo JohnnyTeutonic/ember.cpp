@@ -1,0 +1,1004 @@
+{
+ "stored": [
+  {
+   "family_hint": "llama",
+   "gguf": "/home/jonat/ember_ttft/eps_parity/models/chat_sftfinal_v3.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "attnres",
+   "gguf": "/home/jonat/ember_ttft/families/attnres/attnres_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "flex_highway",
+   "gguf": "/home/jonat/ember_ttft/families/flex_highway/flex_highway_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "flex_plain",
+   "gguf": "/home/jonat/ember_ttft/families/flex_plain/flex_plain_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "kimi",
+   "gguf": "/home/jonat/ember_ttft/families/kimi/kimi_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "mamba",
+   "gguf": "/home/jonat/ember_ttft/families/mamba/mamba_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "srd",
+   "gguf": "/home/jonat/ember_ttft/families/srd/srd_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/home/jonat/ember_ttft/fwmix/chat_fwmix.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/home/jonat/ember_ttft/fwmix/chat_fwmix_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/home/jonat/ember_ttft/fwmoe/fw_moe.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/home/jonat/ember_ttft/fwmoe/fw_moe_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/home/jonat/ember_ttft/fwsft/chat_fwsft.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/home/jonat/ember_ttft/fwsft/chat_fwsft_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "gpt2",
+   "gguf": "/home/jonat/ember_ttft/gpt2_gate/gpt2_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/home/jonat/ember_ttft/ir_gate2/moe_tiny_v3.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "gpt2_swa",
+   "gguf": "/home/jonat/ember_ttft/swa_tiny/swa_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_attnres",
+   "gguf": "/mnt/c/ml_artifacts/attnres_gate/ar3/ar3.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_attnres",
+   "gguf": "/mnt/c/ml_artifacts/attnres_gate/ar3/ar3_q8_0.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "attnres",
+   "gguf": "/mnt/c/ml_artifacts/attnres_tiny/attnres_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/big/fw_big.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/big/fw_big_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/big_sft/chat_fw_big.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/big_sft/chat_fw_big_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/ctrl/fw_ctrl.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/ctrl/fw_ctrl_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/ctrl_sft/chat_fw_ctrl.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/ctrl_sft/chat_fw_ctrl_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "flex_plain",
+   "gguf": "/mnt/c/ml_artifacts/capacity/flex_plain/flex_plain_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/moe/fw_moe.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/moe/fw_moe_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/moe_sft/chat_fw_moe.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/capacity/moe_sft/chat_fw_moe_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "flex_highway",
+   "gguf": "/mnt/c/ml_artifacts/flex_highway_tiny/flex_highway_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/fw_base/release/chat_fwmix.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/fw_base/release/chat_fwmix_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/fw_base/release/chat_fwsft.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/fw_base/release/chat_fwsft_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "gpt2",
+   "gguf": "/mnt/c/ml_artifacts/gpt2_tiny/gpt2_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "kimi",
+   "gguf": "/mnt/c/ml_artifacts/kimi_tiny/kimi_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "mamba",
+   "gguf": "/mnt/c/ml_artifacts/mamba_tiny/mamba_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/moe_tiny/moe_tiny_v3.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama_mor",
+   "gguf": "/mnt/c/ml_artifacts/mor_gate/mor2p0/mor2p0.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_mor",
+   "gguf": "/mnt/c/ml_artifacts/mor_gate/mor2p0/mor2p0_q8_0.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_mor",
+   "gguf": "/mnt/c/ml_artifacts/mor_gate/mor3/mor3.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_mor",
+   "gguf": "/mnt/c/ml_artifacts/mor_gate/mor3/mor3_q8_0.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/next_base/base/pk_base_v1.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/next_base/base/pk_base_v1_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/next_base/base_2302_13971/arxiv_2302_13971_base.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "gpt2",
+   "gguf": "/mnt/c/ml_artifacts/next_base/base_2304_03208/arxiv_2304_03208_base.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/next_base/gate/gate_llama3.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/next_base/gate/gate_llama3_q8_0_all.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/next_base/sft_2302_13971/arxiv_2302_13971.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "gpt2",
+   "gguf": "/mnt/c/ml_artifacts/next_base/sft_2304_03208/arxiv_2304_03208.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_recursive",
+   "gguf": "/mnt/c/ml_artifacts/recursion_gate/b2x4/r.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_recursive",
+   "gguf": "/mnt/c/ml_artifacts/recursion_gate/b2x4/r_q8_0.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_recursive",
+   "gguf": "/mnt/c/ml_artifacts/recursion_gate/p1_b2x3_c1/r.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_recursive",
+   "gguf": "/mnt/c/ml_artifacts/recursion_gate/p1_b2x3_c1/r_q8_0.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_recursive",
+   "gguf": "/mnt/c/ml_artifacts/recursion_gate/p1_b2x3_c1_inject/r.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_recursive",
+   "gguf": "/mnt/c/ml_artifacts/recursion_gate/p1_b2x3_c1_inject/r_q8_0.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "srd",
+   "gguf": "/mnt/c/ml_artifacts/srd_tiny/srd_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_state",
+   "gguf": "/mnt/c/ml_artifacts/state_gate/state4/state4.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_state",
+   "gguf": "/mnt/c/ml_artifacts/state_gate/state4/state4_q8_0.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "gpt2_swa",
+   "gguf": "/mnt/c/ml_artifacts/swa_tiny/swa_tiny.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pick_e1_L32/model.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/post_e1_L32_r1/sft/tc_sft_L32_r1.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L16_r1/tc_e1_L16_r1.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L32_r1/tc_e1_L32_r1.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L32_r2/tc_e1_L32_r2.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L32_r3/tc_e1_L32_r3.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1_60m/pt_e1_60m_L32_r1/tc_e1_60m_L32_r1.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama_recursive",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1_rec/pt_e1_rec_MC7_r1/tc_e1_rec_MC7_r1.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_recursive",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1_rec/pt_e1_rec_R4_r1/tc_e1_rec_R4_r1.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s0_r1/tc_e5_s0_r1.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s0_r2/tc_e5_s0_r2.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s17_r1/tc_e5_s17_r1.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s17_r2/tc_e5_s17_r2.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s35_r1/tc_e5_s35_r1.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s70_r1/tc_e5_s70_r1.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/pilot/pick_pilot_s35/model.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/pilot/pt_pilot_s35_r99/tc_pilot_s35_r99.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/pilot_runpod/pick_pilot_s35/model.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/pilot_runpod/pt_pilot_s35_r99/tc_pilot_s35_r99.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "attnres",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_attnres/pk_attnres.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "flex",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_flex_expr/pk_flex_expr.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "flex_highway",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_flex_highway/pk_flex_highway.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "gpt2",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_gpt2/pk_gpt2.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "gpt2_swa",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_gpt2_swa/pk_gpt2_swa.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "kimi",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_kimi/pk_kimi.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_llama/pk_llama.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama_attnres",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_llama_attnres/pk_llama_attnres.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_attnres",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_llama_attnres_rec/pk_llama_attnres_rec.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "mamba",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_mamba/pk_mamba.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_moe/pk_moe.gguf",
+   "path": "tuned",
+   "why": "",
+   "before": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama_mor",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_mor/pk_mor.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_recursive",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_recursive/pk_recursive.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "srd",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_srd/pk_srd.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama_state",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_state/pk_state.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "gemma3",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/tp_gemma3/tp_gemma3.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "gptneox",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/tp_gptneox/tp_gptneox.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "mamba",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/tp_mamba1/tp_mamba1.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "mistral",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/tp_mistral/tp_mistral.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "qwen3",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/tp_qwen3/tp_qwen3.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "gemma3",
+   "gguf": "/mnt/c/ml_artifacts/thirdparty/gemma-3-270m-it/gemma-3-270m-it-f32.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "mamba",
+   "gguf": "/mnt/c/ml_artifacts/thirdparty/mamba-130m/mamba-130m-f32.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "gptneox",
+   "gguf": "/mnt/c/ml_artifacts/thirdparty/pythia-160m/pythia-160m-f32.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "qwen2",
+   "gguf": "/mnt/c/ml_artifacts/thirdparty/qwen2.5-0.5b-instruct/qwen2.5-0.5b-instruct-fp16.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "qwen3",
+   "gguf": "/mnt/c/ml_artifacts/thirdparty/qwen3-0.6b/Qwen3-0.6B-Q8_0.gguf",
+   "path": "interpreter",
+   "why": "family_hint is not llama",
+   "before": "interpreter",
+   "same": true
+  }
+ ],
+ "edits": [
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "tuned",
+   "why": "",
+   "edit": "as_is",
+   "want": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "interpreter",
+   "why": "rope theta differs from the file's rope.freq_base",
+   "edit": "theta_differs_from_metadata",
+   "want": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "interpreter",
+   "why": "an rmsnorm eps differs from the file's layer_norm_rms_epsilon",
+   "edit": "eps_differs_from_metadata",
+   "want": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "interpreter",
+   "why": "attention scale is not 1/sqrt(head_dim)",
+   "edit": "scale_not_inverse_sqrt",
+   "want": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "interpreter",
+   "why": "rope is not interleaved on every head, n_rot = head_dim, freq_scale 1",
+   "edit": "neox_pairing",
+   "want": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "interpreter",
+   "why": "expected silu node, found gelu",
+   "edit": "gelu_ffn",
+   "want": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "interpreter",
+   "why": "the block has 16 nodes",
+   "edit": "extra_affine",
+   "want": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "interpreter",
+   "why": "add node reads the wrong values",
+   "edit": "no_residual_add",
+   "want": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "interpreter",
+   "why": "linear node reads the wrong values",
+   "edit": "q_from_wrong_value",
+   "want": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "tuned",
+   "why": "",
+   "edit": "renamed_values",
+   "want": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "interpreter",
+   "why": "IR_SPEC 10.1 rule 1: doc.block.nodes[5] (attention) has the key 'flavour', which its specification does not define",
+   "edit": "invalid_document",
+   "want": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf",
+   "path": "interpreter",
+   "why": "a windowed kv slot",
+   "edit": "windowed",
+   "want": "interpreter",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/moe_tiny/moe_tiny_v3.gguf",
+   "path": "tuned",
+   "why": "",
+   "edit": "moe_as_is",
+   "want": "tuned",
+   "same": true
+  },
+  {
+   "family_hint": "llama",
+   "gguf": "/mnt/c/ml_artifacts/moe_tiny/moe_tiny_v3.gguf",
+   "path": "interpreter",
+   "why": "moe_ffn: n_experts / top_k differ from the file's expert_count / expert_used_count, or not renorm silu",
+   "edit": "moe_raw_gates",
+   "want": "interpreter",
+   "same": true
+  }
+ ],
+ "summary": {
+  "stored": 108,
+  "stored_same_path": 108,
+  "tuned": 51,
+  "edits": 14,
+  "edits_as_expected": 14
+ },
+ "pass": true
+}
