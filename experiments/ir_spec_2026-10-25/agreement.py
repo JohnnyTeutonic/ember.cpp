@@ -424,10 +424,15 @@ def main():
         print(f"{row['result']:22s} {name}: validator {row['validator']}, ember {row['ember']}"
               + ("" if row["result"] == "agree" and ok else f" | {msg[:150]}"), flush=True)
 
+    def uses_tensor_index(g):  # a valid document ember does not run yet (section 7.2, Appendix C)
+        d = embedded(g)
+        return d is not None and any("tensor_index" in n for _, _, n in V._sections(d))
+
     for g in pk:
-        run("gguf:" + os.path.relpath(g, A), "valid", "-", g, None, "accept")
+        run("gguf:" + os.path.relpath(g, A), "valid", "-", g, None, "capability" if uses_tensor_index(g) else "accept")
     for g in third_party_ggufs():
-        run("thirdparty:" + os.path.basename(g), "valid", "-", g, None, "accept")
+        tag = "suite:" if g.startswith(PK) else "thirdparty:"
+        run(tag + os.path.basename(g), "valid", "-", g, None, "capability" if uses_tensor_index(g) else "accept")
     stored = [p for p in V.corpus() if p.endswith(".ir.json")]
     unpaired = []
     for p in stored:
