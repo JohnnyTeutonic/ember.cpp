@@ -572,7 +572,9 @@ std::string build_ir_from_gguf(const GGUFData& g) {
 Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool use_gpu) {
   const json j = json::parse(ir_json);
   const int version = j.at("ir_version").get<int>();
-  if (version != 0) throw std::runtime_error("IR version " + std::to_string(version) + " is not supported (ember reads 0)");
+  // 1 is spec/IR_SPEC.md's first normative text of the same document as 0 (paperkiln, 25 Oct 2026)
+  if (version != 0 && version != 1)
+    throw std::runtime_error("IR version " + std::to_string(version) + " is not supported (ember reads 0 and 1)");
   family_hint_ = j.value("family_hint", "");
   embed_ = parse_nodes(j.at("embed"), "embed");
   block_ = parse_nodes(j.at("block"), "block");
