@@ -1,13 +1,98 @@
 {
  "header": {
   "cases_refused": 15,
-  "cases_rendered": 14,
+  "cases_rendered": 17,
   "failures": 0,
   "jinja_modelfile": 4,
   "legacy_prompts": 30,
   "records": 5,
   "resolutions": 7,
   "sha256": 2
+ },
+ "history_strict": {
+  "role_equals_pair": true,
+  "role_text": {
+   "text": "<|user|>hi<|assistant|>hello there<|endoftext|><|user|>hello<|assistant|>"
+  },
+  "violations": [
+   {
+    "history": [
+     {
+      "content": "hello there",
+      "role": "assistant"
+     },
+     {
+      "content": "hi",
+      "role": "user"
+     }
+    ],
+    "ok": true,
+    "result": {
+     "refused": "history has an assistant message without a user message before it: user and assistant messages must alternate, starting with user (section 3 point 3a)"
+    },
+    "rule": "without a user message before it"
+   },
+   {
+    "history": [
+     {
+      "content": "hi",
+      "role": "user"
+     },
+     {
+      "content": "hi",
+      "role": "user"
+     },
+     {
+      "content": "hello there",
+      "role": "assistant"
+     }
+    ],
+    "ok": true,
+    "result": {
+     "refused": "history has two user messages in a row: user and assistant messages must alternate (section 3 point 3a)"
+    },
+    "rule": "two user messages"
+   },
+   {
+    "history": [
+     {
+      "content": "hi",
+      "role": "user"
+     },
+     {
+      "content": "hello there",
+      "role": "assistant"
+     },
+     {
+      "content": "hi",
+      "role": "user"
+     }
+    ],
+    "ok": true,
+    "result": {
+     "refused": "history ends with a user message: it must end with an assistant reply (the new message goes in user_input)"
+    },
+    "rule": "ends with a user message"
+   },
+   {
+    "history": [
+     {
+      "content": "hi",
+      "role": "user"
+     },
+     {
+      "content": "x",
+      "role": "narrator"
+     }
+    ],
+    "ok": true,
+    "result": {
+     "refused": "history role 'narrator' is not allowed here (user, assistant; system only first)"
+    },
+    "rule": "role"
+   }
+  ],
+  "violations_refused": 4
  },
  "paths": [
   {
@@ -256,9 +341,9 @@
       "user_input": "Hi"
      },
      "result": {
-      "text": "<|user|>Hi<|assistant|>"
+      "refused": "history has an assistant message without a user message before it: user and assistant messages must alternate, starting with user (section 3 point 3a)"
      },
-     "same": false
+     "same": true
     },
     "openai": {
      "request": {
@@ -296,9 +381,9 @@
       "user_input": "b"
      },
      "result": {
-      "text": "<|user|>b<|assistant|>"
+      "refused": "history ends with a user message: it must end with an assistant reply (the new message goes in user_input)"
      },
-     "same": false
+     "same": true
     },
     "openai": {
      "request": {
@@ -1009,6 +1094,144 @@
    "template": "gemma3/1"
   },
   {
+   "expect": "<bos><start_of_turn>user\nHi there<end_of_turn>\n<start_of_turn>model\n",
+   "name": "gemma3 trims unicode edge whitespace",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": " 　Hi there \n"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\nHi there<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": " 　Hi there \n",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\nHi there<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    }
+   },
+   "template": "gemma3/1"
+  },
+  {
+   "expect": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n",
+   "name": "gemma3 trims unicode whitespace in system and history",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": " Be brief. ",
+        "role": "system"
+       },
+       {
+        "content": " Q1",
+        "role": "user"
+       },
+       {
+        "content": " A1 ",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "\u001cQ2\u001f"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [
+       {
+        "content": " Q1",
+        "role": "user"
+       },
+       {
+        "content": " A1 ",
+        "role": "assistant"
+       }
+      ],
+      "system": " Be brief. ",
+      "user_input": "\u001cQ2\u001f"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": " Be brief. ",
+        "role": "system"
+       },
+       {
+        "content": " Q1",
+        "role": "user"
+       },
+       {
+        "content": " A1 ",
+        "role": "assistant"
+       },
+       {
+        "content": "\u001cQ2\u001f",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    }
+   },
+   "template": "gemma3/1"
+  },
+  {
+   "expect": "<bos><start_of_turn>user\n​A B​<end_of_turn>\n<start_of_turn>model\n",
+   "name": "gemma3 keeps inner unicode whitespace and zero-width space",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "​A B​"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n​A B​<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "​A B​",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n​A B​<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    }
+   },
+   "template": "gemma3/1"
+  },
+  {
    "expect": "<|im_start|>user\na<|im_end|>\n<|im_start|>assistant\nb<|im_end|>\n<|im_start|>user\nc<|im_end|>\n<|im_start|>assistant\n",
    "name": "qwen3 strips past reasoning",
    "paths": {
@@ -1123,8 +1346,8 @@
  ],
  "paths_summary": {
   "cases_not_a_request": 4,
-  "differ": 3,
-  "same": 49
+  "differ": 1,
+  "same": 58
  },
  "resolutions": [
   {
@@ -1164,6 +1387,6 @@
   }
  ],
  "cases_file": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/tests/chat_template_cases.json",
- "cases_sha256": "dbd13cafff3d66d27ed609ce825b7a5ac7066b0d8ff29d957738e020e8b7aabe",
+ "cases_sha256": "3df67a6374d6b7bcf72cdf62619462705d1717e0fab673c44a9887550a504eda",
  "rc": 0
 }

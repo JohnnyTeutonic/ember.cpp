@@ -40,7 +40,7 @@
  },
  "prompts": "/mnt/c/ml_artifacts/chat_base/sft/tinychat_hf_prompts_v1.jsonl",
  "prompts_sha256": "a906b25aaf9f32848f83e8b87c8ad95e7eb8d5802129635f7e55fc62a68b3132",
- "ember_new": "69d7ca26d5cd4eaf3773a8baf49f6c885c6e7706 + working tree (this change)",
+ "ember_new": "cd1fd152f12e56cede12ea6d6a2eb6a401506277 + working tree (this change)",
  "ember_base": "69d7ca2",
  "health": {
   "new_original": {

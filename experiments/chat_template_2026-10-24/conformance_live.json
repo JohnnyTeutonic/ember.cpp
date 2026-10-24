@@ -230,11 +230,11 @@
    "template": "paperkiln/1",
    "path": "chat_history_system",
    "offline": {
-    "text": "<|user|>Hi<|assistant|>"
+    "refused": "history has an assistant message without a user message before it: user and assistant messages must alternate, starting with user (section 3 point 3a)"
    },
-   "same_as_python_twin": false,
-   "status": 200,
-   "error": null,
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": "history has an assistant message without a user message before it: user and assistant messages must alternate, starting with user (section 3 point 3a)",
    "live_matches_offline": true
   },
   {
@@ -257,11 +257,11 @@
    "template": "paperkiln/1",
    "path": "chat_history_system",
    "offline": {
-    "text": "<|user|>b<|assistant|>"
+    "refused": "history ends with a user message: it must end with an assistant reply (the new message goes in user_input)"
    },
-   "same_as_python_twin": false,
-   "status": 200,
-   "error": null,
+   "same_as_python_twin": true,
+   "status": 400,
+   "error": "history ends with a user message: it must end with an assistant reply (the new message goes in user_input)",
    "live_matches_offline": true
   },
   {
@@ -719,12 +719,96 @@
    "status": 200,
    "error": null,
    "live_matches_offline": true
+  },
+  {
+   "case": "gemma3 trims unicode edge whitespace",
+   "template": "gemma3/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<bos><start_of_turn>user\nHi there<end_of_turn>\n<start_of_turn>model\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "gemma3 trims unicode edge whitespace",
+   "template": "gemma3/1",
+   "path": "openai",
+   "offline": {
+    "text": "<bos><start_of_turn>user\nHi there<end_of_turn>\n<start_of_turn>model\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "gemma3 trims unicode whitespace in system and history",
+   "template": "gemma3/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "gemma3 trims unicode whitespace in system and history",
+   "template": "gemma3/1",
+   "path": "chat_system_field",
+   "offline": {
+    "text": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "gemma3 trims unicode whitespace in system and history",
+   "template": "gemma3/1",
+   "path": "openai",
+   "offline": {
+    "text": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "gemma3 keeps inner unicode whitespace and zero-width space",
+   "template": "gemma3/1",
+   "path": "chat_history_system",
+   "offline": {
+    "text": "<bos><start_of_turn>user\n​A B​<end_of_turn>\n<start_of_turn>model\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
+  },
+  {
+   "case": "gemma3 keeps inner unicode whitespace and zero-width space",
+   "template": "gemma3/1",
+   "path": "openai",
+   "offline": {
+    "text": "<bos><start_of_turn>user\n​A B​<end_of_turn>\n<start_of_turn>model\n"
+   },
+   "same_as_python_twin": true,
+   "status": 200,
+   "error": null,
+   "live_matches_offline": true
   }
  ],
  "offline_only": {
   "legacy word-level prompt": "paperkiln/legacy-word: no chat path with history serves it"
  },
- "n": 50,
- "live_matches_offline": 50,
+ "n": 57,
+ "live_matches_offline": 57,
  "pass": true
 }
