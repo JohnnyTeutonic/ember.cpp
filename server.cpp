@@ -55,6 +55,7 @@
 #include <vector>
 
 #include "api.h"
+#include "chat_request.h"
 #include "logger.h"
 #include "tokenizer.h"
 #include "model_macros.h"
@@ -76,16 +77,16 @@ static size_t utf8_complete_prefix(const std::string& s) {
 }
 
 // ---- BPE chat core, shared by /chat and /v1/chat/completions ------------
-// Chat-mode models: the prompt is exactly the model's chat format
-// (chat_tokenizer.h). paperkiln's SFT template: each past turn
-// <|user|>U<|assistant|>A<|endoftext|> then <|user|>U<|assistant|> (no BOS,
-// no separators). ChatML (Qwen): an optional default system turn, then
-// <|im_start|>user\nU<|im_end|>\n<|im_start|>assistant\n per turn, as HF's
-// apply_chat_template writes it. The oldest turns are dropped until
-// prompt + max_new_tokens fits the context.
+// Chat-mode models: the prompt is the conversation rendered by the model's
+// chat template, the record resolved at load (chat_tokenizer.h; LOCAL_LLM_STACK.md
+// section 3, point 3): paperkiln/1 writes <|user|>U<|assistant|>A<|endoftext|>
+// per past turn then <|user|>U<|assistant|>; the third-party records write
+// ChatML (Qwen2.5, Qwen3) or Gemma 3's turns as HF's apply_chat_template does.
+// The request becomes a Conversation (chat_request.h), and the oldest whole
+// exchanges are dropped until prompt + max_new_tokens fits the context; the
+// system message is pinned.
 struct BpeChatRequest {
-  std::string user_input;
-  std::vector<std::pair<std::string, std::string>> turns;  // (user, assistant), oldest first
+  ember::Conversation conv;
   int max_new_tokens = 60;
   float temperature = 0.1f;
   int top_k = 40;
@@ -129,20 +130,16 @@ struct BpePrompt {
   std::string error;  // non-empty: the newest message alone does not fit
 };
 
+// Throws chat::Error when the template refuses the conversation (HTTP 400).
 static BpePrompt bpe_build_prompt(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r) {
-  const ember::ChatFormat& fmt = *sess.chat_format();
-  auto build = [&](size_t from) { return fmt.prompt(r.turns, from, r.user_input); };
-  const int ctx = sess.get_config().max_position_embeddings;
-  size_t from = 0;
+  const ember::ChatPrompt p = ember::build_chat_prompt(
+      *sess.chat_format(), r.conv, r.max_new_tokens, sess.get_config().max_position_embeddings,
+      [&](const std::string& text) { return sess.bpe_token_count(text); });
   BpePrompt out;
-  out.prompt = build(from);
-  while (from < r.turns.size() && sess.bpe_token_count(out.prompt) + r.max_new_tokens > ctx)
-    out.prompt = build(++from);
-  out.prompt_tokens = sess.bpe_token_count(out.prompt);
-  out.turns_used = static_cast<int>(r.turns.size() - from);
-  if (out.prompt_tokens >= ctx)
-    out.error = "message is " + std::to_string(out.prompt_tokens) + " tokens; the model's context is " +
-                std::to_string(ctx);
+  out.prompt = p.prompt;
+  out.prompt_tokens = p.prompt_tokens;
+  out.turns_used = p.turns_used;
+  out.error = p.error;
   return out;
 }
 
@@ -335,9 +332,14 @@ int main(int argc, char** argv) {
             top_k = std::min(std::max(top_k, 0), 200);
             top_p = std::min(std::max(top_p, 0.05f), 1.0f);
             req_json.erase("return_ids");
+            if (req_json.contains("system") && req_json["system"].is_string() &&
+                req_json["system"].get<std::string>().size() > kMaxText)
+              req_json["system"] = req_json["system"].get<std::string>().substr(0, kMaxText);
             if (req_json.contains("history") && req_json["history"].is_array()) {
               json& hist = req_json["history"];
-              while (hist.size() > 16) hist.erase(hist.begin());  // the context holds ~5 turns anyway
+              // The context holds ~5 turns anyway; a leading system entry is pinned.
+              const bool lead_system = !hist.empty() && hist[0].is_object() && hist[0].value("role", "") == "system";
+              while (hist.size() > 16) hist.erase(hist.begin() + (lead_system ? 1 : 0));
               for (auto& h : hist)
                 for (const char* key : {"content", "user", "assistant"})
                   if (h.is_object() && h.contains(key) && h[key].is_string() &&
@@ -346,14 +348,21 @@ int main(int argc, char** argv) {
             }
           }
 
-          // paperkiln byte-level BPE chat models: the same /chat contract as
-          // mtstudio chat. The prompt is exactly the SFT template: each past
-          // turn <|user|>U<|assistant|>A<|endoftext|>, then
-          // <|user|>U<|assistant|> (no BOS, no separators), with the oldest
-          // turns dropped until prompt + max_new_tokens fits the context.
+          // Chat-mode models: the same /chat contract as mtstudio chat
+          // (LOCAL_LLM_STACK.md section 3, points 3-5). The request is a prompt
+          // conversation (optional "system" or leading system history entry,
+          // the history, user_input, "thinking"), rendered by the model's chat
+          // template, with the oldest whole exchanges dropped until
+          // prompt + max_new_tokens fits the context (the system message pinned).
           if (session->is_bpe()) {
             BpeChatRequest r;
-            r.user_input = user_input_from_client;
+            try {
+              r.conv = ember::chat_conversation(req_json);
+            } catch (const ember::RequestError& e) {
+              res.status = 400;
+              res.set_content(json{{"error", e.what()}}.dump(), "application/json");
+              return;
+            }
             r.max_new_tokens = max_new_tokens;
             r.temperature = temperature;
             r.top_k = top_k;
@@ -368,27 +377,15 @@ int main(int argc, char** argv) {
               res.set_content(json{{"error", rp_error}}.dump(), "application/json");
               return;
             }
-            if (req_json.contains("history") && req_json["history"].is_array()) {
-              std::string pending_user;
-              bool have_user = false;
-              for (const auto& h : req_json["history"]) {
-                if (h.contains("role")) {   // [{"role": "user"|"assistant", "content": ...}]
-                  const std::string role = h.value("role", "");
-                  const std::string content = h.value("content", "");
-                  if (role == "user") {
-                    pending_user = content;
-                    have_user = true;
-                  } else if (role == "assistant" && have_user) {
-                    r.turns.emplace_back(pending_user, content);
-                    have_user = false;
-                  }
-                } else {                    // [{"user": ..., "assistant": ...}]
-                  r.turns.emplace_back(h.value("user", ""), h.value("assistant", ""));
-                }
-              }
-            }
             tinyllama::TinyLlamaSession* sess = session.get();
-            const BpePrompt bp = bpe_build_prompt(*sess, r);
+            BpePrompt bp;
+            try {
+              bp = bpe_build_prompt(*sess, r);
+            } catch (const microtorch::chat::Error& e) {
+              res.status = 400;  // the template refuses the conversation (section 3, point 3)
+              res.set_content(json{{"error", e.what()}}.dump(), "application/json");
+              return;
+            }
             if (!bp.error.empty()) {
               res.status = 400;
               res.set_content(json{{"error", bp.error}}.dump(), "application/json");
@@ -458,8 +455,13 @@ int main(int argc, char** argv) {
                                  lower.rfind("user:", 0) == 0;
                 if (!has_field) {
                     if (dialogue_model == 1) {
+                        // The word-level record (paperkiln/legacy-word, resolved at load):
+                        // "user: X assistant:". History and system are not served on this path.
+                        const microtorch::chat::Template* wt = session->chat_template();
                         prompt_for_session_generate =
-                            "user: " + user_input_from_client + " assistant:";
+                            wt ? microtorch::chat::render(
+                                     microtorch::chat::from_pairs({}, &user_input_from_client), *wt, true)
+                               : "user: " + user_input_from_client + " assistant:";
                         Logger::info("WORD_LEVEL: wrapped input as dialogue turn.");
                     } else {
                         prompt_for_session_generate =
@@ -566,6 +568,13 @@ int main(int argc, char** argv) {
     h["status"] = "ok";
     h["model"] = model_dir;
     h["tokenizer"] = session->is_bpe() ? "bpe" : "ember";
+    // The chat template resolved at load (LOCAL_LLM_STACK.md section 3, point 4), null for raw
+    // completion only; chat_template_why says how it was resolved, or why there is none.
+    if (const microtorch::chat::Template* t = session->chat_template())
+      h["chat_template"] = {{"name", t->name}, {"version", json::parse(t->version.dump())}};
+    else
+      h["chat_template"] = nullptr;
+    h["chat_template_why"] = session->chat_template_why();
     h["context"] = c.max_position_embeddings;
     h["vocab_size"] = c.vocab_size;
     h["hidden_size"] = c.hidden_size;
@@ -574,13 +583,15 @@ int main(int argc, char** argv) {
     res.set_content(h.dump(), "application/json");
   });
 
-  // ---- OpenAI-compatible API (paperkiln BPE chat models) ----------------
+  // ---- OpenAI-compatible API (chat-mode models) -------------------------
   // POST /v1/chat/completions and GET /v1/models, so standard clients (the
-  // openai SDKs, chat front ends) can talk to ember. `messages` map onto the
-  // chat template: the last message must be from the user; earlier
-  // user/assistant pairs become history; system messages are ignored (the
-  // models are not trained with one). Defaults follow OpenAI's (temperature
-  // 1, top_p 1); top_k is accepted as an extension (0 = whole vocabulary).
+  // openai SDKs, chat front ends) can talk to ember. `messages` map one to
+  // one onto the model's chat template (ember::openai_conversation): system
+  // and developer messages before the first user message join with "\n\n"
+  // into the system message, a later one or a tool message is a 400, user and
+  // assistant messages alternate, and the last message must be from the user.
+  // Defaults follow OpenAI's (temperature 1, top_p 1); top_k, thinking and
+  // chat_template_kwargs.enable_thinking are accepted as extensions.
   const std::string model_id = std::filesystem::path(model_dir).filename().string();
   auto openai_error = [](httplib::Response& res, int status, const std::string& msg) {
     res.status = status;
@@ -618,8 +629,7 @@ int main(int argc, char** argv) {
       return;
     }
     json body = json::parse(req.body, nullptr, false);
-    if (body.is_discarded() || !body.is_object() || !body.contains("messages") || !body["messages"].is_array() ||
-        body["messages"].empty()) {
+    if (body.is_discarded()) {
       openai_error(res, 400, "body must be JSON with a non-empty 'messages' array");
       return;
     }
@@ -631,39 +641,12 @@ int main(int argc, char** argv) {
     bool include_usage = false;
     bool stream = false;
     try {
-      std::string pending_user;
-      bool have_user = false;
-      const json& msgs = body["messages"];
-      for (size_t i = 0; i < msgs.size(); ++i) {
-        const json& m = msgs[i];
-        const std::string role = m.value("role", "");
-        std::string content;
-        if (m.contains("content") && m["content"].is_string()) {
-          content = m["content"].get<std::string>();
-        } else if (m.contains("content") && m["content"].is_array()) {  // [{"type": "text", "text": ...}]
-          for (const auto& part : m["content"])
-            if (part.is_object() && part.value("type", "") == "text") content += part.value("text", "");
-        }
-        const bool last = i + 1 == msgs.size();
-        if (role == "user") {
-          if (last) {
-            r.user_input = content;
-          } else {
-            pending_user = content;
-            have_user = true;
-          }
-        } else if (role == "assistant") {
-          if (last) {
-            openai_error(res, 400, "the last message must be from the user");
-            return;
-          }
-          if (have_user) r.turns.emplace_back(pending_user, content);
-          have_user = false;
-        }
-        // "system", "developer", "tool": ignored.
-      }
-      if (msgs.back().value("role", "") != "user") {
-        openai_error(res, 400, "the last message must be from the user");
+      // messages map one to one (chat_request.h): leading system/developer messages join into the
+      // system message, a later one or a tool message is refused, the last message is the user's.
+      try {
+        r.conv = ember::openai_conversation(body);
+      } catch (const ember::RequestError& e) {
+        openai_error(res, 400, e.what());
         return;
       }
       if (body.contains("temperature") && body["temperature"].is_number()) r.temperature = body["temperature"].get<float>();
@@ -703,7 +686,7 @@ int main(int argc, char** argv) {
     r.max_new_tokens = std::max(r.max_new_tokens, 1);
     if (public_mode) {
       constexpr size_t kMaxText = 600;
-      if (r.user_input.size() > kMaxText) {
+      if (r.conv.user.size() > kMaxText) {
         openai_error(res, 400, "message too long (600 characters at most)");
         return;
       }
@@ -711,8 +694,9 @@ int main(int argc, char** argv) {
       r.temperature = std::min(std::max(r.temperature, 0.0f), 1.5f);
       r.top_k = std::min(std::max(r.top_k, 0), 200);
       r.top_p = std::min(std::max(r.top_p, 0.05f), 1.0f);
-      while (r.turns.size() > 8) r.turns.erase(r.turns.begin());
-      for (auto& t : r.turns) {
+      if (r.conv.system.size() > kMaxText) r.conv.system.resize(kMaxText);
+      while (r.conv.turns.size() > 8) r.conv.turns.erase(r.conv.turns.begin());
+      for (auto& t : r.conv.turns) {
         if (t.first.size() > kMaxText) t.first.resize(kMaxText);
         if (t.second.size() > kMaxText) t.second.resize(kMaxText);
       }
@@ -721,7 +705,13 @@ int main(int argc, char** argv) {
     const double queue_ms =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_request).count();
     tinyllama::TinyLlamaSession* sess = session.get();
-    const BpePrompt bp = bpe_build_prompt(*sess, r);
+    BpePrompt bp;
+    try {
+      bp = bpe_build_prompt(*sess, r);
+    } catch (const microtorch::chat::Error& e) {
+      openai_error(res, 400, e.what());  // the template refuses the conversation
+      return;
+    }
     if (!bp.error.empty()) {
       openai_error(res, 400, bp.error);
       return;

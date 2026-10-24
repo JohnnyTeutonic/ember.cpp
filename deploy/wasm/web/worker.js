@@ -77,7 +77,7 @@ async function chatGpu(req) {
   for (let s = 0; s < prep.max_new_tokens; s++) {
     ember.HEAPF32.set(logits, logitsPtr >> 2);
     const t = ember._ember_sample(logitsPtr, n);
-    if (t === 1 || t === 2 || t === 3) { stop = t; break; }
+    if (prep.stop_ids.includes(t)) { stop = t; break; }   // the chat template's stop set
     if (s === prep.max_new_tokens - 1 || pos >= prep.ctx) break;   // the length limit
     logits = await gpu.forward([t], pos++);
   }

@@ -1,4 +1,5 @@
 #include "api.h"
+#include "chat_gguf.h"
 #include "gguf_parser.h"
 #include "model_macros.h"
 
@@ -549,44 +550,35 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
       Logger::info("Dequantised all weights to f32 at load (small model).");
   }
 
-  // paperkiln chat models: their vocabulary ("bpe" with id-pair merges, or the llama.cpp-compatible
-  // "gpt2"/"llama-bpe" form with the chat specials at ids 0-3) goes through the vendored paperkiln
-  // tokenizers in chat_tokenizer.h (see is_bpe()); so do Qwen2/Qwen3 GGUFs ("gpt2"/"qwen2", ChatML).
-  // Any other GGUF keeps ember's own tokenizers.
+  // Chat mode (chat_tokenizer.h): the GGUF's chat template is resolved by chat::resolve (declared
+  // paperkiln.chat_template, paperkiln's specials, a word-level vocabulary, a third-party record by
+  // sha256 or markers and architecture), and the vocabulary goes through the vendored paperkiln
+  // tokenizers ("bpe", "gpt2" with "llama-bpe" or "qwen2") or the SentencePiece port ("llama",
+  // Gemma 3). A GGUF with no template keeps ember's own tokenizers and serves raw completion.
   {
     std::string ext = std::filesystem::path(model_path_arg).extension().string();
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
     if (ext == ".gguf") {
-      std::string arch, chat_template;
-      microtorch::bpe::GgufTokenizer g;
-      bool have = false;
+      ember::ChatVocab v;
       if (const GGUFData* gd = model_->get_gguf_data()) {
-        auto str = [&](const char* key) {
-          auto it = gd->metadata.find(key);
-          const std::string* s = it == gd->metadata.end() ? nullptr : std::get_if<std::string>(&it->second);
-          return s ? *s : std::string();
-        };
-        arch = str("general.architecture");
-        chat_template = str("tokenizer.chat_template");
-        // A Qwen vocabulary comes from the metadata already parsed: read_gguf_tokenizer reads the
-        // whole file into memory (1.3 GB for Qwen2.5-0.5B f16). paperkiln files keep that reader.
-        if (str("tokenizer.ggml.pre") == "qwen2" && !gd->tokenizer_tokens.empty()) {
-          g.model = str("tokenizer.ggml.model");
-          g.pre = "qwen2";
-          g.tokens = gd->tokenizer_tokens;
-          g.merges = gd->tokenizer_merges;
-          g.token_type.assign(gd->tokenizer_token_types.begin(), gd->tokenizer_token_types.end());
-          have = true;
-        }
+        v = ember::chat_vocab_from_gguf(*gd, model_path_arg);
+      } else {
+        v.g = microtorch::bpe::read_gguf_tokenizer(model_path_arg);
       }
-      if (!have) g = microtorch::bpe::read_gguf_tokenizer(model_path_arg);
-      const size_t n_merges = g.merges.size();
-      bpe_ = ember::make_chat_tokenizer(std::move(g), arch, chat_template);
+      const size_t n_merges = v.g.merges.size();
+      ember::ChatSetup cs = ember::make_chat_setup(std::move(v));
+      chat_template_why_ = cs.why;
+      bpe_ = std::move(cs.tok);
       if (bpe_) {
         repetition_penalty_ = 1.0f;  // mtstudio chat applies none
         Logger::info(std::string("Chat tokenizer (") + bpe_->kind() + "): " + std::to_string(bpe_->size()) +
-                     " tokens, " + std::to_string(n_merges) + " merges (chat mode, " + bpe_->format().name +
-                     " template)");
+                     " tokens, " + std::to_string(n_merges) + " merges (chat mode)");
+        Logger::info("Chat template " + bpe_->format().name + " (" + cs.why + ")");
+      } else if (cs.resolved) {
+        word_template_ = std::make_unique<microtorch::chat::Template>(cs.tmpl);
+        Logger::info("Chat template " + cs.tmpl.id() + " (" + cs.why + "), served by ember's own tokenizer");
+      } else {
+        Logger::info("No chat template: " + cs.why);
       }
     }
   }
@@ -607,8 +599,12 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
       if (!ir_ || ir_->state_k() != k)
         throw std::runtime_error("paperkiln.state_tokens.k is " + std::to_string(k) +
                                  ": the model must run through the IR interpreter with a state_weight of k rows");
-      if (!bpe_ || bpe_->format().name != "paperkiln")
-        throw std::runtime_error("paperkiln.state_tokens.k > 0 needs paperkiln's chat template");
+      // The insertion rule is defined over paperkiln/1's markers (state_tokens.h; ir.hpp names
+      // no other template yet).
+      if (!bpe_ || !bpe_->format().v1_markers())
+        throw std::runtime_error("paperkiln.state_tokens.k > 0 needs the paperkiln/1 chat template (state blocks are "
+                                 "defined over its markers); this file's template is " +
+                                 std::string(bpe_ ? bpe_->format().name : "none") + " (" + chat_template_why_ + ")");
       state_k_ = k;
       state_vocab_ = ir_->vocab();
       Logger::info("Per-turn state tokens: k " + std::to_string(k) + " (ids " + std::to_string(state_vocab_) + " .. " +
