@@ -1,0 +1,386 @@
+{
+ "models": {
+  "tc_sft_L32_r1.gguf": {
+   "sha256": "1187e44818139cb52db7218452472a5eddcc0f4f279e1cebccb763258b3eb9d1",
+   "shape": "d 192, 32 layers, 3 heads, d_ff 832",
+   "source": "/mnt/c/ml_artifacts/tiny_chat/e1/post_e1_L32_r1/sft (the post job's file; ember ran it in the failing spot-check)"
+  },
+  "sp_L16.gguf": {
+   "sha256": "40fe2f549a3fc269c90f1223ad883f0abfaec3859eafa7f6a628da4b0e047988",
+   "shape": "d 320, 16 layers, 5 heads, d_ff 864",
+   "source": "shape_20m_L16.json's arch, 2 CPU steps of mtstudio (receipts/home/sp_L16_spec.json)"
+  },
+  "tc_e1_L32_r1.gguf": {
+   "source": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L32_r1 (E1 L32 base)"
+  },
+  "tc_e5_s0_r1.gguf": {
+   "source": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s0_r1 (E5 L8 base, d 448)"
+  }
+ },
+ "cpu_home": {
+  "spot_check_ember_cpu_vs_mtstudio_records": {
+   "items": 40,
+   "items_identical": 40,
+   "replies": 320,
+   "replies_identical": 320
+  },
+  "tinychat_40_ember_cpu_vs_mtstudio_cpu": {
+   "sft_L32_spot": "40/40",
+   "sft_L32_p1": "40/40",
+   "sp_L16_spot": "40/40",
+   "sp_L16_p1": "40/40",
+   "L32_e1_spot": "40/40",
+   "L32_e1_p1": "40/40",
+   "L8_e5_spot": "40/40",
+   "L8_e5_p1": "40/40"
+  }
+ },
+ "cuda_T4": {
+  "kernel_test": {
+   "b72ade8": {
+    "summary": "rmsnorm_batch_test: FAIL (5 widths failed; worst 4.974e-01)",
+    "failed_widths": [
+     96,
+     160,
+     192,
+     200,
+     255
+    ]
+   },
+   "ef4b30f": {
+    "summary": "rmsnorm_batch_test: FAIL (5 widths failed; worst 4.974e-01)",
+    "failed_widths": [
+     96,
+     160,
+     192,
+     200,
+     255
+    ]
+   },
+   "cbdcb91": {
+    "summary": "rmsnorm_batch_test: FAIL (5 widths failed; worst 4.974e-01)",
+    "failed_widths": [
+     96,
+     160,
+     192,
+     200,
+     255
+    ]
+   },
+   "2886a97": {
+    "summary": "rmsnorm_batch_test: FAIL (5 widths failed; worst 4.974e-01)",
+    "failed_widths": [
+     96,
+     160,
+     192,
+     200,
+     255
+    ]
+   },
+   "FIX": {
+    "summary": "rmsnorm_batch_test: PASS (0 widths failed; worst 1.288e-07)",
+    "failed_widths": []
+   },
+   "bit_equal_2886a97_vs_fix": {
+    "32": true,
+    "64": true,
+    "96": false,
+    "128": true,
+    "160": false,
+    "192": false,
+    "200": false,
+    "255": false,
+    "256": true,
+    "320": true,
+    "384": true,
+    "448": true,
+    "512": true,
+    "640": true,
+    "704": true,
+    "832": true,
+    "896": true,
+    "1024": true
+   }
+  },
+  "spot_check_T4": {
+   "pin": {
+    "items": 40,
+    "items_identical": 0,
+    "replies": 320,
+    "replies_identical": 28
+   },
+   "pinfix": {
+    "items": 40,
+    "items_identical": 40,
+    "replies": 320,
+    "replies_identical": 320
+   },
+   "head": {
+    "items": 40,
+    "items_identical": 0,
+    "replies": 320,
+    "replies_identical": 28
+   },
+   "fix": {
+    "items": 40,
+    "items_identical": 40,
+    "replies": 320,
+    "replies_identical": 320
+   },
+   "pin_vs_post_job_ember_L4": {
+    "items": 40,
+    "items_identical": 40,
+    "replies": 320,
+    "replies_identical": 320
+   }
+  },
+  "tinychat_prompts": {
+   "sft_spot": {
+    "pin_cuda_vs_mtstudio": "5/40",
+    "fix_cuda_vs_mtstudio": "40/40",
+    "fix_cpu_vs_mtstudio": "40/40",
+    "home_ember_cpu_vs_mtstudio": "40/40",
+    "pin_cuda_vs_fix_cuda_ids": "5/40",
+    "fix_cuda_vs_fix_cpu_ids": "40/40"
+   },
+   "sft_p1": {
+    "pin_cuda_vs_mtstudio": "5/40",
+    "fix_cuda_vs_mtstudio": "40/40",
+    "fix_cpu_vs_mtstudio": "40/40",
+    "home_ember_cpu_vs_mtstudio": "40/40",
+    "pin_cuda_vs_fix_cuda_ids": "5/40",
+    "fix_cuda_vs_fix_cpu_ids": "40/40"
+   },
+   "L16_spot": {
+    "pin_cuda_vs_mtstudio": "40/40",
+    "fix_cuda_vs_mtstudio": "40/40",
+    "fix_cpu_vs_mtstudio": "40/40",
+    "home_ember_cpu_vs_mtstudio": "40/40",
+    "pin_cuda_vs_fix_cuda_ids": "40/40",
+    "fix_cuda_vs_fix_cpu_ids": "40/40"
+   },
+   "L16_p1": {
+    "pin_cuda_vs_mtstudio": "40/40",
+    "fix_cuda_vs_mtstudio": "40/40",
+    "fix_cpu_vs_mtstudio": "40/40",
+    "home_ember_cpu_vs_mtstudio": "40/40",
+    "pin_cuda_vs_fix_cuda_ids": "40/40",
+    "fix_cuda_vs_fix_cpu_ids": "40/40"
+   }
+  }
+ },
+ "numpy_emulation_of_the_bug": {
+  "n": 8,
+  "bug_eq_ember_cuda": 8,
+  "clean_eq_mtstudio": 8
+ },
+ "logits_at_divergence": [
+  {
+   "item": 0,
+   "prompt_tokens": 9,
+   "replies": {
+    "pin_cuda": "Hi Yuki, I'm Yuki. I'm Yuki.",
+    "fix_cuda": "Hi Yuki, I'm Yuki.",
+    "fix_cpu": "Hi Yuki, I'm Yuki."
+   },
+   "first_divergent_step_vs_cpu": {
+    "pin_cuda": 11,
+    "fix_cuda": null
+   },
+   "at": {
+    "0": {
+     "numpy_top1": 2591,
+     "numpy_margin": 1.571279525756836,
+     "pin_cuda": {
+      "max_abs_vs_numpy": 4.053185463525391,
+      "top1": 2591,
+      "margin": 1.6652983999999975
+     },
+     "fix_cuda": {
+      "max_abs_vs_numpy": 7.629199219039151e-06,
+      "top1": 2591,
+      "margin": 1.5712823999999994
+     },
+     "fix_cpu": {
+      "max_abs_vs_numpy": 7.630141601211449e-06,
+      "top1": 2591,
+      "margin": 1.5712815000000013
+     },
+     "max_abs_pin_cuda_vs_fix_cpu": 4.053178800000001,
+     "max_abs_fix_cuda_vs_fix_cpu": 5.719999998987646e-06
+    },
+    "11": {
+     "numpy_top1": 1,
+     "numpy_margin": 0.3679513931274414,
+     "pin_cuda": {
+      "max_abs_vs_numpy": 3.833686878088379,
+      "top1": 311,
+      "margin": 0.13794809999999913
+     },
+     "fix_cuda": {
+      "max_abs_vs_numpy": 6.437099609346575e-06,
+      "top1": 1,
+      "margin": 0.36795240000000007
+     },
+     "fix_cpu": {
+      "max_abs_vs_numpy": 5.725980224191574e-06,
+      "top1": 1,
+      "margin": 0.3679541999999998
+     },
+     "max_abs_pin_cuda_vs_fix_cpu": 3.83368545,
+     "max_abs_fix_cuda_vs_fix_cpu": 4.289999999684824e-06
+    }
+   }
+  },
+  {
+   "item": 1,
+   "prompt_tokens": 15,
+   "replies": {
+    "pin_cuda": "Bramble is a tortoise that is a tortoise that is a tortoise.",
+    "fix_cuda": "Oh, that's a cute name. I've never heard of it.",
+    "fix_cpu": "Oh, that's a cute name. I've never heard of it."
+   },
+   "first_divergent_step_vs_cpu": {
+    "pin_cuda": 0,
+    "fix_cuda": null
+   },
+   "at": {
+    "0": {
+     "numpy_top1": 2839,
+     "numpy_margin": 0.1649160385131836,
+     "pin_cuda": {
+      "max_abs_vs_numpy": 4.039429425441284,
+      "top1": 37,
+      "margin": 0.8106918000000007
+     },
+     "fix_cuda": {
+      "max_abs_vs_numpy": 6.4361468505858e-06,
+      "top1": 2839,
+      "margin": 0.16491409999999895
+     },
+     "fix_cpu": {
+      "max_abs_vs_numpy": 7.626146850459037e-06,
+      "top1": 2839,
+      "margin": 0.16491409999999895
+     },
+     "max_abs_pin_cuda_vs_fix_cpu": 4.03942656,
+     "max_abs_fix_cuda_vs_fix_cpu": 4.050000000255238e-06
+    }
+   }
+  },
+  {
+   "item": 2,
+   "prompt_tokens": 10,
+   "replies": {
+    "pin_cuda": "That's nice, I love his life.",
+    "fix_cuda": "That's a great feeling. I'm glad you're able to meet him.",
+    "fix_cpu": "That's a great feeling. I'm glad you're able to meet him."
+   },
+   "first_divergent_step_vs_cpu": {
+    "pin_cuda": 2,
+    "fix_cuda": null
+   },
+   "at": {
+    "0": {
+     "numpy_top1": 1027,
+     "numpy_margin": 0.42541980743408203,
+     "pin_cuda": {
+      "max_abs_vs_numpy": 1.725960710083008,
+      "top1": 1027,
+      "margin": 0.3168526000000007
+     },
+     "fix_cuda": {
+      "max_abs_vs_numpy": 4.290997314804201e-06,
+      "top1": 1027,
+      "margin": 0.4254207999999995
+     },
+     "fix_cpu": {
+      "max_abs_vs_numpy": 3.8191406250831506e-06,
+      "top1": 1027,
+      "margin": 0.4254187999999992
+     },
+     "max_abs_pin_cuda_vs_fix_cpu": 1.7259597600000003,
+     "max_abs_fix_cuda_vs_fix_cpu": 2.9000000001389026e-06
+    },
+    "2": {
+     "numpy_top1": 261,
+     "numpy_margin": 0.21693134307861328,
+     "pin_cuda": {
+      "max_abs_vs_numpy": 2.7481229314031985,
+      "top1": 3361,
+      "margin": 0.00906750000000045
+     },
+     "fix_cuda": {
+      "max_abs_vs_numpy": 6.677827148138249e-06,
+      "top1": 261,
+      "margin": 0.21693509999999883
+     },
+     "fix_cpu": {
+      "max_abs_vs_numpy": 6.671337891006601e-06,
+      "top1": 261,
+      "margin": 0.21693319999999972
+     },
+     "max_abs_pin_cuda_vs_fix_cpu": 2.7481257900000005,
+     "max_abs_fix_cuda_vs_fix_cpu": 4.799999999249849e-06
+    }
+   }
+  },
+  {
+   "item": 3,
+   "prompt_tokens": 10,
+   "replies": {
+    "pin_cuda": "No, I haven't. I'm a big fan of the NBA.",
+    "fix_cuda": "No, I haven't.",
+    "fix_cpu": "No, I haven't."
+   },
+   "first_divergent_step_vs_cpu": {
+    "pin_cuda": 6,
+    "fix_cuda": null
+   },
+   "at": {
+    "0": {
+     "numpy_top1": 2134,
+     "numpy_margin": 0.011407852172851562,
+     "pin_cuda": {
+      "max_abs_vs_numpy": 2.888824430566407,
+      "top1": 2134,
+      "margin": 0.0101432999999993
+     },
+     "fix_cuda": {
+      "max_abs_vs_numpy": 6.3228039550722315e-06,
+      "top1": 2134,
+      "margin": 0.011406899999998998
+     },
+     "fix_cpu": {
+      "max_abs_vs_numpy": 5.714086913854999e-06,
+      "top1": 2134,
+      "margin": 0.011407900000000026
+     },
+     "max_abs_pin_cuda_vs_fix_cpu": 2.8888254,
+     "max_abs_fix_cuda_vs_fix_cpu": 3.810000000825653e-06
+    },
+    "6": {
+     "numpy_top1": 1,
+     "numpy_margin": 0.3259143829345703,
+     "pin_cuda": {
+      "max_abs_vs_numpy": 2.1078138348583986,
+      "top1": 311,
+      "margin": 0.37331870000000045
+     },
+     "fix_cuda": {
+      "max_abs_vs_numpy": 6.201398925931301e-06,
+      "top1": 1,
+      "margin": 0.325913400000001
+     },
+     "fix_cpu": {
+      "max_abs_vs_numpy": 5.2487768558151515e-06,
+      "top1": 1,
+      "margin": 0.325913400000001
+     },
+     "max_abs_pin_cuda_vs_fix_cpu": 2.1078171700000006,
+     "max_abs_fix_cuda_vs_fix_cpu": 3.3400000001293506e-06
+    }
+   }
+  }
+ ]
+}

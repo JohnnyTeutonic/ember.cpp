@@ -1,0 +1,79 @@
+{
+ "n": 8,
+ "bug_eq_ember_cuda": 8,
+ "clean_eq_mtstudio": 8,
+ "rows": [
+  {
+   "id": "carry5_v1:recall:0001",
+   "emulated_bug": "Hi Yuki, I'm Yuki. I'm Yuki.",
+   "ember_cuda": "Hi Yuki, I'm Yuki. I'm Yuki.",
+   "numpy_clean": "Hi Yuki, I'm Yuki.",
+   "mtstudio": "Hi Yuki, I'm Yuki.",
+   "bug_eq_ember_cuda": true,
+   "clean_eq_mtstudio": true
+  },
+  {
+   "id": "carry5_v1:recall:0027",
+   "emulated_bug": "Bramble is a tortoise that is a tortoise that is a tortoise.",
+   "ember_cuda": "Bramble is a tortoise that is a tortoise that is a tortoise.",
+   "numpy_clean": "Oh, that's a cute name. I've never heard of it.",
+   "mtstudio": "Oh, that's a cute name. I've never heard of it.",
+   "bug_eq_ember_cuda": true,
+   "clean_eq_mtstudio": true
+  },
+  {
+   "id": "carry5_v1:recall:0053",
+   "emulated_bug": "That's nice, I love his life.",
+   "ember_cuda": "That's nice, I love his life.",
+   "numpy_clean": "That's a great feeling. I'm glad you're able to meet him.",
+   "mtstudio": "That's a great feeling. I'm glad you're able to meet him.",
+   "bug_eq_ember_cuda": true,
+   "clean_eq_mtstudio": true
+  },
+  {
+   "id": "carry5_v1:recall:0079",
+   "emulated_bug": "No, I haven't. I'm a big fan of the NBA.",
+   "ember_cuda": "No, I haven't. I'm a big fan of the NBA.",
+   "numpy_clean": "No, I haven't.",
+   "mtstudio": "No, I haven't.",
+   "bug_eq_ember_cuda": true,
+   "clean_eq_mtstudio": true
+  },
+  {
+   "id": "carry5_v1:recall:0105",
+   "emulated_bug": "I love swimming, I love it too.  I love it when it is done by a bike, but I'm",
+   "ember_cuda": "I love swimming, I love it too.  I love it when it is done by a bike, but I'm",
+   "numpy_clean": "I love swimming, I love it when it is warm and sunny.",
+   "mtstudio": "I love swimming, I love it when it is warm and sunny.",
+   "bug_eq_ember_cuda": true,
+   "clean_eq_mtstudio": true
+  },
+  {
+   "id": "carry5_v1:recall:0131",
+   "emulated_bug": "Oh, I have a cat named Kelly. She is a cat person.",
+   "ember_cuda": "Oh, I have a cat named Kelly. She is a cat person.",
+   "numpy_clean": "Oh, I have a cat named Kelly. She is a cat person.",
+   "mtstudio": "Oh, I have a cat named Kelly. She is a cat person.",
+   "bug_eq_ember_cuda": true,
+   "clean_eq_mtstudio": true
+  },
+  {
+   "id": "carry5_v1:recall:0157",
+   "emulated_bug": "Good morning, I'm a student, and I'm a student.",
+   "ember_cuda": "Good morning, I'm a student, and I'm a student.",
+   "numpy_clean": "Good morning, I'm in the mood to order some coffee.",
+   "mtstudio": "Good morning, I'm in the mood to order some coffee.",
+   "bug_eq_ember_cuda": true,
+   "clean_eq_mtstudio": true
+  },
+  {
+   "id": "carry5_v1:recall:0183",
+   "emulated_bug": "I am 24 years old!  I am 24 now.",
+   "ember_cuda": "I am 24 years old!  I am 24 now.",
+   "numpy_clean": "I am 24 years old.",
+   "mtstudio": "I am 24 years old.",
+   "bug_eq_ember_cuda": true,
+   "clean_eq_mtstudio": true
+  }
+ ]
+}

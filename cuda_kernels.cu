@@ -2040,8 +2040,14 @@ void rmsnorm_batch_cuda(float* d_out, float* d_in, const float* d_weight,
     // Max threads per block is typically 1024.
     // If hidden_size is small (e.g., < 256), could use hidden_size as blockDim.x
     // If hidden_size is large, use a fixed size like 256 or 512.
-    int threads_per_block_x = (hidden_size <= 256) ? hidden_size : 256;
-    if (hidden_size == 0) threads_per_block_x = 1; // Avoid 0 blockDim
+    // The kernel's tree reduction halves blockDim.x at each step, so the block is a power of two.
+    // A block of hidden_size threads loses partial sums at any width up to 256 that is not one: at
+    // d = 192 the reduction reaches s = 3 and drops the third partial, a third of the sum of
+    // squares (tools/rmsnorm_batch_test.cu). Power-of-two widths up to 256, and every width above
+    // 256, get a block of hidden_size or 256 threads as before; the extra threads of a rounded-up
+    // block contribute 0.
+    int threads_per_block_x = 1;
+    while (threads_per_block_x < hidden_size && threads_per_block_x < 256) threads_per_block_x <<= 1;
     
     // We launch one block per token.
     dim3 block_dim(threads_per_block_x);
