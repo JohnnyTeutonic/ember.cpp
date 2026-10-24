@@ -141,7 +141,53 @@ class Interpreter {
   // kv rows held per block (turn_state IRs; else the positions written so far).
   int kv_rows_held() const { return turn_state_ ? static_cast<int>(kv_pos_.size()) : static_cast<int>(ts_seg_.size()); }
 
+  // Conformance hooks (tools/ir_adapter.cpp; paperkiln spec/IR_SPEC.md section 11.3). CPU path
+  // only (each throws on the device path). No other caller uses them, and none changes what
+  // forward() computes: the accessors read the state, truncate() and load_state() set it to what
+  // a fresh run over the same ids would leave.
+  // kv_slot(): the kv slot's name (empty without one). evict_declared(): the document's kv slot
+  // says "evict": "turn_state" (evicts() is what is in force after EMBER_EVICT). seq_len(): the
+  // positions the state covers (the end of the last forward, truncate or load_state).
+  const std::string& kv_slot() const { return kv_slot_; }
+  bool evict_declared() const { return evict_declared_; }
+  int seq_len() const { return seq_len_; }
+  bool has_depth_route() const { return !mor_step_.empty(); }
+  // The absolute positions of the k/v rows application `application`'s kv cache holds, ascending:
+  // under turn_state the compact cache's (after any eviction), under depth_route a recursion
+  // step's compact cache, else 0 .. seq_len() - 1. Empty without a kv slot.
+  std::vector<int> kv_positions(int application) const;
+  // The recurrent slots' tensors in declaration order, and one tensor's values at an application.
+  struct RecurrentTensorInfo {
+    std::string slot, tensor;
+    std::vector<int64_t> shape;
+  };
+  std::vector<RecurrentTensorInfo> recurrent_tensors() const;
+  std::vector<float> recurrent_values(const std::string& slot, const std::string& tensor, int application) const;
+  // Drops the state of positions >= n (IR_SPEC.md section 6.9), as a forward from n would before
+  // running. n must be a point the state can resume from (resume_point(n) == n): the caller
+  // re-prefills from resume_point(n) otherwise.
+  void truncate(int n);
+  // The whole sequence state (kv rows in use, state-token bookkeeping, MoR row sets, recurrent
+  // tensors and their snapshots), copied out and back (the adapter's snapshot / restore).
+  struct State {
+    int seq_len = 0;
+    std::vector<std::vector<float>> k, v;  // per application: its rows in use
+    std::vector<int> ts_seg, ts_sidx, kv_pos;
+    int evicted_below = 0;
+    std::vector<std::vector<int>> mor_rows;
+    std::vector<int> mor_depth;
+    std::vector<float> rec;
+    int rec_pos = 0;
+    std::map<int, std::vector<float>> rec_snaps;
+  };
+  State save_state() const;
+  void load_state(const State& s);
+
  private:
+  int kv_rows_in_use(int application) const;  // rows 0 .. n-1 of the application's cache are live
+  std::string kv_slot_;
+  bool evict_declared_ = false;
+  int seq_len_ = 0;
   struct Buf {
     std::vector<float> v;
     int width = 0;
