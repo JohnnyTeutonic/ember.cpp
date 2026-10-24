@@ -230,6 +230,45 @@ int cases_cmd(const std::string& path) {
         report["paths"].push_back(row);
     }
     report["paths_summary"] = {{"same", same}, {"differ", differ}, {"cases_not_a_request", inexpressible}};
+
+    // 3. /chat role-form history pairs strictly (paperkiln 7a6c7659, mtstudio's test_history_pairs_strictly):
+    // a well-formed role history renders as the same turns in pair form, and each violation is refused
+    // naming its rule.
+    {
+        const json u = {{"role", "user"}, {"content", "hi"}}, a = {{"role", "assistant"}, {"content", "hello there"}};
+        auto req = [](const json& hist) {
+            json r = json::object();
+            r["user_input"] = "hello";
+            r["history"] = hist;
+            return r;
+        };
+        json pair_entry = json::object();
+        pair_entry["user"] = "hi";
+        pair_entry["assistant"] = "hello there";
+        json narrator = json::object();
+        narrator["role"] = "narrator";
+        narrator["content"] = "x";
+        const json role = through(chat::v1(), req(json::array({u, a})), ember::chat_conversation);
+        const json pair = through(chat::v1(), req(json::array({pair_entry})), ember::chat_conversation);
+        json strict = json::object();
+        strict["role_equals_pair"] = role.contains("text") && role == pair;
+        strict["role_text"] = role;
+        const std::vector<std::pair<json, std::string>> bad = {
+            {json::array({a, u}), "without a user message before it"},
+            {json::array({u, u, a}), "two user messages"},
+            {json::array({u, a, u}), "ends with a user message"},
+            {json::array({u, narrator}), "role"}};
+        size_t refused_ok = 0;
+        for (const auto& [hist, rule] : bad) {
+            const json out = through(chat::v1(), req(hist), ember::chat_conversation);
+            const bool ok = out.contains("refused") && out["refused"].get<std::string>().find(rule) != std::string::npos;
+            refused_ok += ok;
+            strict["violations"].push_back({{"history", hist}, {"rule", rule}, {"result", out}, {"ok", ok}});
+        }
+        strict["violations_refused"] = refused_ok;
+        check(strict["role_equals_pair"].get<bool>() && refused_ok == bad.size(), "strict history pairing");
+        report["history_strict"] = strict;
+    }
     std::cout << report.dump(1) << "\n";
     return fails == 0 ? 0 : 1;
 }
