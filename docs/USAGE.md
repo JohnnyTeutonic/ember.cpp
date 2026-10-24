@@ -54,20 +54,40 @@ GPU, 0 for CPU only. Endpoints:
 | Endpoint | What it does |
 |---|---|
 | `GET /` | the chat web UI (`www/`) |
-| `POST /chat` | `{user_input, history, temperature, top_k, top_p, seed, max_new_tokens, repeat_penalty, repeat_last_n, stream, return_ids}` -> `{reply, stop_reason, tokens, ttft}`; `"stream": true` sends server-sent events |
-| `POST /v1/chat/completions` | OpenAI-compatible chat completions, with `stream` and `stream_options.include_usage`; `repeat_penalty` / `repeat_last_n` as extension fields; `frequency_penalty` and `presence_penalty` accept only 0 |
+| `POST /chat` | `{user_input, system, history, thinking, temperature, top_k, top_p, seed, max_new_tokens, repeat_penalty, repeat_last_n, stream, return_ids}` -> `{reply, stop_reason, tokens, ttft}`; `"stream": true` sends server-sent events |
+| `POST /v1/chat/completions` | OpenAI-compatible chat completions, with `stream` and `stream_options.include_usage`; `repeat_penalty` / `repeat_last_n`, `top_k`, `thinking` and `chat_template_kwargs.enable_thinking` as extension fields; `frequency_penalty` and `presence_penalty` accept only 0 |
 | `GET /v1/models` | OpenAI-compatible model list |
-| `GET /health` | model, tokenizer and context length |
+| `GET /health` | model, tokenizer, context length and `chat_template` (`{name, version}`, null for raw completion; `chat_template_why` says how it was resolved) |
+
+Chat template (LOCAL_LLM_STACK.md section 3, point 3; shared with paperkiln's `mtstudio chat`):
+the prompt is the conversation rendered by a template record, never a format built into the
+engine. At load the GGUF's template resolves in this order: its `paperkiln.chat_template` record;
+`paperkiln/1` when ids 0-3 are paperkiln's chat specials (every paperkiln export before the key
+existed); `paperkiln/legacy-word` for a word-level vocabulary; a third-party record
+(`chatml-qwen2.5`, `chatml-qwen3`, `gemma3`) by the sha256 of `tokenizer.chat_template`, else by
+its markers and `general.architecture`; otherwise none, and the model serves raw completion only.
+The log and `/health` say which. Generation stops at the record's stop tokens.
+- `system` (or a leading `{"role": "system"}` history entry, not both, nowhere else) is the system
+  message, rendered by the template's system mode: `paperkiln/1` and Gemma 3 fold it into the first
+  kept user message, ChatML writes a system turn. A template without a system role refuses it (400).
+- `thinking` (Qwen3): `false` writes the empty think block after the generation prompt; absent is
+  the template's default (on, as HF's). Earlier replies' reasoning (`</think>`) is stripped from the
+  history as Qwen3's template does.
+- The OpenAI endpoint maps messages one to one: system and developer messages before the first
+  user message join with a blank line into the system message (an empty one is dropped); a later
+  one, or a tool message, is a 400; user and assistant messages alternate and the last is the user's.
+- Content holding one of the template's own markers is refused (400).
 
 Context rule (shared with paperkiln's `mtstudio chat`): the oldest whole history turns are
-dropped while prompt + `max_new_tokens` exceeds the context; a message that alone fills the
-context is rejected with HTTP 400; a reply that reaches the limit ends with `stop_reason`
-"length".
+dropped while prompt + `max_new_tokens` exceeds the context; the system message is never dropped
+or cut; a message that alone fills the context (with the system message) is rejected with HTTP
+400; a reply that reaches the limit ends with `stop_reason` "length".
 
 Repetition penalty (shared with paperkiln's `mtstudio chat`): `repeat_penalty` p (default 1.0,
 off) and `repeat_last_n` n (default 64; 0 is off). Before each token is sampled, every distinct
-id among the last n ids of the prompt plus the reply so far, except end-of-text, `<|user|>` and
-`<|assistant|>`, has its logit l replaced by l / p when l > 0 and l * p otherwise; greedy
+id among the last n ids of the prompt plus the reply so far, except the chat template's stop set
+(`paperkiln/1`: end-of-text, `<|user|>` and `<|assistant|>`), has its logit l replaced by l / p
+when l > 0 and l * p otherwise; greedy
 decoding applies it too. p must be in [1.0, 2.0] and n in [0, context]: public mode and the
 WebAssembly page clamp to those ranges, other requests get HTTP 400. Speculative decoding
 (`EMBER_SPEC`) is off while the penalty is on. The command line's `--rep-penalty` is a different,

@@ -1,6 +1,7 @@
 // Greedy parity of the WebAssembly build against recorded replies, in node.
 //   node tools/wasm_parity.mjs WASM_DIR MODEL.gguf REF.jsonl [ember.js] [OUT.json]
-// REF rows: {i, prompt, <field>, <tokens>?, <stop>?}; the field is REF_FIELD (default "mtstudio";
+// REF rows: {i, prompt or request, <field>, <tokens>?, <stop>?} (request: a /chat body with system and
+// history, replayed with the parity sampling); the field is REF_FIELD (default "mtstudio";
 // "ember" compares with ember's own replies from tools/release_chat.py), the token count and stop
 // reason REF_TOKENS / REF_STOP (default mts_tokens / mts_stop). MAX_NEW (60), REPEAT_PENALTY /
 // REPEAT_LAST_N as for /chat. Exits 1 unless every reply is identical and, where the rows record
@@ -25,7 +26,8 @@ let same = 0, sameTok = 0, sameStop = 0, haveTok = 0, haveStop = 0;
 const replies = [];
 const t0 = Date.now();
 for (const r of rows) {
-  const req = { user_input: r.prompt, max_new_tokens: Number(process.env.MAX_NEW || 60), temperature: 1.0, top_k: 1, top_p: 1.0, seed: 0 };
+  // A row with a recorded /chat "request" (system message, history) replays it; otherwise its prompt.
+  const req = { ...(r.request || { user_input: r.prompt }), max_new_tokens: Number(process.env.MAX_NEW || 60), temperature: 1.0, top_k: 1, top_p: 1.0, seed: 0 };
   if (process.env.REPEAT_PENALTY) {
     req.repeat_penalty = Number(process.env.REPEAT_PENALTY);
     req.repeat_last_n = Number(process.env.REPEAT_LAST_N || 64);
