@@ -508,10 +508,10 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
 
   eos_token_id_ = config_.eos_token_id; // Use the session's config_ which is now model's config
   // paperkiln IR (LOCAL_LLM_STACK.md section 4): EMBER_IR=path runs the
-  // interpreter; an IR embedded in the GGUF (`paperkiln.ir`) runs it when its
-  // family is not llama (llama keeps the tuned path) or it declares sliding-
-  // window attention (only the interpreter implements it). EMBER_INTERPRETER=1/0
-  // forces it on or off.
+  // interpreter; an IR embedded in the GGUF (`paperkiln.ir`) runs it unless it
+  // is the graph the tuned llama path implements (ember_ir::tuned_llama_match:
+  // a structural match against the file's llama metadata; family_hint "llama"
+  // is only its pre-filter, IR_SPEC 9.1). EMBER_INTERPRETER=1/0 forces it on or off.
   if (const GGUFData* gd = model_->get_gguf_data()) {
     const std::string ir = ember_ir::find_ir(*gd);
     const char* force = std::getenv("EMBER_INTERPRETER");
@@ -520,8 +520,8 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
       throw std::runtime_error("EMBER_INTERPRETER=0, but this GGUF can only run through the IR interpreter");
     if (!ir.empty() && !(force && std::string(force) == "0")) {
       const std::string family = nlohmann::json::parse(ir).value("family_hint", "");
-      if ((force && std::string(force) == "1") || std::getenv("EMBER_IR") || family != "llama" || model_->ir_only() ||
-          ember_ir::has_windowed_attention(ir) || ember_ir::has_state_tokens(ir)) {
+      if ((force && std::string(force) == "1") || std::getenv("EMBER_IR") || model_->ir_only() ||
+          !ember_ir::tuned_llama_match(ir, *gd)) {
         // CUDA builds run the interpreter on the device when the CLI asked for
         // GPU layers (any nonzero count: the interpreter does not split
         // layers); EMBER_IR_DEVICE=cpu keeps it on the CPU. Every op the

@@ -458,6 +458,22 @@ std::string find_ir(const GGUFData& gguf);
 // always has its own). Throws naming the architecture or the missing key.
 std::string build_ir_from_gguf(const GGUFData& gguf);
 
+// ember's tuned llama path (model.cpp, api.cpp) computes one graph, and a document may take it only when it
+// is that graph (paperkiln spec/IR_SPEC.md 9.1: family_hint is never semantics; it is a pre-filter here):
+// a valid document (graph_ir_validate.h) with family_hint "llama" whose nodes are, modulo value names and the
+// operand order of add and mul,
+//   embed  embedding(tokens; token_embd.weight)
+//   block  rmsnorm(attn_norm) -> linear attn_q, attn_k, attn_v (no bias) -> rope (interleaved, every head,
+//          n_rot = head_dim, freq_scale 1, the q / k heads) -> attention (the one kv slot: window 0, sinks 0,
+//          causal mask, scale 1/sqrt(head_dim), no evict, kv_rows or weight_index) -> linear attn_output -> add
+//          -> rmsnorm(ffn_norm) -> SwiGLU (ffn_gate, ffn_up, silu, mul, ffn_down) or moe_ffn (ffn_gate_inp and
+//          the *_exps stacks, gate_norm renorm, silu) -> add
+//   head   rmsnorm(output_norm) -> linear output.weight (tied to token_embd.weight or not)
+// with the numbers the tuned path reads from the GGUF's metadata instead (parse_model_config_from_gguf: d,
+// layers, heads, kv heads, head_dim = d / heads, every eps, theta, experts and experts used, hidden_act silu).
+// Otherwise the interpreter runs the document. why (optional) gets the first difference.
+bool tuned_llama_match(const std::string& ir_json, const GGUFData& gguf, std::string* why = nullptr);
+
 // True when the IR declares sliding-window attention (a kv state or an
 // attention node with window != 0). Only the interpreter implements it, so
 // such a GGUF never runs on the llama path, whatever its family_hint.
