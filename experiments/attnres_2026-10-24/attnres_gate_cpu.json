@@ -1,0 +1,51 @@
+{
+ "dir": "/mnt/c/ml_artifacts/attnres_gate/ar3",
+ "bin": "/home/jonat/ember_wt/build_cpu/ir_logits",
+ "sha256": {
+  "ar3.gguf": {
+   "sha256": "0e2aea089db358e5c95d9dfba6d45bff5b958959ea654deab0d3e49108298c28",
+   "expected_prefix": "0e2aea08",
+   "match": true
+  },
+  "ar3.ir.json": {
+   "sha256": "7428c891d0ee1964d67c3278d6fc48cb1c568bb718cbdb683a00308eedc722a8",
+   "expected_prefix": "7428c891",
+   "match": true
+  },
+  "score_in.jsonl": {
+   "sha256": "7c53d154e550772d5b4fcc8d34fed9f6230abd81bd3b058a2fff086a259ccec0",
+   "expected_prefix": "7c53d154",
+   "match": true
+  },
+  "score_out.jsonl": {
+   "sha256": "81e677bb7875608d5eed2bd6bfaa2965518c2abe6db15db4b5bfd655d889f8cb",
+   "expected_prefix": "81e677bb",
+   "match": true
+  }
+ },
+ "f32": {
+  "logprob_worst_rel": 2.04788592286429e-07,
+  "greedy": "40/40",
+  "decode_eq_prefill": true,
+  "pass": true
+ },
+ "q8_0": {
+  "logprob_worst_rel": 0.00017449278293310677,
+  "greedy": "40/40",
+  "decode_eq_prefill": true,
+  "pseudo_query_types": {
+   "blk.0.attnres_attn_q.weight": "F32",
+   "blk.0.attnres_ffn_q.weight": "F32",
+   "blk.1.attnres_attn_q.weight": "F32",
+   "blk.1.attnres_ffn_q.weight": "F32",
+   "blk.2.attnres_attn_q.weight": "F32",
+   "blk.2.attnres_ffn_q.weight": "F32",
+   "attnres_out_q.weight": "F32"
+  },
+  "pseudo_queries_f32": true
+ },
+ "blk0_attn_q_not_read": {
+  "nan_copy_logits_bit_equal": true
+ },
+ "pass": true
+}
