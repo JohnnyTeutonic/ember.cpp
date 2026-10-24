@@ -1,0 +1,19 @@
+d   32  worst rel 1.010e-07  ok
+d   64  worst rel 1.159e-07  ok
+d   96  worst rel 9.086e-08  ok
+d  128  worst rel 8.437e-08  ok
+d  160  worst rel 1.092e-07  ok
+d  192  worst rel 1.032e-07  ok
+d  200  worst rel 1.194e-07  ok
+d  255  worst rel 1.043e-07  ok
+d  256  worst rel 1.102e-07  ok
+d  320  worst rel 1.007e-07  ok
+d  384  worst rel 1.288e-07  ok
+d  448  worst rel 1.221e-07  ok
+d  512  worst rel 1.065e-07  ok
+d  640  worst rel 7.446e-08  ok
+d  704  worst rel 1.047e-07  ok
+d  832  worst rel 8.758e-08  ok
+d  896  worst rel 1.082e-07  ok
+d 1024  worst rel 1.065e-07  ok
+rmsnorm_batch_test: PASS (0 widths failed; worst 1.288e-07)

@@ -1,0 +1,45 @@
+{
+ "name": "sp_L16",
+ "arch": {
+  "preset": "llama-tiny",
+  "rope_heads": "all",
+  "custom": {
+   "d": 320,
+   "layers": 16,
+   "heads": 5,
+   "d_ff": 864
+  }
+ },
+ "data": {
+  "corpus": "/home/jonat/ember_wt/shape_parity/dd_head.txt",
+  "vocab": "/mnt/c/ml_artifacts/capacity/vocab/vocab_llama3_bpe.gguf",
+  "vocab_cap": 16384,
+  "T": 128,
+  "max_tokens": 0
+ },
+ "train": {
+  "steps": 2,
+  "lr": 0.002,
+  "batch": 8,
+  "accum": 1,
+  "clip": 1.0,
+  "eval_every": 1000,
+  "eval_windows": 4,
+  "checkpoint_every": 20,
+  "gradmap_every": 0,
+  "seed": 1,
+  "optimizer": "adamw",
+  "lr_schedule": {
+   "warmup_steps": 5,
+   "decay": "cosine",
+   "min_lr_frac": 0.1
+  }
+ },
+ "export": {
+  "formats": [
+   "safetensors",
+   "gguf"
+  ]
+ },
+ "out_dir": "/home/jonat/ember_wt/shape_parity/sp_L16"
+}
