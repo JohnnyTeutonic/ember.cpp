@@ -442,6 +442,31 @@ closed = {
                                           "tensor_index"),
     "tensor_index_not_implemented": (B2, tensor_index_valid, "tensor_index"),
 }
+# The load-time refusals of IR_SPEC 10.1 that ember lacked before (each previously loaded, or failed only at the
+# first forward); the container rules on edited GGUFs are in ../ir_spec_2026-10-25/agreement.py.
+closed.update({
+    "rule3_n_layers_ne_repeat": (S4, lambda d: set_(d["model"], "n_layers", 3), "IR_SPEC 3.3"),
+    "rule11_slot_read_by_no_node": (AR, lambda d: d["block"]["state"].append(dict(kv(d), name="kv2")), "IR_SPEC 6.1"),
+    "rule11_attention_names_no_slot": (AR, lambda d: set_(attn(d), "state", "nope"), "IR_SPEC 6.1"),
+    "rule12_window_on_unwindowed_slot": (AR, lambda d: set_(attn(d), "window", 4), "IR_SPEC 5.15"),
+    "rule12_kv_heads_differs_at_load": (AR, lambda d: set_(attn(d), "kv_heads", 1), "IR_SPEC 5.15"),
+    "rule15_turn_state_without_state_weight": (AR, lambda d: set_(attn(d), "mask", "turn_state"), "IR_SPEC 6.8.2"),
+    "rule17a_two_attention_nodes_one_slot": (AR, lambda d: d["block"]["nodes"].insert(
+        d["block"]["nodes"].index(attn(d)) + 1, dict(attn(d), out="a2")), "IR_SPEC 6.1"),
+    "rule17a_reads_tokens": (S4, lambda d: set_([n for n in d["block"]["nodes"] if n["op"] == "silu"][0], "in",
+                                                ["tokens"]), "IR_SPEC 3.5"),
+    "rule17a_reads_depth_route_out": (MR, lambda d: d["block"]["nodes"].append(
+        {"op": "silu", "in": [d["block"]["nodes"][0]["out"]], "out": "junk"}), "IR_SPEC 7.4"),
+    "rule23_depth_route_with_lists": (MR, lambda d: d["block"]["nodes"].append({"op": "list", "in": ["x"], "out": "b"}),
+                                      "IR_SPEC 7.4"),
+    "rule26_router_ne_at_load": (MR, lambda d: set_(d["block"]["nodes"][0], "weight", "blk.0.attn_norm.weight"),
+                                 "IR_SPEC 7.4"),
+    "rule28_specials_name_other_ids": (S4, lambda d: set_(d["tokenizer"]["specials"], "eot", 5), "IR_SPEC 8.2"),
+    "two_kv_slots_capability": (AR, lambda d: (d["block"]["state"].append(dict(kv(d), name="kv2")),
+                                               d["block"]["nodes"].insert(d["block"]["nodes"].index(attn(d)) + 1,
+                                                                          dict(attn(d), state="kv2", out="a2"))),
+                                "more than one kv slot"),
+})
 for name, ((gguf, base), edit, want) in closed.items():
     r = ad.ok("check", gguf=gguf, ir=variant(base, name, edit))
     record(f"check/refuse/{name}", not r["accepted"] and want in r.get("message", ""), message=r.get("message"))
@@ -458,6 +483,15 @@ record("error/logits_on_truncate", "error" in r, reply=r)
 r = ad.call("run_node", node={}, inputs={}, weights={}, state=None)
 record("skip/run_node", "skip" in r, reply=r)
 ad.ok("close", session=s)
+# Token ids out of range are refused at run time (IR_SPEC 5.1, 6.8.1): >= vocab without a state_weight, >= vocab + k
+# with one, negative always.
+for model in ("ar3", "state4"):
+    o = ad.ok("open", gguf=MODELS[model][0], ir=None, evict=None)
+    bad = [o["vocab"] + o["state_k"], -1]
+    errs = [ad.call("forward", session=o["session"], ids=[5, b], report=[]) for b in bad]
+    record(f"error/token_id_out_of_range/{model}", all("error" in e for e in errs),
+           ids=bad, replies=[e.get("error") for e in errs])
+    ad.ok("close", session=o["session"])
 ad.close()
 
 report["requests"] = ad.n

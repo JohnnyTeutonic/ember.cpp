@@ -4,6 +4,8 @@ copied byte for byte, plus
   - state_embd.weight [k, d], k = 4: seeded normal rows with the token embedding's standard deviation
     (untrained: the test is the engine's arithmetic and bookkeeping, not a model's behaviour);
   - paperkiln.state_tokens.k = 4 (u32);
+  - general.architecture "paperkiln", the source's llama.* keys renamed paperkiln.* (IR_SPEC 8.2 and 10.1
+    rule 28: a file with state tokens has architecture paperkiln; the interpreter reads none of these keys);
   - paperkiln.ir: the file's IR with the extended embedding ("state_weight"), attention "mask":
     "turn_state" and kv "evict": "turn_state" (family_hint stays "llama": the engine must route state
     tokens to the interpreter by itself).
@@ -47,10 +49,12 @@ for n in causal["block"]["nodes"]:
 for name, doc in {"ts": ts, "ts_noevict": noevict, "ts_causal": causal, "plain": plain}.items():
     json.dump(doc, open(os.path.join(out_dir, name + ".ir.json"), "w"), indent=1)
 
-w = gguf.GGUFWriter(dst, arch)
+w = gguf.GGUFWriter(dst, "paperkiln")
 for name, f in r.fields.items():
     if name.startswith("GGUF.") or name in ("general.architecture", "general.alignment", "paperkiln.ir"):
         continue
+    if name.startswith(arch + "."):
+        name = "paperkiln." + name[len(arch) + 1:]
     vt = f.types[0]
     if vt == gguf.GGUFValueType.ARRAY:
         sub = f.types[-1]

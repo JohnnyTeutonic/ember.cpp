@@ -670,6 +670,9 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
         throw std::runtime_error("IR kv state: evict " + s.at("evict").dump() + " is not implemented in ember (turn_state only)");
       evict_declared = true;
     }
+    for (const char* k : {"heads", "kv_heads", "head_dim", "max_len"})
+      if (has(s, k) && is_per_layer(s.at(k)))
+        throw std::runtime_error(std::string("IR kv state: a per-layer '") + k + "' is not implemented in ember");
     kv_heads_ = s.at("kv_heads").get<int>();
     head_dim_ = s.at("head_dim").get<int>();
     max_len_ = s.at("max_len").get<int>();
@@ -1051,6 +1054,13 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
     for (const auto& n : *sub)
       if (n.attrs.contains("tensor_index"))
         throw std::runtime_error("IR " + n.op + ": tensor_index (IR_SPEC 7.2) is not implemented in ember yet");
+  {
+    int kv_slots = 0;
+    for (const auto& s : j.at("block").value("state", json::array())) kv_slots += s.value("kind", "") == "kv";
+    if (kv_slots > 1)
+      throw std::runtime_error("IR block declares " + std::to_string(kv_slots) +
+                               " kv slots: more than one kv slot per block (IR_SPEC 6.1) is not implemented in ember");
+  }
   size_t n_quant = 0, bytes_quant = 0, bytes_f32 = 0, n_mapped = 0;
   for (const auto& kv : weights_) {
     n_quant += kv.second.quantised();
@@ -1565,7 +1575,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
                                      std::to_string(vocab_) + ", k " + std::to_string(state_k_) + ")");
           src = &bound(state_weight_);
           row = id - vocab_;
-        } else if (id < 0 || static_cast<size_t>(id + 1) * d > W.numel) {
+        } else if (id < 0 || id >= vocab_ || static_cast<size_t>(id + 1) * d > W.numel) {  // IR_SPEC 5.1, 6.8.1
           throw std::runtime_error("IR embedding: token id " + std::to_string(id) + " out of range");
         }
         float* dst = out.v.data() + static_cast<size_t>(t) * d;
@@ -2406,6 +2416,7 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
     if (s.op == DOp::Embedding || s.op == DOp::PosEmbedding) {  // the graph replay's range checks
       int& rows = s.op == DOp::Embedding ? embed_rows_ : pos_rows_;
       rows = static_cast<int>(std::min<size_t>(rows, s.w_elems / s.w_ne0));
+      if (s.op == DOp::Embedding) rows = std::min(rows, vocab_);  // an id >= vocab is refused (IR_SPEC 5.1)
     }
     steps.push_back(std::move(s));
   }
@@ -2566,7 +2577,7 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
     switch (s.op) {
       case DOp::Embedding: {
         const int d = s.w_ne0;
-        const size_t rows = s.w_elems / d;
+        const size_t rows = std::min<size_t>(s.w_elems / d, static_cast<size_t>(vocab_));  // IR_SPEC 5.1
         for (int t = 0; t < T; ++t)
           if (htokens_[t] < 0 || static_cast<size_t>(htokens_[t]) >= rows)
             throw std::runtime_error("IR embedding: token id " + std::to_string(htokens_[t]) + " out of range");

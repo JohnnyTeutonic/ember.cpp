@@ -1278,11 +1278,63 @@
    "pass": true
   },
   "check/refuse/tensor_index_without_weight_index": {
-   "message": "IR depth_attend: tensor_index (IR_SPEC 7.2) is not implemented in ember yet",
+   "message": "IR_SPEC 7.2: block[0] depth_attend: tensor_index needs a block with weight_index",
    "pass": true
   },
   "check/refuse/tensor_index_not_implemented": {
    "message": "IR rmsnorm: tensor_index (IR_SPEC 7.2) is not implemented in ember yet",
+   "pass": true
+  },
+  "check/refuse/rule3_n_layers_ne_repeat": {
+   "message": "IR_SPEC 3.3: block.repeat 2 != model.n_layers 3",
+   "pass": true
+  },
+  "check/refuse/rule11_slot_read_by_no_node": {
+   "message": "IR_SPEC 6.1: state slot kv2 is read by no node",
+   "pass": true
+  },
+  "check/refuse/rule11_attention_names_no_slot": {
+   "message": "IR_SPEC 6.1: block: attention reads state 'nope', not a declared kv slot; IR_SPEC 6.1: state slot kv is read by no node",
+   "pass": true
+  },
+  "check/refuse/rule12_window_on_unwindowed_slot": {
+   "message": "IR_SPEC 5.15: attention window 4 (application 0) differs from its kv state kv's 0",
+   "pass": true
+  },
+  "check/refuse/rule12_kv_heads_differs_at_load": {
+   "message": "IR_SPEC 5.15: attention kv_heads 1 (application 0) differs from its kv state kv's 2 (Q7)",
+   "pass": true
+  },
+  "check/refuse/rule15_turn_state_without_state_weight": {
+   "message": "IR_SPEC 6.8.2: attention mask turn_state needs window 0, sinks 0 (every application, and its kv slot) and an embedding state_weight",
+   "pass": true
+  },
+  "check/refuse/rule17a_two_attention_nodes_one_slot": {
+   "message": "IR_SPEC 6.1: kv state kv is read by 2 attention nodes (exactly one is defined)",
+   "pass": true
+  },
+  "check/refuse/rule17a_reads_tokens": {
+   "message": "IR_SPEC 3.5: block[11] silu reads the graph input 'tokens' as its input 0",
+   "pass": true
+  },
+  "check/refuse/rule17a_reads_depth_route_out": {
+   "message": "IR_SPEC 7.4: block[16] silu reads depth_route's out 'rec_depth' (the depth report)",
+   "pass": true
+  },
+  "check/refuse/rule23_depth_route_with_lists": {
+   "message": "IR_SPEC 7.4: depth_route with list values (list, append, depth_attend) is not defined",
+   "pass": true
+  },
+  "check/refuse/rule26_router_ne_at_load": {
+   "message": "IR_SPEC 7.4: depth_route: blk.0.attn_norm.weight has ne [32], not [d, n_rec] = [32, 3]",
+   "pass": true
+  },
+  "check/refuse/rule28_specials_name_other_ids": {
+   "message": "IR_SPEC 8.2: state tokens: specials.eot = 5 is the token '\u0001', not '<|endoftext|>'",
+   "pass": true
+  },
+  "check/refuse/two_kv_slots_capability": {
+   "message": "IR block declares 2 kv slots: more than one kv slot per block (IR_SPEC 6.1) is not implemented in ember",
    "pass": true
   },
   "check/accept/underscore_keys": {
@@ -1293,7 +1345,7 @@
   },
   "skip/depth_without_depth_route": {
    "reply": {
-    "id": 2341,
+    "id": 2354,
     "skip": "depth: the document has no depth_route"
    },
    "pass": true
@@ -1301,19 +1353,41 @@
   "error/logits_on_truncate": {
    "reply": {
     "error": "'logits' is a forward report",
-    "id": 2343
+    "id": 2356
    },
    "pass": true
   },
   "skip/run_node": {
    "reply": {
-    "id": 2344,
+    "id": 2357,
     "skip": "run_node is not implemented by ember's adapter (whole-model methods only)"
    },
    "pass": true
+  },
+  "error/token_id_out_of_range/ar3": {
+   "ids": [
+    15,
+    -1
+   ],
+   "replies": [
+    "IR embedding: token id 15 out of range",
+    "IR embedding: token id -1 out of range"
+   ],
+   "pass": true
+  },
+  "error/token_id_out_of_range/state4": {
+   "ids": [
+    404,
+    -1
+   ],
+   "replies": [
+    "IR state tokens: id 404 is past the 4 state slots (vocab 400)",
+    "IR embedding: token id -1 out of range"
+   ],
+   "pass": true
   }
  },
- "requests": 2345,
+ "requests": 2366,
  "failures": [],
  "pass": true
 }
