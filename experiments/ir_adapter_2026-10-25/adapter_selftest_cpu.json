@@ -1337,6 +1337,22 @@
    "message": "IR block declares 2 kv slots: more than one kv slot per block (IR_SPEC 6.1) is not implemented in ember",
    "pass": true
   },
+  "check/accept/s1_pseudo_query_absent": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "forward/s1_pseudo_query_absent": {
+   "pass": true
+  },
+  "check/refuse/s2_pseudo_query_absent": {
+   "reply": {
+    "accepted": false,
+    "message": "IR_SPEC 5.18: depth_attend at application 1 has 3 sources, and its pseudo-query 'blk.1.attnres_attn_q.weight' is not in the GGUF"
+   },
+   "pass": true
+  },
   "check/accept/underscore_keys": {
    "reply": {
     "accepted": true
@@ -1345,7 +1361,7 @@
   },
   "skip/depth_without_depth_route": {
    "reply": {
-    "id": 2354,
+    "id": 2362,
     "skip": "depth: the document has no depth_route"
    },
    "pass": true
@@ -1353,13 +1369,13 @@
   "error/logits_on_truncate": {
    "reply": {
     "error": "'logits' is a forward report",
-    "id": 2356
+    "id": 2364
    },
    "pass": true
   },
   "skip/run_node": {
    "reply": {
-    "id": 2357,
+    "id": 2365,
     "skip": "run_node is not implemented by ember's adapter (whole-model methods only)"
    },
    "pass": true
@@ -1387,7 +1403,7 @@
    "pass": true
   }
  },
- "requests": 2366,
+ "requests": 2374,
  "failures": [],
  "pass": true
 }
