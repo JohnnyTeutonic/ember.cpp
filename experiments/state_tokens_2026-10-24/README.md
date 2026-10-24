@@ -1,9 +1,11 @@
 # Per-turn state tokens (24 Oct 2026)
 
 The contract is paperkiln's `experiments/tiny_chat_long_2026-10/IR_SPEC_DRAFT.md` at paperkiln 0a58e5b6,
-sections 1.1-1.4 and 5. ember reviewed and signed off on that text. Everything here runs on the CPU. No
-trained state-token model exists yet, so the tests use a synthetic one:
-paperkiln's chat_sftfinal_v3 with an untrained `state_embd.weight` added (`make_state_gguf.py`).
+sections 1.1-1.4 and 5. ember reviewed and signed off on that text. Everything here runs on the CPU.
+There are two sets of tests:
+- a synthetic model: paperkiln's chat_sftfinal_v3 with an untrained `state_embd.weight` added
+  (`make_state_gguf.py`);
+- section 5's gate 2 on paperkiln's first trained state-token model, state4 (the last section).
 
 ## What ember does
 
@@ -27,8 +29,9 @@ paperkiln's chat_sftfinal_v3 with an untrained `state_embd.weight` added (`make_
   needs paperkiln's chat format and the interpreter. `ember::insert_state_blocks` (`state_tokens.h`)
   applies to every chat-mode prompt that `generate()` runs (/chat, the OpenAI endpoint and the WASM
   `ember_chat` all go through it), and to the token count used by the context rule:
-  - after every `<|endoftext|>` that closes an exchange (one with an `<|assistant|>` after the latest
-    `<|user|>`), the k state ids;
+  - after every `<|endoftext|>` that closes an exchange, the k state ids. As in paperkiln's
+    serialiser (`tools/state_tokens.py`), an exchange opens at `<|user|>` and has a reply once an
+    `<|assistant|>` follows it. An `<|assistant|>` with no open `<|user|>` starts nothing;
   - before a `<|user|>` that follows an unclosed reply (max_new_tokens, a stop string, an abort),
     `<|endoftext|>` and then the k state ids.
 
@@ -76,7 +79,7 @@ The gate is `state_tokens_gate.py` and its receipt is `state_tokens_gate_cpu.jso
 | (b) the mask vs an independent numpy reference of section 1.3 (paperkiln's ir_numpy node by node, own attention and extended embedding) | within 6.4e-7 of the range, top-1 at every position |
 | (b) the mask is read: turn_state vs the causal mask, same ids | segment 0 bit-equal; later positions move by up to 7.4-13.6 (the causal reference itself is within 6.2e-7 of numpy) |
 | (c) eviction on vs off vs a fresh full prefill, 12 calls (`state_tokens_test run`): turn-by-turn prompts, replies token by token with the block, a regenerated reply, an edited turn 1 (rewind into an evicted turn), a five-turn prefill in one call, then a rewind into evicted turn 0 | logits bit-equal across all three at every call (max diff 0.0). The evicting engine refuses a forward straight into an evicted turn and resumes at its start (27 and 0). Rows held: 26 vs 132 after five turns |
-| (d) template rule (`state_tokens_test template`): 15 id sequences | all pass: block after a closing eot; eot + block before a `<|user|>` after a cut reply (also an empty one); a given block kept; eot outside an exchange untouched; incomplete, out-of-order, cut-off, misplaced and past-k state ids refused |
+| (d) template rule (`state_tokens_test template`): 17 id sequences | all pass: block after a closing eot; eot + block before a `<|user|>` after a cut reply (also an empty one); a given block kept; eot outside an exchange untouched; an `<|assistant|>` with no open `<|user|>` starts nothing; incomplete, out-of-order, cut-off, misplaced and past-k state ids refused. Against paperkiln's serialiser on 3000 random sequences, see state4 below |
 | (d) /chat end to end, greedy, 5 requests, 3 servers (evict on, `EMBER_EVICT=0`, `EMBER_PREFIX_REUSE=0`) | reply ids and prompt ids equal across the three servers on every request. Reply 1 stopped by max_new_tokens 6, and the next prompt has `<|endoftext|>` + S_0..S_3 after it. Every state id sits in a complete block after `<|endoftext|>` and before `<|user|>`. Request 3 reused 49 tokens (through reply 2's generated eot and block); the regenerated reply reused 60. The edited turn-1 message reused 20 with eviction (turn 1's start) and 25 without (the edit) |
 | refusals (load and run time) | 13/13: window, sinks, evict without the mask, evict "lru", mask "bidirectional", k in the metadata with no state_weight, a state_weight whose rows differ from k, a state_weight of the wrong width, a block out of order, text inside a block, a block not starting at S_0, an id past k, a state id with no state_weight |
 
@@ -119,7 +122,25 @@ From Windows, each through `wsl.exe --cd ~ -e bash -lc "..."`; the gate goes thr
   regenerated reply free of a re-prefill after the post-reply block.
 - **The repetition penalty** (section 3 point 4) counts state ids as positions of the window and
   gives them no penalty (they have no logits). mtstudio's chat needs the same rule.
-- **CUDA, WASM.** No device mask kernel, so the CPU serves these files. The WASM build was not
-  rebuilt or gated: it shares `generate()` and the interpreter, but nothing ran it.
-- **Section 5 gate 2** waits for paperkiln's gate files (`/mnt/c/ml_artifacts/state_gate/`, not
-  there on 24 Oct 2026), so nothing here has run on a trained model.
+- **CUDA, WASM.** No device mask kernel, so the CPU serves these files, and the CUDA legs of gate 2
+  are still open. The WASM build was not rebuilt or gated: it shares `generate()` and the
+  interpreter, but nothing ran it.
+
+## Gate 2 on paperkiln's state4 (CPU)
+
+The model is `/mnt/c/ml_artifacts/state_gate/state4/`: llama_state, d 64, 2 layers, vocab 400, k 4,
+mask turn_state, kv evict turn_state. It has 40 multi-turn prompts, and prompt 7's second reply is
+cut after one word. The gate is `state4_gate.py` and its receipt is `state4_gate_cpu.json`. Every
+file's sha256 equals manifest.json's (12/12).
+
+| check | result |
+|---|---|
+| interpreter (IR embedded in state4.gguf), eviction on: log-probs of the 40 continuations against `mtstudio score` | worst 7.9e-7 relative (paperkiln's numpy vs mtstudio: 2.4e-6); greedy 40/40; decode bit-equal to prefill |
+| eviction off (`EMBER_EVICT=0`) | the same numbers; ir_logits output text identical to eviction on |
+| kv rows held after the context | equal to mtstudio's for every prompt, with eviction (mean 25.4) and without (mean 76.2); on = off = a fresh prefill bit for bit |
+| template rule against paperkiln's serialiser (`state_tokens.insert` / `error`), 3000 random sequences, 1340 with state ids | 3000/3000 agree: same refusals, same output |
+| /chat end to end, greedy, history parsed from prompts_text.jsonl; servers with eviction on, off and `EMBER_PREFIX_REUSE=0` | prompt ids equal score_in's 40/40 on each, prompt 7's cut reply closed with `<|endoftext|>` + block included. Reply + stop id equal the continuation 40/40 on each. Every prompt equals the serialiser's insert of its own text ids. Replies identical across the three servers. With eviction, each new conversation's shared prefix ends inside evicted turn 0, so it resumes at 0 |
+| state4_q8_0.gguf (reported, not gated) | loads; log-probs within 7.6e-4, greedy 40/40, decode equal to prefill |
+
+    python3 scripts/cpu_budget.py run --session ember --job "ember state4 gate (CPU)" --cores 4 \
+      --resume "rerun state4_gate.py" -- python3 ember.cpp/experiments/state_tokens_2026-10-24/state4_gate.py

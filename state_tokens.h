@@ -6,8 +6,9 @@
 //   <|user|> U <|assistant|> A <|endoftext|> S_0 S_1 .. S_{k-1}
 // with S_j = vocab + j. The ids never come from the tokeniser; the engine
 // inserts them, as the training serialiser does:
-//   - after every <|endoftext|> that closes an exchange (one with an
-//     <|assistant|> after the latest <|user|>), the k state ids;
+//   - after every <|endoftext|> that closes an exchange (an exchange opens at
+//     <|user|> and has a reply once an <|assistant|> follows it; an
+//     <|assistant|> with no open <|user|> starts nothing), the k state ids;
 //   - an assistant reply followed by a <|user|> with no <|endoftext|> between
 //     them (a reply that stopped early: max_new_tokens, a stop string, an
 //     abort) gets <|endoftext|> and then the k state ids before that <|user|>.
@@ -34,27 +35,32 @@ inline std::vector<int> insert_state_blocks(const std::vector<int>& ids, int voc
   auto block = [&] {
     for (int j = 0; j < k; ++j) out.push_back(vocab + j);
   };
-  bool in_reply = false;  // an <|assistant|> after the latest <|user|>, its reply not yet closed
+  // paperkiln's serialiser (tools/state_tokens.py, nn::insert_state_ids): an exchange opens at
+  // <|user|>, has a reply once <|assistant|> follows it, and ends at the next <|endoftext|>.
+  enum { kNone, kUser, kReply } phase = kNone;
   const size_t n = ids.size();
   for (size_t i = 0; i < n; ++i) {
     const int id = ids[i];
+    if (id < 0) throw std::invalid_argument("token id " + std::to_string(id) + " at position " + std::to_string(i) + " is negative");
     if (id >= vocab)
       throw std::invalid_argument("state id " + std::to_string(id) + " at position " + std::to_string(i) +
                                   " is not part of a complete state block directly after an <|endoftext|> that ends "
                                   "an assistant reply");
     if (id == user) {
-      if (in_reply) {  // the reply stopped early: close it as training does
+      if (phase == kReply) {  // the reply stopped early: close it as training does
         out.push_back(eot);
         block();
       }
-      in_reply = false;
+      phase = kUser;
       out.push_back(id);
     } else if (id == assistant) {
-      in_reply = true;
+      if (phase == kUser) phase = kReply;
       out.push_back(id);
-    } else if (id == eot && in_reply) {
-      in_reply = false;
+    } else if (id == eot) {
+      const bool closes = phase == kReply;
+      phase = kNone;
       out.push_back(id);
+      if (!closes) continue;
       if (i + 1 < n && ids[i + 1] >= vocab) {  // a state block given with the ids: it must be complete
         for (int j = 0; j < k; ++j)
           if (i + 1 + j >= n || ids[i + 1 + j] != vocab + j)

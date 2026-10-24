@@ -5,6 +5,9 @@
 //       The template rule (state_tokens.h) on fixed id sequences: k ids after an <|endoftext|>
 //       that ends a reply, <|endoftext|> + k ids before a <|user|> after a reply that stopped
 //       early, a given complete block kept, malformed or misplaced state ids refused.
+//   state_tokens_test insert < {"vocab", "k", "eot", "user", "assistant", "seqs": [...]}
+//       The rule on given sequences (the output ids, or the refusal), for comparison with
+//       paperkiln's serialiser (tools/state_tokens.py).
 //   EMBER_IR=graph.json state_tokens_test run MODEL.gguf < script.json
 //       script: {"calls": [{"seq": [ids], "from": p, "step": false}, ...]}. Each call continues
 //       the same sequence: the engine resumes at resume_point(from) and runs seq from there,
@@ -53,6 +56,9 @@ int template_cases() {
       {"block_given", {U, 5, A, 6, E, 10, 11, 12, U, 8, A}, {U, 5, A, 6, E, 10, 11, 12, U, 8, A}, false},
       {"eot_outside_exchange", {5, 6, E, 7, U, 8, A}, {5, 6, E, 7, U, 8, A}, false},
       {"eot_after_user_only", {U, 5, E, U, 8, A}, {U, 5, E, U, 8, A}, false},
+      {"assistant_without_user", {A, 6, E, U, 8, A}, {A, 6, E, U, 8, A}, false},
+      {"assistant_after_closed_exchange", {U, 5, A, 6, E, A, 7, E, U, 8, A},
+       {U, 5, A, 6, E, 10, 11, 12, A, 7, E, U, 8, A}, false},
       {"block_incomplete", {U, 5, A, 6, E, 10, 11, U, 8, A}, {}, true},
       {"block_out_of_order", {U, 5, A, 6, E, 10, 12, 11, U, 8, A}, {}, true},
       {"block_cut_at_end", {U, 5, A, 6, E, 10, 11}, {}, true},
@@ -78,6 +84,25 @@ int template_cases() {
   out["pass"] = ok;
   std::cout << out.dump(1) << "\n";
   return ok ? 0 : 1;
+}
+
+// insert_state_blocks on given sequences, for comparing with paperkiln's serialiser:
+// stdin {"vocab", "k", "eot", "user", "assistant", "seqs": [[ids], ...]}, stdout [{"out": [ids]} or
+// {"refused": message}, ...].
+int insert_mode() {
+  const std::string in((std::istreambuf_iterator<char>(std::cin)), std::istreambuf_iterator<char>());
+  const json j = json::parse(in);
+  json out = json::array();
+  for (const json& s : j.at("seqs")) {
+    try {
+      out.push_back({{"out", ember::insert_state_blocks(s.get<std::vector<int>>(), j.at("vocab"), j.at("k"), j.at("eot"),
+                                                        j.at("user"), j.at("assistant"))}});
+    } catch (const std::invalid_argument& e) {
+      out.push_back({{"refused", e.what()}});
+    }
+  }
+  std::cout << out.dump() << "\n";
+  return 0;
 }
 
 struct Rows {
@@ -183,6 +208,7 @@ int run(const char* path) {
 int main(int argc, char** argv) {
   try {
     if (argc >= 2 && std::string(argv[1]) == "template") return template_cases();
+    if (argc >= 2 && std::string(argv[1]) == "insert") return insert_mode();
     if (argc == 3 && std::string(argv[1]) == "run") return run(argv[2]);
   } catch (const std::exception& e) {
     std::cerr << "state_tokens_test: " << e.what() << "\n";
