@@ -108,6 +108,8 @@ static std::string bpe_repeat_fields(const json& body, BpeChatRequest& r, int ct
   if (body.contains("repeat_last_n")) {
     if (!body["repeat_last_n"].is_number_integer()) return "repeat_last_n must be an integer";
     r.repeat_last_n = body["repeat_last_n"].get<int>();
+  } else {
+    r.repeat_last_n = std::min(r.repeat_last_n, ctx);  // default min(64, ctx), as mtstudio
   }
   if (clamp) {
     r.repeat_penalty = std::min(std::max(r.repeat_penalty, 1.0f), 2.0f);
