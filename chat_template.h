@@ -1,6 +1,6 @@
 // Vendored verbatim from paperkiln (microtorch) include/microtorch/chat_template.hpp
-// at paperkiln ae126f1e (unchanged at 28d53ca7, whose tests/chat_template_cases.json ember's
-// tools/chat_template_check.cpp runs). ember.cpp renders every chat prompt through it
+// at paperkiln 7a6c7659, whose tests/chat_template_cases.json ember's
+// tools/chat_template_check.cpp runs. ember.cpp renders every chat prompt through it
 // (chat_tokenizer.h). Do not edit here: change it in paperkiln (its tests check C++/Python
 // parity) and re-vendor.
 #pragma once
@@ -20,8 +20,8 @@
 // text + join opens the first user message's content; turn: open + text + close before the first
 // exchange; none: refused), then generation_prompt when a reply is wanted. Content holding one of
 // the record's `reserved` strings is refused (the Python twin and its parse refuse the same).
-// content "trim" strips ASCII whitespace from each message's own content (HF's Jinja trim strips
-// Unicode whitespace as well; no record here meets it). past_assistant "strip_think" renders an
+// content "trim" strips from each message's own content exactly what Python's str.strip() strips
+// (HF's Jinja trim): the 29 code points str.isspace() accepts, UTF-8 encoded. past_assistant "strip_think" renders an
 // assistant message before the last user message as its content after the last "</think>", with
 // leading newlines stripped, when it contains "</think>"; prompt conversations always end on a
 // user message, so HF's re-wrapping of replies after the last user message never arises and is
@@ -346,6 +346,47 @@ struct Piece {
     int index;                     // the message's position; -1 for bos, the generation prompt and a default system
 };
 
+// Python's str.strip(): drop leading and trailing code points for which str.isspace() is true.
+// Invalid UTF-8 at an end is kept (never stripped).
+inline bool py_space(uint32_t c) {
+    return (c >= 0x09 && c <= 0x0d) || (c >= 0x1c && c <= 0x20) || c == 0x85 || c == 0xa0 || c == 0x1680 ||
+           (c >= 0x2000 && c <= 0x200a) || c == 0x2028 || c == 0x2029 || c == 0x202f || c == 0x205f ||
+           c == 0x3000;
+}
+
+inline std::string strip_py_ws(const std::string& s) {
+    // Decode the code point starting at i; returns its length (0 when invalid).
+    auto decode = [&](size_t i, uint32_t& c) -> size_t {
+        const unsigned char b = static_cast<unsigned char>(s[i]);
+        size_t n = b < 0x80 ? 1 : (b >> 5) == 0x6 ? 2 : (b >> 4) == 0xe ? 3 : (b >> 3) == 0x1e ? 4 : 0;
+        if (n == 0 || i + n > s.size()) return 0;
+        c = n == 1 ? b : b & (0xff >> (n + 1));
+        for (size_t k = 1; k < n; ++k) {
+            const unsigned char x = static_cast<unsigned char>(s[i + k]);
+            if ((x >> 6) != 0x2) return 0;
+            c = (c << 6) | (x & 0x3f);
+        }
+        return n;
+    };
+    size_t b = 0;
+    while (b < s.size()) {
+        uint32_t c = 0;
+        const size_t n = decode(b, c);
+        if (n == 0 || !py_space(c)) break;
+        b += n;
+    }
+    size_t e = s.size();
+    while (e > b) {
+        size_t st = e - 1;  // back up to the lead byte of the last code point
+        while (st > b && (static_cast<unsigned char>(s[st]) >> 6) == 0x2 && e - st < 4) --st;
+        uint32_t c = 0;
+        const size_t n = decode(st, c);
+        if (n != e - st || !py_space(c)) break;
+        e = st;
+    }
+    return s.substr(b, e - b);
+}
+
 // thinking: -1 the template's default (HF's: on), 0 off (generation_prompt_nothink when the record
 // has one), 1 on.
 inline std::vector<Piece> render_pieces(const std::vector<Message>& m, const Template& t, bool generation_prompt,
@@ -358,11 +399,7 @@ inline std::vector<Piece> render_pieces(const std::vector<Message>& m, const Tem
                 throw Error("content holds the template's reserved text '" + r + "'");
     };
     auto body = [&](std::string s) {
-        if (trim) {
-            const char* ws = " \t\n\r\f\v";
-            const size_t b = s.find_first_not_of(ws);
-            s = b == std::string::npos ? std::string() : s.substr(b, s.find_last_not_of(ws) - b + 1);
-        }
+        if (trim) s = strip_py_ws(s);
         check_reserved(s);
         return s;
     };
