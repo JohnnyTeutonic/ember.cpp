@@ -1,0 +1,1169 @@
+{
+ "header": {
+  "cases_refused": 15,
+  "cases_rendered": 14,
+  "failures": 0,
+  "jinja_modelfile": 4,
+  "legacy_prompts": 30,
+  "records": 5,
+  "resolutions": 7,
+  "sha256": 2
+ },
+ "paths": [
+  {
+   "expect": "<|user|>Hi<|assistant|>",
+   "name": "one user prompt",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>Be brief.\n\nHi<|assistant|>",
+   "name": "system folds into the first user turn",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Be brief.\n\nHi<|assistant|>"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": "Be brief.",
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Be brief.\n\nHi<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Be brief.\n\nHi<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "a lone system message",
+   "paths": {
+    "chat_note": "not a /chat request: the last message is not the user's",
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       }
+      ]
+     },
+     "result": {
+      "refused": "the last message must be from the user"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "a system message with no user message",
+   "not_a_request": "a training conversation (requests are prompts)",
+   "paths": {},
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "two system messages",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "system"
+       },
+       {
+        "content": "b",
+        "role": "system"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "a system message is allowed only as the first history entry"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [
+       {
+        "content": "b",
+        "role": "system"
+       }
+      ],
+      "system": "a",
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "give the system message once: the 'system' field or a leading history entry"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "a",
+        "role": "system"
+       },
+       {
+        "content": "b",
+        "role": "system"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>a\n\nb\n\nHi<|assistant|>"
+     },
+     "same": false
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "a system message mid-conversation",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "Hello",
+        "role": "assistant"
+       },
+       {
+        "content": "Now be rude.",
+        "role": "system"
+       }
+      ],
+      "user_input": "Bye"
+     },
+     "result": {
+      "refused": "a system message is allowed only as the first history entry"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "Hello",
+        "role": "assistant"
+       },
+       {
+        "content": "Now be rude.",
+        "role": "system"
+       },
+       {
+        "content": "Bye",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a system message is allowed only before the first user message (this model's chat template has one system message, first)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "the assistant first",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Hello",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": false
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hello",
+        "role": "assistant"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "messages must alternate user and assistant, starting from the user (message 0 is assistant)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "two user messages in a row",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "user"
+       }
+      ],
+      "user_input": "b"
+     },
+     "result": {
+      "text": "<|user|>b<|assistant|>"
+     },
+     "same": false
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "messages must alternate user and assistant, starting from the user (message 1 is user)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "a training conversation ending on a user message",
+   "not_a_request": "a training conversation (requests are prompts)",
+   "paths": {},
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "a prompt ending on an assistant message",
+   "paths": {
+    "chat_note": "not a /chat request: the last message is not the user's",
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "Hello",
+        "role": "assistant"
+       }
+      ]
+     },
+     "result": {
+      "refused": "the last message must be from the user"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "user content holding a role marker",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "say <|user|> now"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|user|>'"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "say <|user|> now",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|user|>'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "system content holding end-of-text",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "stop at <|endoftext|>",
+        "role": "system"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|endoftext|>'"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": "stop at <|endoftext|>",
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|endoftext|>'"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "stop at <|endoftext|>",
+        "role": "system"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|endoftext|>'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "assistant content holding a marker",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "<|assistant|>x",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "y"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|assistant|>'"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "<|assistant|>x",
+        "role": "assistant"
+       },
+       {
+        "content": "y",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|assistant|>'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>the <unk> token<|assistant|>",
+   "name": "<unk> text is ordinary content",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "the <unk> token"
+     },
+     "result": {
+      "text": "<|user|>the <unk> token<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "the <unk> token",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>the <unk> token<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>\n<|assistant|>",
+   "name": "newline-only user content",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "\n"
+     },
+     "result": {
+      "text": "<|user|>\n<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "\n",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>\n<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>a<|assistant|>\n<|endoftext|><|user|>b<|assistant|><|endoftext|><|user|>c<|assistant|>",
+   "name": "newline-only and empty replies in the history",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "\n",
+        "role": "assistant"
+       },
+       {
+        "content": "b",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "c"
+     },
+     "result": {
+      "text": "<|user|>a<|assistant|>\n<|endoftext|><|user|>b<|assistant|><|endoftext|><|user|>c<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "\n",
+        "role": "assistant"
+       },
+       {
+        "content": "b",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>a<|assistant|>\n<|endoftext|><|user|>b<|assistant|><|endoftext|><|user|>c<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "the tool role is reserved",
+   "paths": {
+    "chat_note": "not a /chat request: the last message is not the user's",
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "42",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "tool messages are not supported: this model's chat template has no tool role"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "an unknown role",
+   "paths": {
+    "chat_note": "not a /chat request: the last message is not the user's",
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Once",
+        "role": "narrator"
+       }
+      ]
+     },
+     "result": {
+      "refused": "messages[0] has unknown role 'narrator'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>",
+   "name": "three exchanges with a system message",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Be kind.",
+        "role": "system"
+       },
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       },
+       {
+        "content": "d",
+        "role": "assistant"
+       },
+       {
+        "content": "e",
+        "role": "user"
+       },
+       {
+        "content": "f",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "g"
+     },
+     "result": {
+      "text": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       },
+       {
+        "content": "d",
+        "role": "assistant"
+       },
+       {
+        "content": "e",
+        "role": "user"
+       },
+       {
+        "content": "f",
+        "role": "assistant"
+       }
+      ],
+      "system": "Be kind.",
+      "user_input": "g"
+     },
+     "result": {
+      "text": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Be kind.",
+        "role": "system"
+       },
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       },
+       {
+        "content": "d",
+        "role": "assistant"
+       },
+       {
+        "content": "e",
+        "role": "user"
+       },
+       {
+        "content": "f",
+        "role": "assistant"
+       },
+       {
+        "content": "g",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>S\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|>",
+   "name": "a training conversation with a system message",
+   "not_a_request": "a training conversation (requests are prompts)",
+   "paths": {},
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "loss on a user message",
+   "not_a_request": "a loss flag (no request field carries one)",
+   "paths": {},
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>Grüße, 東京, 🙂<|assistant|>",
+   "name": "unicode content",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "Grüße, 東京, 🙂"
+     },
+     "result": {
+      "text": "<|user|>Grüße, 東京, 🙂<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Grüße, 東京, 🙂",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Grüße, 東京, 🙂<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "system mode none refuses a system message",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "S",
+        "role": "system"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "this model's template has no system role"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": "S",
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "this model's template has no system role"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "S",
+        "role": "system"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "this model's template has no system role"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>Hi<|assistant|>",
+   "name": "system mode none without one",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "user: hi assistant: hello user: how are you assistant:",
+   "name": "legacy word-level prompt",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "hi",
+        "role": "user"
+       },
+       {
+        "content": "hello",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "how are you"
+     },
+     "result": {
+      "text": "user: hi assistant: hello user: how are you assistant:"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "hi",
+        "role": "user"
+       },
+       {
+        "content": "hello",
+        "role": "assistant"
+       },
+       {
+        "content": "how are you",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "user: hi assistant: hello user: how are you assistant:"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/legacy-word"
+  },
+  {
+   "expect": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n",
+   "name": "gemma3 trims and folds",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": " Be brief. ",
+        "role": "system"
+       }
+      ],
+      "user_input": "  Hi \n"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": " Be brief. ",
+      "user_input": "  Hi \n"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": " Be brief. ",
+        "role": "system"
+       },
+       {
+        "content": "  Hi \n",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    }
+   },
+   "template": "gemma3/1"
+  },
+  {
+   "expect": "<|im_start|>user\na<|im_end|>\n<|im_start|>assistant\nb<|im_end|>\n<|im_start|>user\nc<|im_end|>\n<|im_start|>assistant\n",
+   "name": "qwen3 strips past reasoning",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "<think>\nr\n</think>\n\nb",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "c"
+     },
+     "result": {
+      "text": "<|im_start|>user\na<|im_end|>\n<|im_start|>assistant\nb<|im_end|>\n<|im_start|>user\nc<|im_end|>\n<|im_start|>assistant\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "<think>\nr\n</think>\n\nb",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|im_start|>user\na<|im_end|>\n<|im_start|>assistant\nb<|im_end|>\n<|im_start|>user\nc<|im_end|>\n<|im_start|>assistant\n"
+     },
+     "same": true
+    }
+   },
+   "template": "chatml-qwen3/1"
+  },
+  {
+   "expect": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n",
+   "name": "qwen2.5 writes its default system turn",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n"
+     },
+     "same": true
+    }
+   },
+   "template": "chatml-qwen2.5/1"
+  },
+  {
+   "expect": "<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+   "name": "qwen3 thinking off",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "thinking": false,
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ],
+      "thinking": false
+     },
+     "result": {
+      "text": "<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+     },
+     "same": true
+    }
+   },
+   "template": "chatml-qwen3/1"
+  }
+ ],
+ "paths_summary": {
+  "cases_not_a_request": 4,
+  "differ": 3,
+  "same": 49
+ },
+ "resolutions": [
+  {
+   "expect": "paperkiln/1",
+   "got": "paperkiln/1",
+   "why": "paperkiln specials at ids 0-3"
+  },
+  {
+   "expect": "paperkiln/1",
+   "got": "paperkiln/1",
+   "why": "declared"
+  },
+  {
+   "expect": "paperkiln/legacy-word",
+   "got": "paperkiln/legacy-word",
+   "why": "word-level vocabulary"
+  },
+  {
+   "expect": "gemma3/1",
+   "got": "gemma3/1",
+   "why": "markers and architecture gemma3"
+  },
+  {
+   "expect": "(none)",
+   "got": "(none)",
+   "why": "no declared template, no paperkiln specials, and no known tokenizer.chat_template or markers: raw completion only"
+  },
+  {
+   "expect": "(none)",
+   "got": "(none)",
+   "why": "no declared template, no paperkiln specials, and no known tokenizer.chat_template or markers: raw completion only"
+  },
+  {
+   "expect": "chatml-qwen2.5/1",
+   "got": "chatml-qwen2.5/1",
+   "why": "tokenizer.chat_template sha256 d5495a1e5db0"
+  }
+ ],
+ "cases_file": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/tests/chat_template_cases.json",
+ "cases_sha256": "dbd13cafff3d66d27ed609ce825b7a5ac7066b0d8ff29d957738e020e8b7aabe",
+ "rc": 0
+}

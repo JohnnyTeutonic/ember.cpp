@@ -1,0 +1,43 @@
+{
+ "model": "/mnt/c/ml_artifacts/state_gate/state4/state4.gguf",
+ "variants": {
+  "declared_v1": {
+   "tensor_data_equal": true,
+   "health_chat_template": {
+    "name": "paperkiln",
+    "version": 1
+   },
+   "why": "declared",
+   "requests": 5,
+   "identical_to_original": 5,
+   "statuses": [
+    200,
+    200,
+    200,
+    200,
+    200
+   ],
+   "prompt_tokens": [
+    86,
+    46,
+    84,
+    89,
+    94
+   ],
+   "pass": true
+  },
+  "custom_name": {
+   "tensor_data_equal": true,
+   "exit_code": 1,
+   "load_error": "Failed to load model: paperkiln.state_tokens.k > 0 needs the paperkiln/1 chat template (state blocks are defined over its markers); this file's template is custom/1 (declared)",
+   "pass": true
+  },
+  "chatml_qwen3": {
+   "tensor_data_equal": true,
+   "exit_code": 1,
+   "load_error": "Failed to load model: paperkiln.state_tokens.k > 0 needs the paperkiln/1 chat template (state blocks are defined over its markers); this file's template is none (declared; chat template chatml-qwen3/1: stop.eos '<|im_end|>' is not a single token of this vocabulary (ember stops on single tokens only): raw completion only)",
+   "pass": true
+  }
+ },
+ "pass": true
+}
