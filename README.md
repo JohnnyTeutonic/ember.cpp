@@ -202,8 +202,8 @@ as above. ember picks the engine itself:
 ```mermaid
 flowchart LR
     G[GGUF] --> Q{"paperkiln.ir<br/>present?"}
-    Q -- "no, or family llama" --> L["tuned llama path"]
-    Q -- "gpt2, swa, kimi, mamba,<br/>srd, attnres, flex, recursive,<br/>mor, state, llama_attnres" --> I["IR interpreter"]
+    Q -- "no, or the llama graph<br/>(structural match)" --> L["tuned llama path"]
+    Q -- "any other document: gpt2, swa,<br/>kimi, mamba, srd, attnres, flex,<br/>recursive, mor, state, llama_attnres" --> I["IR interpreter"]
     G --> T{"third-party<br/>architecture?"}
     T -- "qwen2/3, gemma3, gptneox,<br/>gpt2, mamba, windowed" --> B["IR built from<br/>the metadata"] --> I
     I -- "CUDA build, -1" --> GPU["device kernels<br/>+ CUDA-graph decode"]
@@ -211,7 +211,17 @@ flowchart LR
 ```
 
 `EMBER_INTERPRETER=1` runs a llama model through the interpreter too, which is how the
-interpreter is checked against the tuned path.
+interpreter is checked against the tuned path. A document takes the tuned path only when it is,
+node for node, the graph that path implements, with the numbers the file's llama metadata gives
+(`ember_ir::tuned_llama_match`; `family_hint` is only a pre-filter, as paperkiln's IR_SPEC 9.1
+requires); `tools/ir_path_check` says which path serves a file.
+
+Every document is checked at load against paperkiln's IR specification (`spec/IR_SPEC.md` section
+10.1, the rules its `tools/ir_validate.py` checks), with its JSON Schema vendored in
+`graph_ir_schema.h` (`tools/ir_schema_header.py --check` compares it with paperkiln's): an attribute
+an op does not define, a missing required attribute, a slot nobody reads or a container key that
+disagrees is refused, naming the rule. `tools/ir_doc_check` checks documents without a GGUF, and
+`tools/ir_adapter` runs paperkiln's conformance suite (`experiments/ir_spec_2026-10-25`).
 
 A third-party GGUF with no `paperkiln.ir` gets its IR built from the llama.cpp metadata at load
 when its `general.architecture` is `qwen2`, `qwen3`, `gemma3`, `gptneox`, `gpt2` or `mamba`, or
@@ -255,7 +265,8 @@ In progress:
   depth sweeps, recursion and Mixture-of-Recursions arms, and then a 12-turn model.
 - **CUDA kernels for the new mechanisms.** The turn_state mask and eviction come first, and
   then Mixture-of-Recursions, so CUDA builds stop serving them on the CPU.
-- **Recursion combined with attention residuals** (`"tensor_index": "application"`).
+- **Recursion combined with attention residuals** (`"tensor_index": "application"`, refused at
+  load until it lands).
 - **The third-party families on every backend.** The WebAssembly gate per family (a 0.5B model
   needs the 4 GB heap).
 - **A new public chat model.** pk_base_v1's chat model, released through `release_chat.py`

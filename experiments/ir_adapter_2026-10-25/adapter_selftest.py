@@ -31,7 +31,8 @@ import sys
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-BIN = os.path.expanduser("~/ember_wt/build_cpu/ir_adapter")
+# IR_ADAPTER_BIN tests another build (a pinned one); its report then goes to the scratch directory, not here.
+BIN = os.environ.get("IR_ADAPTER_BIN", os.path.expanduser("~/ember_wt/build_cpu/ir_adapter"))
 M = os.path.expanduser("~/ember_wt/adapter_models")
 SCRATCH = os.path.expanduser("~/ember_wt/adapter_scratch")
 os.makedirs(SCRATCH, exist_ok=True)
@@ -515,5 +516,6 @@ report["failures"] = failures
 report["pass"] = not failures
 n = len(report["checks"])
 print(f"{n - len(failures)}/{n} checks pass, {ad.n} requests" + ("" if not failures else ": FAIL " + ", ".join(failures)))
-json.dump(report, open(os.path.join(HERE, "adapter_selftest_cpu.json"), "w"), indent=1)
+out_dir = SCRATCH if "IR_ADAPTER_BIN" in os.environ else HERE
+json.dump(report, open(os.path.join(out_dir, "adapter_selftest_cpu.json"), "w"), indent=1)
 sys.exit(0 if not failures else 1)
