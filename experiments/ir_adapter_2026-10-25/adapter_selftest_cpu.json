@@ -1249,9 +1249,51 @@
    "message": "Failed to open file for metadata: /nonexistent/model.gguf",
    "pass": true
   },
+  "check/refuse/unknown_attribute": {
+   "message": "IR_SPEC 10.1 rule 1: doc.block.nodes[5] (attention) has the key 'flavour', which its specification does not define",
+   "pass": true
+  },
+  "check/refuse/unknown_top_level_key": {
+   "message": "IR_SPEC 10.1 rule 1: doc has the key 'extras', which its specification does not define",
+   "pass": true
+  },
+  "check/refuse/unknown_model_key": {
+   "message": "IR_SPEC 10.1 rule 1: doc.model has the key 'hidden', which its specification does not define",
+   "pass": true
+  },
+  "check/refuse/unknown_slot_key": {
+   "message": "IR_SPEC 10.1 rule 1: doc.block.state[0] has the key 'pages', which its specification does not define",
+   "pass": true
+  },
+  "check/refuse/unknown_block_key": {
+   "message": "IR_SPEC 10.1 rule 1: doc.block has the key 'loop', which its specification does not define",
+   "pass": true
+  },
+  "check/refuse/attribute_of_another_op": {
+   "message": "IR_SPEC 10.1 rule 1: doc.block.nodes[0] (rmsnorm) has the key 'theta', which its specification does not define",
+   "pass": true
+  },
+  "check/refuse/required_attribute_missing": {
+   "message": "IR_SPEC 10.1 rule 1: doc.block.nodes[4] lacks the required key 'theta'",
+   "pass": true
+  },
+  "check/refuse/tensor_index_without_weight_index": {
+   "message": "IR depth_attend: tensor_index (IR_SPEC 7.2) is not implemented in ember yet",
+   "pass": true
+  },
+  "check/refuse/tensor_index_not_implemented": {
+   "message": "IR rmsnorm: tensor_index (IR_SPEC 7.2) is not implemented in ember yet",
+   "pass": true
+  },
+  "check/accept/underscore_keys": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
   "skip/depth_without_depth_route": {
    "reply": {
-    "id": 2332,
+    "id": 2341,
     "skip": "depth: the document has no depth_route"
    },
    "pass": true
@@ -1259,22 +1301,19 @@
   "error/logits_on_truncate": {
    "reply": {
     "error": "'logits' is a forward report",
-    "id": 2334
+    "id": 2343
    },
    "pass": true
   },
   "skip/run_node": {
    "reply": {
-    "id": 2335,
+    "id": 2344,
     "skip": "run_node is not implemented by ember's adapter (whole-model methods only)"
    },
    "pass": true
   }
  },
- "tensor_index_on_ar3": {
-  "accepted": true
- },
- "requests": 2336,
+ "requests": 2345,
  "failures": [],
  "pass": true
 }

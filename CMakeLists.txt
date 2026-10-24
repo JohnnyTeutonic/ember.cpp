@@ -291,6 +291,7 @@ add_library(tinyllama_core STATIC
     graph_ir_ops.cpp
     graph_ir_expr.cpp
     graph_ir_mamba.cpp
+    graph_ir_validate.cpp
     parallel_for.cpp
     model_constants.h
     ${CUDA_SOURCES} # Conditionally include CUDA source file
@@ -428,6 +429,9 @@ if(NOT SKBUILD)
     # The interpreter behind paperkiln's IR conformance protocol, JSON Lines (tools/ir_adapter.cpp).
     add_executable(ir_adapter tools/ir_adapter.cpp)
     target_link_libraries(ir_adapter PRIVATE tinyllama_core)
+    # IR documents against IR_SPEC section 10.1's document rules, without a GGUF (tools/ir_doc_check.cpp).
+    add_executable(ir_doc_check tools/ir_doc_check.cpp)
+    target_link_libraries(ir_doc_check PRIVATE tinyllama_core)
     # Per-turn state tokens: template rule, eviction on/off, rewinds (tools/state_tokens_test.cpp).
     add_executable(state_tokens_test tools/state_tokens_test.cpp)
     target_link_libraries(state_tokens_test PRIVATE tinyllama_core)
