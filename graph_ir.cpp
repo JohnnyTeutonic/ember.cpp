@@ -212,7 +212,25 @@ bool has_windowed_attention(const std::string& ir_json) {
   return false;
 }
 
+bool has_state_tokens(const std::string& ir_json) {
+  const json j = json::parse(ir_json);
+  for (const char* sub : {"embed", "block", "head"}) {
+    if (!j.contains(sub)) continue;
+    for (const auto& n : j.at(sub).value("nodes", json::array())) {
+      const std::string op = n.value("op", "");
+      if (op == "embedding" && has(n, "state_weight")) return true;
+      if (op == "attention" && n.contains("mask") && n.at("mask") != "causal") return true;
+    }
+  }
+  if (j.contains("block"))
+    for (const auto& s : j.at("block").value("state", json::array()))
+      if (has(s, "evict")) return true;
+  return false;
+}
+
 bool device_supported(const std::string& ir_json) {
+  // Per-turn state tokens have no device kernel yet: the CPU serves them.
+  if (has_state_tokens(ir_json)) return false;
   const json j = json::parse(ir_json);
   // depth_attend reads at most every tensor ever put in a list (list inputs
   // and appends, the block's once per repeat) plus its own extra inputs.
@@ -595,7 +613,7 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
   vocab_ = j.at("model").at("vocab").get<int>();
   max_len_ = j.at("model").value("ctx", 0);
 
-  bool has_kv = false, kv_rows_active = false;
+  bool has_kv = false, kv_rows_active = false, evict_declared = false;
   for (const auto& s : j.at("block").value("state", json::array())) {
     const std::string kind = s.at("kind").get<std::string>();
     if (kind == "recurrent") {
@@ -632,6 +650,11 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
       if (s.at("kv_rows") != "active")
         throw std::runtime_error("IR kv state: kv_rows '" + s.at("kv_rows").dump() + "' is not implemented in ember");
       kv_rows_active = true;
+    }
+    if (has(s, "evict")) {
+      if (s.at("evict") != "turn_state")
+        throw std::runtime_error("IR kv state: evict " + s.at("evict").dump() + " is not implemented in ember (turn_state only)");
+      evict_declared = true;
     }
     kv_heads_ = s.at("kv_heads").get<int>();
     head_dim_ = s.at("head_dim").get<int>();
@@ -824,6 +847,61 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
       throw std::runtime_error("IR depth_route with windowed attention is not implemented in ember");
     mor_rows_.assign(n_layers_, {});
   }
+  // Per-turn state tokens (paperkiln IR_SPEC_DRAFT.md 1.1, 1.3, 1.4): the extended embedding
+  // (state_weight, one embedding in the embed subgraph, its name in full), attention "mask"
+  // "turn_state" (window 0 and sinks 0 only), kv "evict" "turn_state" (every attention node
+  // turn_state). Not with depth_route (MoR's compact caches) or, for eviction, recurrent state.
+  for (const auto* sub : {&embed_, &block_, &head_})
+    for (const auto& n : *sub) {
+      if (n.op == "embedding" && has(n.attrs, "state_weight")) {
+        if (sub != &embed_) throw std::runtime_error("IR embedding state_weight outside the embed subgraph");
+        if (!state_weight_.empty()) throw std::runtime_error("IR: more than one embedding with a state_weight");
+        state_weight_ = n.attrs.at("state_weight").get<std::string>();
+        if (state_weight_.find("{i}") != std::string::npos)
+          throw std::runtime_error("IR embedding state_weight names its tensor in full (no {i})");
+      }
+      if (n.op == "attention" && n.attrs.contains("mask")) {
+        const std::string mask = n.attrs.at("mask").is_string() ? n.attrs.at("mask").get<std::string>() : "";
+        if (mask != "causal" && mask != "turn_state")
+          throw std::runtime_error("IR attention mask " + n.attrs.at("mask").dump() +
+                                   " is not implemented in ember (causal or turn_state)");
+        if (mask == "turn_state") turn_state_ = true;
+      }
+    }
+  if (turn_state_) {
+    for (const auto& n : block_) {
+      if (n.op != "attention" || n.attrs.value("mask", "causal") != "turn_state") continue;
+      for (int l = 0; l < n_layers_; ++l) {
+        int w = 0, s = 0;
+        attention_window(n, l, w, s);
+        if (w != 0 || s != 0)
+          throw std::runtime_error("IR attention mask turn_state needs window 0 and sinks 0 (block " + std::to_string(l) +
+                                   " has window " + std::to_string(w) + ", sinks " + std::to_string(s) + ")");
+      }
+    }
+    if (window_ > 0 || !window_layer_.empty() || sinks_ > 0)
+      throw std::runtime_error("IR attention mask turn_state with a windowed kv state is not allowed");
+    if (!mor_step_.empty() || kv_rows_active)
+      throw std::runtime_error("IR attention mask turn_state with depth_route / kv_rows active is not implemented in ember");
+  }
+  {
+    bool all_turn_state = true;
+    for (const auto& n : block_)
+      if (n.op == "attention" && n.attrs.value("mask", "causal") != "turn_state") all_turn_state = false;
+    if (evict_declared && (!turn_state_ || !all_turn_state))
+      throw std::runtime_error("IR kv state evict turn_state needs every attention node to have mask turn_state");
+    evict_ = evict_declared;
+    if (const char* e = std::getenv("EMBER_EVICT")) {
+      if (std::string(e) == "0") evict_ = false;
+      if (std::string(e) == "1" && turn_state_) {
+        if (!all_turn_state)
+          throw std::runtime_error("EMBER_EVICT=1: eviction needs every attention node to have mask turn_state");
+        evict_ = true;
+      }
+    }
+    if (evict_ && !rec_slots_.empty())
+      throw std::runtime_error("IR kv state evict turn_state with recurrent state is not implemented in ember");
+  }
   // EMBER_IR_CTX=N: hold at most N positions (a third-party IR declares the
   // model's whole trained context, e.g. 32768, which is ~0.8 GB of f32 KV for
   // Qwen2.5-0.5B).
@@ -919,6 +997,37 @@ Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool 
   bind(embed_, -1, gguf);
   for (int l = 0; l < n_layers_; ++l) bind(block_, l, gguf);
   bind(head_, -1, gguf);
+  // The state rows: state_weight [k, d] (ggml ne0 = d, the token embedding's width); k from its
+  // size, equal to the file's paperkiln.state_tokens.k when the file names one.
+  {
+    const auto meta_k = meta_number(gguf, "paperkiln.state_tokens.k");
+    if (!state_weight_.empty()) {
+      bind_tensor(state_weight_, gguf, true);
+      int d = 0;
+      for (const auto& n : embed_)
+        if (n.op == "embedding" && has(n.attrs, "state_weight")) {
+          std::string w = layer_name(n.attrs.at("weight").get<std::string>(), -1);
+          d = static_cast<int>(shapes_.at(w).at(0));
+        }
+      const auto& sh = shapes_.at(state_weight_);
+      const size_t numel = bound(state_weight_).numel;
+      if (sh.empty() || sh[0] != d || d <= 0 || numel % static_cast<size_t>(d) != 0 || numel == 0)
+        throw std::runtime_error("IR embedding state_weight '" + state_weight_ + "' is not [k, d] with d " +
+                                 std::to_string(d) + " (the token embedding's width)");
+      state_k_ = static_cast<int>(numel / static_cast<size_t>(d));
+      if (meta_k && static_cast<int>(*meta_k) != state_k_)
+        throw std::runtime_error("paperkiln.state_tokens.k is " + std::to_string(static_cast<int>(*meta_k)) +
+                                 ", the IR's state_weight '" + state_weight_ + "' has " + std::to_string(state_k_) +
+                                 " rows");
+      Logger::info("[IR] per-turn state tokens: k " + std::to_string(state_k_) + " (ids " + std::to_string(vocab_) +
+                   " .. " + std::to_string(vocab_ + state_k_ - 1) + " read '" + state_weight_ + "')" +
+                   (turn_state_ ? std::string(", attention mask turn_state") : std::string()) +
+                   (evict_ ? std::string(", kv eviction at turn_state") : std::string()));
+    } else if (meta_k && *meta_k > 0) {
+      throw std::runtime_error("paperkiln.state_tokens.k is " + std::to_string(static_cast<int>(*meta_k)) +
+                               " but the IR's embedding has no state_weight");
+    }
+  }
   size_t n_quant = 0, bytes_quant = 0, bytes_f32 = 0, n_mapped = 0;
   for (const auto& kv : weights_) {
     n_quant += kv.second.quantised();
@@ -1151,7 +1260,121 @@ float* Interpreter::rec_tensor(const RecSlot& slot, const char* tensor, int laye
   throw std::runtime_error("IR recurrent state '" + slot.name + "' has no tensor '" + tensor + "'");
 }
 
+int Interpreter::ts_seg_after(int p) const {
+  if (p < 0) return 0;
+  return ts_seg_.at(p) + (state_k_ > 0 && ts_sidx_.at(p) == state_k_ - 1 ? 1 : 0);
+}
+
+int Interpreter::ts_segment_start(int m) const {
+  if (m <= 0) return 0;
+  // The position after the last state id of block m - 1.
+  for (int p = static_cast<int>(ts_seg_.size()) - 1; p >= 0; --p)
+    if (ts_seg_[p] == m - 1 && ts_sidx_[p] == state_k_ - 1) return p + 1;
+  return static_cast<int>(ts_seg_.size());
+}
+
+void Interpreter::ts_evict_below(int seg) {
+  if (!evict_ || seg <= evicted_below_) return;
+  // Keep every state row and the text rows of segments >= seg; move them down in every block's
+  // cache, in order (row w < row r, so the copies never overlap).
+  const size_t row = static_cast<size_t>(kv_heads_) * head_dim_;
+  size_t w = 0;
+  for (size_t r = 0; r < kv_pos_.size(); ++r) {
+    const int p = kv_pos_[r];
+    if (ts_sidx_.at(p) < 0 && ts_seg_.at(p) < seg) continue;
+    if (w != r) {
+      for (auto& layer : kv_) {
+        std::memcpy(layer.k.data() + w * row, layer.k.data() + r * row, row * sizeof(float));
+        std::memcpy(layer.v.data() + w * row, layer.v.data() + r * row, row * sizeof(float));
+      }
+      kv_pos_[w] = p;
+    }
+    ++w;
+  }
+  kv_pos_.resize(w);
+  evicted_below_ = seg;
+}
+
+void Interpreter::ts_begin(const std::vector<int>& tokens, int start_pos) {
+  const int n = static_cast<int>(ts_seg_.size()), T = static_cast<int>(tokens.size());
+  if (start_pos < 0 || start_pos > n)
+    throw std::runtime_error("IR state tokens: a forward at position " + std::to_string(start_pos) +
+                             ", but the sequence holds " + std::to_string(n) + " positions");
+  // The segment the first token lands in, and how much of a state block is open before it.
+  const int m = ts_seg_after(start_pos - 1);
+  int open = 0;
+  if (start_pos > 0 && ts_sidx_[start_pos - 1] >= 0 && ts_sidx_[start_pos - 1] < state_k_ - 1)
+    open = ts_sidx_[start_pos - 1] + 1;
+  // Ids alone fix s(p) and c(p): a state id must be the next slot of an open block (S_0 opens
+  // one), a text id must not interrupt one. Checked before anything changes.
+  std::vector<int> segs(T), sidx(T);
+  int seg = m;
+  for (int t = 0; t < T; ++t) {
+    const int id = tokens[t];
+    if (id >= vocab_ && state_k_ > 0) {
+      const int j = id - vocab_;
+      if (j >= state_k_)
+        throw std::runtime_error("IR state tokens: id " + std::to_string(id) + " is past the " + std::to_string(state_k_) +
+                                 " state slots (vocab " + std::to_string(vocab_) + ")");
+      if (j != open)
+        throw std::runtime_error("IR state tokens: state id S_" + std::to_string(j) + " at position " +
+                                 std::to_string(start_pos + t) + ", expected " +
+                                 (open == 0 ? std::string("S_0 to open a block") : "S_" + std::to_string(open)));
+      segs[t] = seg;
+      sidx[t] = j;
+      if (++open == state_k_) {
+        open = 0;
+        ++seg;
+      }
+    } else {
+      if (open != 0)
+        throw std::runtime_error("IR state tokens: text id " + std::to_string(id) + " at position " +
+                                 std::to_string(start_pos + t) + " inside an incomplete state block (S_0 .. S_" +
+                                 std::to_string(open - 1) + " of " + std::to_string(state_k_) + ")");
+      segs[t] = seg;
+      sidx[t] = -1;
+    }
+  }
+  // A rewind into a segment whose text rows are gone can resume only at that segment's start
+  // (resume_point); the rows of segments >= m all lie at or past it and are dropped below.
+  if (turn_state_ && m < evicted_below_) {
+    const int s0 = ts_segment_start(m);
+    if (start_pos != s0)
+      throw std::runtime_error("IR state tokens: position " + std::to_string(start_pos) + " is inside turn " +
+                               std::to_string(m) + ", whose text rows were evicted; resume from its start, position " +
+                               std::to_string(s0) + " (resume_point)");
+    evicted_below_ = m;
+  }
+  ts_seg_.resize(start_pos);
+  ts_sidx_.resize(start_pos);
+  ts_seg_.insert(ts_seg_.end(), segs.begin(), segs.end());
+  ts_sidx_.insert(ts_sidx_.end(), sidx.begin(), sidx.end());
+  if (!turn_state_) return;
+  while (!kv_pos_.empty() && kv_pos_.back() >= start_pos) kv_pos_.pop_back();
+  // Rows no query of this call can see: earlier segments' text.
+  if (evict_ && T > 0) ts_evict_below(segs[0]);
+  kv_row0_ = static_cast<int>(kv_pos_.size());
+  if (kv_row0_ + T > max_len_)
+    throw std::runtime_error("IR attention: " + std::to_string(kv_row0_ + T) + " kv rows exceed the kv state (" +
+                             std::to_string(max_len_) + ")");
+  // Visible rows per query (section 1.3), ascending: held rows, then this call's rows up to t.
+  ts_vis_.assign(T, {});
+  for (int t = 0; t < T; ++t) {
+    const int s = segs[t];
+    auto visible = [&](int j) { return ts_seg_[j] == s || (ts_sidx_[j] >= 0 && ts_seg_[j] < s); };
+    std::vector<int>& v = ts_vis_[t];
+    for (int r = 0; r < kv_row0_; ++r)
+      if (visible(kv_pos_[r])) v.push_back(r);
+    for (int u = 0; u <= t; ++u)
+      if (visible(start_pos + u)) v.push_back(kv_row0_ + u);
+  }
+}
+
 int Interpreter::resume_point(int want) const {
+  if (turn_state_ && evict_ && want > 0 && want <= static_cast<int>(ts_seg_.size())) {
+    const int m = ts_seg_after(want - 1);
+    if (m < evicted_below_) return ts_segment_start(m);
+  }
   if (rec_floats_ == 0 || want <= 0) return std::max(want, 0);
   if (want == rec_pos_) return want;
   auto below = [want](const auto& snaps) {
@@ -1306,15 +1529,27 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       const Weight& W = bound(wn);
       const int d = static_cast<int>(shapes_.at(wn).at(0));
       Buf out{std::vector<float>(static_cast<size_t>(T) * d), d};
+      // Extended embedding (state_weight): an id in [vocab, vocab + k) reads row id - vocab of the
+      // state rows; without one, an id past the table is refused. EXACT.
+      const bool ext = has(n.attrs, "state_weight");
       for (int t = 0; t < T; ++t) {
         const int id = static_cast<int>(tokens.v[t]);
-        if (id < 0 || static_cast<size_t>(id + 1) * d > W.numel)
+        const Weight* src = &W;
+        int row = id;
+        if (ext && id >= vocab_) {
+          if (id >= vocab_ + state_k_)
+            throw std::runtime_error("IR embedding: token id " + std::to_string(id) + " is past the state slots (vocab " +
+                                     std::to_string(vocab_) + ", k " + std::to_string(state_k_) + ")");
+          src = &bound(state_weight_);
+          row = id - vocab_;
+        } else if (id < 0 || static_cast<size_t>(id + 1) * d > W.numel) {
           throw std::runtime_error("IR embedding: token id " + std::to_string(id) + " out of range");
+        }
         float* dst = out.v.data() + static_cast<size_t>(t) * d;
-        if (W.quantised())
-          dequant_span_to_f32(W.type, W.qp, static_cast<size_t>(id) * d, d, dst);
+        if (src->quantised())
+          dequant_span_to_f32(src->type, src->qp, static_cast<size_t>(row) * d, d, dst);
         else
-          std::memcpy(dst, W.f32.data() + static_cast<size_t>(id) * d, d * sizeof(float));
+          std::memcpy(dst, src->f32.data() + static_cast<size_t>(row) * d, d * sizeof(float));
       }
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "pos_embedding") {  // x + position_embd[pos], pos absolute. EXACT.
@@ -1433,8 +1668,11 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       const int hkv = n.attrs.at("kv_heads").get<int>();
       if (hd != head_dim_ || hkv != kv_heads_) throw std::runtime_error("IR attention shape differs from its kv state");
       // Under a recursion step (mor_step) the rows go to the application's compact cache, at
-      // attn_row_, and the query reads the rows before and at it; elsewhere rows sit at their positions.
-      const int kpos = attn_row_ >= 0 ? attn_row_ : start_pos;
+      // attn_row_, and the query reads the rows before and at it; under turn_state they go to the
+      // compact cache at kv_row0_ and each query reads its visible rows (ts_vis_); elsewhere rows
+      // sit at their positions.
+      const bool ts = n.attrs.value("mask", "causal") == "turn_state";
+      const int kpos = ts ? kv_row0_ : attn_row_ >= 0 ? attn_row_ : start_pos;
       if (kpos + T > max_len_)
         throw std::runtime_error("IR attention: position " + std::to_string(kpos + T) + " exceeds the kv state (" +
                                  std::to_string(max_len_) + ")");
@@ -1446,7 +1684,9 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       Buf out{{}, hq * hd};
       int window = 0, sinks = 0;
       attention_window(n, layer, window, sinks);
-      if (window > 0)
+      if (ts)
+        attention_rows_batch_cpu(q.v, cache, out.v, T, ts_vis_, hq, hkv, hd, scale);
+      else if (window > 0)
         attention_window_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale, window, sinks);
       else
         attention_batch_cpu(q.v, cache, out.v, T, kpos, hq, hkv, hd, scale);
@@ -1724,6 +1964,7 @@ std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int star
 #ifdef HAS_CUDA
   if (gpu_) return forward_device(tokens, start_pos, all_rows);
 #endif
+  if (state_k_ > 0 || turn_state_) ts_begin(tokens, start_pos);
   if (rec_floats_ > 0) rec_begin(start_pos, T, all_rows);
   Env env;
   env["tokens"] = Buf{std::vector<float>(tokens.begin(), tokens.end()), 1};
@@ -1740,6 +1981,12 @@ std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int star
       mor_step(l, env, T, start_pos);
     else
       run_nodes(block_, l, env, T, start_pos, false);
+  }
+  if (turn_state_) {
+    // Every block has written this call's rows at kv_row0_ ..: they now hold these positions.
+    for (int t = 0; t < T; ++t) kv_pos_.push_back(start_pos + t);
+    // The text rows of segments before the last token's are invisible to every later query.
+    if (evict_) ts_evict_below(ts_seg_.back());
   }
   if (rec_floats_ > 0) rec_end(start_pos, T);
   int rows = T;
