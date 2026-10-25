@@ -1,0 +1,9 @@
+{
+ "numbers_checked": 260616,
+ "number_mismatches": [],
+ "n_number_mismatches": 0,
+ "string_objects": 1600,
+ "string_mismatches": [],
+ "n_string_mismatches": 0,
+ "requests": 2124
+}

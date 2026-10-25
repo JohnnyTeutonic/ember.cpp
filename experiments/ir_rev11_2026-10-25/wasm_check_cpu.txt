@@ -1,0 +1,38 @@
+native rc=0
+In file included from /home/jonat/ember_adapter_39dcce9/src/safetensors_loader.cpp:1:
+/home/jonat/ember_adapter_39dcce9/src/safetensors_loader.h:294:27: warning: 'result_of<(lambda at /home/jonat/ember_adapter_39dcce9/src/safetensors_loader.cpp:561:39) ()>' is deprecated [-Wdeprecated-declarations]
+/home/jonat/ember_adapter_39dcce9/src/safetensors_loader.cpp:561:32: note: while substituting deduced template arguments into function template 'submit' [with F = (lambda at /home/jonat/ember_adapter_39dcce9/src/safetensors_loader.cpp:561:39), Args = <>]
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__type_traits/result_of.h:25:8: note: 'result_of<(lambda at /home/jonat/ember_adapter_39dcce9/src/safetensors_loader.cpp:561:39) ()>' has been explicitly marked deprecated here
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config:540:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config:504:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+In file included from /home/jonat/ember_adapter_39dcce9/src/safetensors_loader.cpp:1:
+/home/jonat/ember_adapter_39dcce9/src/safetensors_loader.h:296:37: warning: 'result_of<(lambda at /home/jonat/ember_adapter_39dcce9/src/safetensors_loader.cpp:561:39) ()>' is deprecated [-Wdeprecated-declarations]
+/home/jonat/ember_adapter_39dcce9/src/safetensors_loader.cpp:561:32: note: in instantiation of function template specialization 'ThreadPool::submit<(lambda at /home/jonat/ember_adapter_39dcce9/src/safetensors_loader.cpp:561:39)>' requested here
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__type_traits/result_of.h:25:8: note: 'result_of<(lambda at /home/jonat/ember_adapter_39dcce9/src/safetensors_loader.cpp:561:39) ()>' has been explicitly marked deprecated here
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config:540:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config:504:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+2 warnings generated.
+== dequant native
+{"bf16":{"n":16,"pass":true,"span_bad":0,"type":"BF16","whole_bad":0},"f16":{"n":16,"pass":true,"span_bad":0,"type":"F16","whole_bad":0},"f32":{"n":16,"pass":true,"span_bad":0,"type":"F32","whole_bad":0},"pass":true,"q4_0":{"n":128,"pass":true,"span_bad":0,"type":"Q4_0","whole_bad":0},"q4_k":{"n":1024,"pass":true,"span_bad":0,"type":"Q4_K","whole_bad":0},"q5_0":{"n":128,"pass":true,"span_bad":0,"type":"Q5_0","whole_bad":0},"q5_1":{"n":128,"pass":true,"span_bad":0,"type":"Q5_1","whole_bad":0},"q5_k":{"n":1024,"pass":true,"span_bad":0,"type":"Q5_K","whole_bad":0},"q6_k":{"n":1024,"pass":true,"span_bad":0,"type":"Q6_K","whole_bad":0},"q8_0":{"n":128,"pass":true,"span_bad":0,"type":"Q8_0","whole_bad":0}}
+== dequant wasm
+{"bf16":{"n":16,"pass":true,"span_bad":0,"type":"BF16","whole_bad":0},"f16":{"n":16,"pass":true,"span_bad":0,"type":"F16","whole_bad":0},"f32":{"n":16,"pass":true,"span_bad":0,"type":"F32","whole_bad":0},"pass":true,"q4_0":{"n":128,"pass":true,"span_bad":0,"type":"Q4_0","whole_bad":0},"q4_k":{"n":1024,"pass":true,"span_bad":0,"type":"Q4_K","whole_bad":0},"q5_0":{"n":128,"pass":true,"span_bad":0,"type":"Q5_0","whole_bad":0},"q5_1":{"n":128,"pass":true,"span_bad":0,"type":"Q5_1","whole_bad":0},"q5_k":{"n":1024,"pass":true,"span_bad":0,"type":"Q5_K","whole_bad":0},"q6_k":{"n":1024,"pass":true,"span_bad":0,"type":"Q6_K","whole_bad":0},"q8_0":{"n":128,"pass":true,"span_bad":0,"type":"Q8_0","whole_bad":0}}
+== pk_recurrence native reference
+{"gguf":"/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_recurrence/pk_recurrence.gguf","load_ms":26.151449,"mode":"ref","prompts":40,"vocab":15}
+== pk_recurrence wasm
+{
+ "gen": 6,
+ "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_recurrence/pk_recurrence.gguf",
+ "greedy_identical": "40/40",
+ "len": 8,
+ "load_ms": 167.959289,
+ "ms_per_prompt": 3.24188325,
+ "of": 40,
+ "pass": true,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "320/320",
+ "vocab": 15,
+ "worst_decode_rel": 7.876405337776886e-08,
+ "worst_prefill_rel": 7.876405337776886e-08
+}
+emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.6 (ce75e06884093bcefb86a6b8fd56a5d62a4cc245)
