@@ -1,4 +1,11 @@
-"""Serve the WebGPU parity page and read its RESULT line through Playwright (Edge). Usage: run.py PORT"""
+"""Serve the WebGPU parity page and read its RESULT line through Playwright (Edge). Usage: run.py PORT
+
+A browser run uses whatever GPU the browser picks: on the 21 Oct 2026 runs headless Edge took the
+laptop's Intel iGPU, and with --use-angle=swiftshader / --use-webgpu-adapter=swiftshader Chrome 156
+on Windows still opened a D3D context on the Intel GPU and offered no SwiftShader adapter (26 Oct).
+GPU work is remote only, so this refuses to run unless EMBER_WEBGPU_REMOTE=1 says the machine is a
+GPU VM. On the laptop, gate the WebGPU code on the software adapter instead: swiftshader_run.py with
+ir_gate.mjs or chat_test.mjs (Dawn's node bindings, SwiftShader the only Vulkan driver)."""
 import functools
 import http.server
 import json
@@ -6,7 +13,11 @@ import os
 import sys
 import threading
 
-from playwright.sync_api import sync_playwright
+if os.environ.get("EMBER_WEBGPU_REMOTE") != "1":
+    sys.exit("run.py drives a browser on a hardware GPU: remote GPU VMs only (set EMBER_WEBGPU_REMOTE=1 there). "
+             "Locally use swiftshader_run.py -- node ir_gate.mjs / chat_test.mjs.")
+
+from playwright.sync_api import sync_playwright  # noqa: E402
 
 PAGE = os.environ.get("PAGE", "index.html")
 port = int(sys.argv[1]) if len(sys.argv) > 1 else 8098
