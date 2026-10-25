@@ -57,7 +57,9 @@ const std::set<std::string> kCudaOps = {"embedding", "pos_embedding", "rmsnorm",
                                         "attention", "add", "mul", "silu", "gelu", "moe_ffn",
                                         "linear_attention", "ssm_scan", "conv1d_causal", "selective_scan",
                                         "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
-                                        "expr", "scale"};
+                                        "expr", "scale",
+                                        // Mixture-of-Recursions' control node (run_device's mor_step_device runs it)
+                                        "depth_route"};
 const std::set<std::string> kRowWiseOps = {"rmsnorm", "layernorm", "linear", "add", "mul", "silu", "gelu",
                                            "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
                                            "expr", "scale"};
@@ -430,13 +432,20 @@ bool device_supported(const std::string& ir_json) {
   // and appends, the block's once per repeat) plus its own extra inputs.
   // Per-layer attributes (the ones the interpreter accepts: attention and
   // kv-state window and sinks, RoPE theta and freq_scale) run on either path.
+  // Mixture-of-Recursions (depth_route) runs a step on its active rows at their own positions: rope and
+  // attention take them (mor_step_device); a pos_embedding in its block stays on the CPU.
   size_t list_tensors = 0, extra = 0;
+  bool mor = false, block_pos_embedding = false;
   for (const char* sub : {"embed", "block", "head"}) {
     if (!j.contains(sub)) continue;
     const size_t times = std::string(sub) == "block" ? j.at(sub).value("repeat", 1) : 1;
     for (const auto& n : j.at(sub).value("nodes", json::array())) {
       const std::string op = n.value("op", "");
       if (!kCudaOps.count(op)) return false;
+      if (std::string(sub) == "block") {
+        mor = mor || op == "depth_route";
+        block_pos_embedding = block_pos_embedding || op == "pos_embedding";
+      }
       if (op == "expr") {  // the CUDA form's limits (graph_ir_expr.h lower)
         try {
           expr::lower(expr::cached(n.at("expr").get<std::string>(), n.at("in").size()));
@@ -453,6 +462,7 @@ bool device_supported(const std::string& ir_json) {
 #endif
     }
   }
+  if (mor && block_pos_embedding) return false;
 #ifdef HAS_CUDA
   if (list_tensors + extra > static_cast<size_t>(kIrDepthSourcesMax)) return false;
 #endif
@@ -2411,6 +2421,18 @@ std::vector<int> Interpreter::kv_positions(int application) const {
   return p;
 }
 
+std::vector<int> Interpreter::held_positions(int application) const {
+  if (application < 0 || application >= n_layers_)
+    throw std::runtime_error("IR held_positions: application " + std::to_string(application) + " of " +
+                             std::to_string(n_layers_));
+  if (kv_heads_ <= 0) return {};
+  if (turn_state_) return kv_pos_;
+  if (!mor_step_.empty() && mor_step_[application] >= 0) return mor_rows_[application];
+  std::vector<int> p(static_cast<size_t>(seq_len_));
+  for (int i = 0; i < seq_len_; ++i) p[i] = i;
+  return p;
+}
+
 std::vector<Interpreter::RecurrentTensorInfo> Interpreter::recurrent_tensors() const {
   std::vector<RecurrentTensorInfo> out;
   for (const auto& slot : rec_slots_)
@@ -2612,6 +2634,7 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
   };
   std::vector<DStep> steps;
   for (const auto& n : nodes) {
+    if (n.op == "depth_route") continue;  // control, not a step: run_device's mor_step_device
     AppIndex ti(app_index_, n);
     DStep s;
     auto op = kOps.find(n.op);
@@ -2780,9 +2803,32 @@ void Interpreter::compile_device() {
   for (int l = 0; l < n_layers_; ++l) plan_block_[l] = compile_nodes(block_, l);
   plan_head_ = compile_nodes(head_, -1);
   logits_slot_ = slot("logits");
+  if (!mor_step_.empty()) {
+    // depth_route's slots, and the block's (its other nodes'): every slot read or written, and those
+    // read before the block writes them (its inputs from outside the block; x among them).
+    mor_xs_ = slot(mor_x_);
+    mor_out_slot_ = slot(mor_out_);
+    std::set<int> touched{mor_xs_}, written;
+    for (const auto& n : block_) {
+      if (n.op == "depth_route") continue;
+      for (const auto& name : n.in) {
+        const int sl = slot(name);
+        touched.insert(sl);
+        if (!written.count(sl) && sl != mor_xs_ &&
+            std::find(mor_livein_.begin(), mor_livein_.end(), sl) == mor_livein_.end())
+          mor_livein_.push_back(sl);
+      }
+      for (const auto& name : n.out) {
+        touched.insert(slot(name));
+        written.insert(slot(name));
+      }
+    }
+    mor_touch_.assign(touched.begin(), touched.end());
+  }
   dbufs_.assign(slot_names_.size(), DBuf{});  // sized once: steps hold slots, dout returns references
   dspare_.assign(slot_names_.size(), DBuf{});
   ditems_.assign(slot_names_.size(), {});
+  msave_.assign(mor_step_.empty() ? 0 : slot_names_.size(), DBuf{});
   Logger::info("[IR] CUDA device plan: " + std::to_string(plan_embed_.size()) + " + " + std::to_string(n_layers_) +
                " x " + std::to_string(block_.size()) + " + " + std::to_string(plan_head_.size()) + " steps over " +
                std::to_string(slot_names_.size()) + " buffer slots");
@@ -2798,6 +2844,12 @@ void Interpreter::free_device() {
   graph_exec_ = nullptr;
   release(dbufs_);
   release(dspare_);
+  release(msave_);
+  for (float* p : {dmor_logits_.alloc, dmor_xin_.alloc, dmor_g_.alloc})
+    if (p) cudaFree(p);
+  dmor_logits_ = dmor_xin_ = dmor_g_ = DBuf{};
+  if (dmor_idx_) cudaFree(dmor_idx_);
+  dmor_idx_ = nullptr;
   for (auto& items : ditems_) release(items);
   ditems_.clear();
   for (auto& w : dweights_) cudaFree(w.second);
@@ -2951,6 +3003,7 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
       case DOp::PosEmbedding: {
         const DBuf& x = in(s, 0);
         const int d = x.width;
+        if (drowpos_) throw std::runtime_error("IR pos_embedding inside a recursion step has no CUDA form");
         if (s.w_ne0 != d) throw std::runtime_error("IR pos_embedding '" + s.wname + "': width differs from x");
         if (static_cast<size_t>(start_pos + T) * d > s.w_elems)
           throw std::runtime_error("IR pos_embedding: position " + std::to_string(start_pos + T - 1) + " exceeds '" +
@@ -3021,7 +3074,16 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
                                     cudaMemcpyDeviceToDevice, st));
           src = &dst;
         }
-        if (!s.neox && s.n_rot == s.hd) {  // full interleaved: the llama path's form
+        if (drowpos_) {  // a recursion step's active rows, each at its own position (mor_step_device)
+          if (!s.neox && s.n_rot == s.hd) {
+            ir_rope_at_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, drowpos_, s.rope, st);
+          } else {
+            if (q->width % s.hd != 0 || k->width % s.hd != 0)
+              throw std::runtime_error("IR rope: q/k widths are not whole heads");
+            ir_rope_rows_at_cuda(q->p, T, q->width / s.hd, s.hd, s.n_rot, s.neox, drowpos_, s.rope, st);
+            ir_rope_rows_at_cuda(k->p, T, k->width / s.hd, s.hd, s.n_rot, s.neox, drowpos_, s.rope, st);
+          }
+        } else if (!s.neox && s.n_rot == s.hd) {  // full interleaved: the llama path's form
           ir_rope_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, start_pos, s.rope, st, dpos_);
         } else {  // NEOX pairing or partial rotary (rope_rows_cpu)
           if (q->width % s.hd != 0 || k->width % s.hd != 0)
@@ -3036,6 +3098,24 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         const int hd = s.hd, hq = s.hq, hkv = s.hkv;
         if (k.width != hkv * hd || v.width != hkv * hd || q.width != hq * hd)
           throw std::runtime_error("IR attention: q/k/v widths do not match heads * head_dim");
+        if (attn_row_ >= 0) {
+          // A recursion step (mor_step_device): this call's rows (the active tokens, ascending) go to the
+          // application's compact cache from attn_row_, and query t reads its rows 0 .. attn_row_ + t:
+          // exactly the rows held at positions <= its own (kv_rows "active").
+          if (attn_row_ + T > max_len_)
+            throw std::runtime_error("IR attention: " + std::to_string(attn_row_ + T) + " kv rows exceed the kv state (" +
+                                     std::to_string(max_len_) + ")");
+          float* K = dk_[layer];
+          float* V = dv_[layer];
+          ir_kv_write_cuda(K, V, k.p, v.p, T, hkv * hd, attn_row_, st);
+          DBuf& out = dout(s.out[0], T, hq * hd, {&q, &k, &v});
+          if (T == 1)
+            attention_decode_at_cuda(q.p, K, V, out.p, hq, attn_row_ + 1, hd, s.scale, max_len_, hkv, st);
+          else
+            attention_batch_prefill_cuda(q.p, nullptr, nullptr, K, V, out.p, T, attn_row_, max_len_, hq, hkv, hd,
+                                         s.scale, st, nullptr);
+          break;
+        }
         if (start_pos + T > max_len_)
           throw std::runtime_error("IR attention: position " + std::to_string(start_pos + T) + " exceeds the kv state (" +
                                    std::to_string(max_len_) + ")");
@@ -3263,7 +3343,144 @@ void Interpreter::run_device(int T, int start_pos) {
   for (auto& b : dbufs_) b.rows = b.items = 0;  // allocations persist, definitions do not
   pending_.clear();
   run_nodes_device(plan_embed_, -1, T, start_pos);
-  for (int l = 0; l < n_layers_; ++l) run_nodes_device(plan_block_[l], l, T, start_pos);
+  for (int l = 0; l < n_layers_; ++l) {
+    if (!mor_step_.empty() && mor_step_[l] >= 0)
+      mor_step_device(l, T, start_pos);
+    else
+      run_nodes_device(plan_block_[l], l, T, start_pos);
+  }
+}
+
+// One application of a recursion step on the device (graph_ir.h, mor_step_device; the CPU's mor_step,
+// ir.hpp depth_route (a)-(d)).
+void Interpreter::mor_step_device(int layer, int T, int start_pos) {
+  cudaStream_t st = stream_;
+  const int s = mor_step_[layer];
+  const bool first = layer == 0 || mor_step_[layer - 1] != s;
+  const bool last = layer == n_layers_ - 1 || mor_step_[layer + 1] != s;
+  auto take = [&](DBuf& b, int rows, int width) {
+    grow(b, static_cast<size_t>(rows) * width);
+    b.p = b.alloc;
+    b.rows = rows;
+    b.width = width;
+    b.is_list = false;
+    b.items = 0;
+  };
+  if (s == 0 && first) {  // (a) routing: the logits on the device, depth and gate on the host
+    const DBuf& x = dbufs_[mor_xs_];
+    if (x.rows != T || x.is_list) throw std::runtime_error("IR depth_route: input '" + mor_x_ + "' is not a tensor");
+    const int d = x.width;
+    const float* W = dweight(mor_router_);
+    size_t numel = 1;
+    for (int64_t e : shapes_.at(mor_router_)) numel *= static_cast<size_t>(e);
+    if (shapes_.at(mor_router_).at(0) != d || numel != static_cast<size_t>(mor_R_) * d)
+      throw std::runtime_error("IR depth_route '" + mor_router_ + "' is not [n_rec, d]");
+    grow(dmor_logits_, static_cast<size_t>(T) * mor_R_);
+    gemm_rm_f32_cuda(cublas_, x.p, W, dmor_logits_.alloc, T, mor_R_, d, st);  // x W^T, as linear
+    std::vector<float> logits(static_cast<size_t>(T) * mor_R_);
+    gpuErrchk(cudaMemcpyAsync(logits.data(), dmor_logits_.alloc, logits.size() * sizeof(float), cudaMemcpyDeviceToHost,
+                              st));
+    gpuErrchk(cudaStreamSynchronize(st));
+    mor_depth_.assign(T, 0);
+    mor_g_.assign(T, 0.0f);
+    for (int t = 0; t < T; ++t) cpu::mor_route(logits.data() + static_cast<size_t>(t) * mor_R_, mor_R_, mor_depth_[t], mor_g_[t]);
+    // The depth report (out), [T, 1], as the CPU's env holds it. Pageable source: the copy has read it
+    // when cudaMemcpyAsync returns.
+    const std::vector<float> depth(mor_depth_.begin(), mor_depth_.end());
+    DBuf& o = dout(mor_out_slot_, T, 1, {});
+    gpuErrchk(cudaMemcpyAsync(o.p, depth.data(), depth.size() * sizeof(float), cudaMemcpyHostToDevice, st));
+    commit();
+  }
+  if (first) {
+    // (b) the step's active tokens, in position order, and its input x_in; every slot the block
+    // touches is held aside, so the step runs on compact rows and the full values return after it.
+    mor_active_.clear();
+    for (int t = 0; t < T; ++t)
+      if (mor_depth_.at(t) > s) mor_active_.push_back(t);
+    mor_A_ = static_cast<int>(mor_active_.size());
+    if (mor_A_ == 0) return;  // (d) no active token: the step runs nothing and writes no kv rows
+    const DBuf& xf = dbufs_[mor_xs_];
+    if (xf.rows != T || xf.is_list) throw std::runtime_error("IR depth_route: input '" + mor_x_ + "' is not a tensor");
+    const int d = xf.width;
+    if (mor_A_ < T) {
+      if (dmor_idx_cap_ < T) {
+        if (dmor_idx_) gpuErrchk(cudaFree(dmor_idx_));
+        gpuErrchk(cudaMalloc(&dmor_idx_, static_cast<size_t>(2) * T * sizeof(int)));
+        dmor_idx_cap_ = T;
+      }
+      std::vector<int> h(static_cast<size_t>(2) * mor_A_);
+      for (int a = 0; a < mor_A_; ++a) {
+        h[a] = mor_active_[a];
+        h[mor_A_ + a] = start_pos + mor_active_[a];
+      }
+      gpuErrchk(cudaMemcpyAsync(dmor_idx_, h.data(), h.size() * sizeof(int), cudaMemcpyHostToDevice, st));
+    }
+    for (int sl : mor_touch_) {
+      std::swap(dbufs_[sl], msave_[sl]);
+      dbufs_[sl].rows = dbufs_[sl].items = 0;
+      dbufs_[sl].is_list = false;
+    }
+    DBuf& xc = dbufs_[mor_xs_];
+    const DBuf& full = msave_[mor_xs_];
+    take(xc, mor_A_, d);
+    if (mor_A_ < T)
+      ir_rows_gather_cuda(full.p, dmor_idx_, xc.p, mor_A_, d, st);
+    else
+      gpuErrchk(cudaMemcpyAsync(xc.p, full.p, static_cast<size_t>(T) * d * sizeof(float), cudaMemcpyDeviceToDevice, st));
+    if (mor_gate_score_) {
+      take(dmor_xin_, mor_A_, d);
+      gpuErrchk(cudaMemcpyAsync(dmor_xin_.p, xc.p, static_cast<size_t>(mor_A_) * d * sizeof(float),
+                                cudaMemcpyDeviceToDevice, st));
+      std::vector<float> g(static_cast<size_t>(mor_A_));
+      for (int a = 0; a < mor_A_; ++a) g[a] = mor_g_[mor_active_[a]];
+      take(dmor_g_, mor_A_, 1);
+      gpuErrchk(cudaMemcpyAsync(dmor_g_.p, g.data(), g.size() * sizeof(float), cudaMemcpyHostToDevice, st));
+    }
+  } else if (mor_A_ == 0) {
+    return;
+  }
+  const int A = mor_A_;
+  // The block's other inputs: each application reads their values from before the step (the CPU
+  // builds each token's row from the full values; only x carries from one application to the next).
+  for (int sl : mor_livein_) {
+    const DBuf& full = msave_[sl];
+    DBuf& b = dbufs_[sl];
+    b.rows = b.items = 0;
+    b.is_list = false;
+    if (full.is_list || full.rows != T || full.width <= 0) continue;  // not a [T, w] tensor: undefined here
+    take(b, A, full.width);
+    if (A < T)
+      ir_rows_gather_cuda(full.p, dmor_idx_, b.p, A, full.width, st);
+    else
+      gpuErrchk(cudaMemcpyAsync(b.p, full.p, static_cast<size_t>(T) * full.width * sizeof(float),
+                                cudaMemcpyDeviceToDevice, st));
+  }
+  attn_row_ = static_cast<int>(mor_rows_[layer].size());
+  drowpos_ = A < T ? dmor_idx_ + A : nullptr;
+  try {
+    run_nodes_device(plan_block_[layer], layer, A, start_pos);
+  } catch (...) {
+    attn_row_ = -1;
+    drowpos_ = nullptr;
+    throw;
+  }
+  attn_row_ = -1;
+  drowpos_ = nullptr;
+  for (int t : mor_active_) mor_rows_[layer].push_back(start_pos + t);
+  if (!last) return;
+  // (c) the gate on the active rows, then those rows back into the full x (inactive rows keep x_in),
+  // and every held value back in its slot.
+  DBuf& y = dbufs_[mor_xs_];
+  DBuf& full = msave_[mor_xs_];
+  const int d = full.width;
+  if (y.is_list || y.rows != A || y.width != d)
+    throw std::runtime_error("IR depth_route: the block changes the width of '" + mor_x_ + "'");
+  if (mor_gate_score_) ir_mor_gate_cuda(dmor_xin_.p, y.p, dmor_g_.p, A, d, st);
+  if (A < T)
+    ir_rows_scatter_cuda(y.p, dmor_idx_, full.p, A, d, st);
+  else
+    gpuErrchk(cudaMemcpyAsync(full.p, y.p, static_cast<size_t>(T) * d * sizeof(float), cudaMemcpyDeviceToDevice, st));
+  for (int sl : mor_touch_) std::swap(dbufs_[sl], msave_[sl]);
 }
 
 // Captures the T = 1 step (embed, blocks, head) on stream_ as a graph. The
@@ -3367,7 +3584,14 @@ std::vector<float> Interpreter::forward_device(const std::vector<int>& tokens, i
     if (evict_) ts_evict_below(ts_seg_.back());
   };
   if (rec_floats_ > 0) rec_begin(start_pos, T, all_rows);
-  if (T == 1 && decode_graph(tokens[0], start_pos)) {
+  if (!mor_step_.empty()) {
+    // As forward() on the CPU: resuming at start_pos keeps each compact cache's rows below it. The
+    // routing reads the host, so a depth_route never takes the captured decode graph.
+    for (auto& rows : mor_rows_)
+      while (!rows.empty() && rows.back() >= start_pos) rows.pop_back();
+    mor_depth_.clear();
+  }
+  if (T == 1 && mor_step_.empty() && decode_graph(tokens[0], start_pos)) {
     ts_end();
     if (rec_floats_ > 0) rec_end(start_pos, T);
     gpuErrchk(cudaStreamSynchronize(stream_));

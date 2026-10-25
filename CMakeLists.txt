@@ -467,6 +467,9 @@ if(NOT SKBUILD)
         # ir_device_gate's device half to a file, for comparing two builds bit for bit (tools/ir_device_dump.cpp).
         add_executable(ir_device_dump tools/ir_device_dump.cpp)
         target_link_libraries(ir_device_dump PRIVATE tinyllama_core)
+        # Mixture-of-Recursions on the device against the CPU: depths, rows held, rewinds (tools/mor_device_gate.cpp).
+        add_executable(mor_device_gate tools/mor_device_gate.cpp)
+        target_link_libraries(mor_device_gate PRIVATE tinyllama_core)
     endif()
 
     add_executable(tinyllama_server

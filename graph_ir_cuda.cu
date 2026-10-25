@@ -584,7 +584,99 @@ __global__ void embedding_state_kernel(const float* __restrict__ table, const fl
   for (int i = threadIdx.x; i < d; i += blockDim.x) out[(size_t)t * d + i] = src[i];
 }
 
+// Mixture-of-Recursions (graph_ir_cuda.h): one block per compact row.
+__global__ void rows_gather_kernel(const float* __restrict__ src, const int* __restrict__ idx, float* __restrict__ dst,
+                                   int w) {
+  const int a = blockIdx.x;
+  const float* s = src + (size_t)idx[a] * w;
+  for (int i = threadIdx.x; i < w; i += blockDim.x) dst[(size_t)a * w + i] = s[i];
+}
+
+__global__ void rows_scatter_kernel(const float* __restrict__ src, const int* __restrict__ idx, float* __restrict__ dst,
+                                    int w) {
+  const int a = blockIdx.x;
+  float* d = dst + (size_t)idx[a] * w;
+  for (int i = threadIdx.x; i < w; i += blockDim.x) d[i] = src[(size_t)a * w + i];
+}
+
+__global__ void mor_gate_kernel(const float* __restrict__ x_in, float* __restrict__ x, const float* __restrict__ g,
+                                int w) {
+  const int a = blockIdx.x;
+  const float ga = g[a];
+  for (int i = threadIdx.x; i < w; i += blockDim.x) {
+    const size_t j = (size_t)a * w + i;
+    const float diff = __fsub_rn(x[j], x_in[j]);
+    const float p = __fmul_rn(ga, diff);
+    x[j] = __fadd_rn(x_in[j], p);
+  }
+}
+
+// rope_kernel and rope_rows_kernel with row t at position pos[t].
+__global__ void rope_at_kernel(float* __restrict__ q, float* __restrict__ k, int hq, int hk, int hd,
+                               const int* __restrict__ pos, const float* __restrict__ freqs) {
+  const int t = blockIdx.x, half = hd / 2;
+  const float* f = freqs + (size_t)pos[t] * half * 2;
+  const int nq = hq * half, total = (hq + hk) * half;
+  for (int j = threadIdx.x; j < total; j += blockDim.x) {
+    const bool is_q = j < nq;
+    const int jj = is_q ? j : j - nq;
+    const int h = jj / half, i = jj % half;
+    float* x = (is_q ? q + (size_t)t * hq * hd : k + (size_t)t * hk * hd) + (size_t)h * hd + 2 * i;
+    const float c = f[2 * i], s = f[2 * i + 1];
+    const float x0 = x[0], x1 = x[1];
+    x[0] = __fsub_rn(__fmul_rn(x0, c), __fmul_rn(x1, s));
+    x[1] = __fadd_rn(__fmul_rn(x0, s), __fmul_rn(x1, c));
+  }
+}
+
+__global__ void rope_rows_at_kernel(float* __restrict__ x, int heads, int hd, int n_rot, int neox,
+                                    const int* __restrict__ pos, const float* __restrict__ freqs) {
+  const int t = blockIdx.x, half = n_rot / 2;
+  const float* f = freqs + (size_t)pos[t] * half * 2;
+  for (int j = threadIdx.x; j < heads * half; j += blockDim.x) {
+    const int h = j / half, i = j % half;
+    float* r = x + ((size_t)t * heads + h) * hd;
+    const int i0 = neox ? i : 2 * i, i1 = neox ? i + half : 2 * i + 1;
+    const float c = f[2 * i], s = f[2 * i + 1];
+    const float v0 = r[i0], v1 = r[i1];
+    r[i0] = __fsub_rn(__fmul_rn(v0, c), __fmul_rn(v1, s));
+    r[i1] = __fadd_rn(__fmul_rn(v0, s), __fmul_rn(v1, c));
+  }
+}
+
 }  // namespace
+
+void ir_rows_gather_cuda(const float* src, const int* idx, float* dst, int n, int w, cudaStream_t stream) {
+  if (n <= 0) return;
+  rows_gather_kernel<<<n, 128, 0, stream>>>(src, idx, dst, w);
+  check_launch("rows gather");
+}
+
+void ir_rows_scatter_cuda(const float* src, const int* idx, float* dst, int n, int w, cudaStream_t stream) {
+  if (n <= 0) return;
+  rows_scatter_kernel<<<n, 128, 0, stream>>>(src, idx, dst, w);
+  check_launch("rows scatter");
+}
+
+void ir_mor_gate_cuda(const float* x_in, float* x, const float* g, int n, int w, cudaStream_t stream) {
+  if (n <= 0) return;
+  mor_gate_kernel<<<n, 128, 0, stream>>>(x_in, x, g, w);
+  check_launch("mor gate");
+}
+
+void ir_rope_at_cuda(float* q, float* k, int T, int hq, int hk, int hd, const int* pos, const float* freqs,
+                     cudaStream_t stream) {
+  rope_at_kernel<<<T, 128, 0, stream>>>(q, k, hq, hk, hd, pos, freqs);
+  check_launch("rope (positions)");
+}
+
+void ir_rope_rows_at_cuda(float* x, int T, int heads, int hd, int n_rot, bool neox, const int* pos, const float* freqs,
+                          cudaStream_t stream) {
+  if (n_rot <= 0 || n_rot % 2 != 0 || n_rot > hd)
+    throw std::runtime_error("IR CUDA rope: n_rot " + std::to_string(n_rot) + " / head_dim " + std::to_string(hd));
+  rope_rows_at_kernel<<<T, 128, 0, stream>>>(x, heads, hd, n_rot, neox ? 1 : 0, pos, freqs);
+  check_launch("rope (rows, positions)");
+}
 
 void ir_turn_state_attention_cuda(const float* q, const float* K, const float* V, float* out, int T, int row0,
                                   const int* codes, int hq, int hkv, int hd, float scale, cudaStream_t stream,
