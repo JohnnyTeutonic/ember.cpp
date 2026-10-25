@@ -1,0 +1,217 @@
+{
+ "_comment": "built by tools/gguf_ir.py from general.architecture = gpt2 and its metadata",
+ "ir_version": 1,
+ "family_hint": "gpt2",
+ "model": {
+  "vocab": 50257,
+  "d": 768,
+  "n_layers": 12,
+  "ctx": 1024,
+  "dtype": "f32"
+ },
+ "tokenizer": {
+  "type": "gguf",
+  "source": "gguf",
+  "specials": {
+   "eot": 50256
+  },
+  "bos": 50256
+ },
+ "inputs": [
+  {
+   "name": "tokens",
+   "kind": "token_ids"
+  },
+  {
+   "name": "pos",
+   "kind": "positions"
+  }
+ ],
+ "embed": {
+  "nodes": [
+   {
+    "op": "embedding",
+    "in": [
+     "tokens"
+    ],
+    "weight": "token_embd.weight",
+    "out": "x"
+   },
+   {
+    "op": "pos_embedding",
+    "in": [
+     "x",
+     "pos"
+    ],
+    "weight": "position_embd.weight",
+    "out": "x"
+   }
+  ]
+ },
+ "block": {
+  "repeat": 12,
+  "state": [
+   {
+    "name": "kv",
+    "kind": "kv",
+    "heads": 12,
+    "kv_heads": 12,
+    "head_dim": 64,
+    "max_len": 1024,
+    "window": 0,
+    "sinks": 0,
+    "dtype": "f32"
+   }
+  ],
+  "nodes": [
+   {
+    "op": "layernorm",
+    "in": [
+     "x"
+    ],
+    "weight": "blk.{i}.attn_norm.weight",
+    "bias": "blk.{i}.attn_norm.bias",
+    "eps": 1e-05,
+    "out": "h"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h"
+    ],
+    "weight": "blk.{i}.attn_qkv.weight",
+    "bias": "blk.{i}.attn_qkv.bias",
+    "out": "qkv"
+   },
+   {
+    "op": "split",
+    "in": [
+     "qkv"
+    ],
+    "sizes": [
+     768,
+     768,
+     768
+    ],
+    "out": [
+     "q",
+     "k",
+     "v"
+    ]
+   },
+   {
+    "op": "attention",
+    "in": [
+     "q",
+     "k",
+     "v"
+    ],
+    "state": "kv",
+    "heads": 12,
+    "kv_heads": 12,
+    "head_dim": 64,
+    "causal": true,
+    "scale": 0.125,
+    "window": 0,
+    "sinks": 0,
+    "softmax": "max-shifted, masked entries exactly zero",
+    "out": "a"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "a"
+    ],
+    "weight": "blk.{i}.attn_output.weight",
+    "bias": "blk.{i}.attn_output.bias",
+    "out": "o"
+   },
+   {
+    "op": "add",
+    "in": [
+     "x",
+     "o"
+    ],
+    "out": "x"
+   },
+   {
+    "op": "layernorm",
+    "in": [
+     "x"
+    ],
+    "weight": "blk.{i}.ffn_norm.weight",
+    "bias": "blk.{i}.ffn_norm.bias",
+    "eps": 1e-05,
+    "out": "h2"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h2"
+    ],
+    "weight": "blk.{i}.ffn_up.weight",
+    "bias": "blk.{i}.ffn_up.bias",
+    "out": "u"
+   },
+   {
+    "op": "gelu",
+    "in": [
+     "u"
+    ],
+    "approx": "tanh",
+    "out": "u"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "u"
+    ],
+    "weight": "blk.{i}.ffn_down.weight",
+    "bias": "blk.{i}.ffn_down.bias",
+    "out": "f"
+   },
+   {
+    "op": "add",
+    "in": [
+     "x",
+     "f"
+    ],
+    "out": "x"
+   }
+  ]
+ },
+ "head": {
+  "nodes": [
+   {
+    "op": "layernorm",
+    "in": [
+     "x"
+    ],
+    "weight": "output_norm.weight",
+    "bias": "output_norm.bias",
+    "eps": 1e-05,
+    "out": "h"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h"
+    ],
+    "weight": "output.weight",
+    "bias": null,
+    "out": "logits",
+    "tied_to": "token_embd.weight"
+   }
+  ]
+ },
+ "outputs": [
+  {
+   "name": "logits",
+   "kind": "logits"
+  }
+ ],
+ "modes": {
+  "prefill": "all nodes over T tokens",
+  "decode": "the same graph with T = 1, attention reads and appends to the kv state, a recurrent op reads and replaces its recurrent state"
+ }
+}

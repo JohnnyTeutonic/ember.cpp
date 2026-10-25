@@ -1,0 +1,27 @@
+{
+ "gguf": "gpt2-124m-f32.gguf",
+ "sequences": 4,
+ "len": 32,
+ "seed": 0,
+ "positions": 128,
+ "ember_prefill_vs_f64": {
+  "max": 2.264638833233431e-06,
+  "median": 5.491359762113405e-07,
+  "top1_same": 128
+ },
+ "ember_decode_vs_f64": {
+  "max": 2.264638833233431e-06,
+  "median": 5.491359762113405e-07,
+  "top1_same": 128
+ },
+ "numpy_f32_vs_f64": {
+  "max": 6.537441560544195e-06,
+  "median": 3.6153377527966435e-06,
+  "top1_same": 128
+ },
+ "hf_vs_f64": {
+  "max": 6.827707470481354e-06,
+  "median": 3.7205172466373507e-06,
+  "top1_same": 128
+ }
+}

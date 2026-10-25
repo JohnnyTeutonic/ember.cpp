@@ -67,14 +67,16 @@ node) and runs on the interpreter:
 | GPT-NeoX / Pythia (160m) | partial NEOX rotary, parallel residual, exact GELU | ✅ | ✅ | not gated |
 | Mamba-1 (130m) | causal depthwise convolution and selective scan, recurrent state | ✅ | ✅ | not gated |
 | Mistral (sliding window) | the window as an attribute on the llama graph | ✅ | ✅ | not gated |
-| GPT-2 | fused qkv, LayerNorm, learned positions | ✅ | ✅ | not gated |
+| GPT-2 (124M) | fused qkv, LayerNorm, learned positions | ✅ | ✅ | not gated |
 
 How they are checked:
 - **The graph.** The IR ember builds equals `gguf_ir.py`'s field by field, on every family.
 - **CPU.** Every position's top-1 agrees with paperkiln's numpy evaluation of the same IR, and
   decode equals prefill. Qwen2.5 and Qwen3 also give greedy replies identical to HF transformers
-  on 40/40 chat prompts, with ember's own tokeniser and template. The tokeniser applies Unicode
-  NFC between the added tokens, as HF's does: its ids equal HF's on 337 strings that NFC changes
+  on 40/40 chat prompts, with ember's own tokeniser and template, and GPT-2 124M on 40/40 raw
+  prompts with HF's token ids ([`experiments/gpt2_2026-10-25/`](experiments/gpt2_2026-10-25/)).
+  The tokeniser applies Unicode NFC between the added tokens, as HF's does: its ids equal HF's on
+  337 strings that NFC changes
   (decomposed accents, Hangul jamo, combining sequences, compatibility characters NFC keeps, mixed
   scripts), raw and templated ([`experiments/qwen_nfc_2026-10-25/`](experiments/qwen_nfc_2026-10-25/)).
 - **CUDA.** CUDA against the CPU interpreter on 40 prompts: greedy replies identical (40/40) and
@@ -86,9 +88,10 @@ How they are checked:
   [`experiments/thirdparty_2026-10-22/device_gate/`](experiments/thirdparty_2026-10-22/device_gate/).
 - **Real checkpoints and float32.** On real checkpoints, logit closeness is judged against a
   float64 evaluation of the same graph, because float32 conditioning grows with depth: on
-  Mamba-130m ember is closer to float64 than numpy's float32 is.
-- **Scope.** The CPU column was checked on official checkpoints for every family except Mistral
-  and GPT-2, which were checked on tiny random models. The CUDA column covers both.
+  Mamba-130m and GPT-2 124M ember is closer to float64 than numpy's float32 is.
+- **Scope.** The CPU column was checked on official checkpoints for every family except Mistral,
+  which was checked on a tiny random model. CUDA for Mistral and GPT-2 was checked on tiny random
+  models.
 - **WASM.** WebAssembly compiles the same CPU interpreter, but no third-party family has been
   gated in the browser yet.
 

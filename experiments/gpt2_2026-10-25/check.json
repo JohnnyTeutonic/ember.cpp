@@ -1,0 +1,67 @@
+{
+ "family": "gpt2",
+ "gguf": "/home/jonat/gpt2_gate/model/gpt2-124m-f32.gguf",
+ "gguf_arch": "gpt2",
+ "ember_built_ir_equals_gguf_ir": true,
+ "sequences": 4,
+ "len": 32,
+ "worst_ember_vs_numpy_rel": 6.243917058927748e-06,
+ "worst_ember_vs_hf_rel": 7.830867090032516e-06,
+ "worst_numpy_vs_hf_rel": 7.0887976148280965e-06,
+ "all_top1_agree": true,
+ "pass": true,
+ "rows": [
+  {
+   "i": 0,
+   "positions": 32,
+   "len": 32,
+   "numpy_vs_hf_rel": 6.115195764615413e-06,
+   "prefill_vs_numpy_rel": 4.968598457747039e-06,
+   "decode_vs_numpy_rel": 4.968598457747039e-06,
+   "prefill_vs_hf_rel": 7.830867090032516e-06,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 32,
+   "top1_decode_vs_numpy": 32,
+   "top1_prefill_vs_hf": 32
+  },
+  {
+   "i": 1,
+   "positions": 32,
+   "len": 32,
+   "numpy_vs_hf_rel": 6.12802762865028e-06,
+   "prefill_vs_numpy_rel": 6.199995925716963e-06,
+   "decode_vs_numpy_rel": 6.199995925716963e-06,
+   "prefill_vs_hf_rel": 6.19998494289371e-06,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 32,
+   "top1_decode_vs_numpy": 32,
+   "top1_prefill_vs_hf": 32
+  },
+  {
+   "i": 2,
+   "positions": 32,
+   "len": 32,
+   "numpy_vs_hf_rel": 7.0887976148280965e-06,
+   "prefill_vs_numpy_rel": 5.420847495297415e-06,
+   "decode_vs_numpy_rel": 5.420847495297415e-06,
+   "prefill_vs_hf_rel": 5.570262596104437e-06,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 32,
+   "top1_decode_vs_numpy": 32,
+   "top1_prefill_vs_hf": 32
+  },
+  {
+   "i": 3,
+   "positions": 32,
+   "len": 32,
+   "numpy_vs_hf_rel": 5.853679095848532e-06,
+   "prefill_vs_numpy_rel": 6.243917058927748e-06,
+   "decode_vs_numpy_rel": 6.243917058927748e-06,
+   "prefill_vs_hf_rel": 6.170962591624769e-06,
+   "decode_vs_prefill_rel": 0.0,
+   "top1_prefill_vs_numpy": 32,
+   "top1_decode_vs_numpy": 32,
+   "top1_prefill_vs_hf": 32
+  }
+ ]
+}

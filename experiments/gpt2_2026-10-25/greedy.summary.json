@@ -1,0 +1,17 @@
+{
+ "prompts": 40,
+ "greedy_same_hf": 40,
+ "ember_text_same_receipt_hf_reply": 40,
+ "hf_text_same_receipt_hf_reply": 40,
+ "prompt_positions": 54,
+ "prompt_top1_same": 54,
+ "steps_compared": 1280,
+ "steps_top1_same": 1280,
+ "worst_first_rel": 3.7565687125722493e-06,
+ "worst_prompt_rel": 3.996791464629783e-06,
+ "worst_step_rel": 2.8255469414660384e-05,
+ "min_hf_margin": 0.02831268310546875,
+ "max_new": 32,
+ "hf": "native safetensors f32, argmax of its cached forward (no generate)",
+ "ember": "tools/ir_adapter (CPU interpreter, IR built from the GGUF), prefill then KV-cached decode"
+}
