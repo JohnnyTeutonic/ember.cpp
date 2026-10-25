@@ -98,10 +98,14 @@ def parity(only=None):
 
 def bits():
     short_ = [[5, 17, 300, 42, 9, 77, 128, 3], [11, 2, 250, 99, 1]]
-    rec = json.load(open(f"{A}/gpt2_tiny/gpt2_tiny.ir.json"))
-    rec["block"]["repeat"] = 4
+    # A recursion document read in place of a file's own (EMBER_IR): the recursion gate's b2x4 (two stored
+    # paperkiln blocks, applied 8 times in its own document) applied as 0, 1, 0, 1 (n_layers 4). It conforms to
+    # IR_SPEC; the hand-made gpt2_tiny version it replaces broke rules 3 and 27 and is refused at load (README).
+    rec = json.load(open(f"{A}/recursion_gate/b2x4/r.ir.json"))
+    rec["model"]["n_layers"] = rec["block"]["repeat"] = 4
     rec["block"]["weight_index"] = {"per_layer": [0, 1, 0, 1]}
-    rec_path = os.path.expanduser("~/ct24/bitreg_recursion.ir.json")
+    rec["block"]["_recursion"]["repeats"] = 2  # the prose annotation, kept true
+    rec_path = os.path.expanduser("~/ct24/bitreg_recursion_b2x4_0101.ir.json")
     json.dump(rec, open(rec_path, "w"))
     chat = [[2, 400, 51, 77, 1203, 3, 88, 901, 15, 1, 2, 64, 3000, 3], [2, 17, 18, 19, 3]]
 
@@ -111,7 +115,7 @@ def bits():
     cases = {
         "gpt2_tiny": (f"{A}/gpt2_tiny/gpt2_tiny.gguf", None, short_),
         "gpt2_tiny_scale_smoke_ir": (f"{A}/gpt2_tiny/gpt2_tiny.gguf", os.path.expanduser("~/ember_wt/scale_smoke.ir.json"), short_),
-        "gpt2_tiny_recursion_0101": (f"{A}/gpt2_tiny/gpt2_tiny.gguf", rec_path, short_),
+        "recursion_b2x4_0101": (f"{A}/recursion_gate/b2x4/r.gguf", rec_path, seqs(f"{A}/recursion_gate/b2x4/score_in.jsonl")),
         "chat_sftfinal_v3": (f"{A}/chat_base/sftfinal/chat_sftfinal_v3.gguf", None, chat),
         "swa_tiny": (f"{A}/swa_tiny/swa_tiny.gguf", None, short_),
         "kimi_tiny": (f"{A}/kimi_tiny/kimi_tiny.gguf", None, short_),

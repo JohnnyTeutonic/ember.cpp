@@ -61,8 +61,18 @@ agreed amendments in paperkiln's frozen header. Everything here runs on the CPU 
 | state-token refusal (`state_refusal.json`) | state4 declaring paperkiln/1: loads, 5/5 requests identical to the original; "custom/1" with v1's markers: refused at load; chatml-qwen3: refused at load |
 | (d) gate scripts rerun in place | recursion_gate, mor_gate, mor_refusals, attnres_gate, state_tokens_gate (after make_state_gguf.py), state4_gate: every receipt rewritten byte-identical |
 | (d) parity receipts replayed (`regress_parity.json`) | 10/10 byte-identical (chat_2026-10-18 n40; gate_llama3, pk_base_v1 f32 and Q8_0, both arXiv-chain models with their demos; repeat p1.1 and p1.3) |
-| (d) ir_logits 69d7ca2 vs this change (`regress_bits.json`) | 16/16 bit-equal (bit_regression.py's list plus ar3, state4, the recursion and MoR gate models) |
+| (d) ir_logits 69d7ca2 vs ember f4fc5e0 (`regress_bits.json`) | 16/16 bit-equal (bit_regression.py's list plus ar3, state4, the recursion and MoR gate models, and a recursion document read through `EMBER_IR`; see below) |
 | WebAssembly `ember_chat`, this change built by `deploy/wasm/build.sh` (`wasm_gate.sh`; one em++ process, about 2 min on one core) | chat_sftfinal_v3 against mtstudio's replies: frozen 40 and system set 60, reply, token count and stop reason 40/40 and 60/60 (`wasm_frozen40.json`, `wasm_system_set_v1.json`). The WebGPU path (`ember_prepare` / `ember_sample` with `stop_ids`, worker.js) needs a browser and is not run here |
+
+**The bit check's recursion document.** `regress.py bits` reads one recursion document in place of a
+file's own (`EMBER_IR`): the recursion gate's `b2x4/r.gguf` (two stored paperkiln blocks, applied 8 times
+in its embedded document) applied as 0, 1, 0, 1 (`n_layers` and `block.repeat` 4), on its own 8 `score_in`
+sequences (case `recursion_b2x4_0101`). Its logits differ from the file's 8 applications, so the document
+is the one run. The check once used a hand-made gpt2_tiny document with the same pattern; IR_SPEC refuses
+it at load, as ember does since e358153 (rule 3: `block.repeat` 4 against `model.n_layers` 2; rule 27:
+`weight_index` on a `gpt2` file), while 69d7ca2 still runs it, so that case could no longer compare the two
+engines. The receipt is ember f4fc5e0's CPU build (`~/wi/build_cpu`) against 69d7ca2's (`build_base.sh`'s
+tree): all 16 cases bit-equal, the 15 others as they were against the chat-template change.
 
 The one by-design path difference: *two system messages* on the OpenAI path are joined with "\n\n" (the
 agreed amendment); the header refuses a conversation with two. (Under the first, lenient `/chat` pairing,
