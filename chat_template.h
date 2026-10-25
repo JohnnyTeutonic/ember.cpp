@@ -1,5 +1,5 @@
 // Vendored verbatim from paperkiln (microtorch) include/microtorch/chat_template.hpp
-// at paperkiln 7a6c7659, whose tests/chat_template_cases.json ember's
+// at paperkiln 33c45899, whose tests/chat_template_cases.json ember's
 // tools/chat_template_check.cpp runs. ember.cpp renders every chat prompt through it
 // (chat_tokenizer.h). Do not edit here: change it in paperkiln (its tests check C++/Python
 // parity) and re-vendor.
@@ -38,9 +38,9 @@
 // `architectures` hold general.architecture (llama.cpp b6000's Gemma 3 GGUF has no
 // tokenizer.chat_template); (5) no chat mode, with the reason.
 //
-// Jonathan's decisions pending (24 Oct 2026), each behind one constant: kSystemModeV1 (fold or
-// none) here and in tools/chat_template.py (SYSTEM_MODE_V1); the default loss policy
-// (DEFAULT_SFT_TURNS there, kDefaultSftTurns here).
+// v1's defaults, each behind one constant shared with tools/chat_template.py: a system message
+// folds into the first user message (kSystemModeV1, SYSTEM_MODE_V1 there), and the SFT loss
+// covers every assistant turn (kDefaultSftTurns, DEFAULT_SFT_TURNS there).
 #include <array>
 #include <cstdint>
 #include <cstdio>
@@ -528,13 +528,15 @@ inline std::string jinja(const Template& t) {
 inline std::string modelfile(const std::string& gguf_name, const Template& t) {
     using detail::go;
     detail::paperkiln_only(t, "modelfile()");
-    std::string msgs = "{{- range $i, $m := .Messages }}{{- if eq $m.Role \"user\" }}" + go(t.user_open);
-    if (t.system_mode == "fold") msgs += "{{- if and $.System (eq $i 0) }}{{ $.System }}" + go(t.system_join) + "{{ end }}";
-    msgs += "{{ $m.Content }}" + go(t.user_close) + "{{- else if eq $m.Role \"assistant\" }}" + go(t.assistant_open) +
-            "{{ $m.Content }}" + go(t.assistant_close) + "{{- end }}{{- end }}" + go(t.generation_prompt);
+    // No action trims whitespace, so the record's text is emitted exactly; the fold goes to the first user
+    // message (Ollama keeps a system message in .Messages as well as in .System), as in tools/chat_template.py.
+    std::string msgs = "{{ $first := true }}{{ range .Messages }}{{ if eq .Role \"user\" }}" + go(t.user_open);
+    if (t.system_mode == "fold") msgs += "{{ if and $first $.System }}{{ $.System }}" + go(t.system_join) + "{{ end }}";
+    msgs += "{{ $first = false }}{{ .Content }}" + go(t.user_close) + "{{ else if eq .Role \"assistant\" }}" +
+            go(t.assistant_open) + "{{ .Content }}" + go(t.assistant_close) + "{{ end }}{{ end }}" + go(t.generation_prompt);
     std::string head = go(t.bos);
     if (t.system_mode == "turn")
-        head += "{{- if .System }}" + go(t.system_open) + "{{ .System }}" + go(t.system_close) + "{{ end }}";
+        head += "{{ if .System }}" + go(t.system_open) + "{{ .System }}" + go(t.system_close) + "{{ end }}";
     std::string s = "# Ollama Modelfile for " + gguf_name + ": chat template " + t.id() +
                     " (LOCAL_LLM_STACK.md section 3, point 3).\nFROM ./" + gguf_name + "\nTEMPLATE \"\"\"" + head +
                     msgs + "\"\"\"\n";
