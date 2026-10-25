@@ -16,7 +16,8 @@
 // - tokenizer.ggml.model "bpe": paperkiln's byte-level BPE with id-pair merges (bpe_tokenizer.h).
 // - "gpt2" with pre "llama-bpe" (paperkiln's 16k Llama 3-scheme vocabulary) or "qwen2" (Qwen2.5,
 //   Qwen3: single digits, added tokens split out by their GGUF token types): paperkiln's exact
-//   llama.cpp port (llama3_tokenizer.h).
+//   llama.cpp port (llama3_tokenizer.h); for "qwen2", NFC between the added tokens first, as HF's
+//   tokenizer.json (QwenNfcTokenizer, unicode_nfc.h).
 // - "llama" (SentencePiece; Gemma 3): llama.cpp b6000's SPM session (spm_tokenizer.h).
 // A word-level vocabulary ("word") resolves to paperkiln/legacy-word but keeps ember's own
 // word-level tokenizer and the server's word-level path (TinyLlamaSession::chat_template()).
@@ -30,6 +31,7 @@
 #include "chat_template.h"
 #include "llama3_tokenizer.h"
 #include "spm_tokenizer.h"
+#include "unicode_nfc.h"
 
 namespace ember {
 
@@ -142,6 +144,88 @@ private:
     const char* kind_;
 };
 
+// The Qwen2.5/Qwen3 tokeniser: HF's tokenizer.json for these models normalises with NFC before
+// pre-tokenising, and its added tokens are all "normalized": false, so HF cuts the raw text at them
+// first and normalises only the text between. This does the same around paperkiln's llama.cpp port
+// (llama3_tokenizer.h, unchanged): the same cut (token types unknown, control and user-defined,
+// longest first, as the port's), then unicode_nfc.h on each piece between, then the port's encoder on
+// it. Text that NFC leaves alone goes to the port whole, so its ids are exactly the port's. NFC could
+// form an added token's text from other text only through kNfcAsciiImages (U+212A KELVIN SIGN -> "K",
+// U+037E -> ";", U+1FEF -> "`"), and HF would not cut there: a vocabulary whose added tokens contain
+// one of those characters is refused at load (none of Qwen2.5's or Qwen3's do).
+class QwenNfcTokenizer {
+public:
+    QwenNfcTokenizer(std::vector<std::string> tokens, const std::vector<std::string>& merges,
+                     const std::vector<int32_t>& token_type) {
+        for (size_t i = 0; i < token_type.size() && i < tokens.size(); ++i) {
+            const int t = token_type[i];
+            if (t != 2 && t != 3 && t != 4) continue;
+            for (const char* c = nfc::tables::kNfcAsciiImages; *c; ++c)
+                if (tokens[i].find(*c) != std::string::npos)
+                    throw std::runtime_error("Qwen vocabulary: added token '" + tokens[i] + "' holds '" +
+                                             std::string(1, *c) +
+                                             "', which NFC writes for another character; ember's NFC cut "
+                                             "would differ from HF's there");
+            specials_.push_back(static_cast<int>(i));
+            texts_.push_back(tokens[i]);
+        }
+        std::vector<size_t> order(specials_.size());
+        for (size_t k = 0; k < order.size(); ++k) order[k] = k;
+        std::stable_sort(order.begin(), order.end(),
+                         [&](size_t a, size_t b) { return texts_[a].size() > texts_[b].size(); });
+        std::vector<int> s;
+        std::vector<std::string> t;
+        for (size_t k : order) {
+            s.push_back(specials_[k]);
+            t.push_back(texts_[k]);
+        }
+        specials_ = std::move(s);
+        texts_ = std::move(t);
+        t_ = std::make_unique<microtorch::llama3::Tokenizer>(std::move(tokens), merges, token_type, 1);
+    }
+
+    std::vector<int> encode(const std::string& text) const {
+        if (nfc::nfc_utf8(text) == text) return t_->encode(text);  // already NFC: the port's ids
+        std::vector<std::pair<std::string, int>> frags = {{text, -1}};
+        for (size_t k = 0; k < specials_.size(); ++k) {
+            const std::string& s = texts_[k];
+            if (s.empty()) continue;
+            std::vector<std::pair<std::string, int>> next;
+            for (auto& [t, id] : frags) {
+                if (id >= 0) {
+                    next.emplace_back(std::move(t), id);
+                    continue;
+                }
+                size_t at = 0;
+                for (size_t m; (m = t.find(s, at)) != std::string::npos; at = m + s.size()) {
+                    if (m > at) next.emplace_back(t.substr(at, m - at), -1);
+                    next.emplace_back(std::string(), specials_[k]);
+                }
+                if (at < t.size()) next.emplace_back(t.substr(at), -1);
+            }
+            frags = std::move(next);
+        }
+        std::vector<int> out;
+        for (const auto& [t, id] : frags) {
+            if (id >= 0) {
+                out.push_back(id);
+                continue;
+            }
+            const std::vector<int> ids = t_->encode(nfc::nfc_utf8(t));
+            out.insert(out.end(), ids.begin(), ids.end());
+        }
+        return out;
+    }
+
+    std::string decode(const std::vector<int>& ids) const { return t_->decode(ids); }
+    size_t size() const { return t_->size(); }
+
+private:
+    std::unique_ptr<microtorch::llama3::Tokenizer> t_;
+    std::vector<int> specials_;       // added token ids, longest text first (ties by id)
+    std::vector<std::string> texts_;  // their texts, in the same order
+};
+
 // True when a GGUF's tokens start with paperkiln's four chat specials.
 inline bool has_chat_specials(const std::vector<std::string>& tokens) {
     if (tokens.size() < chat::kV1Specials.size()) return false;
@@ -204,10 +288,13 @@ inline ChatSetup make_chat_setup(ChatVocab v) {
             microtorch::bpe::Tokenizer(std::move(g.tokens), g.merges), "bpe", std::move(f));
     } else if (l3) {
         if (g.merges.empty()) throw std::runtime_error(g.pre + " GGUF has no tokenizer.ggml.merges");
-        const bool qwen = g.pre == "qwen2";
-        s.tok = std::make_unique<ChatTokenizerOf<microtorch::llama3::Tokenizer>>(
-            microtorch::llama3::Tokenizer(std::move(g.tokens), g.merges, g.token_type, qwen ? 1 : 3),
-            qwen ? "qwen2_bpe" : "llama3_bpe", std::move(f));
+        if (g.pre == "qwen2")
+            s.tok = std::make_unique<ChatTokenizerOf<QwenNfcTokenizer>>(
+                QwenNfcTokenizer(std::move(g.tokens), g.merges, g.token_type), "qwen2_bpe", std::move(f));
+        else
+            s.tok = std::make_unique<ChatTokenizerOf<microtorch::llama3::Tokenizer>>(
+                microtorch::llama3::Tokenizer(std::move(g.tokens), g.merges, g.token_type, 3), "llama3_bpe",
+                std::move(f));
     } else {
         s.tok = std::make_unique<ChatTokenizerOf<SpmTokenizer>>(
             SpmTokenizer(std::move(g.tokens), std::move(v.scores), g.token_type, v.add_space_prefix), "spm",
