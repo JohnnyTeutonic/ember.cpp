@@ -32,7 +32,10 @@ D = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/ember_wt/state_t
 B = os.path.expanduser("~/ember_wt/build_cpu")
 GGUF = os.path.join(D, "chat_state_k4.gguf")
 ORIG = "/mnt/c/ml_artifacts/chat_base/sftfinal/chat_sftfinal_v3.gguf"
+SPEC = os.path.join(PK, "spec", "tools")  # the IR tools (keramos): $KERAMOS_TOOLS, spec/tools, tools/
 sys.path.insert(0, os.path.join(PK, "tools"))
+sys.path.insert(0, os.path.expanduser(os.environ.get("KERAMOS_TOOLS") or (
+    SPEC if os.path.isfile(os.path.join(SPEC, "ir_numpy.py")) else os.path.join(PK, "tools"))))
 import ir_numpy  # noqa: E402
 
 V, K = 8192, 4

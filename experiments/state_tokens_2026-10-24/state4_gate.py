@@ -34,7 +34,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 EMBER = os.path.dirname(os.path.dirname(HERE))
 B = os.path.expanduser("~/ember_wt/build_cpu")
 PK = "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch"
+SPEC = os.path.join(PK, "spec", "tools")  # the IR tools (keramos): $KERAMOS_TOOLS, spec/tools, tools/
 sys.path.insert(0, os.path.join(PK, "tools"))
+sys.path.insert(0, os.path.expanduser(os.environ.get("KERAMOS_TOOLS") or (
+    SPEC if os.path.isfile(os.path.join(SPEC, "state_tokens.py")) else os.path.join(PK, "tools"))))
 import state_tokens as pk_state  # noqa: E402
 
 GGUF = os.path.join(D, "state4.gguf")
