@@ -30,7 +30,9 @@ Smoke test (`recursion_smoke.py`): gpt2_tiny's 2 stored layers applied 4 times (
 the range, top-1 at every position, decode equal to prefill, logits moved by up to 3.5 against the
 plain model (the map is read). The four malformed maps above are each refused at load.
 
-CUDA: the interpreter compiles with HAS_CUDA; the device run waits for the next Colab device gate.
+CUDA: the three models on the device against the CPU (`tools/ir_device_gate`, Colab T4), 40/40 greedy and 320/320
+top-1 each, worst 4.9e-7, and device outputs bit-identical across ember 51eed18 and 66c8b2c
+(`../mor_cuda_2026-10-25`).
 
 ## Mixture-of-Recursions: `depth_route` and kv_rows "active" (causal token choice)
 
@@ -53,7 +55,10 @@ engine code), family_hint `llama_mor`. ember (CPU):
   token_choice, steps that aren't consecutive, ascending and of equal length, a kv state without
   kv_rows "active", kv_from (reserved), recurrent state or windowed attention alongside it, and a
   router name with {i}.
-- **CUDA.** A CUDA build serves these files on the CPU (depth_route has no device kernel yet).
+- **CUDA.** From ember 66c8b2c a CUDA build runs these files on the device, ROUNDING against this CPU path, which stays
+  the EXACT reference: on a T4, mor3 and mor2p0 give greedy 40/40, top-1 1299/1299, logits within 2.0e-7 and
+  log-probabilities within 2.6e-7 of the CPU, depth traces 40/40 in prefill and decode, rows held equal to the CPU's
+  per application, and rewinds 160/160 (`../mor_cuda_2026-10-25`).
 
 Gate (`mor_gate.py`, receipt `mor_gate_cpu.json`) on paperkiln's two MoR models
 (`/mnt/c/ml_artifacts/mor_gate/`):

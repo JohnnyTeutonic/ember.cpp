@@ -1,0 +1,21 @@
+CPU regression of ember 66c8b2c (this work) on WSL, 25 Oct 2026 (cuda_state_2026-10-25/cpu_regress.sh's pattern;
+build ~/ember_wt/mor/build_cpu from git archive f4fc5e0 plus this work's files, which equal 51eed18 plus them for every
+source the CPU targets compile; the gate scripts and receipts from the HEAD archives, f4fc5e0 and, for the three gates
+ember 541a190 and 4e6adee changed, 51eed18; the build path in "bin"/"new" put back before comparing).
+
+recursion_gate rc=0: recursion_gate_cpu.json byte-identical
+mor_gate rc=0: mor_gate_cpu.json byte-identical
+mor_refusals rc=0: mor_refusals.json byte-identical
+attnres_gate rc=0: attnres_gate_cpu.json byte-identical
+state4_gate rc=0: state4_gate_cpu.json byte-identical (f4fc5e0's script and 51eed18's)
+regress_parity rc=0: regress_parity.json byte-identical
+g5_thirdparty rc=0: g5_thirdparty.json byte-identical (a first attempt stopped on WSL memory while hashing a GGUF)
+regress_bits (51eed18's script) rc=0: 16/16 bit-equal to ember 69d7ca2; regress_bits.json equal to the committed one
+  but for the build path it names ("new": /home/jonat/wi/build_cpu/ir_logits in the committed receipt)
+state_tokens_gate (51eed18's script) rc=0: every ember-side field equal to the committed receipt; the nine
+  numpy-reference distances (vs_numpy_rel, causal_vs_numpy_rel; paperkiln's spec/tools/ir_numpy) differ (worst 8.5e-7
+  here, 8.3e-7 committed), as 541a190 records for a rerun
+adapter self-test rc=0: 156/156 checks pass, 2885 requests
+
+CUDA tree (HAS_CUDA, sm_75, no GPU used): ../ir_rev11_2026-10-25/build_cuda_check.sh rc=0; mor_device_gate,
+ir_device_gate, state_device_gate and ir_device_dump link; tools/mor_kernels_test.cu compiles with nvcc 12.6.

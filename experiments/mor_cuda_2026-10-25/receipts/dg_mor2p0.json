@@ -1,0 +1,298 @@
+{
+ "device_supported": true,
+ "family_hint": "llama_mor",
+ "gen": 8,
+ "gguf": "/content/small/models/mor/mor2p0.gguf",
+ "greedy_identical": "40/40",
+ "ids_file": null,
+ "len": 8,
+ "on_gpu": true,
+ "pass": true,
+ "prompts": 40,
+ "rows": [
+  {
+   "decode_rel": 1.1519083781291304e-07,
+   "greedy_first_diff": -1,
+   "i": 0,
+   "prefill_rel": 1.1519083781291304e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.006036116092946e-07,
+   "greedy_first_diff": -1,
+   "i": 1,
+   "prefill_rel": 1.0250236144940307e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.5132087996118114e-07,
+   "greedy_first_diff": -1,
+   "i": 2,
+   "prefill_rel": 1.5132087996118114e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.4950191940530927e-07,
+   "greedy_first_diff": -1,
+   "i": 3,
+   "prefill_rel": 1.497396925185258e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.3261150240345086e-07,
+   "greedy_first_diff": -1,
+   "i": 4,
+   "prefill_rel": 1.3261150240345086e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.5132087996118114e-07,
+   "greedy_first_diff": -1,
+   "i": 5,
+   "prefill_rel": 1.5132087996118114e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 6.024457127131589e-08,
+   "greedy_first_diff": -1,
+   "i": 6,
+   "prefill_rel": 1.693070668092458e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.2117236198982953e-07,
+   "greedy_first_diff": -1,
+   "i": 7,
+   "prefill_rel": 1.2117236198982953e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.3252574793059387e-07,
+   "greedy_first_diff": -1,
+   "i": 8,
+   "prefill_rel": 1.5063887453077247e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 9.96420359857213e-08,
+   "greedy_first_diff": -1,
+   "i": 9,
+   "prefill_rel": 6.416186035517568e-08,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.1116113362124066e-07,
+   "greedy_first_diff": -1,
+   "i": 10,
+   "prefill_rel": 1.6674170043186101e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.4936006679382187e-07,
+   "greedy_first_diff": -1,
+   "i": 11,
+   "prefill_rel": 1.294227808684657e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.1007661919771464e-07,
+   "greedy_first_diff": -1,
+   "i": 12,
+   "prefill_rel": 1.2589782988231994e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.5132087996118114e-07,
+   "greedy_first_diff": -1,
+   "i": 13,
+   "prefill_rel": 1.5132087996118114e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.640925827855285e-07,
+   "greedy_first_diff": -1,
+   "i": 14,
+   "prefill_rel": 1.0939505519035232e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.125914636755168e-07,
+   "greedy_first_diff": -1,
+   "i": 15,
+   "prefill_rel": 1.5092986379787231e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.1978190350573484e-07,
+   "greedy_first_diff": -1,
+   "i": 16,
+   "prefill_rel": 1.3984460467528483e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.00638723788267e-07,
+   "greedy_first_diff": -1,
+   "i": 17,
+   "prefill_rel": 5.871645132799585e-08,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.5132087996118114e-07,
+   "greedy_first_diff": -1,
+   "i": 18,
+   "prefill_rel": 1.5132087996118114e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 6.822926439877039e-08,
+   "greedy_first_diff": -1,
+   "i": 19,
+   "prefill_rel": 1.0049287736633091e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.3548857722903096e-07,
+   "greedy_first_diff": -1,
+   "i": 20,
+   "prefill_rel": 1.25066378980644e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.3727511818930093e-07,
+   "greedy_first_diff": -1,
+   "i": 21,
+   "prefill_rel": 1.3727511818930093e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 7.681495691679511e-08,
+   "greedy_first_diff": -1,
+   "i": 22,
+   "prefill_rel": 9.601869614599389e-08,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.3318837111021697e-07,
+   "greedy_first_diff": -1,
+   "i": 23,
+   "prefill_rel": 1.3318837111021697e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.1500606848688049e-07,
+   "greedy_first_diff": -1,
+   "i": 24,
+   "prefill_rel": 9.583839040573374e-08,
+   "top1": 8
+  },
+  {
+   "decode_rel": 8.634519347885574e-08,
+   "greedy_first_diff": -1,
+   "i": 25,
+   "prefill_rel": 1.0062392873249873e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.1140750458776103e-07,
+   "greedy_first_diff": -1,
+   "i": 26,
+   "prefill_rel": 9.973299482625115e-08,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.1517729182942658e-07,
+   "greedy_first_diff": -1,
+   "i": 27,
+   "prefill_rel": 1.1322593249764292e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.1863720493592464e-07,
+   "greedy_first_diff": -1,
+   "i": 28,
+   "prefill_rel": 5.931860246796232e-08,
+   "top1": 8
+  },
+  {
+   "decode_rel": 9.092243170952538e-08,
+   "greedy_first_diff": -1,
+   "i": 29,
+   "prefill_rel": 1.2887318697978726e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 8.195581095657402e-08,
+   "greedy_first_diff": -1,
+   "i": 30,
+   "prefill_rel": 9.561511278266969e-08,
+   "top1": 8
+  },
+  {
+   "decode_rel": 9.101117234949528e-08,
+   "greedy_first_diff": -1,
+   "i": 31,
+   "prefill_rel": 9.101117234949528e-08,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.1204526987447793e-07,
+   "greedy_first_diff": -1,
+   "i": 32,
+   "prefill_rel": 1.1204526987447793e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.5102008023394823e-07,
+   "greedy_first_diff": -1,
+   "i": 33,
+   "prefill_rel": 1.5102008023394823e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.3607316654164946e-07,
+   "greedy_first_diff": -1,
+   "i": 34,
+   "prefill_rel": 1.3913703702334697e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 9.888659625809165e-08,
+   "greedy_first_diff": -1,
+   "i": 35,
+   "prefill_rel": 9.965368351903465e-08,
+   "top1": 8
+  },
+  {
+   "decode_rel": 9.911235961849274e-08,
+   "greedy_first_diff": -1,
+   "i": 36,
+   "prefill_rel": 9.911235961849274e-08,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.2483459204969362e-07,
+   "greedy_first_diff": -1,
+   "i": 37,
+   "prefill_rel": 1.8577079969428981e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.6594522900275657e-07,
+   "greedy_first_diff": -1,
+   "i": 38,
+   "prefill_rel": 1.6594522900275657e-07,
+   "top1": 8
+  },
+  {
+   "decode_rel": 1.2077559186481378e-07,
+   "greedy_first_diff": -1,
+   "i": 39,
+   "prefill_rel": 8.05170612432092e-08,
+   "top1": 8
+  }
+ ],
+ "tol": 0.0001,
+ "top1_agree": "320/320",
+ "worst_decode_rel": 1.6594522900275657e-07,
+ "worst_prefill_rel": 1.8577079969428981e-07
+}

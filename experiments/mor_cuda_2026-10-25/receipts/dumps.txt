@@ -1,0 +1,14 @@
+syn_mistral_swa identical
+syn_gptneox identical
+syn_gpt2 identical
+syn_mamba identical
+syn_gemma3 identical
+syn_gemma3_freq_scale identical
+syn_gemma3_weight_offset identical
+gpt2_tiny_expr identical
+state4 identical
+state4_q8_0 identical
+ar3 identical
+rec_p1_b2x3_c1 identical
+rec_p1_b2x3_c1_inject identical
+rec_b2x4 identical

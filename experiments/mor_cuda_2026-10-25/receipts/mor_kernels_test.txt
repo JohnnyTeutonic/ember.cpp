@@ -1,0 +1,3 @@
+rows gather / scatter: 32 checks, 0 failed
+mor gate: bit-equal to cpu::mor_gate
+mor_kernels_test: PASS (0 of 51 checks failed)
