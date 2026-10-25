@@ -37,7 +37,9 @@
 // (causal, grouped-query: query head h reads kv head h / (heads / kv_heads);
 // KV state, optional sliding window + sinks as paperkiln's swa_attention), add, mul, silu, gelu (tanh or erf), moe_ffn (llama.cpp's expert
 // layout), linear_attention (elu+1, ops::kimi_attention) and ssm_scan
-// (ops::ssm_scan) over recurrent state; and for the gated and
+// (ops::ssm_scan) over recurrent state, and recurrence (a recurrent op the
+// document defines, IR_SPEC 6.10, graph_ir_recurrence.h; CPU only: a CUDA
+// build serves such a document on the CPU); and for the gated and
 // attention-residual families (flex highway / plain, attnres, srd's router)
 // sub, relu, sigmoid, affine, mul_col, rms_row, list, append and depth_attend
 // (graph_ir_ops.h): a list is a value like a tensor (named by "out", read by
@@ -82,6 +84,9 @@
 struct GGUFData;
 
 namespace ember_ir {
+namespace rec {
+class Recurrence;
+}
 
 struct Node {
   std::string op;
@@ -311,7 +316,9 @@ class Interpreter {
   void rec_end(int start_pos, int T);
   std::vector<RecSlot> rec_slots_;
   size_t rec_floats_ = 0;
-  std::vector<float> rec_init_;  // one block's initial state
+  std::vector<float> rec_init_;  // every application's initial state, [n_layers][rec_floats_]
+  // The recurrence nodes of the block (IR_SPEC 6.10; graph_ir_recurrence.h), compiled at load.
+  std::map<const Node*, std::shared_ptr<rec::Recurrence>> recs_;
   std::vector<float> rec_;  // [n_layers][rec_floats_]
   int rec_pos_ = 0;  // tokens absorbed; -1 after a failed call
   std::map<int, std::vector<float>> rec_snaps_;  // state after `key` tokens

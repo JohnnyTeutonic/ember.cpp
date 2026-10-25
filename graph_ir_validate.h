@@ -17,14 +17,20 @@
 //               attention node per kv slot; nothing reads depth_route's out
 //   rules 18-23 weight_index, tensor_index placement, depth_route, kv_rows active, kv_from, depth_route
 //               with turn_state or list values
+//   rules 31-33 recurrence (revision 1.1, section 6.10; graph_ir_recurrence.h): the node's grammar, names and
+//               reads, its slot's tensors (init "body" exactly where the node's init assigns), one reader
 // Container (ir_container_errors, the GGUF the document loads from):
 //   rule 24     paperkiln.ir_version: a uint32 equal to the file's embedded document's ir_version
+//   rule 30     paperkiln.ir_sha256 (when present): a string equal to the digest of the file's embedded
+//               document (ir_digest.h), which must have one; checked against the embedded document even when
+//               another is run in its place
 //   rule 26     the depth_route router's ne {d, n_rec}
 //   rule 27     weight_index: architecture paperkiln, <arch>.block_count = the stored layers
 //   rule 28     state tokens: paperkiln.state_tokens.k with an embedding state_weight and the reverse,
 //               state_weight ne {d, k}, architecture paperkiln, tokenizer.specials naming paperkiln/1's
 //               markers, no chat template but paperkiln/1
-// Rule 25 (every tensor named is in the file) is the Interpreter's binding; a missing S = 1 depth_attend
+// Rule 25 (every tensor named is in the file) and rule 34 (a recurrence weight's element count; an input's
+// width when the rows arrive) are the Interpreter's binding and run; a missing S = 1 depth_attend
 // pseudo-query is accepted (section 5.18). Rule 29 (sidecars) does not apply: ember reads no sidecar.
 //
 // The Interpreter calls validate_ir after its own load checks (so a document those refuse keeps their

@@ -291,7 +291,9 @@ add_library(tinyllama_core STATIC
     graph_ir_ops.cpp
     graph_ir_expr.cpp
     graph_ir_mamba.cpp
+    graph_ir_recurrence.cpp
     graph_ir_validate.cpp
+    ir_digest.cpp
     parallel_for.cpp
     model_constants.h
     ${CUDA_SOURCES} # Conditionally include CUDA source file
@@ -303,14 +305,15 @@ set_target_properties(tinyllama_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 # fused multiply-add" (paperkiln spec/IR_SPEC.md 4.1, Q4, Appendix A.6) rounds every
 # product before it is added: the gating ops, expr and the Mamba ops
 # (graph_ir_ops.h, graph_ir_expr.h, graph_ir_mamba.h), the rope rotation and its
-# table, linear_attention and ssm_scan (graph_ir.cpp) and the rope kernel the
+# table, linear_attention and ssm_scan (graph_ir.cpp), the recurrence op
+# (graph_ir_recurrence.h, IR_SPEC 6.10.3) and the rope kernel the
 # interpreter shares with the llama path (utils.cpp apply_rope_batch_cpu). Never
 # contract a * b + c into a fused multiply-add, whatever -march a build adds. On
 # x86-64 without -march (every build here) the flag changes no instruction
 # (experiments/ir_spec_2026-10-25/fp_contract_proof.sh). MSVC does not contract
 # without /fp:contract; the WebAssembly build has no FMA instruction.
 if(NOT MSVC)
-    set_source_files_properties(graph_ir_ops.cpp graph_ir_expr.cpp graph_ir_mamba.cpp graph_ir.cpp utils.cpp
+    set_source_files_properties(graph_ir_ops.cpp graph_ir_expr.cpp graph_ir_mamba.cpp graph_ir_recurrence.cpp graph_ir.cpp utils.cpp
                                 PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")
 endif()
 

@@ -214,6 +214,8 @@ See `pytorch/README.md`.
 | `graph_ir.cpp/.h`, `graph_ir_ops.cpp/.h`, `graph_ir_cuda.cu/.h` | the paperkiln IR interpreter (CPU and CUDA) and `build_ir_from_gguf`, the IR of a third-party GGUF from its metadata |
 | `graph_ir_expr.cpp/.h` | the `expr` op: paperkiln's parser (vendored), the CPU evaluator, the CUDA program it lowers to |
 | `graph_ir_mamba.cpp/.h` | Mamba-1's `conv1d_causal` and `selective_scan` on the CPU |
+| `graph_ir_recurrence.cpp/.h` | `recurrence`, a recurrent op the document defines (IR_SPEC 6.10), on the CPU |
+| `ir_digest.cpp/.h` | the digest of an IR document (IR_SPEC 3.10: I-JSON, RFC 8785, SHA-256) |
 | `gguf_parser.cpp`, `weight_management.cpp`, `safetensors_loader.cpp`, `quantization.cpp` | model loading and dequantisation |
 | `tokenizer.cpp`, `bpe_tokenizer.h` | Llama SentencePiece / tiktoken tokenizers; paperkiln byte-level BPE |
 | `parallel_for.h/.cpp` | OpenMP natively, a thread pool in WebAssembly pthread builds |

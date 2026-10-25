@@ -13,7 +13,9 @@
 
 #include "gguf_structs.h"
 #include "graph_ir_expr.h"
+#include "graph_ir_recurrence.h"
 #include "graph_ir_schema.h"
+#include "ir_digest.h"
 
 using nlohmann::json;
 
@@ -231,20 +233,24 @@ std::vector<Sect> sections(const json& doc) {
 }
 
 const std::set<std::string> kNotPerLayer = {"op", "in", "out", "state", "tensor_index", "sizes", "expr", "weight", "bias",
-                                            "router", "experts", "state_weight", "tied_to", "a", "b", "c", "d"};
+                                            "router", "experts", "state_weight", "tied_to", "a", "b", "c", "d",
+                                            // recurrence (IR_SPEC 6.10.1: every key structural)
+                                            "index", "inputs", "weights", "init", "let", "update", "readout"};
 const std::set<std::string> kSlotNotPerLayer = {"name", "kind", "op", "dtype", "tensors", "evict", "kv_rows"};
 const std::map<std::string, size_t> kArity = {
     {"embedding", 1}, {"pos_embedding", 2}, {"linear", 1}, {"scale", 1}, {"split", 1}, {"rmsnorm", 1},
     {"layernorm", 1}, {"gelu", 1}, {"silu", 1}, {"sigmoid", 1}, {"relu", 1}, {"add", 2}, {"mul", 2}, {"sub", 2},
     {"affine", 1}, {"mul_col", 2}, {"rms_row", 1}, {"rope", 3}, {"attention", 3}, {"moe_ffn", 1}, {"append", 2},
     {"linear_attention", 3}, {"ssm_scan", 1}, {"conv1d_causal", 1}, {"selective_scan", 4}, {"depth_route", 1}};
-const std::set<std::string> kAtLeastOne = {"list", "depth_attend", "expr"};
+const std::set<std::string> kAtLeastOne = {"list", "depth_attend", "expr", "recurrence"};
 const std::map<std::string, std::string> kStateful = {{"attention", "kv"},
                                                       {"linear_attention", "recurrent"},
                                                       {"ssm_scan", "recurrent"},
                                                       {"conv1d_causal", "recurrent"},
-                                                      {"selective_scan", "recurrent"}};
-const std::set<std::string> kRecurrent = {"linear_attention", "ssm_scan", "conv1d_causal", "selective_scan"};
+                                                      {"selective_scan", "recurrent"},
+                                                      {"recurrence", "recurrent"}};
+const std::set<std::string> kRecurrent = {"linear_attention", "ssm_scan", "conv1d_causal", "selective_scan",
+                                          "recurrence"};
 
 std::string op_of(const json& n) { return get(n, "op").is_string() ? get(n, "op").get<std::string>() : ""; }
 
@@ -260,6 +266,9 @@ std::vector<std::pair<std::string, std::string>> tensor_names(const json& n) {
   if (get(n, "experts").is_object())
     for (const auto& kv : n.at("experts").items())
       if (kv.value().is_string()) out.emplace_back("experts." + kv.key(), kv.value().get<std::string>());
+  if (op == "recurrence" && get(n, "weights").is_object())
+    for (const auto& kv : n.at("weights").items())
+      if (kv.value().is_string()) out.emplace_back("weights." + kv.key(), kv.value().get<std::string>());
   return out;
 }
 
@@ -410,6 +419,17 @@ void slot_fit(const json& node, const json& slot, int L, Errs& errs) {
     }
     return;
   }
+  if (op == "recurrence") {  // rules 31-33 (graph_ir_recurrence.h)
+    try {
+      const std::string why = rec::Recurrence::compile(node).slot_errors(slot);
+      if (!why.empty()) errs.push_back(E("6.10", "(rule 33) " + why));
+    } catch (const std::exception& e) {
+      std::string m = e.what();
+      const std::string tag = "IR_SPEC 6.10 ";
+      errs.push_back(E("6.10", m.rfind(tag, 0) == 0 ? m.substr(tag.size()) : m));
+    }
+    return;
+  }
   json shapes = json::object();
   if (get(slot, "tensors").is_array())
     for (const auto& t : slot.at("tensors"))
@@ -495,7 +515,7 @@ void state_errors(const json& doc, Errs& errs) {
         if (ts.is_array())
           for (const auto& t : ts) {
             bool ok = t.is_object() && truthy(get(t, "name")) && truthy(get(t, "shape")) && get(t, "shape").is_array() &&
-                      get(t, "init") == json(0);
+                      (get(t, "init") == json(0) || (get(t, "init") == "body" && get(s, "op") == "recurrence"));
             if (ok)
               for (const auto& x : t.at("shape")) ok = ok && is_int(x) && x.get<int64_t>() > 0;
             if (!ok)
@@ -531,16 +551,21 @@ void state_errors(const json& doc, Errs& errs) {
       continue;
     }
     used.insert(st);
-    if (op == "attention") {
+    if (op == "attention" || op == "recurrence") {
       if (!readers.count(st)) reader_order.push_back(st);
       ++readers[st];
     }
     slot_fit(node, *it->second, L, errs);
   }
   for (const auto& name : reader_order)
-    if (readers[name] > 1)
-      errs.push_back(E("6.1", "kv state " + name + " is read by " + std::to_string(readers[name]) +
-                                  " attention nodes (exactly one is defined)"));
+    if (readers[name] > 1) {
+      if (get(*slots.at(name), "kind") == "kv")
+        errs.push_back(E("6.1", "kv state " + name + " is read by " + std::to_string(readers[name]) +
+                                    " attention nodes (exactly one is defined)"));
+      else
+        errs.push_back(E("6.10", "(rule 33) the slot " + name + " of a recurrence is read by " +
+                                     std::to_string(readers[name]) + " nodes (the node alone reads it)"));
+    }
   for (const auto& name : order)
     if (!used.count(name)) errs.push_back(E("6.1", "state slot " + name + " is read by no node"));
 }
@@ -746,7 +771,24 @@ void container_errors(const json& doc, const GGUFData& g, Errs& errs) {
                                        : std::string("(not a uint32)")) +
                                   " does not match the document's ir_version " + show(v)));
   }
-  auto ne = [&](const std::string& name) -> const std::vector<uint64_t>* {
+  // Rule 30: paperkiln.ir_sha256, when present, is a string equal to the digest of the document embedded in
+  // the file (section 3.10), whatever document is run in its place (EMBER_IR, the adapter's "ir").
+  if (const auto key = g.metadata.find("paperkiln.ir_sha256"); key != g.metadata.end()) {
+    const auto* want = std::get_if<std::string>(&key->second);
+    const auto emb = meta_str(g, "paperkiln.ir");
+    if (!want) {
+      errs.push_back(E("3.10", "paperkiln.ir_sha256 is not a string"));
+    } else if (!emb) {
+      errs.push_back(E("3.10", "paperkiln.ir_sha256 is present but the file embeds no paperkiln.ir"));
+    } else {
+      const DigestResult d = ir_digest(*emb);
+      if (!d.ok)
+        errs.push_back(E("3.10", "paperkiln.ir_sha256 is present but the embedded document has no digest (" + d.refused + ")"));
+      else if (d.sha256 != *want)
+        errs.push_back(E("3.10", "paperkiln.ir_sha256 " + *want + " is not the embedded document's digest " + d.sha256));
+    }
+  }
+  auto ne =[&](const std::string& name) -> const std::vector<uint64_t>* {
     auto it = g.tensor_infos_map.find(name);
     return it == g.tensor_infos_map.end() ? nullptr : &it->second.shape;
   };
