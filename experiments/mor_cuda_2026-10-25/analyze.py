@@ -41,11 +41,30 @@ def dg(name):
                                   "len", "gen", "pass")}
 
 
+def device_vs_cpu(s, tol=1e-4, lp_tol=1e-5):
+    """mor_device_gate's verdict without its reference terms (depth_reference, logprob vs reference)."""
+    full = lambda k: s[k].split("/")[0] == s[k].split("/")[1]  # noqa: E731
+    return (all(s[k] <= tol for k in ("prefill_worst_rel", "decode_worst_rel", "two_call_worst_rel",
+                                      "decode_vs_prefill_worst_rel", "rewind_worst_rel_vs_cpu",
+                                      "rewind_worst_rel_vs_fresh_cpu")) and s["logprob_worst_rel_vs_cpu"] <= lp_tol and
+            all(full(k) for k in ("top1_vs_cpu", "depth_prefill", "depth_decode", "depth_two_call",
+                                  "depth_cpu_decode_equal_cpu_prefill", "rows_held_equal_cpu",
+                                  "greedy_free_running_device_equal_cpu", "rewinds")) and
+            s["greedy_teacher_forced_device"] == s["greedy_teacher_forced_cpu"] and
+            s["greedy_free_running_device"] == s["greedy_free_running_cpu"])
+
+
+# The Q8_0 files ran with the F32 models' mtstudio references (score_out is the F32 model's), which the CPU
+# misses too (its log-probabilities move by the quantisation); they are gated device against CPU only.
 b = {}
 for name in ("mor3", "mor3_q8_0", "mor2p0", "mor2p0_q8_0", "tc_mor3"):
     d = load(f"mdg_{name}.json")
-    b[name] = {"missing": True, "pass": False} if d is None else {"summary": d["summary"], "bench": d.get("bench"),
-                                                                    "pass": d["pass"]}
+    if d is None:
+        b[name] = {"missing": True, "pass": False}
+        continue
+    b[name] = {"summary": d["summary"], "bench": d.get("bench"), "tool_pass": d["pass"],
+               "device_vs_cpu_pass": device_vs_cpu(d["summary"])}
+    b[name]["pass"] = b[name]["device_vs_cpu_pass"] if name.endswith("q8_0") else d["pass"]
 b["ir_device_gate"] = {n: dg(n) for n in ("mor3", "mor2p0", "tc_mor3")}
 rep["b_mor"] = b
 

@@ -30,6 +30,10 @@ rm -f tc.part*
 echo "--- deps $(date -u +%T)"
 apt-get update -qq > /dev/null 2>&1
 apt-get install -y -q libboost-regex-dev > /dev/null 2>&1 || fail "apt libboost-regex-dev"
+# /content/LEGS "local" (an optional upload): the third-party checkpoints and their legs are skipped.
+LEGS=$(cat /content/LEGS 2>/dev/null || echo all)
+echo "legs: $LEGS"
+if [ "$LEGS" = all ]; then
 echo "--- checkpoints in the background $(date -u +%T)"
 ( pip install -q gguf sentencepiece "transformers==4.57.0" > /dev/null 2>&1
   git clone -q --depth 1 --branch b6000 https://github.com/ggml-org/llama.cpp /content/llamacpp_b6000
@@ -47,6 +51,7 @@ PY
       || rm -f /content/tp/$m/$m-f32.gguf
   done
   touch /content/TP_DONE ) > $OUT/thirdparty_fetch.log 2>&1 &
+fi
 
 echo "--- builds $(date -u +%T)"
 mkdir -p /content/new /content/head
@@ -126,6 +131,7 @@ dd state4 $M/state4/state4.gguf
 dd state4_q8_0 $M/state4/state4_q8_0.gguf
 dd ar3 $M/ar3/ar3.gguf --len 8 --gen 8
 for m in p1_b2x3_c1 p1_b2x3_c1_inject b2x4; do dd rec_$m $M/recursion/$m.gguf --len 8 --gen 8; done
+if [ "$LEGS" = all ]; then
 for i in $(seq 1 120); do [ -e /content/TP_DONE ] && break; sleep 10; done
 echo "third-party fetch: $(tail -2 $OUT/thirdparty_fetch.log | tr '\n' ' ')"
 TP=/content/tp
@@ -141,6 +147,7 @@ dd qwen25_05b $TP/qwen25/qwen2.5-0.5b-instruct-fp16.gguf
 dd gemma3_270m_long $TP/gemma-3-270m-it/gemma-3-270m-it-f32.gguf --ids /content/ids/gemma3_270m_pastwin.ids.json
 dd qwen25_long $TP/qwen25/qwen2.5-0.5b-instruct-fp16.gguf --ids /content/ids/qwen25_long.ids.json
 dd qwen3_long $TP/qwen3/Qwen3-0.6B-Q8_0.gguf --ids /content/ids/qwen3_long.ids.json
+fi
 
 echo "--- pack $(date -u +%T)"
 cd /content && rm -f out.zip && python3 -c "import shutil; shutil.make_archive('/content/out', 'zip', '/content', 'out')" && echo "packed $(du -sh out.zip | cut -f1)"
