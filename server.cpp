@@ -56,6 +56,7 @@
 
 #include "api.h"
 #include "chat_request.h"
+#include "determinism.h"
 #include "logger.h"
 #include "tokenizer.h"
 #include "model_macros.h"
@@ -221,7 +222,10 @@ int main(int argc, char** argv) {
   }
 
   Logger::info("Starting TinyLlama Chat Server...");
-  
+  if (ember::deterministic())
+    Logger::info("EMBER_DETERMINISTIC set: deterministic CUDA mode (run-to-run bit-identical logits; /health "
+                 "reports \"deterministic\": true).");
+
   std::shared_ptr<tinyllama::TinyLlamaSession> session;
   try {
     Logger::info("Loading model from: " + model_dir);
@@ -579,6 +583,8 @@ int main(int argc, char** argv) {
     h["vocab_size"] = c.vocab_size;
     h["hidden_size"] = c.hidden_size;
     h["layers"] = c.num_hidden_layers;
+    // EMBER_DETERMINISTIC=1 (determinism.h): reported only when on, so the default /health is unchanged.
+    if (ember::deterministic()) h["deterministic"] = true;
     res.set_header("Access-Control-Allow-Origin", "*");
     res.set_content(h.dump(), "application/json");
   });

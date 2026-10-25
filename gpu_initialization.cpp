@@ -5,6 +5,7 @@
 #include "model_constants.h"
 #include "model_macros.h"
 #include "weight_management.h"
+#include "determinism.h"
 #ifdef HAS_CUDA
 #include "cuda_kernels.h"
 #endif
@@ -90,9 +91,16 @@ void TinyLlamaModel::initialize_gpu_and_rope() {
 
   Logger::info("Initializing CUDA resources for " + std::to_string(active_num_gpu_layers) + " GPU layers.");
   if (!cublas_handle_) {
+    ember::deterministic_cublas_env();  // EMBER_DETERMINISTIC=1 only (determinism.h)
     cublasStatus_t cublas_status = cublasCreate(&cublas_handle_);
     if (cublas_status != CUBLAS_STATUS_SUCCESS) {
         throw std::runtime_error("Failed to initialize cuBLAS: " + std::to_string(cublas_status));
+    }
+    if (ember::deterministic()) {
+      cublasSetAtomicsMode(cublas_handle_, CUBLAS_ATOMICS_NOT_ALLOWED);
+      Logger::info("EMBER_DETERMINISTIC: deterministic CUDA mode on (fixed-order decode reductions; cuBLAS "
+                   "workspace " + std::string(std::getenv("CUBLAS_WORKSPACE_CONFIG") ? std::getenv("CUBLAS_WORKSPACE_CONFIG") : "default") +
+                   ", atomics not allowed).");
     }
     Logger::info("cuBLAS handle created successfully.");
 
