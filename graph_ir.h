@@ -66,6 +66,11 @@
 // attention included, so the two paths agree to rounding. A T = 1 call
 // (decode) replays a CUDA graph of the whole step, captured once, with the
 // token and position in device memory (EMBER_IR_GRAPH=0: per-launch).
+// Mixture-of-Recursions (depth_route, kv_rows "active") runs on the device
+// too: routing on the host from the device's router logits, each recursion
+// step batched over its active rows at their absolute positions into the
+// application's compact kv cache (mor_step_device); its decode runs
+// per-launch.
 #include <initializer_list>
 #include <map>
 #include <memory>
@@ -128,6 +133,11 @@ class Interpreter {
   // Mixture-of-Recursions (depth_route): the recursion depth of each row of the last forward
   // (1 .. n_rec), its routing trace; empty when the block has no depth_route.
   const std::vector<int>& last_depths() const { return mor_depth_; }
+  // The absolute positions of the kv rows application `application` holds, ascending, on either path
+  // (the bookkeeping is host-side on both): a recursion step's compact cache under depth_route
+  // (kv_rows "active"), the compact cache under turn_state, else 0 .. seq_len() - 1; empty without a
+  // kv slot. kv_positions() below is the CPU-only conformance hook.
+  std::vector<int> held_positions(int application) const;
   bool on_gpu() const { return gpu_; }
 
   // Per-turn state tokens (paperkiln IR_SPEC_DRAFT.md section 1, tiny_chat_long_2026-10).
@@ -429,6 +439,28 @@ class Interpreter {
   int* dts_code_ = nullptr;
   int* dkv_idx_ = nullptr;
 
+  // Mixture-of-Recursions on the device (mor_step_device, the CPU's mor_step). Routing: the router
+  // logits x W^T by cuBLAS, then each token's depth and gate on the host by cpu::mor_route (the CPU's
+  // code; one sync per forward), so the depth is EXACT given the logits. A step holds the full value of
+  // every slot the block reads or writes aside (mor_touch_, swapped into msave_), gathers the active
+  // rows of x and of the block's other inputs (mor_livein_, re-gathered at each application, as the
+  // CPU rebuilds each token's row from the full values) and runs the block's plan with T = the active
+  // count: rope at each row's absolute position (drowpos_, absent when every row is active), attention
+  // over the application's compact cache from row attn_row_ (the rows it holds, mor_rows_). After the
+  // step's last application the gate blends the compact x with its input, the rows go back into the
+  // full x (inactive rows keep x_in) and the held values return, as the CPU's env keeps them. A forward
+  // through a depth_route never takes the captured decode graph (the routing reads the host).
+  void mor_step_device(int layer, int T, int start_pos);
+  int mor_xs_ = -1, mor_out_slot_ = -1;  // slots of depth_route's input and of its depth report
+  std::vector<int> mor_touch_, mor_livein_;
+  std::vector<DBuf> msave_;  // by slot: the full value held aside during a step
+  DBuf dmor_logits_, dmor_xin_, dmor_g_;
+  int* dmor_idx_ = nullptr;  // [2 cap]: the step's active rows, then their absolute positions
+  int dmor_idx_cap_ = 0;
+  const int* drowpos_ = nullptr;  // non-null inside a step whose rows are not all active
+  std::vector<int> mor_active_;   // this step's active rows (host)
+  int mor_A_ = 0;
+
   // Device recurrent state: drec_ [n_layers][rec_floats_] (fixed: a restore
   // copies into it, so a captured graph keeps reading the live state);
   // drec_init_ the initial state of every block; snapshots and this call's
@@ -510,9 +542,10 @@ bool has_windowed_attention(const std::string& ir_json);
 bool has_recurrent_state(const std::string& ir_json);
 
 // True when the CUDA path has a kernel for every op of the IR (recurrent
-// state and per-turn state tokens included: state_weight, mask "turn_state",
-// evict) within its limits (depth_attend sources, ssm_scan n); otherwise the
-// interpreter must run on the CPU.
+// state, per-turn state tokens: state_weight, mask "turn_state", evict, and
+// Mixture-of-Recursions: depth_route, kv_rows "active", with no pos_embedding
+// in its block) within its limits (depth_attend sources, ssm_scan n);
+// otherwise the interpreter must run on the CPU.
 bool device_supported(const std::string& ir_json);
 
 // True when the IR uses per-turn state tokens: an embedding with

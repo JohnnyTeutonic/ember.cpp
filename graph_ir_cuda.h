@@ -76,6 +76,23 @@ void ir_kv_compact_cuda(float* K, float* V, const int* idx, int w0, int n, int r
 void ir_embedding_state_cuda(const float* table, const float* state, int vocab, const int* tokens, float* out, int T,
                              int d, cudaStream_t stream);
 
+// Mixture-of-Recursions (IR_SPEC 7.4, 7.5; CPU form graph_ir.cpp mor_step). A recursion step runs the
+// block on its active rows only, gathered into compact [n, w] buffers in position order, at their own
+// absolute positions.
+// dst[a] = src[idx[a]] (gather) and dst[idx[a]] = src[a] (scatter), rows of w floats, a < n. EXACT (copies).
+void ir_rows_gather_cuda(const float* src, const int* idx, float* dst, int n, int w, cudaStream_t stream);
+void ir_rows_scatter_cuda(const float* src, const int* idx, float* dst, int n, int w, cudaStream_t stream);
+// Gate "score" in place over x [n, w]: x = x_in + g[a] (x - x_in) per element of row a, the difference
+// rounded, then the product, then the sum (no contraction; cpu::mor_gate). EXACT given its inputs.
+void ir_mor_gate_cuda(const float* x_in, float* x, const float* g, int n, int w, cudaStream_t stream);
+// ir_rope_cuda and ir_rope_rows_cuda with row t at position pos[t] (a device array of T positions)
+// instead of start_pos + t; the same per-pair arithmetic, so a row gives the bits it gives at that
+// position there.
+void ir_rope_at_cuda(float* q, float* k, int T, int hq, int hk, int hd, const int* pos, const float* freqs,
+                     cudaStream_t stream);
+void ir_rope_rows_at_cuda(float* x, int T, int heads, int hd, int n_rot, bool neox, const int* pos, const float* freqs,
+                          cudaStream_t stream);
+
 // The gated and attention-residual ops (CPU forms graph_ir_ops.h, same order
 // of operations; every product and sum rounded on its own).
 // relu: max(0, x) as std::max(0.0f, x) (-0 and NaN give +0). EXACT.
