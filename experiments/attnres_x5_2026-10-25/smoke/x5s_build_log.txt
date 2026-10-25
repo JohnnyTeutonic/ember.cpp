@@ -1,0 +1,33 @@
+[  3%] Building CXX object CMakeFiles/tinyllama_core.dir/model_config.cpp.o
+[  7%] Building CXX object CMakeFiles/tinyllama_core.dir/model.cpp.o
+[ 11%] Building CXX object CMakeFiles/tinyllama_core.dir/kv_cache.cpp.o
+[ 14%] Building CXX object CMakeFiles/tinyllama_core.dir/weight_management.cpp.o
+[ 18%] Building CXX object CMakeFiles/tinyllama_core.dir/cpu_attention.cpp.o
+[ 22%] Building CXX object CMakeFiles/tinyllama_core.dir/model_utils.cpp.o
+[ 25%] Building CXX object CMakeFiles/tinyllama_core.dir/gpu_initialization.cpp.o
+[ 29%] Building CXX object CMakeFiles/tinyllama_core.dir/gpu_memory_optimization.cpp.o
+[ 33%] Building CXX object CMakeFiles/tinyllama_core.dir/cpu_batch_processor.cpp.o
+[ 37%] Building CXX object CMakeFiles/tinyllama_core.dir/utils.cpp.o
+[ 40%] Building CXX object CMakeFiles/tinyllama_core.dir/safetensors_loader.cpp.o
+[ 44%] Building CXX object CMakeFiles/tinyllama_core.dir/tokenizer.cpp.o
+[ 48%] Building CXX object CMakeFiles/tinyllama_core.dir/logger.cpp.o
+[ 51%] Building CXX object CMakeFiles/tinyllama_core.dir/api.cpp.o
+[ 55%] Building CXX object CMakeFiles/tinyllama_core.dir/gguf_parser.cpp.o
+[ 59%] Building CXX object CMakeFiles/tinyllama_core.dir/quantization.cpp.o
+[ 62%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir.cpp.o
+[ 66%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_ops.cpp.o
+[ 70%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_expr.cpp.o
+[ 74%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_mamba.cpp.o
+[ 77%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_recurrence.cpp.o
+[ 81%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_validate.cpp.o
+[ 85%] Building CXX object CMakeFiles/tinyllama_core.dir/ir_digest.cpp.o
+[ 88%] Building CXX object CMakeFiles/tinyllama_core.dir/parallel_for.cpp.o
+[ 92%] Linking CXX static library libtinyllama_core.a
+[ 92%] Built target tinyllama_core
+[ 96%] Building CXX object CMakeFiles/ir_logits.dir/tools/ir_logits.cpp.o
+[100%] Linking CXX executable ir_logits
+[100%] Built target ir_logits
+[ 92%] Built target tinyllama_core
+[ 96%] Building CXX object CMakeFiles/tinyllama_server.dir/server.cpp.o
+[100%] Linking CXX executable tinyllama_server
+[100%] Built target tinyllama_server

@@ -1,0 +1,66 @@
+{
+ "dir": "/mnt/c/ml_artifacts/attnres_gate_x5/smoke_20m_X5",
+ "bin": "/home/jonat/x5s/build/ir_logits",
+ "manifest_sha256": "0257807bbb44401556a35e8f57176a68376ca753ea1d9b4ab21c45c10aca798c",
+ "sha256_all_match": true,
+ "embedded_ir_equals_ir_json": true,
+ "ir": {
+  "ir_version": 1,
+  "family_hint": "llama_attnres"
+ },
+ "f32": {
+  "logprob_worst_rel": 1.616323110940569e-06,
+  "greedy": "40/40",
+  "decode_eq_prefill": true,
+  "decode_vs_prefill_max_abs": 0.0,
+  "argmax_eq_mtstudio_argmax": "40/40",
+  "positions_scored": 320,
+  "prompt_len_range": [
+   53,
+   145
+  ],
+  "pass": true
+ },
+ "blk0_attn_q_all_zero": true,
+ "blk0_attn_q_not_read": {
+  "nan_copy_logits_bit_equal": true
+ },
+ "pass": true
+}
+gate rc=0 in 1223 s
+{
+ "bin": "/home/jonat/x5s/build/tinyllama_server",
+ "gguf": "/mnt/c/ml_artifacts/attnres_gate_x5/smoke_20m_X5/tc_smoke_20m_X5.gguf",
+ "gpu_layers": 0,
+ "health": {
+  "chat_template": {
+   "name": "paperkiln",
+   "version": 1
+  },
+  "chat_template_why": "declared",
+  "context": 512,
+  "hidden_size": 320,
+  "layers": 16,
+  "model": "/mnt/c/ml_artifacts/attnres_gate_x5/smoke_20m_X5/tc_smoke_20m_X5.gguf",
+  "status": "ok",
+  "tokenizer": "bpe",
+  "vocab_size": 16384
+ },
+ "requests": 40,
+ "prompt_ids_equal_score_in": "40/40",
+ "ids_equal_continuation_prefix": "40/40",
+ "stop_reasons": [
+  "eos",
+  "length"
+ ],
+ "positions_compared": 290,
+ "logits_bit_equal_ir_logits_decode": "40/40",
+ "logits_max_abs_vs_ir_logits": 0.0,
+ "pass": true
+}
+carry5_v1:recall:0001 "I'm looking for you." [44, 618, 1894, 330, 319, 17] 1
+carry5_v1:recall:0027 "I'm looking for a lot of the" [44, 618, 1894, 330, 261, 1162, 288, 265] -1
+carry5_v1:recall:0053 "I'm looking for you." [44, 618, 1894, 330, 319, 17] 1
+carry5_v1:recall:0079 "I'm looking for you." [44, 618, 1894, 330, 319, 17] 1
+carry5_v1:recall:0105 "I'm looking for you." [44, 618, 1894, 330, 319, 17] 1
+chat rc=0 in 1255 s

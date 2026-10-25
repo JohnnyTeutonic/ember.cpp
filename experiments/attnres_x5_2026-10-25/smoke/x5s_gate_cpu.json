@@ -1,0 +1,373 @@
+{
+ "dir": "/mnt/c/ml_artifacts/attnres_gate_x5/smoke_20m_X5",
+ "bin": "/home/jonat/x5s/build/ir_logits",
+ "manifest_sha256": "0257807bbb44401556a35e8f57176a68376ca753ea1d9b4ab21c45c10aca798c",
+ "sha256": {
+  "tc_smoke_20m_X5.gguf": {
+   "sha256": "3735ee54aa9cae30febb6669ee91b102b200c7d62e0114df846867dde468365d",
+   "match": true
+  },
+  "tc_smoke_20m_X5.ir.json": {
+   "sha256": "67d1d837518e03caa62506bc47b469b8301af132c906474198e855ca5020dd8b",
+   "match": true
+  },
+  "score_in.jsonl": {
+   "sha256": "1c901ad957f358fb444aa82c0d5757504ddb482bee2f260a329b5e3549413422",
+   "match": true
+  },
+  "score_out.jsonl": {
+   "sha256": "392e8e4fefa8e6e67f00d9481cf02174a24e392e5bde099e96627dfde002b032",
+   "match": true
+  },
+  "spec.json": {
+   "sha256": "9d1ce97157940c345995b3d9e8416fcf4b47184ce4ced25351c6fb7c69e4189e",
+   "match": true
+  }
+ },
+ "sha256_all_match": true,
+ "embedded_ir_equals_ir_json": true,
+ "ir": {
+  "ir_version": 1,
+  "family_hint": "llama_attnres"
+ },
+ "f32": {
+  "logprob_worst_rel": 1.616323110940569e-06,
+  "greedy": "40/40",
+  "decode_eq_prefill": true,
+  "decode_vs_prefill_max_abs": 0.0,
+  "argmax_eq_mtstudio_argmax": "40/40",
+  "positions_scored": 320,
+  "prompt_len_range": [
+   53,
+   145
+  ],
+  "pass": true
+ },
+ "blk0_attn_q_all_zero": true,
+ "blk0_attn_q_not_read": {
+  "nan_copy_logits_bit_equal": true
+ },
+ "per_item": [
+  {
+   "i": 0,
+   "prompt_len": 79,
+   "logprob_rel": 8.083686162150147e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 1,
+   "prompt_len": 70,
+   "logprob_rel": 5.500151326551555e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 2,
+   "prompt_len": 89,
+   "logprob_rel": 1.4870300869939008e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 3,
+   "prompt_len": 68,
+   "logprob_rel": 6.798896885893958e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 4,
+   "prompt_len": 58,
+   "logprob_rel": 7.126332269531605e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 5,
+   "prompt_len": 98,
+   "logprob_rel": 1.1561691269091574e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 6,
+   "prompt_len": 75,
+   "logprob_rel": 8.536573653205448e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 7,
+   "prompt_len": 53,
+   "logprob_rel": 1.616323110940569e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 8,
+   "prompt_len": 90,
+   "logprob_rel": 1.0248022247660885e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 9,
+   "prompt_len": 92,
+   "logprob_rel": 4.624604012953331e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 10,
+   "prompt_len": 57,
+   "logprob_rel": 6.279102229496241e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 11,
+   "prompt_len": 97,
+   "logprob_rel": 1.1662647994294038e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 12,
+   "prompt_len": 73,
+   "logprob_rel": 9.130087021665755e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 13,
+   "prompt_len": 57,
+   "logprob_rel": 4.6532186277222397e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 14,
+   "prompt_len": 88,
+   "logprob_rel": 5.748559194671232e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 15,
+   "prompt_len": 78,
+   "logprob_rel": 7.903513515328189e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 16,
+   "prompt_len": 62,
+   "logprob_rel": 8.756017339507938e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 17,
+   "prompt_len": 94,
+   "logprob_rel": 1.0901114240916971e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 18,
+   "prompt_len": 77,
+   "logprob_rel": 7.416153613700773e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 19,
+   "prompt_len": 74,
+   "logprob_rel": 8.780606288063983e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 20,
+   "prompt_len": 92,
+   "logprob_rel": 5.313630171495851e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 21,
+   "prompt_len": 76,
+   "logprob_rel": 1.1830346728889483e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 22,
+   "prompt_len": 84,
+   "logprob_rel": 6.685605307491089e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 23,
+   "prompt_len": 93,
+   "logprob_rel": 7.306316093479771e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 24,
+   "prompt_len": 77,
+   "logprob_rel": 9.727482263906567e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 25,
+   "prompt_len": 71,
+   "logprob_rel": 8.05030863153903e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 26,
+   "prompt_len": 80,
+   "logprob_rel": 9.98345746718316e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 27,
+   "prompt_len": 64,
+   "logprob_rel": 5.737659226868796e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 28,
+   "prompt_len": 81,
+   "logprob_rel": 8.985560924796219e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 29,
+   "prompt_len": 79,
+   "logprob_rel": 1.009787401029694e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 30,
+   "prompt_len": 53,
+   "logprob_rel": 8.07104549459303e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 31,
+   "prompt_len": 145,
+   "logprob_rel": 1.3379872393411469e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 32,
+   "prompt_len": 118,
+   "logprob_rel": 1.05286043788125e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 33,
+   "prompt_len": 115,
+   "logprob_rel": 1.1088073408420816e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 34,
+   "prompt_len": 97,
+   "logprob_rel": 1.6137784019270818e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 35,
+   "prompt_len": 125,
+   "logprob_rel": 1.227164485137401e-06,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 36,
+   "prompt_len": 108,
+   "logprob_rel": 8.011008613803348e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 37,
+   "prompt_len": 103,
+   "logprob_rel": 7.048777551927951e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 38,
+   "prompt_len": 86,
+   "logprob_rel": 6.450124517072287e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  },
+  {
+   "i": 39,
+   "prompt_len": 103,
+   "logprob_rel": 7.710243042969721e-07,
+   "greedy": true,
+   "decode_eq_prefill": true,
+   "argmax_eq_mtstudio_argmax": true
+  }
+ ],
+ "pass": true
+}
