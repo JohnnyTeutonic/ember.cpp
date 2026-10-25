@@ -1,6 +1,6 @@
 {
- "validator": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/tools/ir_validate.py",
- "adapter": "/home/jonat/ember_wt/build_cpu/ir_adapter",
+ "validator": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/tools/ir_validate.py",
+ "adapter": "/home/jonat/ember_adapter_39dcce9/build/ir_adapter",
  "load": [
   {
    "case": "gguf:attnres_gate/ar3/ar3.gguf",
@@ -289,6 +289,32 @@
    "result": "agree"
   },
   {
+   "case": "gguf:general_chat/sft/pk_sft_v1.gguf",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/general_chat/sft/pk_sft_v1.gguf",
+   "ir": null,
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "gguf:general_chat/sft/pk_sft_v1_q8_0_all.gguf",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/general_chat/sft/pk_sft_v1_q8_0_all.gguf",
+   "ir": null,
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
    "case": "gguf:gpt2_tiny/gpt2_tiny.gguf",
    "kind": "valid",
    "rule": "-",
@@ -397,6 +423,32 @@
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/next_base/base/pk_base_v1.gguf",
+   "ir": null,
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "gguf:next_base/base/pk_base_v1_q4_k_m.gguf",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/next_base/base/pk_base_v1_q4_k_m.gguf",
+   "ir": null,
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "gguf:next_base/base/pk_base_v1_q4_k_s.gguf",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/next_base/base/pk_base_v1_q4_k_s.gguf",
    "ir": null,
    "expected": "accept",
    "validator": "accept",
@@ -627,6 +679,19 @@
    "result": "agree"
   },
   {
+   "case": "gguf:tiny_chat/e1/pick_e1_L16/model.gguf",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pick_e1_L16/model.gguf",
+   "ir": null,
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
    "case": "gguf:tiny_chat/e1/pick_e1_L32/model.gguf",
    "kind": "valid",
    "rule": "-",
@@ -657,6 +722,32 @@
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L16_r1/tc_e1_L16_r1.gguf",
+   "ir": null,
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "gguf:tiny_chat/e1/pt_e1_L16_r2/tc_e1_L16_r2.gguf",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L16_r2/tc_e1_L16_r2.gguf",
+   "ir": null,
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "gguf:tiny_chat/e1/pt_e1_L16_r3/tc_e1_L16_r3.gguf",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L16_r3/tc_e1_L16_r3.gguf",
    "ir": null,
    "expected": "accept",
    "validator": "accept",
@@ -709,6 +800,32 @@
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1_60m/pt_e1_60m_L32_r1/tc_e1_60m_L32_r1.gguf",
+   "ir": null,
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "gguf:tiny_chat/e1_60m/pt_e1_60m_L32_r2/tc_e1_60m_L32_r2.gguf",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1_60m/pt_e1_60m_L32_r2/tc_e1_60m_L32_r2.gguf",
+   "ir": null,
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "gguf:tiny_chat/e1_mor/pt_e1_mor_MoR3_r1/tc_e1_mor_MoR3_r1.gguf",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1_mor/pt_e1_mor_MoR3_r1/tc_e1_mor_MoR3_r1.gguf",
    "ir": null,
    "expected": "accept",
    "validator": "accept",
@@ -800,6 +917,19 @@
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s35_r1/tc_e5_s35_r1.gguf",
+   "ir": null,
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "gguf:tiny_chat/e5/pt_e5_s35_r2/tc_e5_s35_r2.gguf",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s35_r2/tc_e5_s35_r2.gguf",
    "ir": null,
    "expected": "accept",
    "validator": "accept",
@@ -1021,6 +1151,19 @@
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_mor/pk_mor.gguf",
+   "ir": null,
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "suite:pk_recurrence.gguf",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/models/pk_recurrence/pk_recurrence.gguf",
    "ir": null,
    "expected": "accept",
    "validator": "accept",
@@ -1368,11 +1511,11 @@
    "result": "agree"
   },
   {
-   "case": "stored:microtorch/ir/attnres_tiny.ir.json",
+   "case": "stored:microtorch/spec/examples/attnres_tiny.ir.json",
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/attnres_tiny/attnres_tiny.gguf",
-   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/attnres_tiny.ir.json",
+   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/attnres_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -1381,11 +1524,11 @@
    "result": "agree"
   },
   {
-   "case": "stored:microtorch/ir/chat_sftfinal.ir.json",
+   "case": "stored:microtorch/spec/examples/chat_sftfinal.ir.json",
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/capacity/ctrl/fw_ctrl.gguf",
-   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/chat_sftfinal.ir.json",
+   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/chat_sftfinal.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -1394,11 +1537,11 @@
    "result": "agree"
   },
   {
-   "case": "stored:microtorch/ir/flex_highway_tiny.ir.json",
+   "case": "stored:microtorch/spec/examples/flex_highway_tiny.ir.json",
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/flex_highway_tiny/flex_highway_tiny.gguf",
-   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/flex_highway_tiny.ir.json",
+   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/flex_highway_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -1407,11 +1550,11 @@
    "result": "agree"
   },
   {
-   "case": "stored:microtorch/ir/gpt2_tiny.ir.json",
+   "case": "stored:microtorch/spec/examples/gpt2_tiny.ir.json",
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/gpt2_tiny/gpt2_tiny.gguf",
-   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/gpt2_tiny.ir.json",
+   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/gpt2_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -1420,11 +1563,11 @@
    "result": "agree"
   },
   {
-   "case": "stored:microtorch/ir/kimi_tiny.ir.json",
+   "case": "stored:microtorch/spec/examples/kimi_tiny.ir.json",
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/kimi_tiny/kimi_tiny.gguf",
-   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/kimi_tiny.ir.json",
+   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/kimi_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -1433,11 +1576,11 @@
    "result": "agree"
   },
   {
-   "case": "stored:microtorch/ir/mamba_tiny.ir.json",
+   "case": "stored:microtorch/spec/examples/mamba_tiny.ir.json",
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/mamba_tiny/mamba_tiny.gguf",
-   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/mamba_tiny.ir.json",
+   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/mamba_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -1446,11 +1589,11 @@
    "result": "agree"
   },
   {
-   "case": "stored:microtorch/ir/moe_tiny.ir.json",
+   "case": "stored:microtorch/spec/examples/moe_tiny.ir.json",
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/moe_tiny/moe_tiny_v3.gguf",
-   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/moe_tiny.ir.json",
+   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/moe_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -1459,11 +1602,11 @@
    "result": "agree"
   },
   {
-   "case": "stored:microtorch/ir/srd_tiny.ir.json",
+   "case": "stored:microtorch/spec/examples/srd_tiny.ir.json",
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/srd_tiny/srd_tiny.gguf",
-   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/srd_tiny.ir.json",
+   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/srd_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -1472,11 +1615,11 @@
    "result": "agree"
   },
   {
-   "case": "stored:microtorch/ir/swa_tiny.ir.json",
+   "case": "stored:microtorch/spec/examples/swa_tiny.ir.json",
    "kind": "valid",
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/swa_tiny/swa_tiny.gguf",
-   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/swa_tiny.ir.json",
+   "ir": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/swa_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -1646,6 +1789,19 @@
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/fw_base/release/chat_fwsft.gguf",
    "ir": "/mnt/c/ml_artifacts/fw_base/release/chat_fwsft.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "stored:ml_artifacts/general_chat/sft/pk_sft_v1.ir.json",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/general_chat/sft/pk_sft_v1.gguf",
+   "ir": "/mnt/c/ml_artifacts/general_chat/sft/pk_sft_v1.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -1888,6 +2044,32 @@
    "result": "agree"
   },
   {
+   "case": "stored:ml_artifacts/tiny_chat/e1/pt_e1_L16_r2/tc_e1_L16_r2.ir.json",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L16_r2/tc_e1_L16_r2.gguf",
+   "ir": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L16_r2/tc_e1_L16_r2.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "stored:ml_artifacts/tiny_chat/e1/pt_e1_L16_r3/tc_e1_L16_r3.ir.json",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L16_r3/tc_e1_L16_r3.gguf",
+   "ir": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L16_r3/tc_e1_L16_r3.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
    "case": "stored:ml_artifacts/tiny_chat/e1/pt_e1_L32_r1/tc_e1_L32_r1.ir.json",
    "kind": "valid",
    "rule": "-",
@@ -1932,6 +2114,32 @@
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1_60m/pt_e1_60m_L32_r1/tc_e1_60m_L32_r1.gguf",
    "ir": "/mnt/c/ml_artifacts/tiny_chat/e1_60m/pt_e1_60m_L32_r1/tc_e1_60m_L32_r1.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "stored:ml_artifacts/tiny_chat/e1_60m/pt_e1_60m_L32_r2/tc_e1_60m_L32_r2.ir.json",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1_60m/pt_e1_60m_L32_r2/tc_e1_60m_L32_r2.gguf",
+   "ir": "/mnt/c/ml_artifacts/tiny_chat/e1_60m/pt_e1_60m_L32_r2/tc_e1_60m_L32_r2.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "stored:ml_artifacts/tiny_chat/e1_mor/pt_e1_mor_MoR3_r1/tc_e1_mor_MoR3_r1.ir.json",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1_mor/pt_e1_mor_MoR3_r1/tc_e1_mor_MoR3_r1.gguf",
+   "ir": "/mnt/c/ml_artifacts/tiny_chat/e1_mor/pt_e1_mor_MoR3_r1/tc_e1_mor_MoR3_r1.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -2023,6 +2231,19 @@
    "rule": "-",
    "gguf": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s35_r1/tc_e5_s35_r1.gguf",
    "ir": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s35_r1/tc_e5_s35_r1.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_message": "",
+   "result": "agree"
+  },
+  {
+   "case": "stored:ml_artifacts/tiny_chat/e5/pt_e5_s35_r2/tc_e5_s35_r2.ir.json",
+   "kind": "valid",
+   "rule": "-",
+   "gguf": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s35_r2/tc_e5_s35_r2.gguf",
+   "ir": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s35_r2/tc_e5_s35_r2.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -2128,8 +2349,7 @@
    "expected": "refuse",
    "validator": "refuse",
    "validator_messages": [
-    "IR_SPEC 2.3: ir_version 2 is not supported (this validator reads 0, 1)",
-    "IR_SPEC 3.1: paperkiln.ir_version (4, 0) does not match the document's ir_version 2"
+    "IR_SPEC 2.3: ir_version 2 is not supported (this validator reads 0, 1)"
    ],
    "ember": "refuse",
    "ember_message": "IR version 2 is not supported (ember reads 0 and 1)",
@@ -2190,7 +2410,7 @@
    "expected": "refuse",
    "validator": "refuse",
    "validator_messages": [
-    "IR_SPEC 10.1 rule 1: doc.block.nodes[11].op \"swish\" is not one of ['embedding', 'pos_embedding', 'linear', 'scale', 'split', 'rmsnorm', 'layernorm', 'gelu', 'silu', 'sigmoid', 'relu', 'add', 'mul', 'sub', 'affine', 'mul_col', 'rms_row', 'rope', 'attention', 'moe_ffn', 'list', 'append', 'depth_attend', 'expr', 'linear_attention', 'ssm_scan', 'conv1d_causal', 'selective_scan', 'depth_route']"
+    "IR_SPEC 10.1 rule 1: doc.block.nodes[11].op \"swish\" is not one of ['embedding', 'pos_embedding', 'linear', 'scale', 'split', 'rmsnorm', 'layernorm', 'gelu', 'silu', 'sigmoid', 'relu', 'add', 'mul', 'sub', 'affine', 'mul_col', 'rms_row', 'rope', 'attention', 'moe_ffn', 'list', 'append', 'depth_attend', 'expr', 'linear_attention', 'ssm_scan', 'conv1d_causal', 'selective_scan', 'depth_route', 'recurrence']"
    ],
    "ember": "refuse",
    "ember_message": "IR op 'swish' (block) has no CPU kernel in ember's interpreter",
@@ -2660,11 +2880,11 @@
    "expected": "refuse",
    "validator": "refuse",
    "validator_messages": [
-    "IR_SPEC 10.1 rule 1: doc.block.state[0].tensors[0].init must be 0",
-    "IR_SPEC 6.3: recurrent state lin: tensor {'name': 'num', 'shape': [2, 64], 'init': 1} needs name, shape and init 0"
+    "IR_SPEC 10.1 rule 1: doc.block.state[0].tensors[0].init 1 is not one of [0, 'body']",
+    "IR_SPEC 6.3: recurrent state lin: tensor {'name': 'num', 'shape': [2, 64], 'init': 1} needs name, shape and init 0 (or 'body', for a recurrence)"
    ],
    "ember": "refuse",
-   "ember_message": "IR_SPEC 10.1 rule 1: doc.block.state[0].tensors[0].init must be 0; IR_SPEC 6.3: recurrent state lin: tensor {\"init\":1,\"name\":\"num\",\"shape\":[2,64]} needs name, shape and init 0",
+   "ember_message": "IR_SPEC 10.1 rule 1: doc.block.state[0].tensors[0].init 1 is not one of [0,\"body\"]; IR_SPEC 6.3: recurrent state lin: tensor {\"init\":1,\"name\":\"num\",\"shape\":[2,64]} needs name, shape and init 0",
    "result": "agree"
   },
   {
@@ -3265,7 +3485,7 @@
    "expected": "refuse",
    "validator": "refuse",
    "validator_messages": [
-    "IR_SPEC 3.1: paperkiln.ir_version None does not match the document's ir_version 0"
+    "IR_SPEC 3.1: paperkiln.ir_version None does not match the embedded document's ir_version 0"
    ],
    "ember": "refuse",
    "ember_message": "IR_SPEC 3.1: paperkiln.ir_version None does not match the document's ir_version 0",
@@ -3280,7 +3500,7 @@
    "expected": "refuse",
    "validator": "refuse",
    "validator_messages": [
-    "IR_SPEC 3.1: paperkiln.ir_version (4, 1) does not match the document's ir_version 0"
+    "IR_SPEC 3.1: paperkiln.ir_version (4, 1) does not match the embedded document's ir_version 0"
    ],
    "ember": "refuse",
    "ember_message": "IR_SPEC 3.1: paperkiln.ir_version 1 does not match the document's ir_version 0",
@@ -3295,7 +3515,7 @@
    "expected": "refuse",
    "validator": "refuse",
    "validator_messages": [
-    "IR_SPEC 3.1: paperkiln.ir_version (5, 0) does not match the document's ir_version 0"
+    "IR_SPEC 3.1: paperkiln.ir_version (5, 0) does not match the embedded document's ir_version 0"
    ],
    "ember": "refuse",
    "ember_message": "IR_SPEC 3.1: paperkiln.ir_version (not a uint32) does not match the document's ir_version 0",
@@ -3410,18 +3630,16 @@
   },
   {
    "case": "s1_missing_pseudo_query",
-   "kind": "s1",
+   "kind": "accept",
    "rule": "25",
    "gguf": "/home/jonat/ember_wt/spec_scratch/s1_no_q0.gguf",
    "ir": null,
-   "expected": "s1",
-   "validator": "refuse",
-   "validator_messages": [
-    "IR_SPEC 3.7: block 0[0].weight: blk.0.attnres_attn_q.weight is not a tensor of the file"
-   ],
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
    "ember": "accept",
    "ember_message": "",
-   "result": "expected (s1)"
+   "result": "agree"
   },
   {
    "case": "r25_missing_s2_pseudo_query",
@@ -3487,6 +3705,15 @@
   },
   {
    "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/families_2026-10-20/srd/srd_tiny.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/gpt2_2026-10-25/ember_built.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -3639,6 +3866,15 @@
    "result": "agree"
   },
   {
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/engine_2026-10-25/gpt2/gate_n40.jsonl.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
    "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/thirdparty_2026-10-22/gemma3_270m_it/gate_n2.jsonl.ir.json",
    "expected": "accept",
    "validator": "accept",
@@ -3738,7 +3974,7 @@
    "result": "agree"
   },
   {
-   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/attnres_tiny.ir.json",
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/recurrence/pk_kimi.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -3747,7 +3983,7 @@
    "result": "agree"
   },
   {
-   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/chat_sftfinal.ir.json",
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/recurrence/pk_mamba.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -3756,7 +3992,7 @@
    "result": "agree"
   },
   {
-   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/flex_highway_tiny.ir.json",
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/recurrence/pk_srd.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -3765,7 +4001,7 @@
    "result": "agree"
   },
   {
-   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/gpt2_tiny.ir.json",
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/recurrence/tp_mamba1.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -3774,7 +4010,7 @@
    "result": "agree"
   },
   {
-   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/kimi_tiny.ir.json",
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/attnres_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -3783,7 +4019,7 @@
    "result": "agree"
   },
   {
-   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/mamba_tiny.ir.json",
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/chat_sftfinal.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -3792,7 +4028,7 @@
    "result": "agree"
   },
   {
-   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/moe_tiny.ir.json",
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/flex_highway_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -3801,7 +4037,7 @@
    "result": "agree"
   },
   {
-   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/srd_tiny.ir.json",
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/gpt2_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -3810,7 +4046,43 @@
    "result": "agree"
   },
   {
-   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/ir/swa_tiny.ir.json",
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/kimi_tiny.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/mamba_tiny.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/moe_tiny.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/srd_tiny.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
+   "doc": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/examples/swa_tiny.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -3946,6 +4218,15 @@
   },
   {
    "doc": "/mnt/c/ml_artifacts/fw_base/release/chat_fwsft.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
+   "doc": "/mnt/c/ml_artifacts/general_chat/sft/pk_sft_v1.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -4116,6 +4397,24 @@
    "result": "agree"
   },
   {
+   "doc": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L16_r2/tc_e1_L16_r2.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
+   "doc": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L16_r3/tc_e1_L16_r3.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
    "doc": "/mnt/c/ml_artifacts/tiny_chat/e1/pt_e1_L32_r1/tc_e1_L32_r1.ir.json",
    "expected": "accept",
    "validator": "accept",
@@ -4144,6 +4443,24 @@
   },
   {
    "doc": "/mnt/c/ml_artifacts/tiny_chat/e1_60m/pt_e1_60m_L32_r1/tc_e1_60m_L32_r1.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
+   "doc": "/mnt/c/ml_artifacts/tiny_chat/e1_60m/pt_e1_60m_L32_r2/tc_e1_60m_L32_r2.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
+   "doc": "/mnt/c/ml_artifacts/tiny_chat/e1_mor/pt_e1_mor_MoR3_r1/tc_e1_mor_MoR3_r1.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -4207,6 +4524,15 @@
   },
   {
    "doc": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s35_r1/tc_e5_s35_r1.ir.json",
+   "expected": "accept",
+   "validator": "accept",
+   "validator_messages": [],
+   "ember": "accept",
+   "ember_errors": [],
+   "result": "agree"
+  },
+  {
+   "doc": "/mnt/c/ml_artifacts/tiny_chat/e5/pt_e5_s35_r2/tc_e5_s35_r2.ir.json",
    "expected": "accept",
    "validator": "accept",
    "validator_messages": [],
@@ -4347,11 +4673,11 @@
    "expected": "refuse",
    "validator": "refuse",
    "validator_messages": [
-    "IR_SPEC 10.1 rule 1: doc.block.nodes[11].op \"swish\" is not one of ['embedding', 'pos_embedding', 'linear', 'scale', 'split', 'rmsnorm', 'layernorm', 'gelu', 'silu', 'sigmoid', 'relu', 'add', 'mul', 'sub', 'affine', 'mul_col', 'rms_row', 'rope', 'attention', 'moe_ffn', 'list', 'append', 'depth_attend', 'expr', 'linear_attention', 'ssm_scan', 'conv1d_causal', 'selective_scan', 'depth_route']"
+    "IR_SPEC 10.1 rule 1: doc.block.nodes[11].op \"swish\" is not one of ['embedding', 'pos_embedding', 'linear', 'scale', 'split', 'rmsnorm', 'layernorm', 'gelu', 'silu', 'sigmoid', 'relu', 'add', 'mul', 'sub', 'affine', 'mul_col', 'rms_row', 'rope', 'attention', 'moe_ffn', 'list', 'append', 'depth_attend', 'expr', 'linear_attention', 'ssm_scan', 'conv1d_causal', 'selective_scan', 'depth_route', 'recurrence']"
    ],
    "ember": "refuse",
    "ember_errors": [
-    "IR_SPEC 10.1 rule 1: doc.block.nodes[11].op \"swish\" is not one of [\"embedding\",\"pos_embedding\",\"linear\",\"scale\",\"split\",\"rmsnorm\",\"layernorm\",\"gelu\",\"silu\",\"sigmoid\",\"relu\",\"add\",\"mul\",\"sub\",\"affine\",\"mul_col\",\"rms_row\",\"rope\",\"attention\",\"moe_ffn\",\"list\",\"append\",\"depth_attend\",\"expr\",\"linear_attention\",\"ssm_scan\",\"conv1d_causal\",\"selective_scan\",\"depth_route\"]"
+    "IR_SPEC 10.1 rule 1: doc.block.nodes[11].op \"swish\" is not one of [\"embedding\",\"pos_embedding\",\"linear\",\"scale\",\"split\",\"rmsnorm\",\"layernorm\",\"gelu\",\"silu\",\"sigmoid\",\"relu\",\"add\",\"mul\",\"sub\",\"affine\",\"mul_col\",\"rms_row\",\"rope\",\"attention\",\"moe_ffn\",\"list\",\"append\",\"depth_attend\",\"expr\",\"linear_attention\",\"ssm_scan\",\"conv1d_causal\",\"selective_scan\",\"depth_route\",\"recurrence\"]"
    ],
    "result": "agree"
   },
@@ -4760,12 +5086,12 @@
    "expected": "refuse",
    "validator": "refuse",
    "validator_messages": [
-    "IR_SPEC 10.1 rule 1: doc.block.state[0].tensors[0].init must be 0",
-    "IR_SPEC 6.3: recurrent state lin: tensor {'name': 'num', 'shape': [2, 64], 'init': 1} needs name, shape and init 0"
+    "IR_SPEC 10.1 rule 1: doc.block.state[0].tensors[0].init 1 is not one of [0, 'body']",
+    "IR_SPEC 6.3: recurrent state lin: tensor {'name': 'num', 'shape': [2, 64], 'init': 1} needs name, shape and init 0 (or 'body', for a recurrence)"
    ],
    "ember": "refuse",
    "ember_errors": [
-    "IR_SPEC 10.1 rule 1: doc.block.state[0].tensors[0].init must be 0",
+    "IR_SPEC 10.1 rule 1: doc.block.state[0].tensors[0].init 1 is not one of [0,\"body\"]",
     "IR_SPEC 6.3: recurrent state lin: tensor {\"init\":1,\"name\":\"num\",\"shape\":[2,64]} needs name, shape and init 0"
    ],
    "result": "agree"
@@ -5248,6 +5574,7 @@
   }
  ],
  "stored_without_a_gguf": [
+  "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/gpt2_2026-10-25/ember_built.ir.json",
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/recurrent_2026-10-20/fixtures/mamba_tiny.ir.json",
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/thirdparty_2026-10-22/device_gate/colab_l4/gemma_cpu/ember_built.ir.json",
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/thirdparty_2026-10-22/mamba_synth.ir.json",
@@ -5257,6 +5584,7 @@
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/arxiv_chain_2026-10-23/expr_norm_gate/scale_reexport/arxiv_expr_norm_gate_scale.ir.json",
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/arxiv_chain_2026-10-23/golu_run/arxiv_2502_03654.ir.json",
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/arxiv_chain_2026-10-23/relu2wins/arxiv_2402_03804.ir.json",
+  "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/engine_2026-10-25/gpt2/gate_n40.jsonl.ir.json",
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/thirdparty_2026-10-22/gemma3_270m_it/gate_n2.jsonl.ir.json",
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/thirdparty_2026-10-22/gemma3_270m_it/gate_n40.jsonl.ir.json",
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/thirdparty_2026-10-22/gemma3_270m_it_long/gate_n40.jsonl.ir.json",
@@ -5268,15 +5596,19 @@
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/thirdparty_2026-10-22/mistral_swa_synth/synth_mistral_swa.jsonl.ir.json",
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/thirdparty_2026-10-22/pythia/gate_n2.jsonl.ir.json",
   "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/experiments/thirdparty_2026-10-22/pythia/gate_n40.jsonl.ir.json",
+  "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/recurrence/pk_kimi.ir.json",
+  "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/recurrence/pk_mamba.ir.json",
+  "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/recurrence/pk_srd.ir.json",
+  "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance/recurrence/tp_mamba1.ir.json",
   "/mnt/c/ml_artifacts/devgate/ember-gate-1022d/gemma3_270m_pastwin_cpu/gemma3.ember_built.ir.json",
   "/mnt/c/ml_artifacts/devgate/ember-gate-1022d/gemma3_270m_pastwin_cpu/gemma3.ir.json"
  ],
  "summary": {
-  "load_cases": 248,
-  "doc_cases": 166,
-  "load_agree": 246,
-  "load_expected_differences": 2,
-  "doc_agree": 166,
+  "load_cases": 265,
+  "doc_cases": 178,
+  "load_agree": 264,
+  "load_expected_differences": 1,
+  "doc_agree": 178,
   "disagree": 0
  },
  "pass": true

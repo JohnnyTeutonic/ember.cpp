@@ -15,9 +15,15 @@ case by case: both accept or both refuse.
             on every stored document and every must-refuse document.
 
 Expected differences are labelled, not hidden: "capability" (a valid document ember does not run, section 10.3:
-the validator accepts, ember refuses) and "s1" (section 5.18: a missing S = 1 depth_attend pseudo-query, which the
-validator reports for exports and a consumer may accept). Writes agreement_cpu.json beside this file; exits 1 on
-any unexpected disagreement. Usage (WSL): python3 agreement.py [--only SUBSTRING]
+the validator accepts, ember refuses). A missing S = 1 depth_attend pseudo-query (section 5.18) is accepted by
+both: the validator (revision 1.1) reports it as an exporter-rule warning, not a refusal. Writes
+agreement_cpu.json beside this file; exits 1 on any unexpected disagreement.
+
+The IR tools (ir_validate, gguf_ir: keramos) come from $KERAMOS_TOOLS, else paperkiln's vendored spec/tools,
+else paperkiln's tools/ (before keramos v1.1.1). keramos's corpus() holds only its own documents, so the stores
+paperkiln's corpus() used to glob (paperkiln's and ember's experiments, /mnt/c/ml_artifacts) are passed to it.
+--build DIR is the build holding ir_adapter and ir_doc_check (default ~/ember_wt/build_cpu).
+Usage (WSL): python3 agreement.py [--build DIR] [--only SUBSTRING]
 """
 import copy
 import glob
@@ -32,13 +38,26 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete"
 PK = ROOT + "/microtorch"
+IRT = os.path.expanduser(os.environ.get("KERAMOS_TOOLS") or (
+    PK + "/spec/tools" if os.path.isfile(PK + "/spec/tools/ir_validate.py") else PK + "/tools"))
 sys.path.insert(0, PK + "/tools")
+sys.path.insert(0, IRT)
 import ir_validate as V  # noqa: E402
 import gguf_ir  # noqa: E402
 
 A = "/mnt/c/ml_artifacts"
 M = os.path.expanduser("~/ember_wt/adapter_models")
-B = os.path.expanduser("~/ember_wt/build_cpu")
+B = os.path.expanduser(sys.argv[sys.argv.index("--build") + 1] if "--build" in sys.argv else "~/ember_wt/build_cpu")
+STORES = [PK + "/experiments/**/*.ir.json", ROOT + "/ember.cpp/experiments/**/*.ir.json", A + "/**/*.ir.json",
+          A + "/*gate*/**/*.gguf"]
+
+
+def corpus():
+    """keramos's corpus() with the workspace's stores; paperkiln's former corpus() globbed them itself."""
+    try:
+        return V.corpus(STORES)
+    except TypeError:
+        return V.corpus()
 SCR = os.path.expanduser("~/ember_wt/spec_scratch")
 os.makedirs(SCR, exist_ok=True)
 ONLY = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else None
@@ -230,7 +249,7 @@ def insert(lst, i, x):
     lst.insert(i, x)
 
 
-# (name, rule, base, edit of the document, expected) with expected "refuse", "capability" or "s1"
+# (name, rule, base, edit of the document, expected) with expected "refuse", "capability" or "accept"
 DOC_CASES = [
     ("r1_unknown_top_level_key", "1", "S4", lambda d: put(d, extras={})),
     ("r1_model_d_string", "1", "S4", lambda d: put(d["model"], d="64")),
@@ -332,7 +351,8 @@ DOC_CASES = [
                 insert(d["block"]["nodes"], d["block"]["nodes"].index(first(d, "attention")) + 1,
                        dict(copy.deepcopy(first(d, "attention")), state="kv2", out="a2")))),
 ]
-EXPECT = {"v_tensor_index_under_weight_index": "accept", "cap_two_kv_slots": "capability", "r9_expr_parses": "accept"}
+EXPECT = {"v_tensor_index_under_weight_index": "accept", "cap_two_kv_slots": "capability", "r9_expr_parses": "accept",
+          "s1_missing_pseudo_query": "accept"}  # 5.18: an exporter-rule warning in revision 1.1, not a refusal
 
 
 def gguf_cases():
@@ -356,11 +376,12 @@ def gguf_cases():
         ("r28_template_not_paperkiln1", "28",
          copy_gguf(s4, SCR + "/r28_chatml.gguf", set_keys={"paperkiln.chat_template": (
              "STRING", json.dumps({"name": "chatml", "version": 1}))})),
-        ("s1_missing_pseudo_query", "25", copy_gguf(ar, SCR + "/s1_no_q0.gguf", drop_tensors=("blk.0.attnres_attn_q.weight",))),
+        ("s1_missing_pseudo_query", "25",
+         copy_gguf(ar, SCR + "/s1_no_q0.gguf", drop_tensors=("blk.0.attnres_attn_q.weight",))),
         ("r25_missing_s2_pseudo_query", "25",
          copy_gguf(ar, SCR + "/s2_no_q1.gguf", drop_tensors=("blk.1.attnres_attn_q.weight",))),
     ]
-    return [(n, r, g, None, "s1" if n.startswith("s1_") else "refuse") for n, r, g in out]
+    return [(n, r, g, None, EXPECT.get(n, "refuse")) for n, r, g in out]
 
 
 # ---------------------------------------------------------------- the valid set
@@ -400,8 +421,6 @@ def verdict(v_errs, e_ok, expected):
     v_ok = not v_errs
     if expected == "capability":
         return "expected (capability)" if v_ok and not e_ok else "DISAGREE"
-    if expected == "s1":
-        return "expected (s1)" if not v_ok and e_ok else "DISAGREE"
     if v_ok == e_ok:
         return "agree"
     return "DISAGREE"
@@ -409,7 +428,7 @@ def verdict(v_errs, e_ok, expected):
 
 def main():
     ad = Adapter()
-    report = {"validator": PK + "/tools/ir_validate.py", "adapter": B + "/ir_adapter", "load": [], "doc": []}
+    report = {"validator": os.path.abspath(V.__file__),"adapter": B + "/ir_adapter", "load": [], "doc": []}
     pk = paperkiln_ggufs()
 
     def run(name, kind, rule, gguf, doc, expected):
@@ -438,7 +457,7 @@ def main():
     for g in third_party_ggufs():
         tag = "suite:" if g.startswith(PK) else "thirdparty:"
         run(tag + os.path.basename(g), "valid", "-", g, None, "accept")
-    stored = [p for p in V.corpus() if p.endswith(".ir.json")]
+    stored = [p for p in corpus() if p.endswith(".ir.json")]
     unpaired = []
     for p in stored:
         g = pair(p, pk)

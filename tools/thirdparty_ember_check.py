@@ -32,6 +32,15 @@ import sys
 import numpy as np
 
 
+def ir_tools_dir(paperkiln):
+    """The IR tools (gguf_ir, ir_numpy: keramos): $KERAMOS_TOOLS, else paperkiln's vendored spec/tools,
+    else paperkiln's tools/ (before keramos v1.1.1)."""
+    if os.environ.get("KERAMOS_TOOLS"):
+        return os.path.expanduser(os.environ["KERAMOS_TOOLS"])
+    spec = os.path.join(paperkiln, "spec", "tools")
+    return spec if os.path.isfile(os.path.join(spec, "gguf_ir.py")) else os.path.join(paperkiln, "tools")
+
+
 def tiny_hf(family, seed):
     import torch
     if family in ("mistral_swa", "gemma3"):  # paperkiln's own synthetic models (tools/thirdparty_synth.py)
@@ -85,7 +94,9 @@ def main():
     ap.add_argument("--tol", type=float, default=1e-5)
     ap.add_argument("--ids", help="a JSON list of id lists (long prompts): last rows only")
     a = ap.parse_args()
-    sys.path.insert(0, os.path.join(os.path.expanduser(a.paperkiln), "tools"))
+    pk = os.path.expanduser(a.paperkiln)
+    sys.path.insert(0, os.path.join(pk, "tools"))  # thirdparty_synth, bpe
+    sys.path.insert(0, ir_tools_dir(pk))
     import gguf_ir
     import ir_numpy
     import thirdparty_synth
