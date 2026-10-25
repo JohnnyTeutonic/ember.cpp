@@ -42,7 +42,8 @@ const device = await adapter.requestDevice({ requiredLimits: {
   maxStorageBufferBindingSize: lim('maxStorageBufferBindingSize'), maxBufferSize: lim('maxBufferSize'),
   maxComputeWorkgroupStorageSize: lim('maxComputeWorkgroupStorageSize'),
   maxStorageBuffersPerShaderStage: lim('maxStorageBuffersPerShaderStage') } });
-device.addEventListener?.('uncapturederror', (e) => { console.error('WebGPU error:', e.error && e.error.message); process.exitCode = 4; });
+let gpuErrors = 0;   // any WebGPU validation error fails the gate
+device.addEventListener?.('uncapturederror', (e) => { gpuErrors++; if (gpuErrors <= 3) console.error('WebGPU error:', e.error && e.error.message); });
 
 const web = path.resolve(here, '../../deploy/wasm/web/webgpu');
 const { createIr } = await import(pathToFileURL(path.join(web, 'ir_webgpu.js')).href);
@@ -117,7 +118,7 @@ const summary = {
   gen: ids.gen, vocab: V, ctx: m.config.ctx, dispatches_per_token: m.config.dispatchesPerToken,
   worst_rel: worst, median_rel: sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0, worst_spec_rel: worstSpec,
   top1_agree: `${top1}/${positions}`, greedy_identical: `${same}/${upto}`, tol,
-  pass: all.length === upto && same === upto && top1 === positions && worst <= tol,
+  gpu_errors: gpuErrors, pass: !gpuErrors && all.length === upto && same === upto && top1 === positions && worst <= tol,
   load_ms: loadMs, ms_per_prompt: all.length ? all.reduce((a, r) => a + r.ms, 0) / all.length : 0,
 };
 fs.writeFileSync(path.join(outDir, 'summary.json'), JSON.stringify(summary, null, 1) + '\n');

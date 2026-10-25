@@ -10,10 +10,13 @@
 // KV state at N positions before the model loads (ember_set_ctx; ?ctx=0: the file's own context);
 // without it, the build's default (EMBER_WASM_CTX, 2048). A file with a smaller context keeps its own.
 //
-// Backends: with WebGPU available (and no ?backend=wasm), the forward pass runs on the GPU
-// (webgpu/llama_webgpu.js) and ember's WebAssembly keeps the request rules, the tokeniser, the
-// sampler and the stops (ember_prepare / ember_sample / ember_finish); otherwise ember_chat runs
-// everything on the CPU. Both give the same replies for the same request (tools/webgpu_parity/).
+// Backends: with WebGPU available (and no ?backend=wasm), the forward pass runs on the GPU and
+// ember's WebAssembly keeps the request rules, the tokeniser, the sampler and the stops
+// (ember_prepare / ember_sample / ember_finish); otherwise ember_chat runs everything on the CPU.
+// The GPU code follows ember's own choice of path: webgpu/llama_webgpu.js for a file ember serves on
+// its tuned llama path, webgpu/ir_webgpu.js for an IR document its interpreter runs (ember_ir_doc),
+// and WebAssembly for a document with an op the WGSL path lacks. Both give the same replies for the
+// same request (tools/webgpu_parity/).
 if (self.crossOriginIsolated === true) {
   try {
     importScripts('ember-mt.js');
@@ -31,13 +34,29 @@ let logitsPtr = 0;       // WebAssembly scratch for one logits vector
 async function initGpu(buf) {
   if (new URLSearchParams(self.location.search).get('backend') === 'wasm' || !self.navigator.gpu) return null;
   try {
+    // The IR document ember's interpreter runs for this file; "" when its tuned llama path serves it.
+    const doc = ember.ccall('ember_ir_doc', 'string', [], []);
     const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) return null;
+    if (!doc) {   // the llama path, as before
+      const device = await adapter.requestDevice({ requiredLimits: {
+        maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize,
+        maxBufferSize: adapter.limits.maxBufferSize } });
+      const { createLlama } = await import('./webgpu/llama_webgpu.js');
+      const m = await createLlama(device, buf.buffer);
+      logitsPtr = ember._malloc(4 * m.config.vocab);
+      return m;
+    }
+    // Any other document: the IR on WebGPU when every op has a kernel (irSupport), else WebAssembly.
+    const { createIr, irSupport } = await import('./webgpu/ir_webgpu.js');
+    const sup = irSupport(JSON.parse(doc));
+    if (!sup.ok) { console.warn('WebGPU: this document stays in WebAssembly:', sup.reason); return null; }
+    const lim = (k) => adapter.limits[k];
     const device = await adapter.requestDevice({ requiredLimits: {
-      maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize,
-      maxBufferSize: adapter.limits.maxBufferSize } });
-    const { createLlama } = await import('./webgpu/llama_webgpu.js');
-    const m = await createLlama(device, buf.buffer);
+      maxStorageBufferBindingSize: lim('maxStorageBufferBindingSize'), maxBufferSize: lim('maxBufferSize'),
+      maxComputeWorkgroupStorageSize: lim('maxComputeWorkgroupStorageSize'),
+      maxStorageBuffersPerShaderStage: lim('maxStorageBuffersPerShaderStage') } });
+    const m = await createIr(device, buf.buffer, doc, { ctx: ember._ember_ctx() });
     logitsPtr = ember._malloc(4 * m.config.vocab);
     return m;
   } catch (e) {

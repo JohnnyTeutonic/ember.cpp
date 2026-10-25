@@ -195,6 +195,9 @@ class TinyLlamaSession {
     return bpe_ ? &bpe_->format().tmpl : word_template_ ? word_template_.get() : nullptr;
   }
   const std::string& chat_template_why() const { return chat_template_why_; }
+  // The IR document the interpreter runs, or "" when the tuned llama path serves the file: for a
+  // front end that runs the same graph on another device (the browser's WebGPU path, deploy/wasm/web).
+  const std::string& ir_document() const { return ir_doc_; }
   // Chat mode's stop set (the record's stop.eos and stop.turn ids).
   bool is_chat_stop(int id) const { return bpe_ && bpe_->format().is_stop(id); }
   bool is_chat_eos(int id) const { return bpe_ && bpe_->format().is_eos(id); }
@@ -258,6 +261,7 @@ class TinyLlamaSession {
   // paperkiln IR interpreter (graph_ir.h); when set, prefill and decode run
   // through it on the CPU instead of the llama path.
   std::unique_ptr<ember_ir::Interpreter> ir_;
+  std::string ir_doc_;  // the document ir_ runs (ir_document())
   std::unique_ptr<Tokenizer> tokenizer_;
   ModelConfig config_;
   KVCache kv_cache_;
