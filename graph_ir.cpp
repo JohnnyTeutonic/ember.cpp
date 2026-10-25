@@ -736,7 +736,7 @@ std::string build_ir_from_gguf(const GGUFData& g) {
   json doc;
   doc["_comment"] = "built by ember's build_ir_from_gguf (graph_ir.cpp; paperkiln tools/gguf_ir.py's rules) from "
                     "general.architecture = " + arch + " and its metadata";
-  doc["ir_version"] = 0;
+  doc["ir_version"] = 1;  // IR_SPEC 2.3: as tools/gguf_ir.py's IR_VERSION from paperkiln 5349ee19 on
   doc["family_hint"] = arch;
   doc["model"] = {{"vocab", vocab}, {"d", d}, {"n_layers", n_layers}, {"ctx", ctx}, {"dtype", "f32"}};
   doc["tokenizer"] = {{"type", "gguf"},
