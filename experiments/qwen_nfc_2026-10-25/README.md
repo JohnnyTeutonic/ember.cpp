@@ -71,9 +71,17 @@ the token's ">" with it.
 **Unchanged.**
 - The 22 Oct tokeniser receipts (`../thirdparty_2026-10-22/*/tokenizer_check.json`: 21 hard cases,
   200 prompts raw, 200 in the template) regenerate byte-identical with this build.
-- The G5 third-party set (`../chat_template_2026-10-24/g5_thirdparty.json`: Qwen2.5 409/409, Qwen3
-  909/909) and the rest of `../chat_template_2026-10-24/rerun_all.sh` stay byte-identical.
-- The IR adapter self-test (`../ir_adapter_2026-10-25`) stays 119/119.
+- `../chat_template_2026-10-24/rerun_all.sh` (run with 2 cores per job, the build from ember aa50a61
+  plus this change): the G5 third-party receipt (Qwen2.5 409/409, Qwen3 909/909, Gemma 3 409/409),
+  the in-place gate receipts (recursion, MoR, MoR refusals, attnres, state4) and all ten parity
+  replays regenerate byte-identical. The WebAssembly receipts give the same replies, token counts
+  and stop reasons (40/40, 60/60); only their `ms_per_reply` timing differs.
+- Two receipts do not regenerate at aa50a61 with or without this change (the other ember agent's
+  aa50a61 build gives the same two files): in `regress_bits.json`, IR_SPEC's load-time validation
+  (f4516ff) now refuses `regress.py`'s hand-made `gpt2_tiny_recursion_0101` IR (block.repeat 4 with
+  model.n_layers 2, weight_index on a gpt2 IR), and `state_tokens_gate_cpu.json`'s `vs_numpy_rel`
+  values move (the ember side's checks all pass as before). Both are left as committed.
+- The IR adapter self-test (`../ir_adapter_2026-10-25`) stays 119/119, its receipt byte-identical.
 
 ## Reproduce
 
