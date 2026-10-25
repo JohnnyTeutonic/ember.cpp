@@ -43,6 +43,7 @@ flowchart LR
 | Mixture-of-Recursions (`depth_route`: each token picks its depth) | IR interpreter | ✅ | runs on the CPU | not gated | |
 | Per-turn state tokens with eviction (`turn_state`) | IR interpreter | ✅ | ✅ | not gated | |
 | Attention residuals over depth (`llama_attnres`) | IR interpreter | ✅ | ✅ | not gated | |
+| Recurrent ops the document defines (`recurrence`: a paper's new state-space model or linear attention as data) | IR interpreter | ✅ | runs on the CPU | ✅ | |
 
 Every paperkiln family is gated the same way: **greedy replies identical to paperkiln's own
 sampler on 40 frozen prompts**, on each backend, including a trained 70M mixture-of-experts
@@ -120,7 +121,9 @@ How they are checked:
   the F32 file gguf-py dequantises it to, on CPU and CUDA. Gated on paperkiln's pk_base_v1 Q4_K_M and
   Q4_K_S (llama.cpp's own mixes, byte for byte): CUDA replies equal the CPU's 40/40; against the F32
   model 36/40 first tokens and 14/40 whole replies, since 4-bit trades fidelity for size
-  ([`experiments/kquant_2026-10-25/`](experiments/kquant_2026-10-25/)).
+  ([`experiments/kquant_2026-10-25/`](experiments/kquant_2026-10-25/)). Every stored type's values
+  are IR_SPEC 4.7's (ggml b6000's scalar dequantisers), bit for bit on the conformance suite's blocks
+  on the CPU and in WebAssembly, signed zeros and negative scales included.
 - **Serving features.** Server-sent-event streaming, an OpenAI-compatible API, KV prefix reuse
   across turns, speculative decoding, and a hardened public mode. The repetition penalty is
   defined jointly with paperkiln, and replies match mtstudio 40/40 at penalties 1.1 and 1.3 on
@@ -259,6 +262,24 @@ A paper's new elementwise op travels as an `expr` node: a formula in paperkiln's
 (`max(x, 0)^2`, `x * sigmoid(1.702 * x)`, row reductions such as `rowmax`). ember parses it at load
 with paperkiln's own parser and runs it on the CPU and, compiled to a small per-element program, on
 CUDA.
+
+A paper's new recurrent op travels as a `recurrence` node (IR_SPEC 6.10, spec revision 1.1): a state
+of indexed tensors, its initial value, a per-token update and a readout, each a body in `expr`'s
+grammar plus indexed reads (`x[k + 1, c]`, zero outside the shape), index values and an ordered
+`sum(j, ...)`. ember's own parser and evaluator (`graph_ir_recurrence.h`, written from the
+specification text) run it token by token on the CPU: the whole new state from the old, then the
+readout, every primitive rounded in f32 with no fused multiply-add, so prefill equals token-by-token
+decode bit for bit, and snapshots, truncation and rewinds work as for the hand-written recurrent
+ops. Kimi's linear attention, the SSM scan, Mamba-1's convolution and selective scan rewritten as
+recurrences give ember's hand-written ops' logits bit for bit (the selective scan within 1.4e-7).
+A CUDA build serves such a document on its CPU path. A document that breaks the profile's rules is
+refused at load, naming rule 31 to 34.
+
+Every GGUF that carries `paperkiln.ir_sha256` is checked at load: the key must be the digest of the
+embedded document (IR_SPEC 3.10: SHA-256 of its RFC 8785 serialisation without the `_` prose keys,
+`ir_digest.h`, written from the specification text), also when another document is run in its place
+(`EMBER_IR`). The log names the digest of the document run (`[IR] document sha256:...`), so a paper
+can cite exactly what ran. Results: [`experiments/ir_rev11_2026-10-25/`](experiments/ir_rev11_2026-10-25/).
 
 ## Quick start: check a model against paperkiln
 

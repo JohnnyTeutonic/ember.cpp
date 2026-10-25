@@ -1,5 +1,5 @@
 {
- "bin": "/home/jonat/ember_wt/build_cpu/ir_adapter",
+ "bin": "/home/jonat/ember_adapter_39dcce9/build/ir_adapter",
  "hello": {
   "backend": "cpu",
   "engine": "ember.cpp",
@@ -12,15 +12,19 @@
    "truncate",
    "snapshot",
    "restore",
-   "close"
+   "close",
+   "digest",
+   "dequantize",
+   "run_node"
   ],
   "profiles": [
    "core",
    "state",
    "recursion",
-   "thirdparty"
+   "thirdparty",
+   "recurrence"
   ],
-  "version": "ir_adapter 1 (IR versions 0 and 1)"
+  "version": "ir_adapter 2 (IR versions 0 and 1; spec revision 1.1)"
  },
  "checks": {
   "prefill/state4/0": {
@@ -1378,7 +1382,7 @@
   "skip/run_node": {
    "reply": {
     "id": 2365,
-    "skip": "run_node is not implemented by ember's adapter (whole-model methods only)"
+    "skip": "run_node: ember's adapter runs recurrence nodes only (whole-model methods for the other ops)"
    },
    "pass": true
   },
@@ -1403,9 +1407,247 @@
     "IR embedding: token id -1 out of range"
    ],
    "pass": true
+  },
+  "rev11/prefill/pk_recurrence/0": {
+   "positions": 5,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/prefill/pk_recurrence/1": {
+   "positions": 9,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/prefill/pk_recurrence/2": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/truncate/pk_recurrence": {
+   "cut": 6,
+   "len": 12,
+   "pass": true
+  },
+  "rev11/snapshot/pk_recurrence": {
+   "at": 12,
+   "pass": true
+  },
+  "rev11/prefill/pk_kimi_rec/0": {
+   "positions": 5,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/prefill/pk_kimi_rec/1": {
+   "positions": 9,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/prefill/pk_kimi_rec/2": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/truncate/pk_kimi_rec": {
+   "cut": 6,
+   "len": 12,
+   "pass": true
+  },
+  "rev11/snapshot/pk_kimi_rec": {
+   "at": 12,
+   "pass": true
+  },
+  "rev11/rewrite_vs_handwritten/pk_kimi_rec": {
+   "logits_bits": true,
+   "logits_rel": 0.0,
+   "recurrent_bits": true,
+   "recurrent_rel": 0.0,
+   "pass": true
+  },
+  "rev11/prefill/pk_srd_rec/0": {
+   "positions": 5,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/prefill/pk_srd_rec/1": {
+   "positions": 9,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/prefill/pk_srd_rec/2": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/truncate/pk_srd_rec": {
+   "cut": 6,
+   "len": 12,
+   "pass": true
+  },
+  "rev11/snapshot/pk_srd_rec": {
+   "at": 12,
+   "pass": true
+  },
+  "rev11/rewrite_vs_handwritten/pk_srd_rec": {
+   "logits_bits": true,
+   "logits_rel": 0.0,
+   "recurrent_bits": true,
+   "recurrent_rel": 0.0,
+   "pass": true
+  },
+  "rev11/prefill/pk_mamba_rec/0": {
+   "positions": 5,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/prefill/pk_mamba_rec/1": {
+   "positions": 9,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/prefill/pk_mamba_rec/2": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/truncate/pk_mamba_rec": {
+   "cut": 6,
+   "len": 12,
+   "pass": true
+  },
+  "rev11/snapshot/pk_mamba_rec": {
+   "at": 12,
+   "pass": true
+  },
+  "rev11/rewrite_vs_handwritten/pk_mamba_rec": {
+   "logits_bits": true,
+   "logits_rel": 0.0,
+   "recurrent_bits": true,
+   "recurrent_rel": 0.0,
+   "pass": true
+  },
+  "rev11/prefill/tp_mamba1_rec/0": {
+   "positions": 5,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/prefill/tp_mamba1_rec/1": {
+   "positions": 9,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/prefill/tp_mamba1_rec/2": {
+   "positions": 12,
+   "decode_bits": true,
+   "chunks_bits": true,
+   "recurrent_bits": true,
+   "pass": true
+  },
+  "rev11/truncate/tp_mamba1_rec": {
+   "cut": 6,
+   "len": 12,
+   "pass": true
+  },
+  "rev11/snapshot/tp_mamba1_rec": {
+   "at": 12,
+   "pass": true
+  },
+  "rev11/rewrite_vs_handwritten/tp_mamba1_rec": {
+   "logits_bits": false,
+   "logits_rel": 1.4081287782207312e-07,
+   "recurrent_bits": false,
+   "recurrent_rel": 4.6176458410326166e-07,
+   "pass": true
+  },
+  "rev11/init_body/pk_mamba": {
+   "zero_body_equals_plus_zero": true,
+   "b_body_changes_logits": true,
+   "b_body_decode_bits": true,
+   "b_body_after_truncate_0": true,
+   "pass": true
+  },
+  "rev11/rule30": {
+   "key": "829de10cb0c201668212508973195eff89807d739a278cff398e65a18fca84ed",
+   "embedded_digest": "829de10cb0c201668212508973195eff89807d739a278cff398e65a18fca84ed",
+   "wrong_key": "IR_SPEC 3.10: paperkiln.ir_sha256 029de10cb0c201668212508973195eff89807d739a278cff398e65a18fca84ed is not the embedded document's digest 829de10cb0c201668212508973195eff89807d739a278cff398e65a18fca84ed",
+   "wrong_key_with_ir": "IR_SPEC 3.10: paperkiln.ir_sha256 029de10cb0c201668212508973195eff89807d739a278cff398e65a18fca84ed is not the embedded document's digest 829de10cb0c201668212508973195eff89807d739a278cff398e65a18fca84ed",
+   "no_key": true,
+   "int_key": "IR_SPEC 3.10: paperkiln.ir_sha256 is not a string",
+   "pass": true
+  },
+  "rev11/digest_vectors": {
+   "vectors": 74,
+   "equal": 74,
+   "pass": true
+  },
+  "rev11/dequantize_blocks": {
+   "bits_equal": {
+    "F32": true,
+    "F16": true,
+    "Q4_0": true,
+    "Q5_0": true,
+    "Q5_1": true,
+    "Q8_0": true,
+    "Q4_K": true,
+    "Q5_K": true,
+    "Q6_K": true,
+    "BF16": true
+   },
+   "pass": true
+  },
+  "rev11/run_node/ssm_scan_body_bits": {
+   "pass": true
+  },
+  "rev11/run_node/width_rule34": {
+   "reply": {
+    "error": "IR_SPEC 6.10 (rule 34): recurrence input 'u' is 3 wide; its declaration is 4",
+    "id": 2877
+   },
+   "pass": true
+  },
+  "rev11/skip/run_node_grad": {
+   "reply": {
+    "id": 2878,
+    "skip": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+   },
+   "pass": true
+  },
+  "rev11/skip/run_node_other_op": {
+   "reply": {
+    "id": 2879,
+    "skip": "run_node: ember's adapter runs recurrence nodes only (whole-model methods for the other ops)"
+   },
+   "pass": true
   }
  },
- "requests": 2374,
+ "requests": 2879,
  "failures": [],
  "pass": true
 }
