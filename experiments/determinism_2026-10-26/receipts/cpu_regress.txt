@@ -1,0 +1,24 @@
+CPU regression of ember fe01b35 (this work) on WSL, 26 Oct 2026 (cpu_legs.sh -> ../cuda_state_2026-10-25/cpu_regress.sh;
+build ~/det/build_cpu from git archive d74e052 plus this work's files; receipts compared with the committed ones as
+`git show HEAD:<path>` gives them, the build path put back first).
+
+collect pick_cpu rc=0 {"requests": 360, "seconds": 148.7}
+collect sft_cpu rc=0 {"requests": 360, "seconds": 83.2}
+recursion_gate rc=0: recursion_gate_cpu.json byte-identical
+mor_gate rc=0: mor_gate_cpu.json byte-identical
+mor_refusals rc=0: mor_refusals.json byte-identical
+attnres_gate rc=0: attnres_gate_cpu.json byte-identical
+state_tokens_gate rc=0: state_tokens_gate_cpu.json DIFFERS or missing
+state4_gate rc=0: state4_gate_cpu.json byte-identical
+regress_bits rc=1: regress_bits.json DIFFERS or missing
+regress_parity rc=0: regress_parity.json byte-identical
+g5_thirdparty rc=0: g5_thirdparty.json byte-identical
+adapter self-test rc=0: 156/156 checks pass, 2885 requests 
+cpu regression done
+cpu legs done
+
+state_tokens_gate: rerun with d74e052's own CPU build (~/det/build_cpu_head):
+state_tokens_gate: fe01b35 = d74e052 byte for byte
+  (both differ from the committed file in the numpy-reference distances only, the paperkiln-side values)
+regress_bits: its old build ~/ember_69d7ca2/build/ir_logits no longer exists; run with d74e052's ir_logits linked there:
+  fe01b35 vs d74e052: {'gpt2_tiny': True, 'gpt2_tiny_scale_smoke_ir': True, 'recursion_b2x4_0101': True, 'chat_sftfinal_v3': True, 'swa_tiny': True, 'kimi_tiny': True, 'mamba_tiny': True, 'moe_tiny_v3': True, 'attnres_tiny': True, 'attnres_gate_ar3': True, 'state_gate_state4': True, 'recursion_gate_p1_b2x3_c1': True, 'recursion_gate_p1_b2x3_c1_inject': True, 'recursion_gate_b2x4': True, 'mor_gate_mor3': True, 'mor_gate_mor2p0': True}

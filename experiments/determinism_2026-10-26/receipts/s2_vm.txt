@@ -1,0 +1,59 @@
+=== vm Sun Oct 25 02:56:02 PM UTC 2026 new=fe01b35e3e50a049a7f1f5c9a5712d80c3be48b1 head=d74e05279fca6e6b518c3c6b0f3218076081753d ===
+gpu Tesla T4, compute capability 75, building for 75, nproc 2
+--- deps 14:56:04
+--- third-party checkpoints in the background 14:56:17
+--- builds 14:56:17
+built new in 230 s
+built head in 189 s
+--- (a) SASS 15:03:16
+sass: {"arches": ["sm_75"], "head_functions": 78, "new_functions": 80, "identical": 78, "differ": 0, "only_in_head": 0, "only_in_new": 2}
+--- (b) tuned llama path, tinyllama_server 15:03:19
+collect pick_head_a (head, off) rc=0 {"requests": 360, "seconds": 57.9} /health deterministic: None
+collect pick_off_a (new, off) rc=0 {"requests": 360, "seconds": 58.0} /health deterministic: None
+collect pick_on_a (new, on) rc=0 {"requests": 360, "seconds": 58.3} /health deterministic: True
+collect pick_off_b (new, off) rc=0 {"requests": 360, "seconds": 57.8} /health deterministic: None
+collect pick_on_b (new, on) rc=0 {"requests": 360, "seconds": 58.2} /health deterministic: True
+collect sft_head_a (head, off) rc=0 {"requests": 360, "seconds": 34.7} /health deterministic: None
+collect sft_off_a (new, off) rc=0 {"requests": 360, "seconds": 35.0} /health deterministic: None
+collect sft_on_a (new, on) rc=0 {"requests": 360, "seconds": 34.8} /health deterministic: True
+collect sft_on_b (new, on) rc=0 {"requests": 360, "seconds": 35.0} /health deterministic: True
+compare pick_on_a vs pick_on_b rc=0: True {"tinychat": [40, 40, 40, 40, 658, 658, 0.0], "carry5": [320, 320, 320, 320, 3941, 3941, 0.0]}
+compare sft_on_a vs sft_on_b rc=0: True {"tinychat": [40, 40, 40, 40, 647, 647, 0.0], "carry5": [320, 320, 320, 320, 5010, 5010, 0.0]}
+compare pick_off_a vs pick_head_a rc=1: False {"tinychat": [40, 40, 40, 0, 48, 658, 6.67572021484375e-06], "carry5": [320, 320, 147, 0, 189, 3941, 8.58306884765625e-06]}
+compare pick_off_b vs pick_head_a rc=1: False {"tinychat": [40, 40, 40, 0, 41, 658, 7.867813110351562e-06], "carry5": [320, 320, 147, 0, 154, 3941, 8.58306884765625e-06]}
+compare pick_off_a vs pick_off_b rc=1: False {"tinychat": [40, 40, 40, 0, 42, 658, 6.884336471557617e-06], "carry5": [320, 320, 147, 0, 155, 3941, 9.5367431640625e-06]}
+compare sft_off_a vs sft_head_a rc=1: False {"tinychat": [40, 40, 40, 28, 474, 647, 6.67572021484375e-06], "carry5": [320, 320, 271, 244, 4074, 5010, 5.7220458984375e-06]}
+compare pick_on_a vs pick_off_a rc=1: False {"tinychat": [40, 40, 40, 0, 40, 658, 6.67572021484375e-06], "carry5": [320, 320, 147, 0, 147, 3941, 9.059906005859375e-06]}
+compare pick_on_a vs pick_head_a rc=1: False {"tinychat": [40, 40, 40, 0, 40, 658, 7.152557373046875e-06], "carry5": [320, 320, 147, 0, 147, 3941, 9.059906005859375e-06]}
+compare sft_on_a vs sft_off_a rc=1: False {"tinychat": [40, 40, 40, 0, 41, 647, 5.7220458984375e-06], "carry5": [320, 320, 149, 0, 151, 5010, 6.67572021484375e-06]}
+--- (c) cost 15:10:50
+bench pick_off_1 rc=0 {"deterministic": false, "decode_ms_per_token_p50": 1.586, "decode_ms_per_token_mean": 1.611, "decode_ms_per_token_p90": 1.654, "decode_requests": 120, "decode_tokens_mean": 16.85, "prefill_wall_ms_p50": 3.708, "prefill_wall_ms_mean": 3.825, "prefill_ttft_ms_p50": 4.108, "prefill_requests": 80, "prefill_prompt_tokens_mean": 84.475}
+bench pick_on_1 rc=0 {"deterministic": true, "decode_ms_per_token_p50": 1.588, "decode_ms_per_token_mean": 1.611, "decode_ms_per_token_p90": 1.663, "decode_requests": 120, "decode_tokens_mean": 16.85, "prefill_wall_ms_p50": 3.72, "prefill_wall_ms_mean": 3.847, "prefill_ttft_ms_p50": 4.111, "prefill_requests": 80, "prefill_prompt_tokens_mean": 84.475}
+bench pick_off_2 rc=0 {"deterministic": false, "decode_ms_per_token_p50": 1.582, "decode_ms_per_token_mean": 1.594, "decode_ms_per_token_p90": 1.65, "decode_requests": 120, "decode_tokens_mean": 16.85, "prefill_wall_ms_p50": 3.796, "prefill_wall_ms_mean": 4.046, "prefill_ttft_ms_p50": 4.221, "prefill_requests": 80, "prefill_prompt_tokens_mean": 84.475}
+bench pick_on_2 rc=0 {"deterministic": true, "decode_ms_per_token_p50": 1.586, "decode_ms_per_token_mean": 1.606, "decode_ms_per_token_p90": 1.656, "decode_requests": 120, "decode_tokens_mean": 16.85, "prefill_wall_ms_p50": 3.733, "prefill_wall_ms_mean": 3.822, "prefill_ttft_ms_p50": 4.131, "prefill_requests": 80, "prefill_prompt_tokens_mean": 84.475}
+bench sft_off_1 rc=0 {"deterministic": false, "decode_ms_per_token_p50": 0.747, "decode_ms_per_token_mean": 0.751, "decode_ms_per_token_p90": 0.757, "decode_requests": 120, "decode_tokens_mean": 16.175, "prefill_wall_ms_p50": 1.772, "prefill_wall_ms_mean": 1.807, "prefill_ttft_ms_p50": 2.002, "prefill_requests": 80, "prefill_prompt_tokens_mean": 88.175}
+bench sft_on_1 rc=0 {"deterministic": true, "decode_ms_per_token_p50": 0.746, "decode_ms_per_token_mean": 0.759, "decode_ms_per_token_p90": 0.799, "decode_requests": 120, "decode_tokens_mean": 16.175, "prefill_wall_ms_p50": 1.8, "prefill_wall_ms_mean": 1.835, "prefill_ttft_ms_p50": 2.025, "prefill_requests": 80, "prefill_prompt_tokens_mean": 88.175}
+--- (d) interpreter: ir_device_dump head, new off, new on twice 15:11:18
+dump ar_x5 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=39680
+dump ar_x5_q8_0 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=39680
+dump state4 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=3077120
+dump state4_q8_0 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=3077120
+dump mor3 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=39680
+dump mor3_q8_0 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=39680
+dump mor2p0 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=39680
+dump ar3 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=39680
+dump rec_p1_b2x3_c1 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=39680
+dump rec_p1_b2x3_c1_inject head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=39680
+dump rec_b2x4 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=39680
+dump syn_mistral_swa head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=3937280
+dump syn_gptneox head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=3937280
+dump syn_gpt2 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=3937280
+dump syn_mamba head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=3937280
+dump syn_gemma3 head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=3937280
+dump syn_gemma3_freq_scale head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=3937280
+dump syn_gemma3_weight_offset head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=3937280
+dump gpt2_tiny head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=62919680
+packed out1 32M
+third-party fetch: Fetching 8 files:   0%|          | 0/8 [00:00<?, ?it/s]Fetching 8 files:  12%|█▎        | 1/8 [00:00<00:00,  7.02it/s]Fetching 8 files:  50%|█████     | 4/8 [00:07<00:07,  1.89s/it]Fetching 8 files: 100%|██████████| 8/8 [00:07<00:00,  1.13it/s] downloads done 
+dump qwen3_06b head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=1166873600
+dump pythia_160m head_vs_off=identical on_a_vs_on_b=identical off_vs_on=identical bytes=386339840

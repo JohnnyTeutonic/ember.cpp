@@ -1,0 +1,50 @@
+{
+ "a": "/content/plain/pick_on_a",
+ "b": "/content/plain/pick_on_b",
+ "a_bin": "/content/b_new/tinyllama_server",
+ "b_bin": "/content/b_new/tinyllama_server",
+ "gguf": "/content/big/pick_L16.gguf",
+ "gpu_layers": [
+  "-1",
+  "-1"
+ ],
+ "sets": {
+  "tinychat": {
+   "n": 40,
+   "replies_identical": 40,
+   "ids_identical": 40,
+   "prompt_ids_identical": 40,
+   "all_positions_logits_bit_equal": 40,
+   "positions": 658,
+   "first_token_logits_bit_equal": 40,
+   "first_token_logits_worst_abs": 0.0,
+   "divergent": [],
+   "every_position": {
+    "rows": 658,
+    "bit_equal_rows": 658,
+    "worst_abs": 0.0,
+    "worst_rel_to_range": 0.0,
+    "top1_agree": "658/658"
+   }
+  },
+  "carry5": {
+   "n": 320,
+   "replies_identical": 320,
+   "ids_identical": 320,
+   "prompt_ids_identical": 320,
+   "all_positions_logits_bit_equal": 320,
+   "positions": 3941,
+   "first_token_logits_bit_equal": 320,
+   "first_token_logits_worst_abs": 0.0,
+   "divergent": [],
+   "every_position": {
+    "rows": 3941,
+    "bit_equal_rows": 3941,
+    "worst_abs": 0.0,
+    "worst_rel_to_range": 0.0,
+    "top1_agree": "3941/3941"
+   }
+  }
+ },
+ "bit_identical": true
+}

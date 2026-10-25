@@ -1,0 +1,21 @@
+{
+ "head": "/home/jonat/det/sass_head.txt",
+ "new": "/home/jonat/det/sass_new.txt",
+ "arches": [
+  "sm_89"
+ ],
+ "head_functions": 78,
+ "new_functions": 80,
+ "identical": 78,
+ "differ": 0,
+ "only_in_head": 0,
+ "only_in_new": 2,
+ "differing": [],
+ "only_in_head_names": [],
+ "only_in_new_names": [
+  "sm_89 _Z30attention_optimized_det_kernelPKfS0_S0_PfiifiiPKi",
+  "sm_89 _Z28rmsnorm_optimized_det_kernelPKfS0_Pfif"
+ ],
+ "head_instructions": 11608,
+ "every_head_kernel_identical": true
+}

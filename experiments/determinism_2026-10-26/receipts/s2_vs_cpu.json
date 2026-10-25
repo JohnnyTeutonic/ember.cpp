@@ -1,0 +1,254 @@
+{
+ "pick_head_a": {
+  "equal": 360,
+  "n": 360,
+  "tinychat_equal": 40,
+  "carry5_equal": 320,
+  "carry5_same_prompt_differs": 0,
+  "first_divergences": []
+ },
+ "pick_off_a": {
+  "equal": 360,
+  "n": 360,
+  "tinychat_equal": 40,
+  "carry5_equal": 320,
+  "carry5_same_prompt_differs": 0,
+  "first_divergences": []
+ },
+ "pick_off_b": {
+  "equal": 360,
+  "n": 360,
+  "tinychat_equal": 40,
+  "carry5_equal": 320,
+  "carry5_same_prompt_differs": 0,
+  "first_divergences": []
+ },
+ "pick_on_a": {
+  "equal": 360,
+  "n": 360,
+  "tinychat_equal": 40,
+  "carry5_equal": 320,
+  "carry5_same_prompt_differs": 0,
+  "first_divergences": []
+ },
+ "pick_on_b": {
+  "equal": 360,
+  "n": 360,
+  "tinychat_equal": 40,
+  "carry5_equal": 320,
+  "carry5_same_prompt_differs": 0,
+  "first_divergences": []
+ },
+ "sft_head_a": {
+  "equal": 348,
+  "n": 360,
+  "tinychat_equal": 39,
+  "carry5_equal": 309,
+  "carry5_same_prompt_differs": 4,
+  "first_divergences": [
+   {
+    "key": "tinychat:22",
+    "position": 13,
+    "cpu": "It can be really frustrating when things do not go as we exp",
+    "cuda": "It can be really frustrating when things do not go as we exp"
+   },
+   {
+    "key": "carry5_v1:recall:0209|gold",
+    "position": 3,
+    "cpu": "I have not seen anyone yet, but I am curious about it.",
+    "cuda": "I have not been sure yet, but I am curious about it."
+   },
+   {
+    "key": "carry5_v1:correction:0193|self|2",
+    "position": 7,
+    "cpu": "Yes, it is interesting how our minds can change our mood so ",
+    "cuda": "Yes, it is interesting how our feelings can change so quickl"
+   },
+   {
+    "key": "carry5_v1:instruction:0055|self|3",
+    "position": 7,
+    "cpu": "It is interesting how our minds can react in unexpected ways",
+    "cuda": "It is interesting how our minds can change our thoughts abou"
+   },
+   {
+    "key": "carry5_v1:instruction:0133|self|3",
+    "position": 10,
+    "cpu": "It is wonderful to have a lovely place to enjoy the fresh ai",
+    "cuda": "It is wonderful to have a lovely place to enjoy nature and f"
+   }
+  ],
+  "differing_keys": [
+   "tinychat:22",
+   "carry5_v1:recall:0209|gold",
+   "carry5_v1:correction:0193|self|2",
+   "carry5_v1:correction:0193|self|3",
+   "carry5_v1:correction:0193|self|4",
+   "carry5_v1:correction:0193|self|5",
+   "carry5_v1:instruction:0055|self|3",
+   "carry5_v1:instruction:0055|self|4",
+   "carry5_v1:instruction:0055|self|5",
+   "carry5_v1:instruction:0133|self|3",
+   "carry5_v1:instruction:0133|self|4",
+   "carry5_v1:instruction:0133|self|5"
+  ]
+ },
+ "sft_off_a": {
+  "equal": 348,
+  "n": 360,
+  "tinychat_equal": 39,
+  "carry5_equal": 309,
+  "carry5_same_prompt_differs": 4,
+  "first_divergences": [
+   {
+    "key": "tinychat:22",
+    "position": 13,
+    "cpu": "It can be really frustrating when things do not go as we exp",
+    "cuda": "It can be really frustrating when things do not go as we exp"
+   },
+   {
+    "key": "carry5_v1:recall:0209|gold",
+    "position": 3,
+    "cpu": "I have not seen anyone yet, but I am curious about it.",
+    "cuda": "I have not been sure yet, but I am curious about it."
+   },
+   {
+    "key": "carry5_v1:correction:0193|self|2",
+    "position": 7,
+    "cpu": "Yes, it is interesting how our minds can change our mood so ",
+    "cuda": "Yes, it is interesting how our feelings can change so quickl"
+   },
+   {
+    "key": "carry5_v1:instruction:0055|self|3",
+    "position": 7,
+    "cpu": "It is interesting how our minds can react in unexpected ways",
+    "cuda": "It is interesting how our minds can change our thoughts abou"
+   },
+   {
+    "key": "carry5_v1:instruction:0133|self|3",
+    "position": 10,
+    "cpu": "It is wonderful to have a lovely place to enjoy the fresh ai",
+    "cuda": "It is wonderful to have a lovely place to enjoy nature and f"
+   }
+  ],
+  "differing_keys": [
+   "tinychat:22",
+   "carry5_v1:recall:0209|gold",
+   "carry5_v1:correction:0193|self|2",
+   "carry5_v1:correction:0193|self|3",
+   "carry5_v1:correction:0193|self|4",
+   "carry5_v1:correction:0193|self|5",
+   "carry5_v1:instruction:0055|self|3",
+   "carry5_v1:instruction:0055|self|4",
+   "carry5_v1:instruction:0055|self|5",
+   "carry5_v1:instruction:0133|self|3",
+   "carry5_v1:instruction:0133|self|4",
+   "carry5_v1:instruction:0133|self|5"
+  ]
+ },
+ "sft_on_a": {
+  "equal": 348,
+  "n": 360,
+  "tinychat_equal": 39,
+  "carry5_equal": 309,
+  "carry5_same_prompt_differs": 4,
+  "first_divergences": [
+   {
+    "key": "tinychat:22",
+    "position": 13,
+    "cpu": "It can be really frustrating when things do not go as we exp",
+    "cuda": "It can be really frustrating when things do not go as we exp"
+   },
+   {
+    "key": "carry5_v1:recall:0209|gold",
+    "position": 3,
+    "cpu": "I have not seen anyone yet, but I am curious about it.",
+    "cuda": "I have not been sure yet, but I am curious about it."
+   },
+   {
+    "key": "carry5_v1:correction:0193|self|2",
+    "position": 7,
+    "cpu": "Yes, it is interesting how our minds can change our mood so ",
+    "cuda": "Yes, it is interesting how our feelings can change so quickl"
+   },
+   {
+    "key": "carry5_v1:instruction:0055|self|3",
+    "position": 7,
+    "cpu": "It is interesting how our minds can react in unexpected ways",
+    "cuda": "It is interesting how our minds can change our thoughts abou"
+   },
+   {
+    "key": "carry5_v1:instruction:0133|self|3",
+    "position": 10,
+    "cpu": "It is wonderful to have a lovely place to enjoy the fresh ai",
+    "cuda": "It is wonderful to have a lovely place to enjoy nature and f"
+   }
+  ],
+  "differing_keys": [
+   "tinychat:22",
+   "carry5_v1:recall:0209|gold",
+   "carry5_v1:correction:0193|self|2",
+   "carry5_v1:correction:0193|self|3",
+   "carry5_v1:correction:0193|self|4",
+   "carry5_v1:correction:0193|self|5",
+   "carry5_v1:instruction:0055|self|3",
+   "carry5_v1:instruction:0055|self|4",
+   "carry5_v1:instruction:0055|self|5",
+   "carry5_v1:instruction:0133|self|3",
+   "carry5_v1:instruction:0133|self|4",
+   "carry5_v1:instruction:0133|self|5"
+  ]
+ },
+ "sft_on_b": {
+  "equal": 348,
+  "n": 360,
+  "tinychat_equal": 39,
+  "carry5_equal": 309,
+  "carry5_same_prompt_differs": 4,
+  "first_divergences": [
+   {
+    "key": "tinychat:22",
+    "position": 13,
+    "cpu": "It can be really frustrating when things do not go as we exp",
+    "cuda": "It can be really frustrating when things do not go as we exp"
+   },
+   {
+    "key": "carry5_v1:recall:0209|gold",
+    "position": 3,
+    "cpu": "I have not seen anyone yet, but I am curious about it.",
+    "cuda": "I have not been sure yet, but I am curious about it."
+   },
+   {
+    "key": "carry5_v1:correction:0193|self|2",
+    "position": 7,
+    "cpu": "Yes, it is interesting how our minds can change our mood so ",
+    "cuda": "Yes, it is interesting how our feelings can change so quickl"
+   },
+   {
+    "key": "carry5_v1:instruction:0055|self|3",
+    "position": 7,
+    "cpu": "It is interesting how our minds can react in unexpected ways",
+    "cuda": "It is interesting how our minds can change our thoughts abou"
+   },
+   {
+    "key": "carry5_v1:instruction:0133|self|3",
+    "position": 10,
+    "cpu": "It is wonderful to have a lovely place to enjoy the fresh ai",
+    "cuda": "It is wonderful to have a lovely place to enjoy nature and f"
+   }
+  ],
+  "differing_keys": [
+   "tinychat:22",
+   "carry5_v1:recall:0209|gold",
+   "carry5_v1:correction:0193|self|2",
+   "carry5_v1:correction:0193|self|3",
+   "carry5_v1:correction:0193|self|4",
+   "carry5_v1:correction:0193|self|5",
+   "carry5_v1:instruction:0055|self|3",
+   "carry5_v1:instruction:0055|self|4",
+   "carry5_v1:instruction:0055|self|5",
+   "carry5_v1:instruction:0133|self|3",
+   "carry5_v1:instruction:0133|self|4",
+   "carry5_v1:instruction:0133|self|5"
+  ]
+ }
+}

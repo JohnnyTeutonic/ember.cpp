@@ -1,0 +1,965 @@
+{
+ "vm_out": "/mnt/c/ml_artifacts/ember_determinism/ember-det2-1026-t4/out",
+ "cpu_work": "/home/jonat/det/cpu",
+ "gpu": "Tesla T4 75 75",
+ "builds": [
+  [
+   "4c6058a4f33bbb1f26716ecb67e667b37f041b28a92f61275ad6c0063295d941",
+   "/content/b_head/tinyllama_server"
+  ],
+  [
+   "001c8a1c18bdb6821dc70eab9ed56679b83a1088afbc59f81703de6b110131b5",
+   "/content/b_new/tinyllama_server"
+  ],
+  [
+   "a4ddccbe287b5347a51e0ded048ec8d97771d11af39926ed9456592a43feba03",
+   "/content/b_head/ir_device_dump"
+  ],
+  [
+   "ccda7a64951aabc8c960446495f20e0a577e0e606b38614ae251614893a65874",
+   "/content/b_new/ir_device_dump"
+  ]
+ ],
+ "sass": {
+  "arches": [
+   "sm_75"
+  ],
+  "head_functions": 78,
+  "new_functions": 80,
+  "identical": 78,
+  "differ": 0,
+  "only_in_head": 0,
+  "only_in_new": 2,
+  "differing": [],
+  "only_in_head_names": [],
+  "only_in_new_names": [
+   "sm_75 _Z30attention_optimized_det_kernelPKfS0_S0_PfiifiiPKi",
+   "sm_75 _Z28rmsnorm_optimized_det_kernelPKfS0_Pfif"
+  ],
+  "every_head_kernel_identical": true
+ },
+ "plain": {
+  "pick_off_a_vs_pick_head_a": {
+   "bit_identical": false,
+   "tinychat": {
+    "n": 40,
+    "replies_identical": 40,
+    "ids_identical": 40,
+    "prompt_ids_identical": 40,
+    "first_token_logits_bit_equal": 40,
+    "first_token_logits_worst_abs": 0.0,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 658,
+    "positions_bit_equal": 48,
+    "positions_worst_abs": 6.67572021484375e-06,
+    "positions_top1": "658/658"
+   },
+   "carry5": {
+    "n": 320,
+    "replies_identical": 320,
+    "ids_identical": 320,
+    "prompt_ids_identical": 320,
+    "first_token_logits_bit_equal": 147,
+    "first_token_logits_worst_abs": 7.748603820800781e-06,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 3941,
+    "positions_bit_equal": 189,
+    "positions_worst_abs": 8.58306884765625e-06,
+    "positions_top1": "3941/3941"
+   },
+   "total": {
+    "requests": 360,
+    "replies_identical": 360,
+    "ids_identical": 360,
+    "first_token_logits_bit_equal": 187,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 4599,
+    "positions_bit_equal": 237,
+    "worst_abs": 8.58306884765625e-06
+   }
+  },
+  "pick_off_a_vs_pick_off_b": {
+   "bit_identical": false,
+   "tinychat": {
+    "n": 40,
+    "replies_identical": 40,
+    "ids_identical": 40,
+    "prompt_ids_identical": 40,
+    "first_token_logits_bit_equal": 40,
+    "first_token_logits_worst_abs": 0.0,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 658,
+    "positions_bit_equal": 42,
+    "positions_worst_abs": 6.884336471557617e-06,
+    "positions_top1": "658/658"
+   },
+   "carry5": {
+    "n": 320,
+    "replies_identical": 320,
+    "ids_identical": 320,
+    "prompt_ids_identical": 320,
+    "first_token_logits_bit_equal": 147,
+    "first_token_logits_worst_abs": 7.62939453125e-06,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 3941,
+    "positions_bit_equal": 155,
+    "positions_worst_abs": 9.5367431640625e-06,
+    "positions_top1": "3941/3941"
+   },
+   "total": {
+    "requests": 360,
+    "replies_identical": 360,
+    "ids_identical": 360,
+    "first_token_logits_bit_equal": 187,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 4599,
+    "positions_bit_equal": 197,
+    "worst_abs": 9.5367431640625e-06
+   }
+  },
+  "pick_off_b_vs_pick_head_a": {
+   "bit_identical": false,
+   "tinychat": {
+    "n": 40,
+    "replies_identical": 40,
+    "ids_identical": 40,
+    "prompt_ids_identical": 40,
+    "first_token_logits_bit_equal": 40,
+    "first_token_logits_worst_abs": 0.0,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 658,
+    "positions_bit_equal": 41,
+    "positions_worst_abs": 7.867813110351562e-06,
+    "positions_top1": "658/658"
+   },
+   "carry5": {
+    "n": 320,
+    "replies_identical": 320,
+    "ids_identical": 320,
+    "prompt_ids_identical": 320,
+    "first_token_logits_bit_equal": 147,
+    "first_token_logits_worst_abs": 8.106231689453125e-06,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 3941,
+    "positions_bit_equal": 154,
+    "positions_worst_abs": 8.58306884765625e-06,
+    "positions_top1": "3941/3941"
+   },
+   "total": {
+    "requests": 360,
+    "replies_identical": 360,
+    "ids_identical": 360,
+    "first_token_logits_bit_equal": 187,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 4599,
+    "positions_bit_equal": 195,
+    "worst_abs": 8.58306884765625e-06
+   }
+  },
+  "pick_on_a_vs_pick_head_a": {
+   "bit_identical": false,
+   "tinychat": {
+    "n": 40,
+    "replies_identical": 40,
+    "ids_identical": 40,
+    "prompt_ids_identical": 40,
+    "first_token_logits_bit_equal": 40,
+    "first_token_logits_worst_abs": 0.0,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 658,
+    "positions_bit_equal": 40,
+    "positions_worst_abs": 7.152557373046875e-06,
+    "positions_top1": "658/658"
+   },
+   "carry5": {
+    "n": 320,
+    "replies_identical": 320,
+    "ids_identical": 320,
+    "prompt_ids_identical": 320,
+    "first_token_logits_bit_equal": 147,
+    "first_token_logits_worst_abs": 8.58306884765625e-06,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 3941,
+    "positions_bit_equal": 147,
+    "positions_worst_abs": 9.059906005859375e-06,
+    "positions_top1": "3941/3941"
+   },
+   "total": {
+    "requests": 360,
+    "replies_identical": 360,
+    "ids_identical": 360,
+    "first_token_logits_bit_equal": 187,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 4599,
+    "positions_bit_equal": 187,
+    "worst_abs": 9.059906005859375e-06
+   }
+  },
+  "pick_on_a_vs_pick_off_a": {
+   "bit_identical": false,
+   "tinychat": {
+    "n": 40,
+    "replies_identical": 40,
+    "ids_identical": 40,
+    "prompt_ids_identical": 40,
+    "first_token_logits_bit_equal": 40,
+    "first_token_logits_worst_abs": 0.0,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 658,
+    "positions_bit_equal": 40,
+    "positions_worst_abs": 6.67572021484375e-06,
+    "positions_top1": "658/658"
+   },
+   "carry5": {
+    "n": 320,
+    "replies_identical": 320,
+    "ids_identical": 320,
+    "prompt_ids_identical": 320,
+    "first_token_logits_bit_equal": 147,
+    "first_token_logits_worst_abs": 8.58306884765625e-06,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 3941,
+    "positions_bit_equal": 147,
+    "positions_worst_abs": 9.059906005859375e-06,
+    "positions_top1": "3941/3941"
+   },
+   "total": {
+    "requests": 360,
+    "replies_identical": 360,
+    "ids_identical": 360,
+    "first_token_logits_bit_equal": 187,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 4599,
+    "positions_bit_equal": 187,
+    "worst_abs": 9.059906005859375e-06
+   }
+  },
+  "pick_on_a_vs_pick_on_b": {
+   "bit_identical": true,
+   "tinychat": {
+    "n": 40,
+    "replies_identical": 40,
+    "ids_identical": 40,
+    "prompt_ids_identical": 40,
+    "first_token_logits_bit_equal": 40,
+    "first_token_logits_worst_abs": 0.0,
+    "requests_all_positions_bit_equal": 40,
+    "positions": 658,
+    "positions_bit_equal": 658,
+    "positions_worst_abs": 0.0,
+    "positions_top1": "658/658"
+   },
+   "carry5": {
+    "n": 320,
+    "replies_identical": 320,
+    "ids_identical": 320,
+    "prompt_ids_identical": 320,
+    "first_token_logits_bit_equal": 320,
+    "first_token_logits_worst_abs": 0.0,
+    "requests_all_positions_bit_equal": 320,
+    "positions": 3941,
+    "positions_bit_equal": 3941,
+    "positions_worst_abs": 0.0,
+    "positions_top1": "3941/3941"
+   },
+   "total": {
+    "requests": 360,
+    "replies_identical": 360,
+    "ids_identical": 360,
+    "first_token_logits_bit_equal": 360,
+    "requests_all_positions_bit_equal": 360,
+    "positions": 4599,
+    "positions_bit_equal": 4599,
+    "worst_abs": 0.0
+   }
+  },
+  "sft_off_a_vs_sft_head_a": {
+   "bit_identical": false,
+   "tinychat": {
+    "n": 40,
+    "replies_identical": 40,
+    "ids_identical": 40,
+    "prompt_ids_identical": 40,
+    "first_token_logits_bit_equal": 40,
+    "first_token_logits_worst_abs": 0.0,
+    "requests_all_positions_bit_equal": 28,
+    "positions": 647,
+    "positions_bit_equal": 474,
+    "positions_worst_abs": 6.67572021484375e-06,
+    "positions_top1": "647/647"
+   },
+   "carry5": {
+    "n": 320,
+    "replies_identical": 320,
+    "ids_identical": 320,
+    "prompt_ids_identical": 320,
+    "first_token_logits_bit_equal": 271,
+    "first_token_logits_worst_abs": 4.76837158203125e-06,
+    "requests_all_positions_bit_equal": 244,
+    "positions": 5010,
+    "positions_bit_equal": 4074,
+    "positions_worst_abs": 5.7220458984375e-06,
+    "positions_top1": "5010/5010"
+   },
+   "total": {
+    "requests": 360,
+    "replies_identical": 360,
+    "ids_identical": 360,
+    "first_token_logits_bit_equal": 311,
+    "requests_all_positions_bit_equal": 272,
+    "positions": 5657,
+    "positions_bit_equal": 4548,
+    "worst_abs": 6.67572021484375e-06
+   }
+  },
+  "sft_on_a_vs_sft_off_a": {
+   "bit_identical": false,
+   "tinychat": {
+    "n": 40,
+    "replies_identical": 40,
+    "ids_identical": 40,
+    "prompt_ids_identical": 40,
+    "first_token_logits_bit_equal": 40,
+    "first_token_logits_worst_abs": 0.0,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 647,
+    "positions_bit_equal": 41,
+    "positions_worst_abs": 5.7220458984375e-06,
+    "positions_top1": "647/647"
+   },
+   "carry5": {
+    "n": 320,
+    "replies_identical": 320,
+    "ids_identical": 320,
+    "prompt_ids_identical": 320,
+    "first_token_logits_bit_equal": 149,
+    "first_token_logits_worst_abs": 5.297362804412842e-06,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 5010,
+    "positions_bit_equal": 151,
+    "positions_worst_abs": 6.67572021484375e-06,
+    "positions_top1": "5010/5010"
+   },
+   "total": {
+    "requests": 360,
+    "replies_identical": 360,
+    "ids_identical": 360,
+    "first_token_logits_bit_equal": 189,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 5657,
+    "positions_bit_equal": 192,
+    "worst_abs": 6.67572021484375e-06
+   }
+  },
+  "sft_on_a_vs_sft_on_b": {
+   "bit_identical": true,
+   "tinychat": {
+    "n": 40,
+    "replies_identical": 40,
+    "ids_identical": 40,
+    "prompt_ids_identical": 40,
+    "first_token_logits_bit_equal": 40,
+    "first_token_logits_worst_abs": 0.0,
+    "requests_all_positions_bit_equal": 40,
+    "positions": 647,
+    "positions_bit_equal": 647,
+    "positions_worst_abs": 0.0,
+    "positions_top1": "647/647"
+   },
+   "carry5": {
+    "n": 320,
+    "replies_identical": 320,
+    "ids_identical": 320,
+    "prompt_ids_identical": 320,
+    "first_token_logits_bit_equal": 320,
+    "first_token_logits_worst_abs": 0.0,
+    "requests_all_positions_bit_equal": 320,
+    "positions": 5010,
+    "positions_bit_equal": 5010,
+    "positions_worst_abs": 0.0,
+    "positions_top1": "5010/5010"
+   },
+   "total": {
+    "requests": 360,
+    "replies_identical": 360,
+    "ids_identical": 360,
+    "first_token_logits_bit_equal": 360,
+    "requests_all_positions_bit_equal": 360,
+    "positions": 5657,
+    "positions_bit_equal": 5657,
+    "worst_abs": 0.0
+   }
+  }
+ },
+ "health": {
+  "pick_head_a": null,
+  "pick_off_a": null,
+  "pick_off_b": null,
+  "pick_on_a": true,
+  "pick_on_b": true,
+  "sft_head_a": null,
+  "sft_off_a": null,
+  "sft_on_a": true,
+  "sft_on_b": true
+ },
+ "on_vs_cpu": {
+  "pick": {
+   "bit_identical": false,
+   "tinychat": {
+    "n": 40,
+    "replies_identical": 40,
+    "ids_identical": 40,
+    "prompt_ids_identical": 40,
+    "first_token_logits_bit_equal": 0,
+    "first_token_logits_worst_abs": 6.340444087982178e-06,
+    "requests_all_positions_bit_equal": 0,
+    "positions": null,
+    "positions_bit_equal": null,
+    "positions_worst_abs": null,
+    "positions_top1": null
+   },
+   "carry5": {
+    "n": 320,
+    "replies_identical": 320,
+    "ids_identical": 320,
+    "prompt_ids_identical": 320,
+    "first_token_logits_bit_equal": 0,
+    "first_token_logits_worst_abs": 1.0013580322265625e-05,
+    "requests_all_positions_bit_equal": 0,
+    "positions": null,
+    "positions_bit_equal": null,
+    "positions_worst_abs": null,
+    "positions_top1": null
+   },
+   "total": {
+    "requests": 360,
+    "replies_identical": 360,
+    "ids_identical": 360,
+    "first_token_logits_bit_equal": 0,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 0,
+    "positions_bit_equal": 0,
+    "worst_abs": 0.0
+   },
+   "on_b_replies_and_ids_equal_cpu": 360
+  },
+  "sft": {
+   "bit_identical": false,
+   "tinychat": {
+    "n": 40,
+    "replies_identical": 39,
+    "ids_identical": 39,
+    "prompt_ids_identical": 40,
+    "first_token_logits_bit_equal": 0,
+    "first_token_logits_worst_abs": 6.318092346191406e-06,
+    "requests_all_positions_bit_equal": 0,
+    "positions": null,
+    "positions_bit_equal": null,
+    "positions_worst_abs": null,
+    "positions_top1": null
+   },
+   "carry5": {
+    "n": 320,
+    "replies_identical": 309,
+    "ids_identical": 309,
+    "prompt_ids_identical": 313,
+    "first_token_logits_bit_equal": 0,
+    "first_token_logits_worst_abs": 4.033789157867432,
+    "requests_all_positions_bit_equal": 0,
+    "positions": null,
+    "positions_bit_equal": null,
+    "positions_worst_abs": null,
+    "positions_top1": null
+   },
+   "total": {
+    "requests": 360,
+    "replies_identical": 348,
+    "ids_identical": 348,
+    "first_token_logits_bit_equal": 0,
+    "requests_all_positions_bit_equal": 0,
+    "positions": 0,
+    "positions_bit_equal": 0,
+    "worst_abs": 0.0
+   },
+   "on_b_replies_and_ids_equal_cpu": 348
+  }
+ },
+ "replies_vs_cpu": {
+  "pick_head_a": {
+   "equal": 360,
+   "n": 360,
+   "tinychat_equal": 40,
+   "carry5_equal": 320,
+   "carry5_same_prompt_differs": 0,
+   "first_divergences": []
+  },
+  "pick_off_a": {
+   "equal": 360,
+   "n": 360,
+   "tinychat_equal": 40,
+   "carry5_equal": 320,
+   "carry5_same_prompt_differs": 0,
+   "first_divergences": []
+  },
+  "pick_off_b": {
+   "equal": 360,
+   "n": 360,
+   "tinychat_equal": 40,
+   "carry5_equal": 320,
+   "carry5_same_prompt_differs": 0,
+   "first_divergences": []
+  },
+  "pick_on_a": {
+   "equal": 360,
+   "n": 360,
+   "tinychat_equal": 40,
+   "carry5_equal": 320,
+   "carry5_same_prompt_differs": 0,
+   "first_divergences": []
+  },
+  "pick_on_b": {
+   "equal": 360,
+   "n": 360,
+   "tinychat_equal": 40,
+   "carry5_equal": 320,
+   "carry5_same_prompt_differs": 0,
+   "first_divergences": []
+  },
+  "sft_head_a": {
+   "equal": 348,
+   "n": 360,
+   "tinychat_equal": 39,
+   "carry5_equal": 309,
+   "carry5_same_prompt_differs": 4,
+   "first_divergences": [
+    {
+     "key": "tinychat:22",
+     "position": 13,
+     "cpu": "It can be really frustrating when things do not go as we exp",
+     "cuda": "It can be really frustrating when things do not go as we exp"
+    },
+    {
+     "key": "carry5_v1:recall:0209|gold",
+     "position": 3,
+     "cpu": "I have not seen anyone yet, but I am curious about it.",
+     "cuda": "I have not been sure yet, but I am curious about it."
+    },
+    {
+     "key": "carry5_v1:correction:0193|self|2",
+     "position": 7,
+     "cpu": "Yes, it is interesting how our minds can change our mood so ",
+     "cuda": "Yes, it is interesting how our feelings can change so quickl"
+    },
+    {
+     "key": "carry5_v1:instruction:0055|self|3",
+     "position": 7,
+     "cpu": "It is interesting how our minds can react in unexpected ways",
+     "cuda": "It is interesting how our minds can change our thoughts abou"
+    },
+    {
+     "key": "carry5_v1:instruction:0133|self|3",
+     "position": 10,
+     "cpu": "It is wonderful to have a lovely place to enjoy the fresh ai",
+     "cuda": "It is wonderful to have a lovely place to enjoy nature and f"
+    }
+   ],
+   "differing_keys": [
+    "tinychat:22",
+    "carry5_v1:recall:0209|gold",
+    "carry5_v1:correction:0193|self|2",
+    "carry5_v1:correction:0193|self|3",
+    "carry5_v1:correction:0193|self|4",
+    "carry5_v1:correction:0193|self|5",
+    "carry5_v1:instruction:0055|self|3",
+    "carry5_v1:instruction:0055|self|4",
+    "carry5_v1:instruction:0055|self|5",
+    "carry5_v1:instruction:0133|self|3",
+    "carry5_v1:instruction:0133|self|4",
+    "carry5_v1:instruction:0133|self|5"
+   ]
+  },
+  "sft_off_a": {
+   "equal": 348,
+   "n": 360,
+   "tinychat_equal": 39,
+   "carry5_equal": 309,
+   "carry5_same_prompt_differs": 4,
+   "first_divergences": [
+    {
+     "key": "tinychat:22",
+     "position": 13,
+     "cpu": "It can be really frustrating when things do not go as we exp",
+     "cuda": "It can be really frustrating when things do not go as we exp"
+    },
+    {
+     "key": "carry5_v1:recall:0209|gold",
+     "position": 3,
+     "cpu": "I have not seen anyone yet, but I am curious about it.",
+     "cuda": "I have not been sure yet, but I am curious about it."
+    },
+    {
+     "key": "carry5_v1:correction:0193|self|2",
+     "position": 7,
+     "cpu": "Yes, it is interesting how our minds can change our mood so ",
+     "cuda": "Yes, it is interesting how our feelings can change so quickl"
+    },
+    {
+     "key": "carry5_v1:instruction:0055|self|3",
+     "position": 7,
+     "cpu": "It is interesting how our minds can react in unexpected ways",
+     "cuda": "It is interesting how our minds can change our thoughts abou"
+    },
+    {
+     "key": "carry5_v1:instruction:0133|self|3",
+     "position": 10,
+     "cpu": "It is wonderful to have a lovely place to enjoy the fresh ai",
+     "cuda": "It is wonderful to have a lovely place to enjoy nature and f"
+    }
+   ],
+   "differing_keys": [
+    "tinychat:22",
+    "carry5_v1:recall:0209|gold",
+    "carry5_v1:correction:0193|self|2",
+    "carry5_v1:correction:0193|self|3",
+    "carry5_v1:correction:0193|self|4",
+    "carry5_v1:correction:0193|self|5",
+    "carry5_v1:instruction:0055|self|3",
+    "carry5_v1:instruction:0055|self|4",
+    "carry5_v1:instruction:0055|self|5",
+    "carry5_v1:instruction:0133|self|3",
+    "carry5_v1:instruction:0133|self|4",
+    "carry5_v1:instruction:0133|self|5"
+   ]
+  },
+  "sft_on_a": {
+   "equal": 348,
+   "n": 360,
+   "tinychat_equal": 39,
+   "carry5_equal": 309,
+   "carry5_same_prompt_differs": 4,
+   "first_divergences": [
+    {
+     "key": "tinychat:22",
+     "position": 13,
+     "cpu": "It can be really frustrating when things do not go as we exp",
+     "cuda": "It can be really frustrating when things do not go as we exp"
+    },
+    {
+     "key": "carry5_v1:recall:0209|gold",
+     "position": 3,
+     "cpu": "I have not seen anyone yet, but I am curious about it.",
+     "cuda": "I have not been sure yet, but I am curious about it."
+    },
+    {
+     "key": "carry5_v1:correction:0193|self|2",
+     "position": 7,
+     "cpu": "Yes, it is interesting how our minds can change our mood so ",
+     "cuda": "Yes, it is interesting how our feelings can change so quickl"
+    },
+    {
+     "key": "carry5_v1:instruction:0055|self|3",
+     "position": 7,
+     "cpu": "It is interesting how our minds can react in unexpected ways",
+     "cuda": "It is interesting how our minds can change our thoughts abou"
+    },
+    {
+     "key": "carry5_v1:instruction:0133|self|3",
+     "position": 10,
+     "cpu": "It is wonderful to have a lovely place to enjoy the fresh ai",
+     "cuda": "It is wonderful to have a lovely place to enjoy nature and f"
+    }
+   ],
+   "differing_keys": [
+    "tinychat:22",
+    "carry5_v1:recall:0209|gold",
+    "carry5_v1:correction:0193|self|2",
+    "carry5_v1:correction:0193|self|3",
+    "carry5_v1:correction:0193|self|4",
+    "carry5_v1:correction:0193|self|5",
+    "carry5_v1:instruction:0055|self|3",
+    "carry5_v1:instruction:0055|self|4",
+    "carry5_v1:instruction:0055|self|5",
+    "carry5_v1:instruction:0133|self|3",
+    "carry5_v1:instruction:0133|self|4",
+    "carry5_v1:instruction:0133|self|5"
+   ]
+  },
+  "sft_on_b": {
+   "equal": 348,
+   "n": 360,
+   "tinychat_equal": 39,
+   "carry5_equal": 309,
+   "carry5_same_prompt_differs": 4,
+   "first_divergences": [
+    {
+     "key": "tinychat:22",
+     "position": 13,
+     "cpu": "It can be really frustrating when things do not go as we exp",
+     "cuda": "It can be really frustrating when things do not go as we exp"
+    },
+    {
+     "key": "carry5_v1:recall:0209|gold",
+     "position": 3,
+     "cpu": "I have not seen anyone yet, but I am curious about it.",
+     "cuda": "I have not been sure yet, but I am curious about it."
+    },
+    {
+     "key": "carry5_v1:correction:0193|self|2",
+     "position": 7,
+     "cpu": "Yes, it is interesting how our minds can change our mood so ",
+     "cuda": "Yes, it is interesting how our feelings can change so quickl"
+    },
+    {
+     "key": "carry5_v1:instruction:0055|self|3",
+     "position": 7,
+     "cpu": "It is interesting how our minds can react in unexpected ways",
+     "cuda": "It is interesting how our minds can change our thoughts abou"
+    },
+    {
+     "key": "carry5_v1:instruction:0133|self|3",
+     "position": 10,
+     "cpu": "It is wonderful to have a lovely place to enjoy the fresh ai",
+     "cuda": "It is wonderful to have a lovely place to enjoy nature and f"
+    }
+   ],
+   "differing_keys": [
+    "tinychat:22",
+    "carry5_v1:recall:0209|gold",
+    "carry5_v1:correction:0193|self|2",
+    "carry5_v1:correction:0193|self|3",
+    "carry5_v1:correction:0193|self|4",
+    "carry5_v1:correction:0193|self|5",
+    "carry5_v1:instruction:0055|self|3",
+    "carry5_v1:instruction:0055|self|4",
+    "carry5_v1:instruction:0055|self|5",
+    "carry5_v1:instruction:0133|self|3",
+    "carry5_v1:instruction:0133|self|4",
+    "carry5_v1:instruction:0133|self|5"
+   ]
+  }
+ },
+ "cost": {
+  "pick_off_1": {
+   "deterministic": false,
+   "decode_ms_per_token_p50": 1.5859875062525841,
+   "decode_ms_per_token_mean": 1.6105065448925338,
+   "decode_ms_per_token_p90": 1.6540963333036316,
+   "decode_requests": 120,
+   "decode_tokens_mean": 16.85,
+   "prefill_wall_ms_p50": 3.707832,
+   "prefill_wall_ms_mean": 3.8246769499999997,
+   "prefill_ttft_ms_p50": 4.107699,
+   "prefill_requests": 80,
+   "prefill_prompt_tokens_mean": 84.475
+  },
+  "pick_off_2": {
+   "deterministic": false,
+   "decode_ms_per_token_p50": 1.581849452976587,
+   "decode_ms_per_token_mean": 1.5936905850159089,
+   "decode_ms_per_token_p90": 1.650262999984916,
+   "decode_requests": 120,
+   "decode_tokens_mean": 16.85,
+   "prefill_wall_ms_p50": 3.7959295,
+   "prefill_wall_ms_mean": 4.046204125,
+   "prefill_ttft_ms_p50": 4.220757,
+   "prefill_requests": 80,
+   "prefill_prompt_tokens_mean": 84.475
+  },
+  "pick_on_1": {
+   "deterministic": true,
+   "decode_ms_per_token_p50": 1.5876329833280212,
+   "decode_ms_per_token_mean": 1.61093839216499,
+   "decode_ms_per_token_p90": 1.6632663333254756,
+   "decode_requests": 120,
+   "decode_tokens_mean": 16.85,
+   "prefill_wall_ms_p50": 3.7204705000000002,
+   "prefill_wall_ms_mean": 3.8473822125,
+   "prefill_ttft_ms_p50": 4.110754,
+   "prefill_requests": 80,
+   "prefill_prompt_tokens_mean": 84.475
+  },
+  "pick_on_2": {
+   "deterministic": true,
+   "decode_ms_per_token_p50": 1.5860080499967912,
+   "decode_ms_per_token_mean": 1.6055681048364592,
+   "decode_ms_per_token_p90": 1.6559461666470423,
+   "decode_requests": 120,
+   "decode_tokens_mean": 16.85,
+   "prefill_wall_ms_p50": 3.7327060000000003,
+   "prefill_wall_ms_mean": 3.82226585,
+   "prefill_ttft_ms_p50": 4.13056,
+   "prefill_requests": 80,
+   "prefill_prompt_tokens_mean": 84.475
+  },
+  "sft_off_1": {
+   "deterministic": false,
+   "decode_ms_per_token_p50": 0.7465664419605269,
+   "decode_ms_per_token_mean": 0.7514119543141713,
+   "decode_ms_per_token_p90": 0.7573672499954823,
+   "decode_requests": 120,
+   "decode_tokens_mean": 16.175,
+   "prefill_wall_ms_p50": 1.7716025,
+   "prefill_wall_ms_mean": 1.8074260250000003,
+   "prefill_ttft_ms_p50": 2.0023815000000003,
+   "prefill_requests": 80,
+   "prefill_prompt_tokens_mean": 88.175
+  },
+  "sft_on_1": {
+   "deterministic": true,
+   "decode_ms_per_token_p50": 0.7464129285739677,
+   "decode_ms_per_token_mean": 0.7591051339178969,
+   "decode_ms_per_token_p90": 0.7992601579029859,
+   "decode_requests": 120,
+   "decode_tokens_mean": 16.175,
+   "prefill_wall_ms_p50": 1.799517,
+   "prefill_wall_ms_mean": 1.8353126249999998,
+   "prefill_ttft_ms_p50": 2.0253105,
+   "prefill_requests": 80,
+   "prefill_prompt_tokens_mean": 88.175
+  },
+  "pick_on_over_off": {
+   "decode_ms_per_token_p50": 1.0018,
+   "decode_ms_per_token_mean": 1.0038,
+   "prefill_wall_ms_p50": 0.9933,
+   "prefill_ttft_ms_p50": 0.9895
+  },
+  "sft_on_over_off": {
+   "decode_ms_per_token_p50": 0.9998,
+   "decode_ms_per_token_mean": 1.0102,
+   "prefill_wall_ms_p50": 1.0158,
+   "prefill_ttft_ms_p50": 1.0115
+  }
+ },
+ "interpreter": {
+  "ar_x5": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "39680"
+  },
+  "ar_x5_q8_0": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "39680"
+  },
+  "state4": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "3077120"
+  },
+  "state4_q8_0": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "3077120"
+  },
+  "mor3": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "39680"
+  },
+  "mor3_q8_0": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "39680"
+  },
+  "mor2p0": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "39680"
+  },
+  "ar3": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "39680"
+  },
+  "rec_p1_b2x3_c1": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "39680"
+  },
+  "rec_p1_b2x3_c1_inject": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "39680"
+  },
+  "rec_b2x4": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "39680"
+  },
+  "syn_mistral_swa": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "3937280"
+  },
+  "syn_gptneox": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "3937280"
+  },
+  "syn_gpt2": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "3937280"
+  },
+  "syn_mamba": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "3937280"
+  },
+  "syn_gemma3": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "3937280"
+  },
+  "syn_gemma3_freq_scale": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "3937280"
+  },
+  "syn_gemma3_weight_offset": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "3937280"
+  },
+  "gpt2_tiny": {
+   "head_vs_off": "identical",
+   "on_a_vs_on_b": "identical",
+   "off_vs_on": "identical",
+   "bytes": "62919680"
+  }
+ },
+ "gates": {
+  "sass: every d74e052 kernel's SASS identical in this build": true,
+  "pick: on vs on, every sampled position bit-identical, replies 360/360": true,
+  "pick: off vs d74e052, replies and ids 360/360": true,
+  "pick: off vs d74e052, fresh-prompt first-token logits bit-equal 40/40": true,
+  "pick: on replies = CPU replies 360/360": true,
+  "pick: on vs CPU = d74e052 vs CPU, request by request (360/360)": true,
+  "sft: on vs on, every sampled position bit-identical, replies 360/360": true,
+  "sft: off vs d74e052, replies and ids 360/360": true,
+  "sft: off vs d74e052, fresh-prompt first-token logits bit-equal 40/40": true,
+  "sft: on vs CPU = d74e052 vs CPU, request by request (348/360)": true,
+  "/health reports deterministic only on the on runs": true,
+  "interpreter: head = new off, every dump": true,
+  "interpreter: new on = new on, every dump": true
+ },
+ "pass": true
+}

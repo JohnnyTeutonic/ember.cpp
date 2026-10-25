@@ -127,6 +127,7 @@ Operational logs go to `debugging.log` in the working directory.
 | `EMBER_DECODE_GRAPH=0` | disable the CUDA-graph decode on the llama path |
 | `EMBER_DECODE_ATTN=legacy` | the one-block-per-head decode attention kernel instead of split-K |
 | `EMBER_GEMM_TF32=0` | FP32 instead of TF32 GEMMs in the CUDA prefill |
+| `EMBER_DETERMINISTIC=1` | deterministic CUDA mode: prefill and decode logits bit-identical run to run on the same GPU and build (below); `/health` then reports `"deterministic": true`. Off by default |
 | `EMBER_DEQUANT_AT_LOAD=0` | keep small quantised models in their blocks (default: dequantise under 64M parameters) |
 | `EMBER_MOE_DENSE=1` | run every MoE expert densely instead of the routed path |
 | `EMBER_INTERPRETER=1/0` | force the IR interpreter on, or off, for a GGUF with `paperkiln.ir` |
@@ -141,6 +142,18 @@ Operational logs go to `debugging.log` in the working directory.
 | `EMBER_KERNEL_DEBUG=1` | the CUDA batch helpers' debug probes (each one synchronises) |
 | `TINYLLAMA_LOGITS_DUMP=file` | append each prompt's next-token logits to a file |
 | `TINYLLAMA_TOPK_DEBUG=1` | top-10 candidates at every sampled position, on stderr |
+
+### Deterministic CUDA mode (`EMBER_DETERMINISTIC=1`)
+
+By default the CUDA decode is not bit-reproducible run to run: the decode rmsnorm adds its warp sums with
+shared-memory atomics, so logits can move in the last bits (up to ~1e-5) between two runs of the same build, though
+replies rarely change. With `EMBER_DETERMINISTIC=1` (any value but `0`) the decode rmsnorm and the one-block-per-head
+decode attention reduce in a fixed order, and each cuBLAS handle gets `CUBLAS_WORKSPACE_CONFIG=:4096:8` (unless already
+set) and no atomics; every logit at every position is then bit-identical run to run on the same GPU and build, on the
+tuned llama path and the IR interpreter (whose device path was already fixed-order). It costs nothing measurable
+(decode and prefill within 1-2% noise on a T4). Not promised across GPUs, CUDA or cuBLAS versions, or builds. Unset,
+every path is exactly as before (same kernels; `/health` has no `deterministic` field). Receipts:
+`experiments/determinism_2026-10-26/`.
 
 ## The browser page (`deploy/wasm/`)
 
