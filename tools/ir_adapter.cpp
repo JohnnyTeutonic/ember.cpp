@@ -9,26 +9,35 @@
 // --log FILE writes ember's log there (off by default). CPU interpreter only ("backend": "cpu",
 // "exact": true).
 //
-// Methods: hello, check, open, forward, truncate, snapshot, restore, close, digest, dequantize, and run_node
-// for recurrence nodes (other ops and run_node_grad reply skip). A session owns one GGUF, one interpreter and
-// the ids it has seen.
+// Methods: hello, check, open, forward, truncate, snapshot, restore, close, digest, dequantize, render_chat, and
+// run_node for recurrence and expr nodes (other ops and run_node_grad reply skip). A session owns one GGUF, one
+// interpreter and the ids it has seen.
 //   check / open: "ir" names a document that replaces the file's (ember's EMBER_IR); null reads the
 //     GGUF's paperkiln.ir (or the IR ember builds from third-party metadata). EMBER_IR from the
-//     environment is ignored. open's "evict": null as declared, false keeps every row
-//     (EMBER_EVICT=0), true requires the document's "evict": "turn_state".
-//   forward: ids at positions len .. len + n - 1, one call of the interpreter (all rows).
-//   truncate: section 6.9. The interpreter drops the state past resume_point(n) and re-prefills
-//     resume_point(n) .. n - 1 from the ids held (an evicted turn's start under eviction; the
-//     nearest recurrent snapshot below n).
+//     environment is ignored. check with "gguf" null checks the document "ir" alone: the document rules
+//     (graph_ir_validate.h ir_document_errors, with rule 35's parse), no container rule and no binding.
+//     open's "evict": null as declared, false keeps every row (EMBER_EVICT=0), true requires the
+//     document's "evict": "turn_state".
+//   forward: ids at positions len .. len + n - 1, one call of the interpreter (all rows); empty ids are an error.
+//   truncate: section 6.9, 0 <= n <= len (n = len changes nothing; n < 0 or n > len is an error). The
+//     interpreter drops the state past resume_point(n) and re-prefills resume_point(n) .. n - 1 from the ids
+//     held (an evicted turn's start under eviction; the nearest recurrent snapshot below n, or the start).
 //   snapshot / restore: a copy of the whole sequence state (kv rows, state-token bookkeeping, MoR
-//     row sets, recurrent tensors and snapshots) and the ids, by tag.
+//     row sets, recurrent tensors and snapshots) and the ids, by tag; a tag used again replaces its snapshot,
+//     and restoring a tag never snapshotted is an error.
+//   An error reply (or a skip) leaves the session as it was before the call (IR_SPEC 11.3): forward, truncate
+//   and restore save the sequence state first and put it back when the call fails.
 //   digest: ember's digest of the text (ir_digest.h; IR_SPEC 3.10), with its canonical form, or "refused".
 //   dequantize: the f32 values of n elements stored as the bytes, by the interpreter's route
 //     (dequant_span_to_f32, IR_SPEC 4.7): F32, F16, BF16, Q8_0, Q4_0, Q4_1, Q5_0, Q5_1, Q4_K, Q5_K, Q6_K.
+//   render_chat: the text a conversation renders to under a template record (IR_SPEC 8.1.3), through the
+//     vendored chat_template.h ember's chat paths render with, or "refused" with its reason.
 //   run_node: a recurrence node (graph_ir_recurrence.h) as application 0 ({i} is 0), token by token over the
 //     inputs' rows from the slot's initial state (or "state"'s tensors); outputs {out: [T, w]} and the slot's
-//     tensors after the last row.
-// Reports: logits and depth (forward only), kv_rows, kv_positions, recurrent. ember keeps one kv
+//     tensors after the last row. An expr node (graph_ir_expr.h): the interpreter's expression over its inputs
+//     [T, w], their shapes checked as the interpreter checks them (rule 37); state {}.
+// Reports: logits and depth (forward only), kv_rows, kv_positions, recurrent; depth is [] for a document
+// without depth_route, kv_rows / kv_positions {} without a kv slot, recurrent {} without one. ember keeps one kv
 // slot per block; kv_rows and kv_positions give, per application, the rows its cache holds after
 // the call. ember evicts lazily: a finished segment's text rows go when the first position of a
 // later segment is processed (the start of the next call into it), not at the end of the call
@@ -48,9 +57,12 @@
 
 #include <nlohmann/json.hpp>
 
+#include "chat_template.h"
 #include "gguf_parser.h"
 #include "graph_ir.h"
+#include "graph_ir_expr.h"
 #include "graph_ir_recurrence.h"
+#include "graph_ir_validate.h"
 #include "ir_digest.h"
 #include "logger.h"
 #include "quantization.h"
@@ -187,7 +199,16 @@ class Adapter {
     if (method == "hello") return hello();
     if (method == "check") {
       try {
-        load(p, nullptr);
+        if (p.contains("gguf") && !p.at("gguf").is_null()) {
+          load(p, nullptr);
+        } else {  // the document alone: the document rules (IR_SPEC 11.3)
+          if (!p.contains("ir") || p.at("ir").is_null()) throw std::runtime_error("check: neither gguf nor ir");
+          const std::vector<std::string> errs =
+              ember_ir::ir_document_errors(ember_ir::parse_ir_document(read_file(p.at("ir").get<std::string>())));
+          std::string msg;
+          for (const auto& e : errs) msg += (msg.empty() ? "" : "; ") + e;
+          if (!errs.empty()) return {{"accepted", false}, {"message", msg}};
+        }
       } catch (const std::exception& e) {
         return {{"accepted", false}, {"message", e.what()}};
       }
@@ -206,11 +227,11 @@ class Adapter {
       if (!sessions_.erase(sid(p))) throw std::runtime_error("no session " + sid(p));
       return json::object();
     }
-    if (method == "forward") return forward(session(p), p);
-    if (method == "truncate") return truncate(session(p), p);
+    if (method == "forward") return guarded(session(p), [&](Session& s) { return forward(s, p); });
+    if (method == "truncate") return guarded(session(p), [&](Session& s) { return truncate(s, p); });
     if (method == "snapshot") {
       Session& s = session(p);
-      s.snaps[p.at("tag").get<std::string>()] = Snap{s.ids, s.m.ip->save_state()};
+      s.snaps[p.at("tag").get<std::string>()] = Snap{s.ids, s.m.ip->save_state()};  // a tag used again: replaced
       return {{"len", s.ids.size()}};
     }
     if (method == "restore") {
@@ -218,12 +239,15 @@ class Adapter {
       const auto it = s.snaps.find(p.at("tag").get<std::string>());
       if (it == s.snaps.end()) throw std::runtime_error("no snapshot " + p.at("tag").dump());
       check_reports(*s.m.ip, p, false);
-      s.m.ip->load_state(it->second.state);
-      s.ids = it->second.ids;
-      json r{{"len", s.ids.size()}};
-      reports(s, p, r, false, {});
-      return r;
+      return guarded(s, [&](Session& ss) {
+        ss.m.ip->load_state(it->second.state);
+        ss.ids = it->second.ids;
+        json r{{"len", ss.ids.size()}};
+        reports(ss, p, r, false, {});
+        return r;
+      });
     }
+    if (method == "render_chat") return render_chat(p);
     if (method == "run_node") return run_node(p);
     if (method == "run_node_grad") throw Skip{"ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"};
     if (method == "digest") {
@@ -238,12 +262,72 @@ class Adapter {
  private:
   static json hello() {
     return {{"engine", "ember.cpp"},
-            {"version", "ir_adapter 2 (IR versions 0 and 1; spec revision 1.1)"},
+            {"version", "ir_adapter 3 (IR versions 0 and 1; spec revision 1.2)"},
             {"backend", "cpu"},
             {"exact", true},
-            {"profiles", {"core", "state", "recursion", "thirdparty", "recurrence"}},
+            {"profiles", {"core", "state", "recursion", "thirdparty", "recurrence", "chat"}},
             {"methods", {"hello", "check", "open", "forward", "truncate", "snapshot", "restore", "close", "digest",
-                         "dequantize", "run_node"}}};
+                         "dequantize", "run_node", "render_chat"}}};
+  }
+
+  // The call f on s; when it fails (an error or a skip), the session's ids and sequence state as they were
+  // before it (IR_SPEC 11.3: an error leaves the session unchanged).
+  template <class F>
+  static json guarded(Session& s, F f) {
+    const std::vector<int> ids = s.ids;
+    const ember_ir::Interpreter::State state = s.m.ip->save_state();
+    try {
+      return f(s);
+    } catch (...) {
+      s.m.ip->load_state(state);
+      s.ids = ids;
+      throw;
+    }
+  }
+
+  // IR_SPEC 8.1.3 through chat_template.h: the record's fields and values, the conversation's structure and its
+  // reserved texts are checked there; any refusal is a result.
+  static json render_chat(const json& p) {
+    namespace chat = microtorch::chat;
+    try {
+      const chat::Template t = chat::Template::from_json(chat::json::parse(p.at("record").dump()));
+      const std::vector<chat::Message> m = chat::messages_from_json(chat::json::parse(p.at("messages").dump()));
+      const json& th = p.contains("thinking") ? p.at("thinking") : json();
+      const int thinking = th.is_boolean() ? (th.get<bool>() ? 1 : 0) : -1;
+      return {{"text", chat::render(m, t, p.value("generation_prompt", false), thinking)}};
+    } catch (const chat::Error& e) {
+      return {{"refused", e.what()}};
+    } catch (const nlohmann::json::exception& e) {  // a field of the wrong type
+      return {{"refused", std::string("chat template: ") + e.what()}};
+    }
+  }
+
+  // An expr node alone (IR_SPEC 5.19): the interpreter's evaluation (graph_ir_expr.h) and its shape checks.
+  static json run_expr(const json& node, const json& inputs) {
+    if (!node.contains("expr") || !node.at("expr").is_string()) throw std::runtime_error("IR_SPEC 5.19: expr needs its expr");
+    const std::vector<std::string> ins = node.at("in").get<std::vector<std::string>>();
+    if (ins.empty()) throw std::runtime_error("IR_SPEC 10.1 rule 7: expr reads at least one value");
+    std::vector<std::vector<float>> vals;
+    std::vector<int64_t> shape0;
+    for (size_t k = 0; k < ins.size(); ++k) {
+      if (!inputs.contains(ins[k])) throw std::runtime_error("run_node: no input '" + ins[k] + "'");
+      std::vector<int64_t> shape;
+      vals.push_back(floats(inputs.at(ins[k]), &shape));
+      if (shape.size() != 2) throw std::runtime_error("run_node: expr input '" + ins[k] + "' is not [T, w]");
+      if (k == 0) shape0 = shape;
+      if (shape != shape0)
+        throw std::runtime_error("IR_SPEC 5.19 (rule 37): expr inputs must share one shape [T, w]");
+    }
+    const auto& e = ember_ir::expr::cached(node.at("expr").get<std::string>(), ins.size());
+    std::vector<const float*> ptrs;
+    for (const auto& v : vals) ptrs.push_back(v.data());
+    std::vector<float> out(vals[0].size());
+    ember_ir::expr::eval(e, ptrs, static_cast<int>(shape0[0]), static_cast<int>(shape0[1]), out.data());
+    json r;
+    r["outputs"] = json::object();
+    r["outputs"][node.at("out").get<std::string>()] = tensor(shape0, out.data(), out.size());
+    r["state"] = json::object();
+    return r;
   }
 
   static json dequantize(const json& p) {
@@ -270,8 +354,9 @@ class Adapter {
   // A recurrence node alone, as application 0 (IR_SPEC 11.3 run_node; 6.10.3).
   static json run_node(const json& p) {
     const json& node = p.at("node");
+    if (node.value("op", "") == "expr") return run_expr(node, p.at("inputs"));
     if (node.value("op", "") != "recurrence")
-      throw Skip{"run_node: ember's adapter runs recurrence nodes only (whole-model methods for the other ops)"};
+      throw Skip{"run_node: ember's adapter runs recurrence and expr nodes only (whole-model methods for the other ops)"};
     const ember_ir::rec::Recurrence prog = ember_ir::rec::Recurrence::compile(node);
     std::vector<std::string> ins;
     if (node.at("in").is_string())
@@ -360,7 +445,6 @@ class Adapter {
       const std::string k = want.get<std::string>();
       if (k == "logits" || k == "depth") {
         if (!fwd) throw std::runtime_error("'" + k + "' is a forward report");
-        if (k == "depth" && !ip.has_depth_route()) throw Skip{"depth: the document has no depth_route"};
       } else if (k != "kv_rows" && k != "kv_positions" && k != "recurrent") {
         throw std::runtime_error("unknown report '" + k + "'");
       }
@@ -370,6 +454,7 @@ class Adapter {
   json forward(Session& s, const json& p) {
     check_reports(*s.m.ip, p, true);
     const std::vector<int> ids = p.at("ids").get<std::vector<int>>();
+    if (ids.empty()) throw std::runtime_error("forward: ids is empty (IR_SPEC 11.3: at least one id)");
     const int len = static_cast<int>(s.ids.size());
     if (s.m.ip->seq_len() != len)
       throw std::runtime_error("session state covers " + std::to_string(s.m.ip->seq_len()) + " positions, the ids " +
@@ -386,11 +471,13 @@ class Adapter {
     const int n = p.at("n").get<int>();
     const int len = static_cast<int>(s.ids.size());
     if (n < 0 || n > len) throw std::runtime_error("truncate to " + std::to_string(n) + " of " + std::to_string(len));
-    ember_ir::Interpreter& ip = *s.m.ip;
-    const int r = ip.resume_point(n);
-    ip.truncate(r);
-    if (r < n) ip.forward(std::vector<int>(s.ids.begin() + r, s.ids.begin() + n), r, true);
-    s.ids.resize(n);
+    if (n < len) {  // n = len changes nothing (IR_SPEC 11.3)
+      ember_ir::Interpreter& ip = *s.m.ip;
+      const int r = ip.resume_point(n);
+      ip.truncate(r);
+      if (r < n) ip.forward(std::vector<int>(s.ids.begin() + r, s.ids.begin() + n), r, true);
+      s.ids.resize(n);
+    }
     json out{{"len", n}};
     reports(s, p, out, false, {});
     return out;
@@ -409,9 +496,8 @@ class Adapter {
           if (logits.size() != n * static_cast<size_t>(V))
             throw std::runtime_error("logits: " + std::to_string(logits.size()) + " values for " + std::to_string(n) + " rows");
           r["logits"] = tensor({static_cast<int64_t>(n), V}, logits.data(), logits.size());
-        } else {
-          if (ip.last_depths().empty() && n > 0) throw Skip{"depth: the document has no depth_route"};
-          r["depth"] = n > 0 ? ip.last_depths() : std::vector<int>{};
+        } else {  // [] for a document without depth_route (IR_SPEC 11.3)
+          r["depth"] = n > 0 && ip.has_depth_route() ? ip.last_depths() : std::vector<int>{};
         }
       } else if (k == "kv_rows" || k == "kv_positions") {
         json slots = json::object();
