@@ -12,18 +12,21 @@ specification text; paperkiln's `src/ir.cpp`, `recurrence.hpp` and `recurrence.c
 Pinned build: `build_pinned.sh 39dcce9` (git archive, CPU only, Release, GCC 13.3, WSL ext4):
 `~/ember_adapter_39dcce9/build/ir_adapter`.
 
-**The suite** (`run_suite.sh`, keramos's runner at v1.1.0): 221 pass, 0 fail, 53 skip. Receipt:
-keramos `conformance/receipts/ember_cpu.json` (keramos 178f2a2, not pushed).
+**The suite** (`run_suite.sh`, keramos's runner at v1.1.1, commit 6170ee052cf20d65687428a25288843148646c1e):
+230 pass, 0 fail, 54 skip, with no ember change; v1.1.1's six digest vectors (what a "_" member holds), the
+op case `recurrence/square_weight_declaration` and the refusals `recurrence_assignment_repeats_index` and
+`recurrence_bare_undeclared_name` all pass. Receipt: keramos `conformance/receipts/ember_cpu.json`
+(keramos 999d37b).
 
 | Kind | Pass | Fail | Skip |
 |---|---:|---:|---:|
 | model | 21 | 0 | 0 |
 | trace | 37 | 0 | 0 |
-| op | 7 | 0 | 46 |
-| refuse | 72 | 0 | 0 |
-| digest | 74 | 0 | 0 |
+| op | 8 | 0 | 46 |
+| refuse | 74 | 0 | 0 |
+| digest | 80 | 0 | 0 |
 | dequant | 10 | 0 | 0 |
-| grad | 0 | 0 | 7 |
+| grad | 0 | 0 | 8 |
 
 The op skips are the fixtures of ops other than `recurrence` (the adapter's `run_node` runs recurrence
 nodes; the other ops are checked through whole models and traces); the grad skips are `run_node_grad`
@@ -65,10 +68,10 @@ nodes; the other ops are checked through whole models and traces); the grad skip
   moved (in the seventh digit, as at d49c3e1).
 - tuned_path: the 108 stored files of the receipt take the same path; 11 files added to
   /mnt/c/ml_artifacts since (pk_recurrence among them) take theirs as expected; 14/14 edits.
-- agreement.py (run with paperkiln's tools at their new place): ember's verdict unchanged on all 181 load
-  cases still in the corpus, and agrees with the validator on the 20 new ones and the 90 documents;
-  one case reads DISAGREE because the validator now accepts the S = 1 pseudo-query that the script
-  still expects it to refuse (a script expectation, not ember).
+- agreement.py (`--build ~/ember_adapter_39dcce9/build`, keramos v1.1.1's validator from paperkiln's
+  `spec/tools`, with the workspace's stores passed to `corpus()`): 265 load cases, 264 agree and one
+  expected capability difference (`cap_two_kv_slots`); 178 documents, all agree; 0 disagreements. Both
+  accept the missing S = 1 pseudo-query (`s1_missing_pseudo_query`), an exporter-rule warning in 1.1.
 
 ## IR_SPEC Appendix C (ember's statements)
 

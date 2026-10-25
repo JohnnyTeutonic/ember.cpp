@@ -20,13 +20,24 @@ import types
 import numpy
 
 
+def ir_tools_dir(paperkiln):
+    """The IR tools (gguf_ir, ir_numpy: keramos): $KERAMOS_TOOLS, else paperkiln's vendored spec/tools,
+    else paperkiln's tools/ (before keramos v1.1.1)."""
+    if os.environ.get("KERAMOS_TOOLS"):
+        return os.path.expanduser(os.environ["KERAMOS_TOOLS"])
+    spec = os.path.join(paperkiln, "spec", "tools")
+    return spec if os.path.isfile(os.path.join(spec, "gguf_ir.py")) else os.path.join(paperkiln, "tools")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--gguf", required=True)
     ap.add_argument("--paperkiln", required=True)
     ap.add_argument("--gate", required=True, help="an ir_device_gate receipt with rows[].flips")
     a = ap.parse_args()
-    sys.path.insert(0, os.path.join(a.paperkiln, "tools"))
+    pk = os.path.expanduser(a.paperkiln)
+    sys.path.insert(0, os.path.join(pk, "tools"))
+    sys.path.insert(0, ir_tools_dir(pk))
     import gguf_ir
     import ir_numpy
     meta, shapes = gguf_ir.read_meta(a.gguf)

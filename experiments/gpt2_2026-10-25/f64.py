@@ -34,7 +34,11 @@ def main():
     ap.add_argument("--greedy", help="gpt2_greedy.py's receipt: check its prompt + reply sequences instead")
     ap.add_argument("--min-rel", type=float, default=1e-5)
     a = ap.parse_args()
-    sys.path.insert(0, os.path.join(a.paperkiln, "tools"))
+    pk = os.path.expanduser(a.paperkiln)
+    spec = os.path.join(pk, "spec", "tools")  # the IR tools (keramos): $KERAMOS_TOOLS, spec/tools, tools/
+    sys.path.insert(0, os.path.join(pk, "tools"))
+    sys.path.insert(0, os.path.expanduser(os.environ.get("KERAMOS_TOOLS") or (
+        spec if os.path.isfile(os.path.join(spec, "gguf_ir.py")) else os.path.join(pk, "tools"))))
     import gguf_ir
     import ir_numpy
     import torch

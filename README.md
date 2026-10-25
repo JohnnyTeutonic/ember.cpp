@@ -57,7 +57,7 @@ conversation over 5 and then 12 turns (data mix, depth against width, recursion,
 ember serves every arm's models and checks paperkiln's generation in its post jobs.
 
 **Third-party GGUFs.** A llama.cpp GGUF with no `paperkiln.ir` gets its graph built from its
-metadata at load (`build_ir_from_gguf`, a C++ port of paperkiln's `tools/gguf_ir.py`, node for
+metadata at load (`build_ir_from_gguf`, a C++ port of keramos's `tools/gguf_ir.py`, node for
 node) and runs on the interpreter:
 
 | Family (official checkpoint gated) | What the graph has | CPU | CUDA | WASM |
@@ -237,12 +237,13 @@ node for node, the graph that path implements, with the numbers the file's llama
 (`ember_ir::tuned_llama_match`; `family_hint` is only a pre-filter, as paperkiln's IR_SPEC 9.1
 requires); `tools/ir_path_check` says which path serves a file.
 
-Every document is checked at load against paperkiln's IR specification (`spec/IR_SPEC.md` section
-10.1, the rules its `tools/ir_validate.py` checks), with its JSON Schema vendored in
+Every document is checked at load against the IR specification, keramos (paperkiln vendors it at
+`spec/`; `IR_SPEC.md` section 10.1, the rules its `tools/ir_validate.py` checks), with its JSON Schema vendored in
 `graph_ir_schema.h` (`tools/ir_schema_header.py --check` compares it with paperkiln's): an attribute
 an op does not define, a missing required attribute, a slot nobody reads or a container key that
 disagrees is refused, naming the rule. `tools/ir_doc_check` checks documents without a GGUF, and
-`tools/ir_adapter` runs paperkiln's conformance suite (`experiments/ir_spec_2026-10-25`).
+`tools/ir_adapter` runs keramos's conformance suite (`experiments/ir_spec_2026-10-25`,
+`experiments/ir_rev11_2026-10-25`).
 
 A third-party GGUF with no `paperkiln.ir` gets its IR built from the llama.cpp metadata at load
 when its `general.architecture` is `qwen2`, `qwen3`, `gemma3`, `gptneox`, `gpt2` or `mamba`, or
