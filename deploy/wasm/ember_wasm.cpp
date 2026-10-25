@@ -6,10 +6,17 @@
 // (the record resolved at load, chat_tokenizer.h; paperkiln/1 writes
 // <|user|>U<|assistant|>A<|endoftext|> per past turn then <|user|>U<|assistant|>),
 // with the oldest whole exchanges dropped until prompt + max_new_tokens fits
-// the context and the system message pinned; a request's seed reseeds the
-// sampler before generating.
+// the context (the capped context: ember_set_ctx) and the system message
+// pinned; a request's seed reseeds the sampler before generating.
 //
+//   ember_set_ctx(n)        the context cap for the next ember_load: the KV state holds at most n
+//                            positions, as EMBER_IR_CTX does for the native server (graph_ir.h), so
+//                            a third-party file that declares its whole trained context (Qwen3-0.6B:
+//                            40,960 positions, 9.4 GB of f32 KV) fits the heap; a file with a smaller
+//                            context keeps its own. n <= 0: no cap. Default EMBER_WASM_CTX (2048,
+//                            set by build.sh). Returns the cap now set.
 //   ember_load(path)        load a GGUF from the in-memory filesystem; 1 in chat mode
+//   ember_ctx()             the loaded model's context (after the cap); 0 with no model
 //   ember_chat(json)        {"user_input", "system", "history": [{"user","assistant"}]
 //                            or [{"role","content"}] (a leading {"role": "system"} entry
 //                            instead of "system"), "thinking", "temperature", "top_k",
@@ -32,6 +39,7 @@
 #include <emscripten/emscripten.h>
 
 #include <cstdio>
+#include <cstdlib>
 #include <memory>
 #include <string>
 #include <utility>
@@ -44,8 +52,13 @@
 
 using json = nlohmann::json;
 
+#ifndef EMBER_WASM_CTX
+#define EMBER_WASM_CTX 2048
+#endif
+
 namespace {
 std::unique_ptr<tinyllama::TinyLlamaSession> g_session;
+int g_ctx_cap = EMBER_WASM_CTX;  // ember_set_ctx; <= 0: the file's own context
 std::string g_out;  // returned to JS; valid until the next call
 
 struct Request {
@@ -100,8 +113,22 @@ std::string strip(const std::string& s) {
 
 extern "C" {
 
+EMSCRIPTEN_KEEPALIVE int ember_set_ctx(int n) {
+    g_ctx_cap = n > 0 ? n : 0;
+    return g_ctx_cap;
+}
+
+EMSCRIPTEN_KEEPALIVE int ember_ctx() { return g_session ? g_session->get_config().max_position_embeddings : 0; }
+
 EMSCRIPTEN_KEEPALIVE int ember_load(const char* path) {
     try {
+        // The cap reaches the loader as the native server's EMBER_IR_CTX does: it bounds the
+        // interpreter's KV state and the context the request rules use (model.cpp, graph_ir.cpp).
+        if (g_ctx_cap > 0)
+            setenv("EMBER_IR_CTX", std::to_string(g_ctx_cap).c_str(), 1);
+        else
+            unsetenv("EMBER_IR_CTX");
+        g_session.reset();  // free the previous model before the next is read
         g_session = std::make_unique<tinyllama::TinyLlamaSession>(path, "", 1, 0, /*mmap=*/false);
         return g_session->is_bpe() ? 1 : 0;
     } catch (const std::exception& e) {
@@ -138,7 +165,7 @@ EMSCRIPTEN_KEEPALIVE const char* ember_prepare(const char* request) {
         g_req = parse_request(json::parse(request));
         if (g_req.has_seed) g_session->set_seed(g_req.seed);
         g_session->set_repeat_penalty(g_req.repeat_penalty, g_req.repeat_last_n);
-        g_context = g_session->bpe_encode(g_req.prompt);
+        g_context = g_session->bpe_prompt_ids(g_req.prompt);  // the ids generate() runs (state blocks included)
         g_prompt_len = g_context.size();
         out["prompt_ids"] = g_context;
         out["stop_ids"] = g_session->chat_format()->stop_ids();

@@ -1,10 +1,14 @@
 // ember chat, in-browser: ember.cpp compiled to WebAssembly (deploy/wasm/build.sh)
 // runs here, off the page's main thread. Messages:
 //   in:  {id, req}  where req is the /chat body (user_input, history, sampling)
-//   out: {type: 'progress', loaded, total} | {type: 'ready', ok, backend} | {type: 'reply', id, out}
+//   out: {type: 'progress', loaded, total} | {type: 'ready', ok, backend, ctx} | {type: 'reply', id, out}
 // A cross-origin-isolated page (COOP/COEP headers; not inside the GitHub
 // Pages iframe) can run the multi-threaded build, ember-mt.js, if the Space
 // ships one; otherwise, or if it is missing, the single-threaded ember.js.
+//
+// Context cap: ?ctx=N on the page's URL (the page passes its query string to this worker) caps the
+// KV state at N positions before the model loads (ember_set_ctx; ?ctx=0: the file's own context);
+// without it, the build's default (EMBER_WASM_CTX, 2048). A file with a smaller context keeps its own.
 //
 // Backends: with WebGPU available (and no ?backend=wasm), the forward pass runs on the GPU
 // (webgpu/llama_webgpu.js) and ember's WebAssembly keeps the request rules, the tokeniser, the
@@ -44,6 +48,8 @@ async function initGpu(buf) {
 
 async function init() {
   ember = await createEmber();
+  const ctx = new URLSearchParams(self.location.search).get('ctx');
+  if (ctx !== null && /^[0-9]+$/.test(ctx)) ember._ember_set_ctx(Number(ctx));
   const res = await fetch('chat.gguf');
   if (!res.ok) throw new Error('model download failed: ' + res.status);
   const total = Number(res.headers.get('content-length')) || 0;
@@ -64,7 +70,7 @@ async function init() {
   const ok = ember.ccall('ember_load', 'number', ['string'], ['/model.gguf']);
   ember.FS.unlink('/model.gguf');  // the session holds its own copy of the weights
   if (ok === 1) gpu = await initGpu(buf);
-  postMessage({ type: 'ready', ok, backend: gpu ? 'webgpu' : 'wasm' });
+  postMessage({ type: 'ready', ok, backend: gpu ? 'webgpu' : 'wasm', ctx: ember._ember_ctx() });
 }
 
 // One reply with the forward pass on the GPU: ember prepares the prompt and samples each token.
