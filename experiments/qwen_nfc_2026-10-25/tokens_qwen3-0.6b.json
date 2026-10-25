@@ -1,0 +1,245 @@
+{
+ "model": "qwen3-0.6b",
+ "gguf": "/mnt/c/ml_artifacts/thirdparty/qwen3-0.6b/Qwen3-0.6B-Q8_0.gguf",
+ "hf": "/mnt/c/ml_artifacts/thirdparty/qwen3-0.6b",
+ "strings": 337,
+ "chat_cases": 309,
+ "template_text_same": 309,
+ "ember": {
+  "ids_same": {
+   "raw": 337,
+   "chat": 309
+  },
+  "by_category": {
+   "chat:combining": "55/55",
+   "chat:compat": "28/28",
+   "chat:decomposed": "111/111",
+   "chat:hangul": "49/49",
+   "chat:mixed": "20/20",
+   "chat:reorder": "42/42",
+   "chat:specials": "4/4",
+   "raw:combining": "55/55",
+   "raw:compat": "28/28",
+   "raw:decomposed": "111/111",
+   "raw:hangul": "49/49",
+   "raw:mixed": "20/20",
+   "raw:reorder": "42/42",
+   "raw:specials": "32/32"
+  },
+  "differences": [],
+  "stderr": "chat tokenizer: qwen2_bpe, 151936 tokens"
+ },
+ "ember_before_nfc": {
+  "ids_same": {
+   "raw": 12,
+   "chat": 0
+  },
+  "by_category": {
+   "chat:combining": "0/55",
+   "chat:compat": "0/28",
+   "chat:decomposed": "0/111",
+   "chat:hangul": "0/49",
+   "chat:mixed": "0/20",
+   "chat:reorder": "0/42",
+   "chat:specials": "0/4",
+   "raw:combining": "0/55",
+   "raw:compat": "0/28",
+   "raw:decomposed": "0/111",
+   "raw:hangul": "0/49",
+   "raw:mixed": "0/20",
+   "raw:reorder": "0/42",
+   "raw:specials": "12/32"
+  },
+  "differences": [
+   {
+    "i": 0,
+    "kind": "raw",
+    "category": "decomposed",
+    "at": 1,
+    "ember": [
+     924,
+     1859,
+     53839
+    ],
+    "hf": [
+     924,
+     58858
+    ]
+   },
+   {
+    "i": 1,
+    "kind": "raw",
+    "category": "decomposed",
+    "at": 0,
+    "ember": [
+     77,
+     2143,
+     136,
+     230,
+     586
+    ],
+    "hf": [
+     3376,
+     37572,
+     586
+    ]
+   },
+   {
+    "i": 2,
+    "kind": "raw",
+    "category": "decomposed",
+    "at": 1,
+    "ember": [
+     57,
+     84,
+     136,
+     230,
+     13851
+    ],
+    "hf": [
+     57,
+     5186,
+     713
+    ]
+   },
+   {
+    "i": 3,
+    "kind": "raw",
+    "category": "decomposed",
+    "at": 0,
+    "ember": [
+     52279,
+     136,
+     225,
+     78,
+     36926
+    ],
+    "hf": [
+     50,
+     3413,
+     36926
+    ]
+   },
+   {
+    "i": 4,
+    "kind": "raw",
+    "category": "decomposed",
+    "at": 4,
+    "ember": [
+     416,
+     1241,
+     7350,
+     362,
+     136,
+     232,
+     81,
+     12800
+    ],
+    "hf": [
+     416,
+     1241,
+     7350,
+     79252,
+     81,
+     12800
+    ]
+   },
+   {
+    "i": 5,
+    "kind": "raw",
+    "category": "decomposed",
+    "at": 0,
+    "ember": [
+     32,
+     136,
+     232,
+     968,
+     95941
+    ],
+    "hf": [
+     144044,
+     968,
+     495,
+     85584
+    ]
+   },
+   {
+    "i": 6,
+    "kind": "raw",
+    "category": "decomposed",
+    "at": 0,
+    "ember": [
+     837,
+     96549,
+     2660,
+     42000,
+     136
+    ],
+    "hf": [
+     5082,
+     24267,
+     1411,
+     29772,
+     133607
+    ]
+   },
+   {
+    "i": 7,
+    "kind": "raw",
+    "category": "decomposed",
+    "at": 1,
+    "ember": [
+     35,
+     36115,
+     136,
+     234,
+     64,
+     53839
+    ],
+    "hf": [
+     35,
+     3334,
+     28332,
+     71442
+    ]
+   },
+   {
+    "i": 8,
+    "kind": "raw",
+    "category": "decomposed",
+    "at": 1,
+    "ember": [
+     129003,
+     78,
+     53839,
+     37877,
+     53839
+    ],
+    "hf": [
+     129003,
+     20511,
+     39511
+    ]
+   },
+   {
+    "i": 9,
+    "kind": "raw",
+    "category": "decomposed",
+    "at": 0,
+    "ember": [
+     22185,
+     136,
+     100,
+     1021
+    ],
+    "hf": [
+     3632,
+     3131,
+     1021
+    ]
+   }
+  ],
+  "stderr": "chat tokenizer: qwen2_bpe, 151936 tokens"
+ },
+ "pass": true
+}
