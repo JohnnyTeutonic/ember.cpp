@@ -1,0 +1,16 @@
+{
+ "gen": 32,
+ "gguf": "/mnt/c/ml_artifacts/thirdparty/mamba-130m/mamba-130m-f32.gguf",
+ "greedy_identical": "40/40",
+ "len": 24,
+ "load_ms": 120676.975301,
+ "ms_per_prompt": 8284.941503949998,
+ "of": 40,
+ "pass": true,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "960/960",
+ "vocab": 50280,
+ "worst_decode_rel": 2.012918173752659e-05,
+ "worst_prefill_rel": 2.012918173752659e-05
+}
