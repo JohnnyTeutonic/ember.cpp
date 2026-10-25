@@ -1,0 +1,13 @@
+head_dim   16  worst rel 1.947e-07  ok
+head_dim   32  worst rel 1.541e-07  ok
+head_dim   48  worst rel 3.867e+00  FAIL
+head_dim   64  worst rel 1.184e-07  ok
+head_dim   80  worst rel 9.292e-01  FAIL
+head_dim   96  worst rel 3.063e+00  FAIL
+head_dim  112  worst rel 3.427e+00  FAIL
+head_dim  128  worst rel 1.439e-07  ok
+head_dim  160  worst rel 1.542e+00  FAIL
+head_dim  192  worst rel 3.526e+00  FAIL
+head_dim  200  worst rel 1.047e+01  FAIL
+head_dim  256  worst rel 1.334e-07  ok
+prefill_attention_test: FAIL (7 head dims failed; worst 1.047e+01)

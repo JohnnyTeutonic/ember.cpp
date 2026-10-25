@@ -1,0 +1,16 @@
+syn_mistral_swa identical
+syn_gptneox identical
+syn_gpt2 identical
+syn_mamba identical
+syn_gemma3 identical
+syn_gemma3_freq_scale identical
+syn_gemma3_weight_offset identical
+gpt2_tiny_expr identical
+ar3 identical
+qwen3_06b identical
+pythia_160m identical
+gemma3_270m identical
+qwen25_05b identical
+gemma3_270m_long identical
+qwen25_long identical
+qwen3_long identical
