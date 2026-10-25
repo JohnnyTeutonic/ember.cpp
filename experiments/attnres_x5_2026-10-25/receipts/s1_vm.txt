@@ -1,0 +1,28 @@
+=== vm Sun Oct 25 01:02:22 PM UTC 2026 new=e115fd3d23ad5cee1ab7fb3bd0c8bb249ef69555 old=cbdcb915d26a66a276919328b8d808a450d51307 ce=ce41ffb77f5ad57e84291d1ca309bed103493eba ===
+compute capability 75, nproc 2
+--- deps 13:02:23
+--- builds 13:02:37
+pin: CUDA toolkit and cuBLAS found
+pin build (sm_89, tinyllama_server) rc=0 in 172 s
+CMAKE_BUILD_TYPE:STRING=Release
+CMAKE_CUDA_ARCHITECTURES:STRING=89
+tools built (sm_75) in 192 s
+dump9 applied to /content/src_old/api.cpp
+old built in 137 s
+oldce built
+--- (a) ar_x5 on the device 13:11:35
+x5_device_logits new ar_x5 rc=0
+x5_device_logits oldce ar_x5 rc=0
+state_device_gate ar_x5 rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 1.8432146843752902e-07, "worst_decode_vs_prefill_rel": 2.447595950860432e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 1.8635082686191265e-07, "worst_prefill_on_rel": 1.8635082686191265e-07, "worst_turns_rel": 0.0} pass True
+x5_device_logits new ar_x5_q8_0 rc=0
+x5_device_logits oldce ar_x5_q8_0 rc=0
+state_device_gate ar_x5_q8_0 rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 1.6328188756474535e-07, "worst_decode_vs_prefill_rel": 1.8396234658690058e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 1.8396231274476186e-07, "worst_prefill_on_rel": 1.8396231274476186e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate new rc=0: 40/40 320/320 2.1774656259832618e-07 1.858246456440148e-07 pass True
+ir_device_gate oldce rc=0: 40/40 320/320 2.1774656259832618e-07 1.858246456440148e-07 pass True
+--- (b) plain llama through tinyllama_server, gpu_layers -1, EMBER_GEMM_TF32=0 13:13:05
+collect new rc=0 {"requests": 360, "seconds": 42.1}
+collect old rc=0 {"requests": 360, "seconds": 42.1}
+compare rc=1 False {"tinychat": {"n": 40, "replies_identical": 40, "all_positions_logits_bit_equal": 0, "first_token_logits_bit_equal": 40}, "carry5": {"n": 320, "replies_identical": 320, "all_positions_logits_bit_equal": 0, "first_token_logits_bit_equal": 148}}
+--- pack 13:14:32
+packed 42M
+=== done Sun Oct 25 01:14:35 PM UTC 2026 ===

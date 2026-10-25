@@ -1,0 +1,36 @@
+{
+ "a": "/home/jonat/x5g/plain/new_cpu",
+ "b": "/home/jonat/x5g/plain/old_cpu",
+ "a_bin": "/home/jonat/x5g/new/build_cpu/tinyllama_server",
+ "b_bin": "/home/jonat/x5g/old/build_cpu/tinyllama_server",
+ "gguf": "/mnt/c/ml_artifacts/tiny_chat/e1/pick_e1_L16/model.gguf",
+ "gpu_layers": [
+  "0",
+  "0"
+ ],
+ "sets": {
+  "tinychat": {
+   "n": 40,
+   "replies_identical": 40,
+   "ids_identical": 40,
+   "prompt_ids_identical": 40,
+   "all_positions_logits_bit_equal": 40,
+   "positions": 658,
+   "first_token_logits_bit_equal": 40,
+   "first_token_logits_worst_abs": 0.0,
+   "divergent": []
+  },
+  "carry5": {
+   "n": 320,
+   "replies_identical": 320,
+   "ids_identical": 320,
+   "prompt_ids_identical": 320,
+   "all_positions_logits_bit_equal": 320,
+   "positions": 3941,
+   "first_token_logits_bit_equal": 320,
+   "first_token_logits_worst_abs": 0.0,
+   "divergent": []
+  }
+ },
+ "bit_identical": true
+}

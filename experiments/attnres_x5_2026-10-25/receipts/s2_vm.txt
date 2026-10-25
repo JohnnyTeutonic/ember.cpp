@@ -1,0 +1,17 @@
+=== vm2 Sun Oct 25 01:27:15 PM UTC 2026 new=e115fd3d23ad5cee1ab7fb3bd0c8bb249ef69555 old=cbdcb915d26a66a276919328b8d808a450d51307 ===
+compute capability 75, nproc 2
+dump9 applied to /content/src_old/api.cpp
+built new in 180 s
+built old in 146 s
+collect new_a rc=0 {"requests": 360, "seconds": 55.5}
+collect old_a rc=0 {"requests": 360, "seconds": 55.7}
+collect new_b rc=0 {"requests": 360, "seconds": 55.4}
+collect old_b rc=0 {"requests": 360, "seconds": 55.3}
+compare new_a vs new_b rc=1: {"tinychat": [40, 40, 40, 0, 40, 658, 7.62939453125e-06], "carry5": [320, 320, 147, 0, 160, 3941, 8.58306884765625e-06]}
+compare old_a vs old_b rc=1: {"tinychat": [40, 40, 40, 0, 43, 658, 6.67572021484375e-06], "carry5": [320, 320, 148, 0, 153, 3941, 1.3113021850585938e-05]}
+compare new_a vs old_a rc=1: {"tinychat": [40, 40, 40, 0, 41, 658, 6.4373016357421875e-06], "carry5": [320, 320, 147, 0, 159, 3941, 8.106231689453125e-06]}
+compare new_b vs old_b rc=1: {"tinychat": [40, 40, 40, 0, 41, 658, 6.67572021484375e-06], "carry5": [320, 320, 147, 0, 151, 3941, 8.463859558105469e-06]}
+compare new_a vs old_b rc=1: {"tinychat": [40, 40, 40, 0, 43, 658, 6.67572021484375e-06], "carry5": [320, 320, 148, 0, 162, 3941, 1.0013580322265625e-05]}
+compare new_b vs old_a rc=1: {"tinychat": [40, 40, 40, 0, 45, 658, 7.152557373046875e-06], "carry5": [320, 320, 147, 0, 162, 3941, 8.106231689453125e-06]}
+packed 168K
+=== done Sun Oct 25 01:36:49 PM UTC 2026 ===

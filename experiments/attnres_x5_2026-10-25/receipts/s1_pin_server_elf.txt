@@ -1,0 +1,2 @@
+ELF file    1: tinyllama_server.1.sm_89.cubin
+ELF file    2: tinyllama_server.2.sm_89.cubin

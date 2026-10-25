@@ -1,0 +1,152 @@
+{
+ "a": "/content/plain/old_a",
+ "b": "/content/plain/old_b",
+ "a_bin": "/content/bin/old_server",
+ "b_bin": "/content/bin/old_server",
+ "gguf": "/content/models/pick_L16.gguf",
+ "gpu_layers": [
+  "-1",
+  "-1"
+ ],
+ "sets": {
+  "tinychat": {
+   "n": 40,
+   "replies_identical": 40,
+   "ids_identical": 40,
+   "prompt_ids_identical": 40,
+   "all_positions_logits_bit_equal": 0,
+   "positions": 658,
+   "first_token_logits_bit_equal": 40,
+   "first_token_logits_worst_abs": 0.0,
+   "divergent": [
+    {
+     "key": "tinychat:0",
+     "a": "I do, I have a friend who is scared of me, but I am so scared of anyone.",
+     "b": "I do, I have a friend who is scared of me, but I am so scared of anyone."
+    },
+    {
+     "key": "tinychat:1",
+     "a": "What do you think of that?",
+     "b": "What do you think of that?"
+    },
+    {
+     "key": "tinychat:2",
+     "a": "Oh no, what happened?",
+     "b": "Oh no, what happened?"
+    },
+    {
+     "key": "tinychat:3",
+     "a": "I think it is a good idea. I think it is a good idea to use a soft leather item.",
+     "b": "I think it is a good idea. I think it is a good idea to use a soft leather item."
+    },
+    {
+     "key": "tinychat:4",
+     "a": "I do not think that I have ever heard of a slow swim.",
+     "b": "I do not think that I have ever heard of a slow swim."
+    },
+    {
+     "key": "tinychat:5",
+     "a": "I'm good. I'm just getting ready to go to the movies.",
+     "b": "I'm good. I'm just getting ready to go to the movies."
+    },
+    {
+     "key": "tinychat:6",
+     "a": "I don't think so.",
+     "b": "I don't think so."
+    },
+    {
+     "key": "tinychat:7",
+     "a": "I'm sorry to hear that. I'm sorry to hear that.",
+     "b": "I'm sorry to hear that. I'm sorry to hear that."
+    },
+    {
+     "key": "tinychat:8",
+     "a": "I'm sorry to hear that.  I'm sorry to hear that.  I'm sure you're still in good ",
+     "b": "I'm sorry to hear that.  I'm sorry to hear that.  I'm sure you're still in good "
+    },
+    {
+     "key": "tinychat:9",
+     "a": "I do, I love it!  I love it!  It's a dish of the same kind, but it's a good sauc",
+     "b": "I do, I love it!  I love it!  It's a dish of the same kind, but it's a good sauc"
+    }
+   ],
+   "every_position": {
+    "rows": 658,
+    "bit_equal_rows": 43,
+    "worst_abs": 6.67572021484375e-06,
+    "worst_rel_to_range": 3.096273904174481e-07,
+    "top1_agree": "658/658"
+   }
+  },
+  "carry5": {
+   "n": 320,
+   "replies_identical": 320,
+   "ids_identical": 320,
+   "prompt_ids_identical": 320,
+   "all_positions_logits_bit_equal": 0,
+   "positions": 3941,
+   "first_token_logits_bit_equal": 148,
+   "first_token_logits_worst_abs": 1.3113021850585938e-05,
+   "divergent": [
+    {
+     "key": "carry5_v1:recall:0001|self|1",
+     "a": "Hi, I'm jessica. How are you?",
+     "b": "Hi, I'm jessica. How are you?"
+    },
+    {
+     "key": "carry5_v1:recall:0001|self|2",
+     "a": "You should take a picnic.",
+     "b": "You should take a picnic."
+    },
+    {
+     "key": "carry5_v1:recall:0001|self|3",
+     "a": "You can try cooking for a quick bite.",
+     "b": "You can try cooking for a quick bite."
+    },
+    {
+     "key": "carry5_v1:recall:0001|self|4",
+     "a": "My name is jessica.",
+     "b": "My name is jessica."
+    },
+    {
+     "key": "carry5_v1:recall:0001|self|5",
+     "a": "You are welcome.",
+     "b": "You are welcome."
+    },
+    {
+     "key": "carry5_v1:recall:0001|gold",
+     "a": "My name is Tony.",
+     "b": "My name is Tony."
+    },
+    {
+     "key": "carry5_v1:recall:0001|twin",
+     "a": "My name is kimmy",
+     "b": "My name is kimmy"
+    },
+    {
+     "key": "carry5_v1:recall:0001|noctx",
+     "a": "My name is Ted.",
+     "b": "My name is Ted."
+    },
+    {
+     "key": "carry5_v1:recall:0027|self|1",
+     "a": "That is a cute tortoise!  I love tortoise!  I love the tortoise!",
+     "b": "That is a cute tortoise!  I love tortoise!  I love the tortoise!"
+    },
+    {
+     "key": "carry5_v1:recall:0027|self|2",
+     "a": "I love that it is so beautiful!  I love the tortoise!",
+     "b": "I love that it is so beautiful!  I love the tortoise!"
+    }
+   ],
+   "every_position": {
+    "rows": 3941,
+    "bit_equal_rows": 153,
+    "worst_abs": 1.3113021850585938e-05,
+    "worst_rel_to_range": 5.305137217084749e-07,
+    "top1_agree": "3941/3941"
+   }
+  }
+ },
+ "bit_identical": false
+}

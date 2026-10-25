@@ -1,0 +1,47 @@
+make: Entering directory '/content/b_pin'
+make[1]: Entering directory '/content/b_pin'
+make[2]: Entering directory '/content/b_pin'
+make[3]: Entering directory '/content/b_pin'
+make[3]: Leaving directory '/content/b_pin'
+make[3]: Entering directory '/content/b_pin'
+[  3%] Building CXX object CMakeFiles/tinyllama_core.dir/model.cpp.o
+[  6%] Building CXX object CMakeFiles/tinyllama_core.dir/model_config.cpp.o
+[ 10%] Building CXX object CMakeFiles/tinyllama_core.dir/kv_cache.cpp.o
+[ 13%] Building CXX object CMakeFiles/tinyllama_core.dir/weight_management.cpp.o
+[ 17%] Building CXX object CMakeFiles/tinyllama_core.dir/cpu_attention.cpp.o
+[ 20%] Building CXX object CMakeFiles/tinyllama_core.dir/model_utils.cpp.o
+[ 24%] Building CXX object CMakeFiles/tinyllama_core.dir/gpu_initialization.cpp.o
+[ 27%] Building CXX object CMakeFiles/tinyllama_core.dir/gpu_memory_optimization.cpp.o
+[ 31%] Building CXX object CMakeFiles/tinyllama_core.dir/cpu_batch_processor.cpp.o
+[ 34%] Building CXX object CMakeFiles/tinyllama_core.dir/utils.cpp.o
+[ 37%] Building CXX object CMakeFiles/tinyllama_core.dir/safetensors_loader.cpp.o
+[ 41%] Building CXX object CMakeFiles/tinyllama_core.dir/tokenizer.cpp.o
+[ 44%] Building CXX object CMakeFiles/tinyllama_core.dir/logger.cpp.o
+[ 48%] Building CXX object CMakeFiles/tinyllama_core.dir/api.cpp.o
+[ 51%] Building CXX object CMakeFiles/tinyllama_core.dir/gguf_parser.cpp.o
+[ 55%] Building CXX object CMakeFiles/tinyllama_core.dir/quantization.cpp.o
+[ 58%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir.cpp.o
+[ 62%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_ops.cpp.o
+[ 65%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_expr.cpp.o
+[ 68%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_mamba.cpp.o
+[ 72%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_recurrence.cpp.o
+[ 75%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_validate.cpp.o
+[ 79%] Building CXX object CMakeFiles/tinyllama_core.dir/ir_digest.cpp.o
+[ 82%] Building CXX object CMakeFiles/tinyllama_core.dir/parallel_for.cpp.o
+[ 86%] Building CUDA object CMakeFiles/tinyllama_core.dir/cuda_kernels.cu.o
+[ 89%] Building CUDA object CMakeFiles/tinyllama_core.dir/graph_ir_cuda.cu.o
+[ 93%] Linking CXX static library libtinyllama_core.a
+make[3]: Leaving directory '/content/b_pin'
+[ 93%] Built target tinyllama_core
+make[3]: Entering directory '/content/b_pin'
+make[3]: Leaving directory '/content/b_pin'
+make[3]: Entering directory '/content/b_pin'
+[ 96%] Building CXX object CMakeFiles/tinyllama_server.dir/server.cpp.o
+<command-line>: warning: "CPPHTTPLIB_BROTLI_SUPPORT" redefined
+<command-line>: note: this is the location of the previous definition
+[100%] Linking CXX executable tinyllama_server
+make[3]: Leaving directory '/content/b_pin'
+[100%] Built target tinyllama_server
+make[2]: Leaving directory '/content/b_pin'
+make[1]: Leaving directory '/content/b_pin'
+make: Leaving directory '/content/b_pin'
