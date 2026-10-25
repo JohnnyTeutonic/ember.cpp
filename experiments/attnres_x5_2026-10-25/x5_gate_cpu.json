@@ -1,0 +1,85 @@
+{
+ "dir": "/mnt/c/ml_artifacts/attnres_gate_x5/ar_x5",
+ "manifest_sha256": "0c8edd40eb28976ae97e04516c3dc2fc415610e1be60b46c2f162776370d4f43",
+ "sha256": {
+  "ar_x5.gguf": {
+   "sha256": "226fe90badf633c372343d77d72deed7cceaecdb539884440b95274a90686c8e",
+   "match": true
+  },
+  "ar_x5.ir.json": {
+   "sha256": "7d9e577a350b4a38202dc1e428d127ebabcdb40a42fa745e395f285214fa51fe",
+   "match": true
+  },
+  "ar_x5_q8_0.gguf": {
+   "sha256": "757798885725fa7b1cfa4d73c509d787b3c931a699c113f4b40c83ed2443438a",
+   "match": true
+  },
+  "v.gguf": {
+   "sha256": "879b0dcb5995b7d79c9b0b72779416d9fe54fb9a4bb223424feee827605ea48a",
+   "match": true
+  },
+  "score_in.jsonl": {
+   "sha256": "b0f08ef50346d070f95928b39e86f6eaff0da1c1bf384e8e58f474a8796811f0",
+   "match": true
+  },
+  "score_out.jsonl": {
+   "sha256": "4739183c7084c3fa54c2089f102cf584b3c4dd98ab7599e61857eecbae967b8e",
+   "match": true
+  },
+  "spec.json": {
+   "sha256": "86fe2dd3a978945e77cc0edfc5d89869eb83c599fc42f2e845e1278195de292b",
+   "match": true
+  }
+ },
+ "builds": {
+  "new": {
+   "bin": "/home/jonat/x5g/new/build_cpu/ir_logits",
+   "f32": {
+    "logprob_worst_rel": 5.643613022465743e-07,
+    "greedy": "40/40",
+    "decode_eq_prefill": true,
+    "pass": true
+   },
+   "q8_0": {
+    "logprob_worst_rel": 7.135109376887883e-05,
+    "greedy": "40/40",
+    "decode_eq_prefill": true
+   }
+  },
+  "oldce": {
+   "bin": "/home/jonat/x5g/oldce/build_cpu/ir_logits",
+   "f32": {
+    "logprob_worst_rel": 5.643613022465743e-07,
+    "greedy": "40/40",
+    "decode_eq_prefill": true,
+    "pass": true
+   },
+   "q8_0": {
+    "logprob_worst_rel": 7.135109376887883e-05,
+    "greedy": "40/40",
+    "decode_eq_prefill": true
+   }
+  },
+  "old": {
+   "bin": "/home/jonat/x5g/old/build_cpu/ir_logits",
+   "f32": {
+    "refused": "terminate called after throwing an instance of 'std::runtime_error'\n  what():  IR version 1 is not supported (ember reads 0)"
+   }
+  }
+ },
+ "sha256_all_match": true,
+ "q8_0_pseudo_query_types": [
+  "F32"
+ ],
+ "q8_0_pseudo_queries": 33,
+ "q8_0_pseudo_queries_f32": true,
+ "blk0_attn_q_all_zero": true,
+ "blk0_attn_q_not_read": {
+  "build": "new",
+  "nan_copy_logits_bit_equal": true
+ },
+ "f32_outputs_bit_equal_between_builds": {
+  "new=oldce": true
+ },
+ "pass": true
+}

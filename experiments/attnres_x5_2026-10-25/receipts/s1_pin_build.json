@@ -1,0 +1,1 @@
+{"commit": "e115fd3d23ad5cee1ab7fb3bd0c8bb249ef69555", "rc": 0, "cmake": "cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=89", "make": "make -C build -j2 tinyllama_server", "seconds": 172}
