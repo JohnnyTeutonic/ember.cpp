@@ -1,0 +1,755 @@
+{
+ "requests": {
+  "pk_bench256.jsonl": {
+   "sha256": "11e912c84cfee828214d661df6afdfe4640a9908f9129d96095847a3c0788a56",
+   "n": 256
+  },
+  "pk_requests.jsonl": {
+   "sha256": "6da4210e65df88b032d8a70dabc90e621ce8e626ea28d1c34ebba5c02b971865",
+   "n": 198
+  },
+  "pk_sub60.jsonl": {
+   "sha256": "46b3719bf93719098053f8d6dc179d3d87a2160eb8db9b5fd2371bf5cbf2ed1e",
+   "n": 60
+  },
+  "pythia_bench256.jsonl": {
+   "sha256": "72d9c54911ba92ec5f808c44e2d7f208a890bbef0c36feecbd663fb1dc55fc74",
+   "n": 256
+  },
+  "pythia_requests.jsonl": {
+   "sha256": "c715c357ec99372a14359aee0e68c1be4497f9c8ff16c5493ac1d5ac3ba92b86",
+   "n": 194
+  },
+  "pythia_sub60.jsonl": {
+   "sha256": "7235a193d5c35d7669b4e13b072aac19b5f9afe96e27e409954827b3b19520a1",
+   "n": 60
+  },
+  "qwen_requests.jsonl": {
+   "sha256": "d9fcb2c8c8d77b01898b6f8d6610f91f49414a37d5499eef38892034c91c1763",
+   "n": 194
+  },
+  "qwen_sub60.jsonl": {
+   "sha256": "86c212d884a923a33dbcef689ed0e802668094edd4bda8f7a689e13405ee590c",
+   "n": 60
+  },
+  "smol_bench256.jsonl": {
+   "sha256": "6d836988e9d8b1e3a5c16f3d452796c98cd8525e5158dbbcab7c6fab1eb5132d",
+   "n": 256
+  },
+  "smol_requests.jsonl": {
+   "sha256": "b44f6125cd4508aa70ada5bdd82a59569eb5eed936068909aa6a8f1f8b40f344",
+   "n": 194
+  },
+  "smol_sub60.jsonl": {
+   "sha256": "01ccd4fb5e4479b697869425d22fcacb28aef1be317d53c801ff94bc08a17532",
+   "n": 60
+  }
+ },
+ "cpu": {
+  "pick": {
+   "health": {
+    "context": 512,
+    "vocab_size": 16384,
+    "layers": 16,
+    "hidden_size": 320,
+    "tokenizer": "bpe"
+   },
+   "path": "tuned llama",
+   "full_reference_on": "pk_requests (all)",
+   "default_eq_full_bytes": true,
+   "one_call_eq_chunks_of_50_bytes": true,
+   "vs_mtstudio": {
+    "scored": 196,
+    "over_ctx_ref": 2,
+    "over_ctx_same": 198,
+    "fields_same": 196,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 1.127665038502812e-05,
+    "logprob_worst_rounding": 4.3459580802597265e-06,
+    "sum_worst_abs": 3.057619986179816e-05,
+    "argmax_same": 2732,
+    "argmax_positions": 2732,
+    "argmax_flips": [],
+    "keys_same": true
+   },
+   "plain_abs_1e-5_met": false,
+   "float64_on_the_10_largest": {
+    "ember_closer": 9,
+    "worst_ember_vs_f64": 1.0122351855379463e-05,
+    "worst_mtstudio_vs_f64": 1.372336337102098e-05
+   },
+   "pass": true,
+   "chat_unchanged_by_score": true,
+   "bench256_default_eq_full_bytes": true,
+   "throughput": {
+    "default:pk_requests": {
+     "n": 198,
+     "req_per_s": 0.91,
+     "wall_s": 218.256,
+     "positions": 12167,
+     "reused_positions": 3523
+    },
+    "default:pk_bench256": {
+     "n": 256,
+     "req_per_s": 0.81,
+     "wall_s": 314.589,
+     "positions": 22933,
+     "reused_positions": 10923
+    },
+    "full:pk_requests": {
+     "n": 198,
+     "req_per_s": 0.45,
+     "wall_s": 443.592,
+     "positions": 12167,
+     "reused_positions": 0
+    },
+    "full:pk_bench256": {
+     "n": 256,
+     "req_per_s": 0.43,
+     "wall_s": 589.44,
+     "positions": 22933,
+     "reused_positions": 0
+    },
+    "mtstudio:gate set (process incl. load)": "mts pick rc=0 score: 198 continuations (2 over the context of 512) -> /home/jonat/ember_score/work/out/mts_pick.jsonl.part 890403 ms"
+   },
+   "errors": {
+    "not_json": 400,
+    "no_requests": 400,
+    "request_not_object": 400,
+    "empty_continuation": 400,
+    "empty_prompt": 400,
+    "prompt_id_negative": 400,
+    "prompt_id_vocab": 400,
+    "continuation_id_vocab": 400,
+    "ids_not_list": 400,
+    "ids_string_element": 400,
+    "text_fields_only": 400,
+    "good_then_bad": 400,
+    "empty_list": 200
+   }
+  },
+  "pkbase": {
+   "health": {
+    "context": 512,
+    "vocab_size": 16384,
+    "layers": 12,
+    "hidden_size": 768,
+    "tokenizer": "bpe"
+   },
+   "path": "tuned llama",
+   "full_reference_on": "pk_sub60 (60 requests)",
+   "default_eq_full_bytes": true,
+   "one_call_eq_chunks_of_50_bytes": "not run",
+   "vs_mtstudio": {
+    "scored": 196,
+    "over_ctx_ref": 2,
+    "over_ctx_same": 198,
+    "fields_same": 196,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 1.0904204069461798e-05,
+    "logprob_worst_rounding": 2.6378127118758672e-06,
+    "sum_worst_abs": 3.61433150146695e-05,
+    "argmax_same": 2732,
+    "argmax_positions": 2732,
+    "argmax_flips": [],
+    "keys_same": true
+   },
+   "plain_abs_1e-5_met": false,
+   "float64_on_the_10_largest": {
+    "ember_closer": 9,
+    "worst_ember_vs_f64": 1.2251151893405421e-05,
+    "worst_mtstudio_vs_f64": 1.9698307713866825e-05
+   },
+   "pass": true,
+   "chat_unchanged_by_score": true,
+   "throughput": {
+    "default:pk_requests": {
+     "n": 198,
+     "req_per_s": 0.22,
+     "wall_s": 907.916,
+     "positions": 12167,
+     "reused_positions": 3523
+    },
+    "default:pk_bench256": {
+     "n": 256,
+     "req_per_s": 0.22,
+     "wall_s": 1155.422,
+     "positions": 22933,
+     "reused_positions": 10923
+    },
+    "full:pk_sub60": {
+     "n": 60,
+     "req_per_s": 0.09,
+     "wall_s": 659.936,
+     "positions": 7631,
+     "reused_positions": 0
+    }
+   },
+   "errors": {
+    "not_json": 400,
+    "no_requests": 400,
+    "request_not_object": 400,
+    "empty_continuation": 400,
+    "empty_prompt": 400,
+    "prompt_id_negative": 400,
+    "prompt_id_vocab": 400,
+    "continuation_id_vocab": 400,
+    "ids_not_list": 400,
+    "ids_string_element": 400,
+    "text_fields_only": 400,
+    "good_then_bad": 400,
+    "empty_list": 200
+   }
+  },
+  "pythia": {
+   "health": {
+    "context": 2048,
+    "vocab_size": 50304,
+    "layers": 12,
+    "hidden_size": 768,
+    "tokenizer": "ember"
+   },
+   "path": "interpreter",
+   "full_reference_on": "pythia_sub60 (60 requests)",
+   "default_eq_full_bytes": true,
+   "one_call_eq_chunks_of_50_bytes": "not run",
+   "vs_hf": {
+    "scored": 194,
+    "over_ctx_ref": 0,
+    "over_ctx_same": 194,
+    "fields_same": 194,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 0.006871557817757612,
+    "logprob_worst_rounding": 0.0006378143822939331,
+    "sum_worst_abs": 0.005783936623970476,
+    "argmax_same": 2408,
+    "argmax_positions": 2408,
+    "argmax_flips": [],
+    "logprob_worst_over_range": 8.33858977659551e-06,
+    "keys_same": true
+   },
+   "pass": true,
+   "chat_unchanged_by_score": true,
+   "throughput": {
+    "default:pythia_requests": {
+     "n": 194,
+     "req_per_s": 0.37,
+     "wall_s": 528.874,
+     "positions": 10541,
+     "reused_positions": 2771
+    },
+    "default:pythia_bench256": {
+     "n": 256,
+     "req_per_s": 0.27,
+     "wall_s": 953.499,
+     "positions": 21433,
+     "reused_positions": 10165
+    },
+    "full:pythia_sub60": {
+     "n": 60,
+     "req_per_s": 0.14,
+     "wall_s": 434.834,
+     "positions": 6325,
+     "reused_positions": 0
+    }
+   },
+   "errors": {
+    "not_json": 400,
+    "no_requests": 400,
+    "request_not_object": 400,
+    "empty_continuation": 400,
+    "empty_prompt": 400,
+    "prompt_id_negative": 400,
+    "prompt_id_vocab": 400,
+    "continuation_id_vocab": 400,
+    "ids_not_list": 400,
+    "ids_string_element": 400,
+    "text_fields_only": 400,
+    "good_then_bad": 400,
+    "empty_list": 200
+   }
+  },
+  "qwen": {
+   "health": {
+    "context": 8192,
+    "vocab_size": 151936,
+    "layers": 24,
+    "hidden_size": 896,
+    "tokenizer": "bpe"
+   },
+   "path": "interpreter",
+   "full_reference_on": "qwen_sub60 (60 requests)",
+   "default_eq_full_bytes": true,
+   "one_call_eq_chunks_of_50_bytes": "not run",
+   "vs_hf": {
+    "scored": 194,
+    "over_ctx_ref": 0,
+    "over_ctx_same": 194,
+    "fields_same": 194,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 5.789501150488263e-05,
+    "logprob_worst_rounding": 5.322321410089085e-06,
+    "sum_worst_abs": 0.0001772024942852113,
+    "argmax_same": 2436,
+    "argmax_positions": 2436,
+    "argmax_flips": [],
+    "logprob_worst_over_range": 2.235204219782958e-06,
+    "keys_same": true
+   },
+   "pass": true,
+   "chat_unchanged_by_score": true,
+   "throughput": {
+    "default:qwen_requests": {
+     "n": 194,
+     "req_per_s": 0.09,
+     "wall_s": 2078.438,
+     "positions": 10246,
+     "reused_positions": 2705
+    },
+    "full:qwen_sub60": {
+     "n": 60,
+     "req_per_s": 0.03,
+     "wall_s": 1830.972,
+     "positions": 6224,
+     "reused_positions": 0
+    }
+   },
+   "errors": {
+    "not_json": 400,
+    "no_requests": 400,
+    "request_not_object": 400,
+    "empty_continuation": 400,
+    "empty_prompt": 400,
+    "prompt_id_negative": 400,
+    "prompt_id_vocab": 400,
+    "continuation_id_vocab": 400,
+    "ids_not_list": 400,
+    "ids_string_element": 400,
+    "text_fields_only": 400,
+    "good_then_bad": 400,
+    "empty_list": 200
+   }
+  },
+  "smol": {
+   "health": {
+    "context": 8192,
+    "vocab_size": 49152,
+    "layers": 30,
+    "hidden_size": 576,
+    "tokenizer": "ember"
+   },
+   "path": "tuned llama",
+   "full_reference_on": "smol_sub60 (60 requests)",
+   "default_eq_full_bytes": true,
+   "one_call_eq_chunks_of_50_bytes": "not run",
+   "vs_hf": {
+    "scored": 194,
+    "over_ctx_ref": 0,
+    "over_ctx_same": 194,
+    "fields_same": 194,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 2.7879367124228338e-05,
+    "logprob_worst_rounding": 4.277165613020273e-06,
+    "sum_worst_abs": 5.489096210453681e-05,
+    "argmax_same": 2435,
+    "argmax_positions": 2435,
+    "argmax_flips": [],
+    "logprob_worst_over_range": 1.2143865207668274e-06,
+    "keys_same": true
+   },
+   "pass": true,
+   "chat_unchanged_by_score": true,
+   "throughput": {
+    "default:smol_requests": {
+     "n": 194,
+     "req_per_s": 0.3,
+     "wall_s": 649.264,
+     "positions": 10549,
+     "reused_positions": 2776
+    },
+    "default:smol_bench256": {
+     "n": 256,
+     "req_per_s": 0.27,
+     "wall_s": 950.405,
+     "positions": 21368,
+     "reused_positions": 10127
+    },
+    "full:smol_sub60": {
+     "n": 60,
+     "req_per_s": 0.1,
+     "wall_s": 600.157,
+     "positions": 6340,
+     "reused_positions": 0
+    }
+   },
+   "errors": {
+    "not_json": 400,
+    "no_requests": 400,
+    "request_not_object": 400,
+    "empty_continuation": 400,
+    "empty_prompt": 400,
+    "prompt_id_negative": 400,
+    "prompt_id_vocab": 400,
+    "continuation_id_vocab": 400,
+    "ids_not_list": 400,
+    "ids_string_element": 400,
+    "text_fields_only": 400,
+    "good_then_bad": 400,
+    "empty_list": 200
+   }
+  }
+ },
+ "cuda": {
+  "pick": {
+   "vs_cpu": {
+    "scored": 196,
+    "over_ctx_ref": 2,
+    "over_ctx_same": 198,
+    "fields_same": 196,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 1.936459164220139e-05,
+    "logprob_worst_rounding": 3.9889620563870575e-06,
+    "sum_worst_abs": 2.2212124491716168e-05,
+    "argmax_same": 2732,
+    "argmax_positions": 2732,
+    "argmax_flips": [],
+    "keys_same": true
+   },
+   "det_vs_cpu": {
+    "scored": 196,
+    "over_ctx_ref": 2,
+    "over_ctx_same": 198,
+    "fields_same": 196,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 1.936459164220139e-05,
+    "logprob_worst_rounding": 3.9889620563870575e-06,
+    "sum_worst_abs": 2.2212124491716168e-05,
+    "argmax_same": 2732,
+    "argmax_positions": 2732,
+    "argmax_flips": [],
+    "keys_same": true
+   },
+   "det_run_to_run_bytes": true,
+   "pass": true,
+   "throughput": {
+    "pk_requests": {
+     "n": 198,
+     "req_per_s": 76.4
+    },
+    "pk_bench256": {
+     "n": 256,
+     "req_per_s": 53.18
+    }
+   },
+   "chat_unchanged_by_score": true,
+   "errors": {
+    "not_json": 400,
+    "no_requests": 400,
+    "request_not_object": 400,
+    "empty_continuation": 400,
+    "empty_prompt": 400,
+    "prompt_id_negative": 400,
+    "prompt_id_vocab": 400,
+    "continuation_id_vocab": 400,
+    "ids_not_list": 400,
+    "ids_string_element": 400,
+    "text_fields_only": 400,
+    "good_then_bad": 400,
+    "empty_list": 200
+   }
+  },
+  "pkbase": {
+   "vs_cpu": {
+    "scored": 196,
+    "over_ctx_ref": 2,
+    "over_ctx_same": 198,
+    "fields_same": 196,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 8.081517620439627e-06,
+    "logprob_worst_rounding": 2.2731177787972526e-06,
+    "sum_worst_abs": 1.3541918747250747e-05,
+    "argmax_same": 2732,
+    "argmax_positions": 2732,
+    "argmax_flips": [],
+    "keys_same": true
+   },
+   "det_vs_cpu": {
+    "scored": 196,
+    "over_ctx_ref": 2,
+    "over_ctx_same": 198,
+    "fields_same": 196,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 8.081517620439627e-06,
+    "logprob_worst_rounding": 2.2731177787972526e-06,
+    "sum_worst_abs": 1.3541918747250747e-05,
+    "argmax_same": 2732,
+    "argmax_positions": 2732,
+    "argmax_flips": [],
+    "keys_same": true
+   },
+   "det_run_to_run_bytes": true,
+   "pass": true,
+   "throughput": {
+    "pk_requests": {
+     "n": 198,
+     "req_per_s": 44.91
+    },
+    "pk_bench256": {
+     "n": 256,
+     "req_per_s": 30.22
+    }
+   },
+   "chat_unchanged_by_score": true,
+   "errors": {
+    "not_json": 400,
+    "no_requests": 400,
+    "request_not_object": 400,
+    "empty_continuation": 400,
+    "empty_prompt": 400,
+    "prompt_id_negative": 400,
+    "prompt_id_vocab": 400,
+    "continuation_id_vocab": 400,
+    "ids_not_list": 400,
+    "ids_string_element": 400,
+    "text_fields_only": 400,
+    "good_then_bad": 400,
+    "empty_list": 200
+   }
+  },
+  "pythia": {
+   "vs_cpu": {
+    "scored": 194,
+    "over_ctx_ref": 0,
+    "over_ctx_same": 194,
+    "fields_same": 194,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 0.002468767857112475,
+    "logprob_worst_rounding": 0.00039587085395952217,
+    "sum_worst_abs": 0.005602187788923629,
+    "argmax_same": 2408,
+    "argmax_positions": 2408,
+    "argmax_flips": [],
+    "keys_same": true
+   },
+   "det_vs_cpu": {
+    "scored": 194,
+    "over_ctx_ref": 0,
+    "over_ctx_same": 194,
+    "fields_same": 194,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 0.002468767857112475,
+    "logprob_worst_rounding": 0.00039587085395952217,
+    "sum_worst_abs": 0.005602187788923629,
+    "argmax_same": 2408,
+    "argmax_positions": 2408,
+    "argmax_flips": [],
+    "keys_same": true
+   },
+   "det_run_to_run_bytes": true,
+   "vs_hf": {
+    "scored": 194,
+    "over_ctx_ref": 0,
+    "over_ctx_same": 194,
+    "fields_same": 194,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 0.008701828081714602,
+    "logprob_worst_rounding": 0.0005579425414353745,
+    "sum_worst_abs": 0.007407457219755997,
+    "argmax_same": 2408,
+    "argmax_positions": 2408,
+    "argmax_flips": [],
+    "logprob_worst_over_range": 1.0559610586752779e-05,
+    "keys_same": true
+   },
+   "judged_by": "real-model rule against HF (ROUNDING against the CPU not met)",
+   "pass": true,
+   "throughput": {
+    "pythia_requests": {
+     "n": 194,
+     "req_per_s": 54.14
+    },
+    "pythia_bench256": {
+     "n": 256,
+     "req_per_s": 34.36
+    }
+   },
+   "chat_unchanged_by_score": true,
+   "errors": {
+    "not_json": 400,
+    "no_requests": 400,
+    "request_not_object": 400,
+    "empty_continuation": 400,
+    "empty_prompt": 400,
+    "prompt_id_negative": 400,
+    "prompt_id_vocab": 400,
+    "continuation_id_vocab": 400,
+    "ids_not_list": 400,
+    "ids_string_element": 400,
+    "text_fields_only": 400,
+    "good_then_bad": 400,
+    "empty_list": 200
+   }
+  },
+  "qwen": {
+   "vs_cpu": {
+    "scored": 194,
+    "over_ctx_ref": 0,
+    "over_ctx_same": 194,
+    "fields_same": 194,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 9.141063829787299e-05,
+    "logprob_worst_rounding": 8.163589157228479e-06,
+    "sum_worst_abs": 0.00017119550516042636,
+    "argmax_same": 2436,
+    "argmax_positions": 2436,
+    "argmax_flips": [],
+    "keys_same": true
+   },
+   "det_vs_cpu": {
+    "scored": 194,
+    "over_ctx_ref": 0,
+    "over_ctx_same": 194,
+    "fields_same": 194,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 9.141063829787299e-05,
+    "logprob_worst_rounding": 8.163589157228479e-06,
+    "sum_worst_abs": 0.00017119550516042636,
+    "argmax_same": 2436,
+    "argmax_positions": 2436,
+    "argmax_flips": [],
+    "keys_same": true
+   },
+   "det_run_to_run_bytes": true,
+   "vs_hf": {
+    "scored": 194,
+    "over_ctx_ref": 0,
+    "over_ctx_same": 194,
+    "fields_same": 194,
+    "requests_bit_equal": 0,
+    "logprob_worst_abs": 6.83710413031946e-05,
+    "logprob_worst_rounding": 8.204500963393535e-06,
+    "sum_worst_abs": 0.00011218202563156865,
+    "argmax_same": 2436,
+    "argmax_positions": 2436,
+    "argmax_flips": [],
+    "logprob_worst_over_range": 2.1944987956697035e-06,
+    "keys_same": true
+   },
+   "pass": true,
+   "throughput": {
+    "qwen_requests": {
+     "n": 194,
+     "req_per_s": 17.25
+    }
+   },
+   "chat_unchanged_by_score": true,
+   "errors": {
+    "not_json": 400,
+    "no_requests": 400,
+    "request_not_object": 400,
+    "empty_continuation": 400,
+    "empty_prompt": 400,
+    "prompt_id_negative": 400,
+    "prompt_id_vocab": 400,
+    "continuation_id_vocab": 400,
+    "ids_not_list": 400,
+    "ids_string_element": 400,
+    "text_fields_only": 400,
+    "good_then_bad": 400,
+    "empty_list": 200
+   }
+  }
+ },
+ "refusals": {
+  "not_json": {
+   "ember_status": 400,
+   "mtstudio_rc": 1,
+   "mtstudio": [
+    "mtstudio: [json.exception.parse_error.101] parse error at line 1, column 3: syntax error while parsing object key - invalid literal; last read: '{no'; expected string literal"
+   ]
+  },
+  "no_requests": {
+   "ember_status": 400,
+   "mtstudio": "n/a (one request per line)"
+  },
+  "request_not_object": {
+   "ember_status": 400,
+   "mtstudio_rc": 1,
+   "mtstudio": [
+    "mtstudio: [json.exception.type_error.304] cannot use at() with array"
+   ]
+  },
+  "empty_continuation": {
+   "ember_status": 400,
+   "mtstudio_rc": 1,
+   "mtstudio": [
+    "mtstudio: score: line 0 has an empty prompt or continuation"
+   ]
+  },
+  "empty_prompt": {
+   "ember_status": 400,
+   "mtstudio_rc": 1,
+   "mtstudio": [
+    "mtstudio: score: line 0 has an empty prompt or continuation"
+   ]
+  },
+  "prompt_id_negative": {
+   "ember_status": 400,
+   "mtstudio_rc": 1,
+   "mtstudio": [
+    "mtstudio: score: prompt id out of range"
+   ]
+  },
+  "prompt_id_vocab": {
+   "ember_status": 400,
+   "mtstudio_rc": 1,
+   "mtstudio": [
+    "mtstudio: score: prompt id out of range"
+   ]
+  },
+  "continuation_id_vocab": {
+   "ember_status": 400,
+   "mtstudio_rc": 1,
+   "mtstudio": [
+    "mtstudio: score: continuation id out of range"
+   ]
+  },
+  "ids_not_list": {
+   "ember_status": 400,
+   "mtstudio_rc": 1,
+   "mtstudio": [
+    "mtstudio: [json.exception.type_error.302] type must be array, but is string"
+   ]
+  },
+  "ids_string_element": {
+   "ember_status": 400,
+   "mtstudio_rc": 1,
+   "mtstudio": [
+    "mtstudio: [json.exception.type_error.302] type must be number, but is string"
+   ]
+  },
+  "text_fields_only": {
+   "ember_status": 400,
+   "mtstudio_rc": 0,
+   "mtstudio": [
+    "score: 1 continuations (0 over the context of 512) -> /home/jonat/ember_score/work/mts_err/err_text_fields_only.out.jsonl"
+   ]
+  },
+  "good_then_bad": {
+   "ember_status": 400,
+   "mtstudio_rc": 1,
+   "mtstudio": [
+    "mtstudio: score: line 1 has an empty prompt or continuation"
+   ]
+  },
+  "empty_list": {
+   "ember_status": 200,
+   "mtstudio_rc": 0,
+   "mtstudio": [
+    "score: 0 continuations (0 over the context of 512) -> /home/jonat/ember_score/work/mts_err/err_empty_list.out.jsonl"
+   ]
+  }
+ },
+ "refusals_agree": true,
+ "pass": true
+}

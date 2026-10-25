@@ -58,6 +58,7 @@ GPU, 0 for CPU only. Endpoints:
 | `POST /v1/chat/completions` | OpenAI-compatible chat completions, with `stream` and `stream_options.include_usage`; `repeat_penalty` / `repeat_last_n`, `top_k`, `thinking` and `chat_template_kwargs.enable_thinking` as extension fields; `frequency_penalty` and `presence_penalty` accept only 0 |
 | `GET /v1/models` | OpenAI-compatible model list |
 | `GET /health` | model, tokenizer, context length and `chat_template` (`{name, version}`, null for raw completion; `chat_template_why` says how it was resolved) |
+| `POST /score` | log-probabilities of continuations, paperkiln's `mtstudio score` on token ids (below): `{requests: [{key, prompt_ids, continuation_ids}]}` -> `{results: [{i, key, prompt_tokens, continuation_ids, over_ctx, logprobs, argmax, sum}], stats}` |
 
 Chat template (LOCAL_LLM_STACK.md section 3, point 3; shared with paperkiln's `mtstudio chat`):
 the prompt is the conversation rendered by a template record, never a format built into the
@@ -97,6 +98,42 @@ WebAssembly page clamp to those ranges, other requests get HTTP 400. Speculative
 (`EMBER_SPEC`) is off while the penalty is on. The command line's `--rep-penalty` is a different,
 older penalty for word-level models.
 
+### `POST /score`: log-probabilities (forced-choice benchmarks)
+
+The semantics of paperkiln's `mtstudio score` (`tools/mtstudio.cpp` `score_cmd`, which its
+`tools/bench_eval.py` uses for HellaSwag, ARC, PIQA, WinoGrande, LAMBADA and BLiMP), on token ids:
+
+```bash
+curl http://127.0.0.1:8080/score -H "Content-Type: application/json" \
+  -d '{"requests": [{"key": "q1|0", "prompt_ids": [0, 412, 88], "continuation_ids": [93, 17]}]}'
+```
+
+- Each request is one fresh forward over `prompt_ids + continuation_ids[:-1]` from position 0; nothing
+  is carried from one request to the next. For continuation token j, from the logits row before it:
+  `logprobs[j]`, its log-probability under the softmax at temperature 1, in double from the float
+  logits; `argmax[j]`, the top logit with `<unk>`, `<s>`, `</s>` and `<pad>` left out (by name, where
+  the vocabulary has them; the first maximum wins); `sum`, the log-probabilities added in order.
+- A request with more than context + 1 ids (`/health`'s `context`) comes back `"over_ctx": true`,
+  unscored. Records carry mtstudio's fields: `i` (the index in this call), `key` (echoed, any JSON),
+  `prompt_tokens`, `continuation_ids`.
+- Refused with HTTP 400 before anything runs, naming the first bad request, where mtstudio score
+  fails: a request that is not an object, ids that are not lists of integers, an empty prompt or
+  continuation, a prompt id outside [0, vocab + k) or a continuation id outside [0, vocab) (k: the
+  model's per-turn state tokens, 0 without), and, for state-token models, state ids that are not
+  complete blocks after an end-of-text closing a reply. mtstudio's text fields (`prompt`,
+  `continuation`, `messages`) are not served: ember scores ids. Off (403) under `EMBER_PUBLIC=1`.
+- A call holds the session from its first request to its last, so a batch is not interleaved with
+  chat requests; `/chat` after `/score` starts from a fresh cache, as it would anyway.
+- Speed without changing a bit: on the CPU paths, consecutive requests sharing a prefix (the choices
+  of one item) keep its KV rows, and only the continuation's rows go through the final norm and LM
+  head; every CPU row is computed apart from the batch it is in, so the log-probabilities are those of
+  a fresh full prefill, bit for bit (checked against `EMBER_SCORE_FULL=1`). The device, recurrent
+  state, eviction, depth routing and state tokens always prefill afresh.
+- On CUDA the scoring forward runs FP32 GEMMs whatever `EMBER_GEMM_TF32` says (no TF32, no BF16
+  tensor cores; they move log-probabilities by ~1e-3); `/chat`'s prefill is unchanged.
+  `EMBER_DETERMINISTIC=1` makes repeated calls bit-identical on one GPU and build.
+- `stats`: requests, scored, over_ctx, positions run, positions reused, queue and scoring time.
+
 ## `tinyllama` (command line)
 
 ```
@@ -123,6 +160,8 @@ Operational logs go to `debugging.log` in the working directory.
 |---|---|
 | `EMBER_PUBLIC=1` | public-serving limits: 600-character messages, 16 history turns, 64 new tokens, clamped sampling, 64 KB requests, bounded queue, warnings-only logging |
 | `EMBER_PREFIX_REUSE=0` | disable KV/prefix reuse across turns |
+| `EMBER_SCORE_REUSE=0` | `/score`: no prefix reuse between a call's requests (the bits do not change) |
+| `EMBER_SCORE_FULL=1` | `/score`: every request a fresh prefill computing every row's logits (the reference the default path is checked against) |
 | `EMBER_SPEC=k` | speculative decoding with prompt-lookup drafts of up to k tokens (greedy only) |
 | `EMBER_DECODE_GRAPH=0` | disable the CUDA-graph decode on the llama path |
 | `EMBER_DECODE_ATTN=legacy` | the one-block-per-head decode attention kernel instead of split-K |

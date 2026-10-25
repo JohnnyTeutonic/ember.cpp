@@ -1,0 +1,68 @@
+{
+ "gguf": "model.gguf",
+ "requests": [
+  {
+   "key": "long/7",
+   "ember_vs_mtstudio": 1.127665038502812e-05,
+   "ember_vs_f64": 1.0122351855379463e-05,
+   "mtstudio_vs_f64": 1.372336337102098e-05
+  },
+  {
+   "key": "piqa/1074|1",
+   "ember_vs_mtstudio": 1.086370113956292e-05,
+   "ember_vs_f64": 3.5736987564760625e-06,
+   "mtstudio_vs_f64": 7.290002383086858e-06
+  },
+  {
+   "key": "piqa/1074|0",
+   "ember_vs_mtstudio": 1.086370113956292e-05,
+   "ember_vs_f64": 3.5736987564760625e-06,
+   "mtstudio_vs_f64": 7.290002383086858e-06
+  },
+  {
+   "key": "hellaswag/46359|2",
+   "ember_vs_mtstudio": 1.070187555285429e-05,
+   "ember_vs_f64": 3.6492080424110895e-06,
+   "mtstudio_vs_f64": 9.591190267776994e-06
+  },
+  {
+   "key": "piqa/802|1",
+   "ember_vs_mtstudio": 1.0446923859319668e-05,
+   "ember_vs_f64": 1.6775630136134367e-06,
+   "mtstudio_vs_f64": 1.0593513899870288e-05
+  },
+  {
+   "key": "arc_challenge/Mercury_7033845|3",
+   "ember_vs_mtstudio": 1.0315251619985588e-05,
+   "ember_vs_f64": 3.47534185607401e-06,
+   "mtstudio_vs_f64": 6.839909763911578e-06
+  },
+  {
+   "key": "arc_challenge/Mercury_178255|2",
+   "ember_vs_mtstudio": 1.0258726529599471e-05,
+   "ember_vs_f64": 5.439441167709447e-06,
+   "mtstudio_vs_f64": 4.8192853618900244e-06
+  },
+  {
+   "key": "arc_challenge/Mercury_7033845|1",
+   "ember_vs_mtstudio": 1.0169301376095063e-05,
+   "ember_vs_f64": 1.8305271405338885e-06,
+   "mtstudio_vs_f64": 1.0132958192521357e-05
+  },
+  {
+   "key": "piqa/884|0",
+   "ember_vs_mtstudio": 9.094162345846257e-06,
+   "ember_vs_f64": 1.7724396208507187e-06,
+   "mtstudio_vs_f64": 8.842262054997718e-06
+  },
+  {
+   "key": "blimp/wh_island/324|0",
+   "ember_vs_mtstudio": 8.936328672604077e-06,
+   "ember_vs_f64": 2.345371015621822e-06,
+   "mtstudio_vs_f64": 1.1281699688225899e-05
+  }
+ ],
+ "ember_closer": 9,
+ "worst_ember_vs_f64": 1.0122351855379463e-05,
+ "worst_mtstudio_vs_f64": 1.372336337102098e-05
+}

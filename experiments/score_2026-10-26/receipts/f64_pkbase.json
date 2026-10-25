@@ -1,0 +1,68 @@
+{
+ "gguf": "pk_base_v1.gguf",
+ "requests": [
+  {
+   "key": "hellaswag/25032|3",
+   "ember_vs_mtstudio": 1.0904204069461798e-05,
+   "ember_vs_f64": 1.7740089175433127e-06,
+   "mtstudio_vs_f64": 9.803872146996184e-06
+  },
+  {
+   "key": "blimp/wh_island/324|0",
+   "ember_vs_mtstudio": 8.650774126373051e-06,
+   "ember_vs_f64": 5.1131793359360245e-06,
+   "mtstudio_vs_f64": 3.5375947904370264e-06
+  },
+  {
+   "key": "hellaswag/34922|3",
+   "ember_vs_mtstudio": 8.487860574835082e-06,
+   "ember_vs_f64": 1.720233415269945e-06,
+   "mtstudio_vs_f64": 6.767627159565137e-06
+  },
+  {
+   "key": "hellaswag/25032|1",
+   "ember_vs_mtstudio": 8.087163858583324e-06,
+   "ember_vs_f64": 1.903135741443407e-06,
+   "mtstudio_vs_f64": 6.184028117139917e-06
+  },
+  {
+   "key": "long/5",
+   "ember_vs_mtstudio": 7.93366208462487e-06,
+   "ember_vs_f64": 4.4945395920592546e-06,
+   "mtstudio_vs_f64": 5.972021526190474e-06
+  },
+  {
+   "key": "hellaswag/34922|0",
+   "ember_vs_mtstudio": 7.661526125524176e-06,
+   "ember_vs_f64": 1.2511267479808907e-06,
+   "mtstudio_vs_f64": 7.540911873160638e-06
+  },
+  {
+   "key": "hellaswag/34922|2",
+   "ember_vs_mtstudio": 7.447155820461404e-06,
+   "ember_vs_f64": 1.2251151893405421e-05,
+   "mtstudio_vs_f64": 1.9698307713866825e-05
+  },
+  {
+   "key": "hellaswag/46359|0",
+   "ember_vs_mtstudio": 7.434469925016174e-06,
+   "ember_vs_f64": 1.7273072900891862e-06,
+   "mtstudio_vs_f64": 9.16177721510536e-06
+  },
+  {
+   "key": "hellaswag/46359|2",
+   "ember_vs_mtstudio": 7.286734550859819e-06,
+   "ember_vs_f64": 1.978460288043493e-06,
+   "mtstudio_vs_f64": 5.540727098463094e-06
+  },
+  {
+   "key": "lambada/1251|0",
+   "ember_vs_mtstudio": 7.259306493256901e-06,
+   "ember_vs_f64": 5.794849511353561e-07,
+   "mtstudio_vs_f64": 6.6798215421215446e-06
+  }
+ ],
+ "ember_closer": 9,
+ "worst_ember_vs_f64": 1.2251151893405421e-05,
+ "worst_mtstudio_vs_f64": 1.9698307713866825e-05
+}

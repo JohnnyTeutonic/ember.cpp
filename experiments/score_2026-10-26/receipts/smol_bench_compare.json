@@ -1,0 +1,11 @@
+{
+ "a": "/home/jonat/ember_score/work/smolbench/bench_hf/smol",
+ "b": "/home/jonat/ember_score/work/smolbench/bench_ember/smol",
+ "requests": 296,
+ "tokens": 6097,
+ "max_abs_logprob_diff": 3.147873831998993e-05,
+ "median_abs_sum_diff": 9.855265886926645e-06,
+ "max_abs_sum_diff": 7.126622551822948e-05,
+ "argmax_agree": "6097/6097",
+ "choice_agree": "72/72"
+}

@@ -318,9 +318,28 @@ python3 tools/chat_ctx_parity.py 8095 8096 256      # long replies, long histori
 python3 tools/quantize_gguf.py model.gguf model_q8.gguf --output-q8 --embed-q8   # Q8_0 (or --dequantize)
 ```
 
+## Quick start: score benchmarks by log-probability
+
+```bash
+curl http://127.0.0.1:8080/score -H "Content-Type: application/json" \
+  -d '{"requests": [{"key": "q1|0", "prompt_ids": [0, 412, 88], "continuation_ids": [93, 17]}]}'
+```
+
+`POST /score` gives each continuation's per-token log-probabilities, the argmax at each of its
+positions and their sum, with the semantics of paperkiln's `mtstudio score`, so paperkiln's
+`tools/bench_eval.py --scorer ember` runs HellaSwag, ARC, PIQA, WinoGrande, LAMBADA and BLiMP
+through ember. Requests sharing a prefix reuse its KV rows on the CPU without changing a bit. On
+paperkiln's pick_e1_L16 and pk_base_v1 the log-probabilities agree with mtstudio's within ROUNDING
+(worst 1.1e-5, with ember nearer a float64 evaluation), argmax 2732/2732. Pythia-160m, Qwen2.5-0.5B
+and SmolLM2-135M agree with HF transformers within 8.3e-6 of the logit range, argmax equal
+everywhere, and on a T4 the device matches the CPU at 17-53 requests/s
+([docs/USAGE.md](docs/USAGE.md), [`experiments/score_2026-10-26/`](experiments/score_2026-10-26/)).
+
 ## Landing next
 
 Recently landed:
+- **Log-probability scoring for benchmarks.** `POST /score`, above. GGUFs without `output.weight`
+  (a tied head, such as SmolLM2's) now run on the tuned llama path.
 - **A llama.cpp-compatible vocabulary.** paperkiln's 97.5M base (pk_base_v1, d768 L12) and its
   chat fine-tunes use the 16,384-token Llama 3 scheme, so llama.cpp, Ollama and LM Studio can
   tokenise them too. They give ember chat replies identical to mtstudio's, 40/40.

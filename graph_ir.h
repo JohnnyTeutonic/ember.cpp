@@ -115,7 +115,9 @@ class Interpreter {
   // Runs tokens at absolute positions start_pos .. start_pos + T - 1 (the KV
   // state must already hold positions < start_pos). Returns logits for the
   // last token ([vocab]) or, with all_rows, for every token ([T][vocab]).
-  std::vector<float> forward(const std::vector<int>& tokens, int start_pos, bool all_rows = false);
+  // tail_rows > 0 (all_rows false): the last min(tail_rows, T) tokens' logits, each row the one
+  // all_rows gives (the head ops are row-wise); POST /score's continuation rows.
+  std::vector<float> forward(const std::vector<int>& tokens, int start_pos, bool all_rows = false, int tail_rows = 0);
 
   // True when a block declares recurrent state (see the header comment).
   bool has_recurrent() const { return rec_floats_ > 0; }
@@ -403,7 +405,7 @@ class Interpreter {
   void copy_item(DBuf& dst, const DBuf& x);
   void commit();
   void run_nodes_device(const std::vector<DStep>& steps, int layer, int T, int start_pos);
-  std::vector<float> forward_device(const std::vector<int>& tokens, int start_pos, bool all_rows);
+  std::vector<float> forward_device(const std::vector<int>& tokens, int start_pos, bool all_rows, int tail_rows);
   void run_device(int T, int start_pos);  // embed, blocks; not the head
   // The captured T = 1 step: true when it ran (logits in hlogits_).
   bool decode_graph(int token, int start_pos);
