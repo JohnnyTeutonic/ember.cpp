@@ -1738,12 +1738,17 @@ __global__ void attention_batch_prefill_cuda_kernel(
     const int* attention_mask_cu) {
 
     // Grid: (num_tokens_in_batch, num_q_heads)
-    // Block: (head_dim)
+    // Block: head_dim threads rounded up to a power of two (the launcher). The softmax's tree
+    // reductions halve blockDim.x, so a block of head_dim threads lost partials at any head_dim that
+    // is not a power of two (80, 96: tools/prefill_attention_test.cu), as rmsnorm_batch_cuda did
+    // before 69d7ca2. The extra threads (dim_thread_idx >= head_dim) read and write nothing; they
+    // join every barrier and put the reductions' identities (-FLT_MAX, 0) in the scratch.
     int token_idx_in_batch = blockIdx.x; // Current token in the batch we are computing attention FOR
     int q_head_idx = blockIdx.y;         // Current Q head we are computing attention FOR
     int dim_thread_idx = threadIdx.x;    // Thread index within the head dimension
+    const bool active = dim_thread_idx < head_dim;
 
-    if (token_idx_in_batch >= num_tokens_in_batch || q_head_idx >= num_q_heads || dim_thread_idx >= head_dim) {
+    if (token_idx_in_batch >= num_tokens_in_batch || q_head_idx >= num_q_heads) {
         return;
     }
 
@@ -1771,7 +1776,7 @@ __global__ void attention_batch_prefill_cuda_kernel(
 
     extern __shared__ float sdata[];
     float* s_scores = sdata; // Size: total_context_len
-    float* s_dot_product_scratch = &sdata[total_context_len]; // Size: head_dim
+    float* s_dot_product_scratch = &sdata[total_context_len]; // Size: blockDim.x (>= head_dim)
 
     // Calculate QK^T for each K vector in the context with causal masking
     for (int context_pos = 0; context_pos < total_context_len; ++context_pos) {
@@ -1796,9 +1801,11 @@ __global__ void attention_batch_prefill_cuda_kernel(
         if (context_pos <= max_attend_pos_for_this_token) {
             // Parallel dot product: each thread computes one element of Q_d * K_d
             // Store into shared memory scratchpad
-            float q_val = q_current_head_ptr[dim_thread_idx];
-            float k_val = k_vec_ptr[dim_thread_idx];
-            s_dot_product_scratch[dim_thread_idx] = q_val * k_val;
+            if (active) {
+                float q_val = q_current_head_ptr[dim_thread_idx];
+                float k_val = k_vec_ptr[dim_thread_idx];
+                s_dot_product_scratch[dim_thread_idx] = q_val * k_val;
+            }
             __syncthreads(); // Ensure all partial products are in s_dot_product_scratch
 
             // Thread 0 sums up the partial products from scratchpad
@@ -1818,12 +1825,14 @@ __global__ void attention_batch_prefill_cuda_kernel(
     // 1. Find max score in s_scores (reduction)
     float max_score = -FLT_MAX; 
 
+    // The scores are split over the head_dim active threads (stride head_dim, which is blockDim.x
+    // at a power-of-two head_dim); the extra threads hold the identities.
     float thread_local_max_for_scores = -FLT_MAX;
-    for (int i = dim_thread_idx; i < total_context_len; i += blockDim.x) {
+    for (int i = dim_thread_idx; active && i < total_context_len; i += head_dim) {
          thread_local_max_for_scores = fmaxf(thread_local_max_for_scores, s_scores[i]);
     }
-    s_dot_product_scratch[dim_thread_idx] = thread_local_max_for_scores; 
-    __syncthreads(); 
+    s_dot_product_scratch[dim_thread_idx] = thread_local_max_for_scores;
+    __syncthreads();
 
     for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
         if (dim_thread_idx < s) { 
@@ -1834,11 +1843,12 @@ __global__ void attention_batch_prefill_cuda_kernel(
     if (dim_thread_idx == 0) {
         max_score = s_dot_product_scratch[0];
     }
-    __syncthreads(); 
-    max_score = s_dot_product_scratch[0]; 
+    __syncthreads();
+    max_score = s_dot_product_scratch[0];
+    __syncthreads();  // every thread has read the maximum before the scratch takes the sums
 
     float thread_local_sum_exp = 0.0f;
-     for (int i = dim_thread_idx; i < total_context_len; i += blockDim.x) {
+     for (int i = dim_thread_idx; active && i < total_context_len; i += head_dim) {
          float val = expf(s_scores[i] - max_score);
          s_scores[i] = val; 
          thread_local_sum_exp += val;
@@ -1866,6 +1876,7 @@ __global__ void attention_batch_prefill_cuda_kernel(
     __syncthreads(); 
 
     // --- Weighted Sum of V ---
+    if (!active) return;  // no barrier follows
     double weighted_sum_v_d = 0.0; // USE DOUBLE FOR ACCUMULATION
     for (int context_pos = 0; context_pos < total_context_len; ++context_pos) {
         // CORRECTED: All V comes from cache since cache already contains current batch
@@ -2535,11 +2546,17 @@ void attention_batch_prefill_cuda(
     }
 
     dim3 grid_dim(num_tokens_in_batch, num_q_heads); // One block per (token_in_batch, q_head)
-    dim3 block_dim(head_dim); // Threads in block work on one head's computation, primarily along head_dim
+    // Threads in block work on one head's computation, primarily along head_dim. The kernel's tree
+    // reductions halve blockDim.x, so the block is head_dim rounded up to a power of two (the extra
+    // threads contribute the identities; tools/prefill_attention_test.cu). A power-of-two head_dim
+    // launches as before.
+    int threads_per_block = 1;
+    while (threads_per_block < head_dim) threads_per_block <<= 1;
+    dim3 block_dim(threads_per_block);
 
     int total_context_len = start_pos_in_kv_cache + num_tokens_in_batch;
     if (total_context_len > cache_max_seq_len) total_context_len = cache_max_seq_len;
-    size_t shared_mem_bytes = (total_context_len + head_dim) * sizeof(float);
+    size_t shared_mem_bytes = (total_context_len + threads_per_block) * sizeof(float);
 
     if (shared_mem_bytes > 48 * 1024) { 
         Logger::warning("[ATTN_BATCH_PREFILL_CUDA_WARN] Requested shared memory (" + std::to_string(shared_mem_bytes) + " bytes) might be large.");
