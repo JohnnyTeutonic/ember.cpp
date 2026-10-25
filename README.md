@@ -41,8 +41,8 @@ flowchart LR
 | Runtime-defined ops (`expr`: a paper's new activation or gate as a formula) | IR interpreter | ✅ | ✅ | not gated | |
 | Tied-block recursion (`weight_index`: one stored block applied several times) | IR interpreter | ✅ | not gated | not gated | |
 | Mixture-of-Recursions (`depth_route`: each token picks its depth) | IR interpreter | ✅ | runs on the CPU | not gated | |
-| Per-turn state tokens with eviction (`turn_state`) | IR interpreter | ✅ | runs on the CPU | not gated | |
-| Attention residuals over depth (`llama_attnres`) | IR interpreter | ✅ | not gated | not gated | |
+| Per-turn state tokens with eviction (`turn_state`) | IR interpreter | ✅ | ✅ | not gated | |
+| Attention residuals over depth (`llama_attnres`) | IR interpreter | ✅ | ✅ | not gated | |
 
 Every paperkiln family is gated the same way: **greedy replies identical to paperkiln's own
 sampler on 40 frozen prompts**, on each backend, including a trained 70M mixture-of-experts
@@ -262,12 +262,14 @@ Recently landed:
   tokenise them too. They give ember chat replies identical to mtstudio's, 40/40.
 - **The conversation schema** (above), gated against mtstudio and against HF's
   `apply_chat_template` for Qwen2.5, Qwen3 and Gemma 3.
+- **Per-turn state tokens on CUDA.** The turn_state mask and eviction run on the device, with
+  greedy 40/40 and logits within 1.1e-6 of the CPU on paperkiln's state4, rewinds into evicted
+  turns included (`experiments/cuda_state_2026-10-25`).
 
 In progress:
 - **The research programme's models.** These are training on Colab and RunPod: the 20M and 60M
   depth sweeps, recursion and Mixture-of-Recursions arms, and then a 12-turn model.
-- **CUDA kernels for the new mechanisms.** The turn_state mask and eviction come first, and
-  then Mixture-of-Recursions, so CUDA builds stop serving them on the CPU.
+- **A CUDA kernel for Mixture-of-Recursions**, so CUDA builds stop serving it on the CPU.
 - **The third-party families on every backend.** The WebAssembly gate per family (a 0.5B model
   needs the 4 GB heap).
 - **A new public chat model.** pk_base_v1's chat model, released through `release_chat.py`

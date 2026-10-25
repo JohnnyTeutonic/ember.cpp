@@ -1,0 +1,4 @@
+9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031  /content/tp/qwen3/Qwen3-0.6B-Q8_0.gguf
+8e0ae26000627ed62de0e78e41860af70094558b9d2913385c842a6aa06cf3fc  /content/tp/qwen25/qwen2.5-0.5b-instruct-fp16.gguf
+97522db7c8b426c8ae91ee23697a7ea9c56fa51bf05736b62824476daabf08f3  /content/tp/pythia-160m/pythia-160m-f32.gguf
+36b7792e106eaba963e59a443e65326fd6edabd875317e5112eaac489f1f2a71  /content/tp/gemma-3-270m-it/gemma-3-270m-it-f32.gguf

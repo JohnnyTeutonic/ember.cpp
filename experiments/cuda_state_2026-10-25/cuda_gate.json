@@ -1,0 +1,351 @@
+{
+ "session_out": "/mnt/c/ml_artifacts/ember_cuda_state/ember-cuda-1025b/out",
+ "gpu": "0  Tesla T4                       Off",
+ "a_kernel_tests": {
+  "prefill_attention_test_new": "prefill_attention_test: PASS (0 head dims failed; worst 2.274e-07)",
+  "prefill_attention_failed_head_dims_new": [],
+  "rmsnorm_batch_test_new": "rmsnorm_batch_test: PASS (0 widths failed; worst 1.288e-07)",
+  "prefill_attention_test_head": "prefill_attention_test: FAIL (7 head dims failed; worst 1.047e+01)",
+  "prefill_attention_failed_head_dims_head": [
+   48,
+   80,
+   96,
+   112,
+   160,
+   192,
+   200
+  ],
+  "rmsnorm_batch_test_head": "rmsnorm_batch_test: PASS (0 widths failed; worst 1.288e-07)",
+  "prefill_outputs_bit_equal_new_vs_old": {
+   "16": true,
+   "32": true,
+   "48": false,
+   "64": true,
+   "80": false,
+   "96": false,
+   "112": false,
+   "128": true,
+   "160": false,
+   "192": false,
+   "200": false,
+   "256": true
+  },
+  "prefill_pow2_unchanged": true,
+  "rmsnorm_outputs_bit_equal_new_vs_old": true,
+  "turn_state_attention_test": "turn_state_attention_test: PASS (0 checks failed; attention worst 2.816e-07)",
+  "turn_state_attention_lines": [
+   "attention head_dim  32 held    0 T  1  worst rel 0.000e+00  device row base bit-equal  ok",
+   "attention head_dim  32 held    0 T  5  worst rel 6.371e-08  device row base bit-equal  ok",
+   "attention head_dim  32 held    0 T 37  worst rel 1.272e-07  device row base bit-equal  ok",
+   "attention head_dim  32 held    9 T  1  worst rel 0.000e+00  device row base bit-equal  ok",
+   "attention head_dim  32 held    9 T  5  worst rel 1.630e-07  device row base bit-equal  ok",
+   "attention head_dim  32 held    9 T 37  worst rel 1.805e-07  device row base bit-equal  ok",
+   "attention head_dim  32 held 1100 T  1  worst rel 1.211e-07  device row base bit-equal  ok",
+   "attention head_dim  32 held 1100 T  5  worst rel 2.816e-07  device row base bit-equal  ok",
+   "attention head_dim  32 held 1100 T 37  worst rel 2.557e-07  device row base bit-equal  ok",
+   "attention head_dim  64 held    0 T  1  worst rel 0.000e+00  device row base bit-equal  ok",
+   "attention head_dim  64 held    0 T  5  worst rel 9.261e-08  device row base bit-equal  ok",
+   "attention head_dim  64 held    0 T 37  worst rel 1.243e-07  device row base bit-equal  ok",
+   "attention head_dim  64 held    9 T  1  worst rel 1.284e-07  device row base bit-equal  ok",
+   "attention head_dim  64 held    9 T  5  worst rel 1.139e-07  device row base bit-equal  ok",
+   "attention head_dim  64 held    9 T 37  worst rel 2.109e-07  device row base bit-equal  ok",
+   "attention head_dim  64 held 1100 T  1  worst rel 1.126e-07  device row base bit-equal  ok",
+   "attention head_dim  64 held 1100 T  5  worst rel 2.008e-07  device row base bit-equal  ok",
+   "attention head_dim  64 held 1100 T 37  worst rel 1.973e-07  device row base bit-equal  ok",
+   "attention head_dim  80 held    0 T  1  worst rel 0.000e+00  device row base bit-equal  ok",
+   "attention head_dim  80 held    0 T  5  worst rel 8.462e-08  device row base bit-equal  ok",
+   "attention head_dim  80 held    0 T 37  worst rel 1.676e-07  device row base bit-equal  ok",
+   "attention head_dim  80 held    9 T  1  worst rel 8.590e-08  device row base bit-equal  ok",
+   "attention head_dim  80 held    9 T  5  worst rel 8.791e-08  device row base bit-equal  ok",
+   "attention head_dim  80 held    9 T 37  worst rel 1.804e-07  device row base bit-equal  ok",
+   "attention head_dim  80 held 1100 T  1  worst rel 1.683e-07  device row base bit-equal  ok",
+   "attention head_dim  80 held 1100 T  5  worst rel 1.675e-07  device row base bit-equal  ok",
+   "attention head_dim  80 held 1100 T 37  worst rel 2.116e-07  device row base bit-equal  ok",
+   "attention head_dim 128 held    0 T  1  worst rel 0.000e+00  device row base bit-equal  ok",
+   "attention head_dim 128 held    0 T  5  worst rel 1.289e-07  device row base bit-equal  ok",
+   "attention head_dim 128 held    0 T 37  worst rel 1.346e-07  device row base bit-equal  ok",
+   "attention head_dim 128 held    9 T  1  worst rel 1.152e-07  device row base bit-equal  ok",
+   "attention head_dim 128 held    9 T  5  worst rel 9.196e-08  device row base bit-equal  ok",
+   "attention head_dim 128 held    9 T 37  worst rel 1.518e-07  device row base bit-equal  ok",
+   "attention head_dim 128 held 1100 T  1  worst rel 9.811e-08  device row base bit-equal  ok",
+   "attention head_dim 128 held 1100 T  5  worst rel 1.786e-07  device row base bit-equal  ok",
+   "attention head_dim 128 held 1100 T 37  worst rel 2.798e-07  device row base bit-equal  ok",
+   "kv compact: 40 rows -> 19 kept (first moved row 3)  ok",
+   "kv compact: 700 rows -> 291 kept (first moved row 3)  ok",
+   "embedding with state rows: ok",
+   "turn_state_attention_test: PASS (0 checks failed; attention worst 2.816e-07)"
+  ],
+  "decode_attention_test": "all ok",
+  "pass": true
+ },
+ "b_state_and_attnres": {
+  "state4": {
+   "summary": {
+    "calls": "12/12",
+    "calls_direct_rewinds_refused": "2/2",
+    "calls_worst_on_vs_fresh_rel": 5.859593854421906e-07,
+    "calls_worst_on_vs_off_rel": 5.015601255687692e-07,
+    "calls_worst_vs_cpu_rel": 1.0284389549489512e-06,
+    "direct_rewinds_refused": "80/80",
+    "free_greedy": {
+     "cpu": "40/40",
+     "device": "40/40"
+    },
+    "kv_rows_held_equal": "40/40",
+    "rewinds": "80/80",
+    "sequences": 40,
+    "teacher_forced_greedy": {
+     "cpu": "40/40",
+     "device": "40/40"
+    },
+    "top1_agree": "9264/9264",
+    "worst_decode_rel": 4.4413269619043697e-07,
+    "worst_decode_vs_prefill_rel": 4.301865876122053e-07,
+    "worst_on_vs_off_rel": 0.0,
+    "worst_prefill_off_rel": 6.166824103402018e-07,
+    "worst_prefill_on_rel": 6.166824103402018e-07,
+    "worst_rewind_rel": 6.509425442479908e-07,
+    "worst_turns_rel": 4.1496969212266806e-07
+   },
+   "pass": true,
+   "evicts_on": true,
+   "evicts_off": false,
+   "kv_rows_evict_equal_mtstudio": true,
+   "kv_rows_keep_equal_mtstudio": true,
+   "kv_rows_mean": {
+    "evict": 25.35,
+    "keep": 76.2
+   }
+  },
+  "state4_q8_0": {
+   "summary": {
+    "direct_rewinds_refused": "80/80",
+    "free_greedy": {
+     "cpu": "40/40",
+     "device": "40/40"
+    },
+    "kv_rows_held_equal": "40/40",
+    "rewinds": "80/80",
+    "sequences": 40,
+    "teacher_forced_greedy": {
+     "cpu": "40/40",
+     "device": "40/40"
+    },
+    "top1_agree": "9264/9264",
+    "worst_decode_rel": 4.396848397693179e-07,
+    "worst_decode_vs_prefill_rel": 5.196011363528395e-07,
+    "worst_on_vs_off_rel": 0.0,
+    "worst_prefill_off_rel": 5.938300464345405e-07,
+    "worst_prefill_on_rel": 5.938300464345405e-07,
+    "worst_rewind_rel": 5.938300464345405e-07,
+    "worst_turns_rel": 5.938300464345405e-07
+   },
+   "pass": true,
+   "evicts_on": true,
+   "evicts_off": false,
+   "kv_rows_evict_equal_mtstudio": true,
+   "kv_rows_keep_equal_mtstudio": true,
+   "kv_rows_mean": {
+    "evict": 25.35,
+    "keep": 76.2
+   }
+  },
+  "ar3": {
+   "summary": {
+    "free_greedy": {
+     "cpu": "40/40",
+     "device": "40/40"
+    },
+    "kv_rows_held_equal": "40/40",
+    "sequences": 40,
+    "teacher_forced_greedy": {
+     "cpu": "40/40",
+     "device": "40/40"
+    },
+    "top1_agree": "1419/1419",
+    "worst_decode_rel": 1.9655250831466248e-07,
+    "worst_decode_vs_prefill_rel": 1.8490160091504104e-07,
+    "worst_on_vs_off_rel": 0.0,
+    "worst_prefill_off_rel": 1.9655250831466248e-07,
+    "worst_prefill_on_rel": 1.9655250831466248e-07,
+    "worst_turns_rel": 0.0
+   },
+   "pass": true,
+   "evicts_on": false,
+   "evicts_off": false
+  },
+  "synth_k4": {
+   "summary": {
+    "calls": "12/12",
+    "calls_direct_rewinds_refused": "2/2",
+    "calls_worst_on_vs_fresh_rel": 7.652349087513488e-07,
+    "calls_worst_on_vs_off_rel": 5.61713639203772e-07,
+    "calls_worst_vs_cpu_rel": 8.549011667080479e-07,
+    "kv_rows_held_equal": "0/0",
+    "sequences": 0,
+    "top1_agree": "0/0",
+    "worst_decode_rel": 0.0,
+    "worst_decode_vs_prefill_rel": 0.0,
+    "worst_on_vs_off_rel": 0.0,
+    "worst_prefill_off_rel": 0.0,
+    "worst_prefill_on_rel": 0.0,
+    "worst_turns_rel": 0.0
+   },
+   "pass": true,
+   "evicts_on": true,
+   "evicts_off": false
+  },
+  "ir_device_gate_state4": {
+   "device_supported": true,
+   "family_hint": "llama_state",
+   "gen": 32,
+   "gguf": "/content/small/models/state4/state4.gguf",
+   "greedy_identical": "40/40",
+   "ids_file": null,
+   "len": 24,
+   "on_gpu": true,
+   "pass": true,
+   "prompts": 40,
+   "tol": 0.0001,
+   "top1_agree": "960/960",
+   "worst_decode_rel": 9.732434970881945e-07,
+   "worst_prefill_rel": 7.6021285148948e-07
+  },
+  "ir_device_gate_ar3": {
+   "device_supported": true,
+   "family_hint": "llama_attnres",
+   "gen": 8,
+   "gguf": "/content/small/models/ar3/ar3.gguf",
+   "greedy_identical": "40/40",
+   "ids_file": null,
+   "len": 8,
+   "on_gpu": true,
+   "pass": true,
+   "prompts": 40,
+   "tol": 0.0001,
+   "top1_agree": "320/320",
+   "worst_decode_rel": 1.889465749780318e-07,
+   "worst_prefill_rel": 1.842008024523758e-07
+  },
+  "pass": true
+ },
+ "c_device_gate_set": {
+  "syn_mistral_swa": {
+   "greedy_identical": "40/40",
+   "top1_agree": "960/960",
+   "worst_prefill_rel": 2.419039757357923e-06,
+   "worst_decode_rel": 2.046641629771282e-06,
+   "pass": true
+  },
+  "syn_gptneox": {
+   "greedy_identical": "40/40",
+   "top1_agree": "960/960",
+   "worst_prefill_rel": 4.275236528150474e-07,
+   "worst_decode_rel": 3.5018849564319667e-07,
+   "pass": true
+  },
+  "syn_gpt2": {
+   "greedy_identical": "40/40",
+   "top1_agree": "960/960",
+   "worst_prefill_rel": 6.272220595905113e-07,
+   "worst_decode_rel": 5.606494396217582e-07,
+   "pass": true
+  },
+  "syn_mamba": {
+   "greedy_identical": "40/40",
+   "top1_agree": "960/960",
+   "worst_prefill_rel": 8.806377761590888e-07,
+   "worst_decode_rel": 6.535427197068245e-07,
+   "pass": true
+  },
+  "syn_gemma3": {
+   "greedy_identical": "40/40",
+   "top1_agree": "960/960",
+   "worst_prefill_rel": 8.040019586525135e-07,
+   "worst_decode_rel": 6.508804381581313e-07,
+   "pass": true
+  },
+  "syn_gemma3_freq_scale": {
+   "greedy_identical": "40/40",
+   "top1_agree": "960/960",
+   "worst_prefill_rel": 6.471310427898385e-07,
+   "worst_decode_rel": 6.862774922763406e-07,
+   "pass": true
+  },
+  "syn_gemma3_weight_offset": {
+   "greedy_identical": "40/40",
+   "top1_agree": "960/960",
+   "worst_prefill_rel": 1.2314051810802344e-06,
+   "worst_decode_rel": 9.137638803884341e-07,
+   "pass": true
+  },
+  "gpt2_tiny_expr": {
+   "greedy_identical": "40/40",
+   "top1_agree": "960/960",
+   "worst_prefill_rel": 3.6081820941257443e-07,
+   "worst_decode_rel": 2.4174542128128457e-07,
+   "pass": true
+  },
+  "device_dumps_new_vs_old": {
+   "syn_mistral_swa": "identical",
+   "syn_gptneox": "identical",
+   "syn_gpt2": "identical",
+   "syn_mamba": "identical",
+   "syn_gemma3": "identical",
+   "syn_gemma3_freq_scale": "identical",
+   "syn_gemma3_weight_offset": "identical",
+   "gpt2_tiny_expr": "identical",
+   "ar3": "identical",
+   "qwen3_06b": "identical",
+   "pythia_160m": "identical",
+   "gemma3_270m": "identical",
+   "qwen25_05b": "identical",
+   "gemma3_270m_long": "identical",
+   "qwen25_long": "identical",
+   "qwen3_long": "identical"
+  },
+  "thirdparty_sha256": [
+   "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031  /content/tp/qwen3/Qwen3-0.6B-Q8_0.gguf",
+   "8e0ae26000627ed62de0e78e41860af70094558b9d2913385c842a6aa06cf3fc  /content/tp/qwen25/qwen2.5-0.5b-instruct-fp16.gguf",
+   "97522db7c8b426c8ae91ee23697a7ea9c56fa51bf05736b62824476daabf08f3  /content/tp/pythia-160m/pythia-160m-f32.gguf",
+   "36b7792e106eaba963e59a443e65326fd6edabd875317e5112eaac489f1f2a71  /content/tp/gemma-3-270m-it/gemma-3-270m-it-f32.gguf"
+  ],
+  "pass": true
+ },
+ "d_rmsnorm_L32": {
+  "vs_mtstudio_cpu_spot": {
+   "n": 40,
+   "replies_identical": 40,
+   "with_ids": 0,
+   "ids_identical": 0,
+   "prompt_ids_identical": 0,
+   "divergent": []
+  },
+  "vs_fix_cuda_T4_spot": {
+   "n": 40,
+   "replies_identical": 40,
+   "with_ids": 40,
+   "ids_identical": 40,
+   "prompt_ids_identical": 40,
+   "divergent": []
+  },
+  "vs_mtstudio_cpu_p1": {
+   "n": 40,
+   "replies_identical": 40,
+   "with_ids": 0,
+   "ids_identical": 0,
+   "prompt_ids_identical": 0,
+   "divergent": []
+  },
+  "vs_fix_cuda_T4_p1": {
+   "n": 40,
+   "replies_identical": 40,
+   "with_ids": 40,
+   "ids_identical": 40,
+   "prompt_ids_identical": 40,
+   "divergent": []
+  },
+  "pass": true
+ },
+ "pass": true
+}

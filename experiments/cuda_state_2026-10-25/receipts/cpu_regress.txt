@@ -1,0 +1,25 @@
+CPU regression of ember aadeed2 (this work) on WSL, 25 Oct 2026 (cpu_regress.sh, wasm_regress.sh; build
+~/ember_wt/ci/build_cpu from git archive aa50a61 plus this work's files; receipts compared with the committed
+ones as `git show HEAD:<path>` gives them, the build path in "bin"/"new" put back first).
+
+recursion_gate rc=0: recursion_gate_cpu.json byte-identical
+mor_gate rc=0: mor_gate_cpu.json byte-identical
+mor_refusals rc=0: mor_refusals.json byte-identical
+attnres_gate rc=0: attnres_gate_cpu.json byte-identical
+state4_gate rc=0: state4_gate_cpu.json byte-identical
+regress_parity rc=0: regress_parity.json byte-identical
+g5_thirdparty rc=0: g5_thirdparty.json byte-identical
+wasm_frozen40.json equal to the committed receipt (ms_per_reply aside): True   (WASM reply == mtstudio 40/40)
+wasm_system_set_v1.json equal to the committed receipt (ms_per_reply aside): True   (60/60)
+adapter self-test rc=0: 119/119 checks pass, 2374 requests
+
+state_tokens_gate rc=0: state_tokens_gate_cpu.json differs from the committed receipt in its numpy-reference
+  fields only (vs_numpy_rel, causal_vs_numpy_rel: paperkiln's tools/ir_numpy.py side, the same values another
+  session's in-place rerun wrote at 15:45); the same gate run now with ember aa50a61's own CPU build
+  (~/ember_wt/ci/build_cpu_head): "state_tokens_gate: this build = aa50a61, byte for byte".
+
+regress_bits rc=0: 15 of 16 cases bit-equal to ember 69d7ca2; gpt2_tiny_recursion_0101 rc [0, 134]: its
+  hand-made IR (gpt2_tiny with repeat 4 and weight_index) is refused at load since IR_SPEC validation
+  (e358153, f4516ff), by aa50a61's build and this one alike:
+  "IR_SPEC 3.3: block.repeat 4 != model.n_layers 2; IR_SPEC 7.1: block.weight_index needs architecture
+  paperkiln, not gpt2". Not a change of this work; the gate script's case predates the validation.

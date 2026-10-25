@@ -1,0 +1,40 @@
+attention head_dim  32 held    0 T  1  worst rel 0.000e+00  device row base bit-equal  ok
+attention head_dim  32 held    0 T  5  worst rel 6.371e-08  device row base bit-equal  ok
+attention head_dim  32 held    0 T 37  worst rel 1.272e-07  device row base bit-equal  ok
+attention head_dim  32 held    9 T  1  worst rel 0.000e+00  device row base bit-equal  ok
+attention head_dim  32 held    9 T  5  worst rel 1.630e-07  device row base bit-equal  ok
+attention head_dim  32 held    9 T 37  worst rel 1.805e-07  device row base bit-equal  ok
+attention head_dim  32 held 1100 T  1  worst rel 1.211e-07  device row base bit-equal  ok
+attention head_dim  32 held 1100 T  5  worst rel 2.816e-07  device row base bit-equal  ok
+attention head_dim  32 held 1100 T 37  worst rel 2.557e-07  device row base bit-equal  ok
+attention head_dim  64 held    0 T  1  worst rel 0.000e+00  device row base bit-equal  ok
+attention head_dim  64 held    0 T  5  worst rel 9.261e-08  device row base bit-equal  ok
+attention head_dim  64 held    0 T 37  worst rel 1.243e-07  device row base bit-equal  ok
+attention head_dim  64 held    9 T  1  worst rel 1.284e-07  device row base bit-equal  ok
+attention head_dim  64 held    9 T  5  worst rel 1.139e-07  device row base bit-equal  ok
+attention head_dim  64 held    9 T 37  worst rel 2.109e-07  device row base bit-equal  ok
+attention head_dim  64 held 1100 T  1  worst rel 1.126e-07  device row base bit-equal  ok
+attention head_dim  64 held 1100 T  5  worst rel 2.008e-07  device row base bit-equal  ok
+attention head_dim  64 held 1100 T 37  worst rel 1.973e-07  device row base bit-equal  ok
+attention head_dim  80 held    0 T  1  worst rel 0.000e+00  device row base bit-equal  ok
+attention head_dim  80 held    0 T  5  worst rel 8.462e-08  device row base bit-equal  ok
+attention head_dim  80 held    0 T 37  worst rel 1.676e-07  device row base bit-equal  ok
+attention head_dim  80 held    9 T  1  worst rel 8.590e-08  device row base bit-equal  ok
+attention head_dim  80 held    9 T  5  worst rel 8.791e-08  device row base bit-equal  ok
+attention head_dim  80 held    9 T 37  worst rel 1.804e-07  device row base bit-equal  ok
+attention head_dim  80 held 1100 T  1  worst rel 1.683e-07  device row base bit-equal  ok
+attention head_dim  80 held 1100 T  5  worst rel 1.675e-07  device row base bit-equal  ok
+attention head_dim  80 held 1100 T 37  worst rel 2.116e-07  device row base bit-equal  ok
+attention head_dim 128 held    0 T  1  worst rel 0.000e+00  device row base bit-equal  ok
+attention head_dim 128 held    0 T  5  worst rel 1.289e-07  device row base bit-equal  ok
+attention head_dim 128 held    0 T 37  worst rel 1.346e-07  device row base bit-equal  ok
+attention head_dim 128 held    9 T  1  worst rel 1.152e-07  device row base bit-equal  ok
+attention head_dim 128 held    9 T  5  worst rel 9.196e-08  device row base bit-equal  ok
+attention head_dim 128 held    9 T 37  worst rel 1.518e-07  device row base bit-equal  ok
+attention head_dim 128 held 1100 T  1  worst rel 9.811e-08  device row base bit-equal  ok
+attention head_dim 128 held 1100 T  5  worst rel 1.786e-07  device row base bit-equal  ok
+attention head_dim 128 held 1100 T 37  worst rel 2.798e-07  device row base bit-equal  ok
+kv compact: 40 rows -> 19 kept (first moved row 3)  ok
+kv compact: 700 rows -> 291 kept (first moved row 3)  ok
+embedding with state rows: ok
+turn_state_attention_test: PASS (0 checks failed; attention worst 2.816e-07)
