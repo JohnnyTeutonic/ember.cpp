@@ -9,8 +9,9 @@
 // --log FILE writes ember's log there (off by default). CPU interpreter only ("backend": "cpu",
 // "exact": true).
 //
-// Methods: hello, check, open, forward, truncate, snapshot, restore, close; run_node replies skip.
-// A session owns one GGUF, one interpreter and the ids it has seen.
+// Methods: hello, check, open, forward, truncate, snapshot, restore, close, digest, dequantize, and run_node
+// for recurrence nodes (other ops and run_node_grad reply skip). A session owns one GGUF, one interpreter and
+// the ids it has seen.
 //   check / open: "ir" names a document that replaces the file's (ember's EMBER_IR); null reads the
 //     GGUF's paperkiln.ir (or the IR ember builds from third-party metadata). EMBER_IR from the
 //     environment is ignored. open's "evict": null as declared, false keeps every row
@@ -21,11 +22,18 @@
 //     nearest recurrent snapshot below n).
 //   snapshot / restore: a copy of the whole sequence state (kv rows, state-token bookkeeping, MoR
 //     row sets, recurrent tensors and snapshots) and the ids, by tag.
+//   digest: ember's digest of the text (ir_digest.h; IR_SPEC 3.10), with its canonical form, or "refused".
+//   dequantize: the f32 values of n elements stored as the bytes, by the interpreter's route
+//     (dequant_span_to_f32, IR_SPEC 4.7): F32, F16, BF16, Q8_0, Q4_0, Q4_1, Q5_0, Q5_1, Q4_K, Q5_K, Q6_K.
+//   run_node: a recurrence node (graph_ir_recurrence.h) as application 0 ({i} is 0), token by token over the
+//     inputs' rows from the slot's initial state (or "state"'s tensors); outputs {out: [T, w]} and the slot's
+//     tensors after the last row.
 // Reports: logits and depth (forward only), kv_rows, kv_positions, recurrent. ember keeps one kv
 // slot per block; kv_rows and kv_positions give, per application, the rows its cache holds after
 // the call. ember evicts lazily: a finished segment's text rows go when the first position of a
 // later segment is processed (the start of the next call into it), not at the end of the call
 // that completes the state block (IR_SPEC.md 6.8.3 allows either).
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -42,7 +50,11 @@
 
 #include "gguf_parser.h"
 #include "graph_ir.h"
+#include "graph_ir_recurrence.h"
+#include "ir_digest.h"
 #include "logger.h"
+#include "quantization.h"
+#include "weight_management.h"
 
 #ifdef _WIN32
 #include <io.h>
@@ -87,6 +99,42 @@ json tensor(const std::vector<int64_t>& shape, const float* v, size_t n) {
     for (int d = 7; d >= 0; --d, b >>= 4) s[i * 8 + d] = hex[b & 15];
   }
   return json{{"shape", shape}, {"f32", s}};
+}
+
+// A tensor of section 11.2 as floats (and its shape).
+std::vector<float> floats(const json& t, std::vector<int64_t>* shape = nullptr) {
+  const std::string hex = t.at("f32").get<std::string>();
+  if (hex.size() % 8) throw std::runtime_error("a tensor's f32 hex is not 8 digits per value");
+  std::vector<float> v(hex.size() / 8);
+  for (size_t i = 0; i < v.size(); ++i) {
+    const uint32_t b = static_cast<uint32_t>(std::stoul(hex.substr(i * 8, 8), nullptr, 16));
+    std::memcpy(&v[i], &b, 4);
+  }
+  if (shape) *shape = t.at("shape").get<std::vector<int64_t>>();
+  return v;
+}
+
+std::vector<uint8_t> unhex(const std::string& h) {
+  if (h.size() % 2) throw std::runtime_error("bytes: an odd number of hex digits");
+  std::vector<uint8_t> out(h.size() / 2);
+  for (size_t i = 0; i < out.size(); ++i) out[i] = static_cast<uint8_t>(std::stoul(h.substr(2 * i, 2), nullptr, 16));
+  return out;
+}
+
+// IR_SPEC 4.7's table: elements and bytes per block.
+struct StoredType {
+  GGMLType type;
+  size_t elems, bytes;
+};
+const std::map<std::string, StoredType>& stored_types() {
+  static const std::map<std::string, StoredType> t = {
+      {"F32", {GGMLType::GGML_TYPE_F32, 1, 4}},       {"F16", {GGMLType::GGML_TYPE_F16, 1, 2}},
+      {"BF16", {GGMLType::GGML_TYPE_BF16, 1, 2}},     {"Q8_0", {GGMLType::GGML_TYPE_Q8_0, 32, 34}},
+      {"Q4_0", {GGMLType::GGML_TYPE_Q4_0, 32, 18}},   {"Q4_1", {GGMLType::GGML_TYPE_Q4_1, 32, 20}},
+      {"Q5_0", {GGMLType::GGML_TYPE_Q5_0, 32, 22}},   {"Q5_1", {GGMLType::GGML_TYPE_Q5_1, 32, 24}},
+      {"Q4_K", {GGMLType::GGML_TYPE_Q4_K, 256, 144}}, {"Q5_K", {GGMLType::GGML_TYPE_Q5_K, 256, 176}},
+      {"Q6_K", {GGMLType::GGML_TYPE_Q6_K, 256, 210}}};
+  return t;
 }
 
 struct Loaded {
@@ -176,18 +224,126 @@ class Adapter {
       reports(s, p, r, false, {});
       return r;
     }
-    if (method == "run_node") throw Skip{"run_node is not implemented by ember's adapter (whole-model methods only)"};
+    if (method == "run_node") return run_node(p);
+    if (method == "run_node_grad") throw Skip{"ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"};
+    if (method == "digest") {
+      const ember_ir::DigestResult d = ember_ir::ir_digest(p.at("text").get<std::string>(), p.value("prose", false));
+      if (!d.ok) return {{"refused", d.refused}};
+      return {{"sha256", d.sha256}, {"canonical", d.canonical}};
+    }
+    if (method == "dequantize") return dequantize(p);
     throw std::runtime_error("unknown method '" + method + "'");
   }
 
  private:
   static json hello() {
     return {{"engine", "ember.cpp"},
-            {"version", "ir_adapter 1 (IR versions 0 and 1)"},
+            {"version", "ir_adapter 2 (IR versions 0 and 1; spec revision 1.1)"},
             {"backend", "cpu"},
             {"exact", true},
-            {"profiles", {"core", "state", "recursion", "thirdparty"}},
-            {"methods", {"hello", "check", "open", "forward", "truncate", "snapshot", "restore", "close"}}};
+            {"profiles", {"core", "state", "recursion", "thirdparty", "recurrence"}},
+            {"methods", {"hello", "check", "open", "forward", "truncate", "snapshot", "restore", "close", "digest",
+                         "dequantize", "run_node"}}};
+  }
+
+  static json dequantize(const json& p) {
+    const std::string name = p.at("type").get<std::string>();
+    const auto it = stored_types().find(name);
+    if (it == stored_types().end()) throw std::runtime_error("dequantize: type " + name + " is not one ember reads");
+    const StoredType& st = it->second;
+    const size_t n = p.at("n").get<size_t>();
+    if (n % st.elems)
+      throw std::runtime_error("dequantize: " + std::to_string(n) + " elements of " + name + " is not whole blocks of " +
+                               std::to_string(st.elems));
+    const std::vector<uint8_t> raw = unhex(p.at("bytes").get<std::string>());
+    if (raw.size() != n / st.elems * st.bytes)
+      throw std::runtime_error("dequantize: " + std::to_string(raw.size()) + " bytes for " + std::to_string(n) +
+                               " elements of " + name);
+    std::vector<float> v(n);
+    if (st.type == GGMLType::GGML_TYPE_F32)
+      std::memcpy(v.data(), raw.data(), raw.size());
+    else if (!dequant_span_to_f32(st.type, raw.data(), 0, n, v.data()))
+      throw std::runtime_error("dequantize: no route for " + name);
+    return {{"values", tensor({static_cast<int64_t>(n)}, v.data(), v.size())}};
+  }
+
+  // A recurrence node alone, as application 0 (IR_SPEC 11.3 run_node; 6.10.3).
+  static json run_node(const json& p) {
+    const json& node = p.at("node");
+    if (node.value("op", "") != "recurrence")
+      throw Skip{"run_node: ember's adapter runs recurrence nodes only (whole-model methods for the other ops)"};
+    const ember_ir::rec::Recurrence prog = ember_ir::rec::Recurrence::compile(node);
+    std::vector<std::string> ins;
+    if (node.at("in").is_string())
+      ins.push_back(node.at("in").get<std::string>());
+    else
+      ins = node.at("in").get<std::vector<std::string>>();
+    std::vector<std::vector<float>> in_vals;
+    int64_t T = -1;
+    for (size_t k = 0; k < ins.size(); ++k) {
+      std::vector<int64_t> shape;
+      in_vals.push_back(floats(p.at("inputs").at(ins[k]), &shape));
+      const int64_t rows = shape.empty() ? 0 : shape[0];
+      if (T >= 0 && rows != T) throw std::runtime_error("run_node: the inputs have different row counts");
+      T = rows;
+      if (rows > 0 && in_vals.back().size() != static_cast<size_t>(rows) * prog.input_widths()[k])
+        throw std::runtime_error("IR_SPEC 6.10 (rule 34): recurrence input '" + ins[k] + "' is " +
+                                 std::to_string(in_vals.back().size() / rows) + " wide; its declaration is " +
+                                 std::to_string(prog.input_widths()[k]));
+    }
+    std::vector<std::vector<float>> w_vals;
+    std::vector<const float*> w;
+    for (const auto& wd : prog.weights()) {
+      std::string name = wd.tensor;
+      const auto at = name.find("{i}");
+      if (at != std::string::npos) name.replace(at, 3, "0");
+      if (!p.at("weights").contains(name)) throw std::runtime_error("run_node: no weight '" + name + "'");
+      w_vals.push_back(floats(p.at("weights").at(name)));
+      if (w_vals.back().size() != wd.numel)
+        throw std::runtime_error("IR_SPEC 6.10 (rule 34): recurrence weight " + wd.decl + " reads '" + name +
+                                 "', which has " + std::to_string(w_vals.back().size()) +
+                                 " elements; its declaration has " + std::to_string(wd.numel));
+    }
+    for (const auto& v : w_vals) w.push_back(v.data());
+    const std::string slot = node.at("state").get<std::string>();
+    std::vector<std::vector<float>> st_vals;
+    std::vector<float*> st;
+    for (const auto& s : prog.state()) st_vals.emplace_back(s.numel);
+    for (auto& v : st_vals) st.push_back(v.data());
+    prog.init(w, st);
+    const json given = p.contains("state") ? p.at("state") : json();
+    if (given.is_object() && given.contains(slot)) {  // the slot's declaration and its tensors before the call
+      const json& g = given.at(slot);
+      if (g.contains("decl")) {
+        const std::string why = prog.slot_errors(g.at("decl"));
+        if (!why.empty()) throw std::runtime_error("IR_SPEC 6.10 (rule 33): " + why);
+      }
+      for (size_t s = 0; s < prog.state().size(); ++s)
+        if (g.contains("tensors") && g.at("tensors").contains(prog.state()[s].name)) {
+          const std::vector<float> v = floats(g.at("tensors").at(prog.state()[s].name));
+          if (v.size() != st_vals[s].size())
+            throw std::runtime_error("run_node: state tensor " + prog.state()[s].name + " has the wrong size");
+          std::copy(v.begin(), v.end(), st_vals[s].begin());
+        }
+    }
+    const size_t ow = prog.out_width();
+    const int64_t rows = T < 0 ? 0 : T;
+    std::vector<float> out(static_cast<size_t>(rows) * ow);
+    std::vector<const float*> row(ins.size());
+    for (int64_t t = 0; t < rows; ++t) {
+      for (size_t k = 0; k < ins.size(); ++k) row[k] = in_vals[k].data() + static_cast<size_t>(t) * prog.input_widths()[k];
+      prog.step(row, w, st, out.data() + static_cast<size_t>(t) * ow);
+    }
+    json state = json::object();
+    for (size_t s = 0; s < prog.state().size(); ++s)
+      state[prog.state()[s].name] = tensor(prog.state()[s].shape, st_vals[s].data(), st_vals[s].size());
+    json outputs = json::object();
+    outputs[node.at("out").get<std::string>()] = tensor({rows, static_cast<int64_t>(ow)}, out.data(), out.size());
+    json r;
+    r["outputs"] = outputs;
+    r["state"] = json::object();
+    r["state"][slot] = state;
+    return r;
   }
   static std::string sid(const json& p) { return p.at("session").get<std::string>(); }
   Session& session(const json& p) {

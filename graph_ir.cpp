@@ -19,7 +19,9 @@
 #include "graph_ir_expr.h"
 #include "graph_ir_mamba.h"
 #include "graph_ir_ops.h"
+#include "graph_ir_recurrence.h"
 #include "graph_ir_validate.h"
+#include "ir_digest.h"
 #include "logger.h"
 #include "quantization.h"
 #include "utils.h"
@@ -44,8 +46,12 @@ const std::set<std::string> kCpuOps = {"embedding", "pos_embedding", "rmsnorm", 
                                        // runtime-defined elementwise ops (graph_ir_expr.h) and the per-feature gain
                                        "expr", "scale",
                                        // Mixture-of-Recursions' control node (forward's mor_step runs it)
-                                       "depth_route"};
-const std::set<std::string> kRecurrentOps = {"linear_attention", "ssm_scan", "conv1d_causal", "selective_scan"};
+                                       "depth_route",
+                                       // a recurrent op defined in the document (graph_ir_recurrence.h); no CUDA
+                                       // kernel: a CUDA build serves its documents on the CPU (device_supported)
+                                       "recurrence"};
+const std::set<std::string> kRecurrentOps = {"linear_attention", "ssm_scan", "conv1d_causal", "selective_scan",
+                                             "recurrence"};
 // The ops run_nodes_device implements.
 const std::set<std::string> kCudaOps = {"embedding", "pos_embedding", "rmsnorm", "layernorm", "linear", "split", "rope",
                                         "attention", "add", "mul", "silu", "gelu", "moe_ffn",
@@ -835,7 +841,15 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
           if (e <= 0) throw std::runtime_error("IR recurrent state '" + slot.name + "': bad shape for " + rt.name);
           rt.floats *= static_cast<size_t>(e);
         }
-        rt.init = t.value("init", 0.0f);
+        // init 0, or "body" for op recurrence: the node's init assigns it (IR_SPEC 6.10.1; set after binding)
+        if (t.contains("init") && t.at("init").is_string()) {
+          if (slot.op != "recurrence" || t.at("init") != "body")
+            throw std::runtime_error("IR recurrent state '" + slot.name + "': init " + t.at("init").dump() + " for " +
+                                     rt.name + " (0, or \"body\" for op recurrence; IR_SPEC 6.3, 10.1 rule 13)");
+          rt.init = 0.0f;
+        } else {
+          rt.init = t.value("init", 0.0f);
+        }
         rt.offset = rec_floats_;
         rec_floats_ += rt.floats;
         slot.tensors.push_back(std::move(rt));
@@ -1170,15 +1184,35 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
         throw std::runtime_error("IR selective_scan reads [x, dt, B, C] and writes one output");
       if (slot.tensors.size() != 1 || slot.tensors[0].name != "s" || slot.tensors[0].shape != std::vector<int64_t>{D, N})
         throw std::runtime_error("IR recurrent state '" + slot.name + "' must hold one tensor s [channels, d_state]");
+    } else if (n.op == "recurrence") {  // IR_SPEC 6.10, 10.1 rules 31-33 (graph_ir_recurrence.h)
+      auto prog = std::make_shared<rec::Recurrence>(rec::Recurrence::compile(n.attrs));
+      if (n.out.size() != 1) throw std::runtime_error("IR recurrence writes one output");
+      const std::string name = has(n.attrs, "state") ? n.attrs.at("state").get<std::string>() : "";
+      const json* decl = nullptr;  // into the document (not a copy: it is read below)
+      if (j.at("block").contains("state") && j.at("block").at("state").is_array())
+        for (const auto& s : j.at("block").at("state"))
+          if (s.is_object() && s.value("name", "") == name && s.value("kind", "") == "recurrent") decl = &s;
+      if (!decl) throw std::runtime_error("IR_SPEC 6.10 (rule 33): recurrence names no recurrent slot '" + name + "'");
+      const std::string why = prog->slot_errors(*decl);
+      if (!why.empty()) throw std::runtime_error("IR_SPEC 6.10 (rule 33): " + why);
+      rec_slot(n, "recurrence");
+      for (const auto& other : block_)
+        if (&other != &n && has(other.attrs, "state") && other.attrs.at("state") == name)
+          throw std::runtime_error("IR_SPEC 6.10 (rule 33): the slot '" + name + "' of a recurrence is read by another node (" +
+                                   other.op + ")");
+      recs_[&n] = std::move(prog);
     }
   }
   if (rec_floats_ > 0) {
-    rec_init_.assign(rec_floats_, 0.0f);
-    for (const auto& slot : rec_slots_)
-      for (const auto& rt : slot.tensors)
-        std::fill(rec_init_.begin() + rt.offset, rec_init_.begin() + rt.offset + rt.floats, rt.init);
-    rec_.resize(static_cast<size_t>(n_layers_) * rec_floats_);
-    for (int l = 0; l < n_layers_; ++l) std::copy(rec_init_.begin(), rec_init_.end(), rec_.begin() + l * rec_floats_);
+    // Every application's initial state: +0, or (op recurrence with "init" "body") the init body over the
+    // application's weights, set after binding.
+    rec_init_.assign(static_cast<size_t>(n_layers_) * rec_floats_, 0.0f);
+    for (int l = 0; l < n_layers_; ++l)
+      for (const auto& slot : rec_slots_)
+        for (const auto& rt : slot.tensors)
+          std::fill(rec_init_.begin() + l * rec_floats_ + rt.offset, rec_init_.begin() + l * rec_floats_ + rt.offset + rt.floats,
+                    rt.init);
+    rec_ = rec_init_;
     // Snapshots are a whole state each; at most 64, and at most 256 MiB.
     const size_t budget = (256u << 20) / sizeof(float);
     rec_max_snaps_ = std::max<size_t>(2, std::min<size_t>(64, budget / rec_.size()));
@@ -1228,6 +1262,24 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
   bind(embed_, -1, gguf);
   for (int l = 0; l < n_layers_; ++l) bind(block_, l, gguf);
   bind(head_, -1, gguf);
+  // A recurrence's initial state (IR_SPEC 6.10.3): its init bodies over each application's weights.
+  for (const auto& [np, prog] : recs_) {
+    const RecSlot& slot = rec_slot(*np, "recurrence");
+    AppIndex ai(app_index_, *np);
+    for (int l = 0; l < n_layers_; ++l) {
+      std::vector<const float*> w;
+      for (const auto& wd : prog->weights()) w.push_back(weight(layer_name(wd.tensor, l)).data());
+      std::vector<float*> st;
+      for (const auto& s : prog->state()) {
+        const RecTensor* rt = nullptr;
+        for (const auto& t : slot.tensors)
+          if (t.name == s.name) rt = &t;
+        st.push_back(rec_init_.data() + static_cast<size_t>(l) * rec_floats_ + rt->offset);
+      }
+      prog->init(w, st);
+    }
+  }
+  if (!recs_.empty()) rec_ = rec_init_;
   // The state rows: state_weight [k, d] (ggml ne0 = d, the token embedding's width); k from its
   // size, equal to the file's paperkiln.state_tokens.k when the file names one.
   {
@@ -1318,6 +1370,10 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
                "; f32 " +
                std::to_string(bytes_f32 >> 20) + " MiB" + (dequant_all_ ? "; dequantised at load" : "") + "), device " +
                (gpu_ ? "cuda" : "cpu"));
+  {  // The document run, by its digest (IR_SPEC 3.10): a citation names it as sha256:<hex>.
+    const DigestResult d = ir_digest(ir_json);
+    Logger::info(d.ok ? "[IR] document sha256:" + d.sha256 : "[IR] the document has no digest (" + d.refused + ")");
+  }
   if (rec_floats_ > 0)
     Logger::info("[IR] recurrent state: " + std::to_string(rec_slots_.size()) + " slot(s), " +
                  std::to_string(rec_floats_) + " floats per block; up to " + std::to_string(rec_max_snaps_) +
@@ -1488,6 +1544,18 @@ void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData
         const std::string d = layer_name(n.attrs.at("d").get<std::string>(), layer);
         bind_tensor(d, gguf);
         expect(d, D);
+      }
+    }
+    if (n.op == "recurrence") {  // each weight as many elements as its declaration, read row-major (IR_SPEC 6.10.1)
+      const auto it = recs_.find(&n);
+      if (it == recs_.end()) throw std::runtime_error("IR recurrence: the node was not compiled");
+      for (const auto& wd : it->second->weights()) {
+        const std::string w = layer_name(wd.tensor, layer);
+        bind_tensor(w, gguf);
+        if (bound(w).numel != wd.numel)
+          throw std::runtime_error("IR_SPEC 6.10 (rule 34): recurrence weight " + wd.decl + " reads '" + w + "', which has " +
+                                   std::to_string(bound(w).numel) + " elements; its declaration has " +
+                                   std::to_string(wd.numel));
       }
     }
   }
@@ -1681,7 +1749,7 @@ void Interpreter::rec_begin(int start_pos, int T, bool all_rows) {
     } else
 #endif
     {
-      for (int l = 0; l < n_layers_; ++l) std::copy(rec_init_.begin(), rec_init_.end(), rec_.begin() + l * rec_floats_);
+      rec_ = rec_init_;  // every application's initial state
       rec_snaps_.clear();
     }
   } else if (start_pos != rec_pos_) {
@@ -2178,6 +2246,33 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
         rec_row_done(slot, layer, t);
       }
       env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "recurrence") {  // a recurrent op the document defines (IR_SPEC 6.10). EXACT or ROUNDING.
+      const rec::Recurrence& prog = *recs_.at(&n);
+      const RecSlot& slot = rec_slot(n, "recurrence");
+      std::vector<const Buf*> ins;
+      for (size_t k = 0; k < n.in.size(); ++k) {
+        const Buf& b = in(n, k);
+        if (b.is_list || static_cast<size_t>(b.width) != prog.input_widths()[k] ||
+            b.v.size() != static_cast<size_t>(T) * b.width)
+          throw std::runtime_error("IR_SPEC 6.10 (rule 34): recurrence input '" + n.in[k] + "' is " +
+                                   std::to_string(b.width) + " wide; its declaration is " +
+                                   std::to_string(prog.input_widths()[k]));
+        ins.push_back(&b);
+      }
+      std::vector<const float*> w;
+      for (const auto& wd : prog.weights()) w.push_back(weight(layer_name(wd.tensor, layer)).data());
+      std::vector<float*> st;
+      for (const auto& s : prog.state())
+        st.push_back(rec_tensor(slot, s.name.c_str(), layer, s.numel));
+      const size_t ow = prog.out_width();
+      Buf out{std::vector<float>(static_cast<size_t>(T) * ow), static_cast<int>(ow)};
+      std::vector<const float*> row(ins.size());
+      for (int t = 0; t < T; ++t) {  // token by token, in order (prefill = decode)
+        for (size_t k = 0; k < ins.size(); ++k) row[k] = ins[k]->v.data() + static_cast<size_t>(t) * ins[k]->width;
+        prog.step(row, w, st, out.v.data() + static_cast<size_t>(t) * ow);
+        rec_row_done(slot, layer, t);
+      }
+      env[n.out.at(0)] = std::move(out);
     }
   }
 }
@@ -2362,7 +2457,7 @@ void Interpreter::truncate(int n) {
     while (!rows.empty() && rows.back() >= n) rows.pop_back();
   if (rec_floats_ > 0 && n != rec_pos_) {
     if (n == 0) {
-      for (int l = 0; l < n_layers_; ++l) std::copy(rec_init_.begin(), rec_init_.end(), rec_.begin() + l * rec_floats_);
+      rec_ = rec_init_;  // every application's initial state
       rec_snaps_.clear();
     } else {
       rec_ = rec_snaps_.at(n);
