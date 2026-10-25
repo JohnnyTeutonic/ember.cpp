@@ -18,7 +18,7 @@ models copied to ext4 (copy_models.sh: ~/ember_wt/adapter_models). Checks:
   mor        depths equal mtstudio's trace (score_out.jsonl) in prefill and decode; kv rows per application
              #{t : step_i = -1 or depth_t > step_i} at those tokens' positions;
   refuse     check accepts every gate model and refuses broken documents (accepted false); depth on a model
-             without depth_route and run_node skip; keys outside the schema's closed sets (IR_SPEC 10.1 rules
+             without depth_route is [] (revision 1.2; revision 1.1's adapter skipped) and run_node skips; keys outside the schema's closed sets (IR_SPEC 10.1 rules
              1, 4) refused, naming the key; "_" keys and tensor_index under weight_index accepted.
   rev11      spec revision 1.1 (appended after the checks above, which it leaves unchanged): the suite's
              recurrence models (pk_recurrence, and pk_kimi, pk_srd, pk_mamba, tp_mamba1 with their documents
@@ -29,6 +29,14 @@ models copied to ext4 (copy_models.sh: ~/ember_wt/adapter_models). Checks:
              embedded document's digest, refused when wrong or not a string, also under a substituted document;
              a file without the key loads); the digest vectors and dequantisation blocks; run_node on a
              recurrence (rule 34 on a wrong width), run_node_grad and other ops skip.
+  rev12      spec revision 1.2 (keramos v1.2.0; IR12_SUITE, the suite at the tag): rule 35 (a member name twice,
+             at any depth and in prose, in a document read in place of the file's, in the file's own (which loads
+             with a valid document in its place) and in a document checked alone), rule 36 (the suite's four refusals and two edits; a head reading a block
+             value is accepted without depth_route), rule 20's run of steps, rule 37 when the rows arrive (the error
+             names it and leaves the session as a fresh open's), depth_attend without eps = eps 1e-5 bit for bit,
+             check with gguf null on the suite's documents alone, section 11.3's edge cases, render_chat on the
+             suite's 32 chat cases, run_node on the suite's expr cases (bits), depth 204 and two shapes refused.
+IR_SUITE is the suite the rev11 checks read (revision 1.1's receipt: a keramos v1.1.0 archive).
 Writes adapter_selftest_cpu.json beside this file (or to ADAPTER_SELFTEST_OUT); exits 1 on any failure.
 ADAPTER_SCRATCH moves the scratch directory (default ~/ember_wt/adapter_scratch)."""
 import copy
@@ -505,7 +513,8 @@ record("check/accept/tensor_index_under_weight_index", r["accepted"], reply=r)
 s = ad.ok("open", gguf=MODELS["ar3"][0], ir=None, evict=None)["session"]
 r = ad.call("forward", session=s, ids=[1, 2], report=["depth"])
 r2 = ad.ok("forward", session=s, ids=[1, 2], report=["kv_rows"])
-record("skip/depth_without_depth_route", "skip" in r and r2["len"] == 2, reply=r)
+# Revision 1.2 (IR_SPEC 11.3): depth is [] for a document without depth_route (revision 1.1's adapter skipped).
+record("depth/without_depth_route_empty", r.get("result", {}).get("depth") == [] and r2["len"] == 4, reply=r)
 r = ad.call("truncate", session=s, n=1, report=["logits"])
 record("error/logits_on_truncate", "error" in r, reply=r)
 r = ad.call("run_node", node={}, inputs={}, weights={}, state=None)
@@ -681,6 +690,187 @@ r = ad.call("run_node_grad", node=c["node"], inputs=c["inputs"], weights=c["weig
 record("rev11/skip/run_node_grad", "skip" in r, reply=r)
 r = ad.call("run_node", node={"op": "relu", "in": ["x"], "out": "y"}, inputs={}, weights={}, state=None)
 record("rev11/skip/run_node_other_op", "skip" in r, reply=r)
+
+# ---- spec revision 1.2 (keramos v1.2.0, d4b880ae): rules 35-37 and 20, check of a document alone, render_chat,
+# the adapter's edge cases (section 11.3), expr in run_node, depth_attend's default eps. Appended after every
+# earlier check. IR12_SUITE is the suite at v1.2.0 (an archive of the tag).
+S12 = os.environ.get("IR12_SUITE", "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/keramos/conformance")
+
+
+def scratch_text(name, text):
+    p = os.path.join(SCRATCH, f"adapter_rev12_{name}.ir.json")
+    open(p, "wb").write(text.encode("utf-8"))
+    return p
+
+
+def scratch_doc(name, d):
+    return scratch_text(name, json.dumps(d))
+
+
+LL = f"{S12}/models/pk_llama/pk_llama.gguf"
+ll = embedded(LL)
+txt = json.dumps(ll)
+n0 = json.dumps(ll["block"]["nodes"][0])
+assert txt.count(n0) == 1
+dups = {  # rule 35: a member name twice in one object, at any depth, "_" members included
+    "top": txt[:-1] + ', "family_hint": "llama"}',
+    "node": txt.replace(n0, n0[:-1] + ', "eps": ' + json.dumps(ll["block"]["nodes"][0]["eps"]) + "}"),
+    "prose": '{"_a": 1, "_a": 1, ' + txt[1:],
+    "nested_prose": '{"_note": {"x": [1, {"k": 1, "k": 2}]}, ' + txt[1:],
+}
+got = {}
+for name, t in dups.items():
+    r = ad.ok("check", gguf=LL, ir=scratch_text("dup_" + name, t))
+    got[name] = r.get("message")
+    record(f"rev12/rule35/{name}", not r["accepted"] and "(rule 35)" in r.get("message", ""), message=r.get("message"))
+r = ad.ok("check", gguf=LL, ir=scratch_text("no_dup", txt))
+record("rev12/rule35/same_text_without_the_duplicate", r["accepted"], reply=r)
+DE = f"{S12}/refuse/duplicate_member_embedded.gguf"
+r = ad.ok("check", gguf=DE, ir=None)
+de_doc = embedded(DE)  # Python's json keeps the last of the two members
+r2 = ad.ok("check", gguf=DE, ir=scratch_doc("embedded_deduplicated", de_doc))
+# The rule governs the document read: with a valid one in its place the file loads (as the reference accepts it).
+record("rev12/rule35/embedded", not r["accepted"] and "(rule 35)" in r.get("message", "") and r2["accepted"],
+       message=r.get("message"), with_ir_in_place=r2)
+r = ad.ok("check", gguf=None, ir=scratch_text("dup_alone", dups["node"]))
+record("rev12/rule35/document_alone", not r["accepted"] and "(rule 35)" in r.get("message", ""), message=r.get("message"))
+
+# rule 36 (and rule 20's run of steps): the suite's refusals, and one edit each of pk_llama and pk_mor
+for name in ("reads_unwritten_value", "embed_writes_no_x", "head_writes_no_logits", "mor_reads_outside_value",
+             "mor_step_gap"):
+    c = json.load(open(f"{S12}/refuse/{name}.json", encoding="utf-8"))
+    r = ad.ok("check", gguf=f"{S12}/{c['gguf']}", ir=scratch_doc(name, c["doc"]))
+    record(f"rev12/rule{c['rule']}/{name}", not r["accepted"] and f"(rule {c['rule']})" in r.get("message", ""),
+           message=r.get("message"))
+MO = f"{S12}/models/pk_mor/pk_mor.gguf"
+mo = embedded(MO)
+edits36 = {
+    "reads_a_later_write": (LL, ll, lambda d: d["block"]["nodes"][1].__setitem__("in", ["gu"])),
+    "head_reads_block_value_under_mor": (MO, mo, lambda d: d["head"]["nodes"][1].__setitem__("in", ["h2"])),
+}
+for name, (g, base, edit) in edits36.items():
+    d = copy.deepcopy(base)
+    edit(d)
+    r = ad.ok("check", gguf=g, ir=scratch_doc(name, d))
+    record(f"rev12/rule36/{name}", not r["accepted"] and "(rule 36)" in r.get("message", ""), message=r.get("message"))
+d = copy.deepcopy(mo)  # without depth_route the head reads the last application's values (section 3.5)
+d["head"]["nodes"][1]["in"] = ["h2"]
+d["block"]["nodes"] = d["block"]["nodes"][1:]
+d["block"]["state"][0].pop("kv_rows")
+r = ad.ok("check", gguf=None, ir=scratch_doc("head_reads_block_value", d))
+record("rev12/rule36/head_reads_block_value_without_mor", r["accepted"], reply=r)
+
+# rule 37 when the rows arrive: an ffn rmsnorm group that does not divide d (after layer 0's attention ran), and a
+# residual add of the ffn width after a recurrence updated its state: the error names the rule, and the session is
+# as before the call (its kv rows and recurrent tensors those of a fresh open).
+d = copy.deepcopy(ll)
+d["block"]["nodes"][8]["group"] = 3
+g37 = scratch_doc("rule37_group", d)
+PRG = f"{S12}/models/pk_recurrence/pk_recurrence.gguf"
+pr = embedded(PRG)
+d = copy.deepcopy(pr)
+d["block"]["nodes"][-1]["in"] = ["x", "u"]
+r37 = scratch_doc("rule37_add", d)
+for name, (g, ir, rep) in {"rmsnorm_group": (LL, g37, "kv_rows"), "add_shapes": (PRG, r37, "recurrent")}.items():
+    o = ad.ok("open", gguf=g, ir=ir, evict=None)
+    fresh = ad.ok("truncate", session=o["session"], n=0, report=[rep])
+    e = ad.call("forward", session=o["session"], ids=[1, 2, 3], report=["logits"])
+    after = ad.ok("truncate", session=o["session"], n=0, report=[rep])
+    record(f"rev12/rule37/{name}", "error" in e and "(rule 37)" in e["error"] and after == fresh,
+           error=e.get("error"), session_unchanged=after == fresh)
+    ad.ok("close", session=o["session"])
+
+# depth_attend's eps optional, default 1e-5 (section 5.18): pk_attnres without it gives the same logits, bits
+AT = f"{S12}/models/pk_attnres/pk_attnres.gguf"
+at = embedded(AT)
+d = copy.deepcopy(at)
+n_eps = 0
+for sect in ("embed", "block", "head"):
+    for n in d[sect]["nodes"]:
+        if n["op"] == "depth_attend" and "eps" in n:
+            assert n["eps"] == 1e-5
+            n.pop("eps")
+            n_eps += 1
+ids = [3, 1, 4, 1, 5, 9, 2, 6]
+outs = []
+for ir in (None, scratch_doc("attnres_no_eps", d)):
+    o = ad.ok("open", gguf=AT, ir=ir, evict=None)
+    outs.append(f32(ad.ok("forward", session=o["session"], ids=ids, report=["logits"])["logits"]))
+    ad.ok("close", session=o["session"])
+record("rev12/depth_attend_eps_default", n_eps > 0 and bits_equal(outs[0], outs[1]), nodes=n_eps,
+       logits_bits=bits_equal(outs[0], outs[1]))
+
+# check with gguf null: the document rules alone (the suite's acceptance documents with an "ir" and no "gguf")
+acc = json.load(open(f"{S12}/accept/documents.json", encoding="utf-8"))["cases"]
+alone = [c for c in acc if not c.get("gguf")]
+res = {c["name"]: ad.ok("check", gguf=None, ir=os.path.normpath(f"{S12}/{c['ir']}")) for c in alone}
+record("rev12/check_document_alone/accept", len(alone) > 0 and all(r["accepted"] for r in res.values()),
+       documents=len(alone), refused={k: r["message"] for k, r in res.items() if not r["accepted"]})
+r = ad.ok("check", gguf=None, ir=scratch_doc("alone_unknown_op", {**ll, "block": {**ll["block"], "nodes": [
+    {**ll["block"]["nodes"][0], "op": "warp"}] + ll["block"]["nodes"][1:]}}))
+record("rev12/check_document_alone/refuse", not r["accepted"] and "(rule 4)" in r.get("message", ""), message=r.get("message"))
+
+# the adapter's edge cases (section 11.3)
+o = ad.ok("open", gguf=LL, ir=None, evict=None)
+s = o["session"]
+e_empty = ad.call("forward", session=s, ids=[], report=["logits"])
+a = ad.ok("forward", session=s, ids=[1, 2, 3, 4, 5], report=["logits", "depth", "recurrent", "kv_rows"])
+e_past = ad.call("truncate", session=s, n=6, report=[])
+e_neg = ad.call("truncate", session=s, n=-1, report=[])
+same = ad.ok("truncate", session=s, n=5, report=["kv_rows", "kv_positions"])
+ad.ok("snapshot", session=s, tag="t")
+ad.ok("forward", session=s, ids=[6], report=[])
+ad.ok("snapshot", session=s, tag="t")  # replaces the snapshot at 5
+back = ad.ok("restore", session=s, tag="t", report=["kv_rows"])
+e_tag = ad.call("restore", session=s, tag="never", report=[])
+e_vocab = ad.call("forward", session=s, ids=[2, o["vocab"] + 3], report=["logits"])
+nxt = ad.ok("forward", session=s, ids=[7, 8], report=["logits"])
+f = ad.ok("open", gguf=LL, ir=None, evict=None)
+fr = ad.ok("forward", session=f["session"], ids=[1, 2, 3, 4, 5, 6], report=[])
+fn = ad.ok("forward", session=f["session"], ids=[7, 8], report=["logits"])
+for x in (s, f["session"]):
+    ad.ok("close", session=x)
+ok = "error" in e_empty and a["len"] == 5 and a["depth"] == [] and a["recurrent"] == {} and "error" in e_past and \
+    "error" in e_neg and same["len"] == 5 and same["kv_rows"] == a["kv_rows"] and back["len"] == 6 and \
+    back["kv_rows"] == {"kv": [6, 6]} and "error" in e_tag and "error" in e_vocab and nxt["len"] == 8 and \
+    bits_equal(f32(nxt["logits"]), f32(fn["logits"]))
+record("rev12/edge_cases", ok, empty_forward=e_empty.get("error"), depth=a["depth"], recurrent=a["recurrent"],
+       truncate_past=e_past.get("error"), truncate_negative=e_neg.get("error"), truncate_to_len=same["len"],
+       snapshot_tag_reused_len=back["len"], restore_unknown=e_tag.get("error"), bad_id=e_vocab.get("error"),
+       after_error_equals_fresh=bits_equal(f32(nxt["logits"]), f32(fn["logits"])))
+o = ad.ok("open", gguf=f"{S12}/models/pk_recurrence/pk_recurrence.gguf", ir=None, evict=None)
+a = ad.ok("forward", session=o["session"], ids=[1, 2, 3], report=["kv_rows", "kv_positions", "depth"])
+record("rev12/edge_cases/no_kv_slot", a["kv_rows"] == {} and a["kv_positions"] == {} and a["depth"] == [], reply=a)
+ad.ok("close", session=o["session"])
+
+# render_chat over the suite's chat cases (section 8.1.3)
+chat = json.load(open(f"{S12}/chat/render.json", encoding="utf-8"))
+good, bad_cases = 0, []
+for c in chat["cases"]:
+    rec = chat["records"][c["record"]] if isinstance(c["record"], str) else c["record"]
+    r = ad.ok("render_chat", record=rec, messages=c["messages"], generation_prompt=c.get("generation_prompt", False),
+              thinking=c.get("thinking"))
+    hit = ("refused" in r) if c.get("refused") else r.get("text") == c["expect"]
+    good += hit
+    if not hit:
+        bad_cases.append(c["name"])
+record("rev12/render_chat", good == len(chat["cases"]), cases=len(chat["cases"]), equal=good, failed=bad_cases)
+
+# run_node on expr: the suite's expr cases bit for bit (rowsum of a constant is w additions; depth 200 parses);
+# depth 204 (40 parentheses around x) refused; inputs of two shapes refused naming rule 37
+ex = json.load(open(f"{S12}/ops/expr.json", encoding="utf-8"))["cases"]
+per = {}
+for c in ex:
+    r = ad.ok("run_node", node=c["node"], inputs=c["inputs"], weights=c.get("weights", {}), state=None)
+    per[c["name"]] = all(bits_equal(f32(r["outputs"][k]), f32(v)) for k, v in c["expect"].items())
+x0 = ex[0]["inputs"][ex[0]["node"]["in"][0]]
+deep = ad.call("run_node", node={"op": "expr", "in": ["x"], "out": "y", "expr": "(" * 40 + "x" + ")" * 40},
+               inputs={"x": x0}, weights={}, state=None)
+two = ad.call("run_node", node={"op": "expr", "in": ["x", "y"], "out": "z", "expr": "x + a"},
+              inputs={"x": x0, "y": {"shape": [x0["shape"][0], x0["shape"][1] - 1],
+                                     "f32": x0["f32"][:8 * x0["shape"][0] * (x0["shape"][1] - 1)]}}, weights={}, state=None)
+record("rev12/run_node/expr", all(per.values()) and "rowsum_constant" in per and "depth_200" in per and "error" in deep and
+       "error" in two and "(rule 37)" in two["error"], bits_equal=per, depth_204=deep.get("error"), two_shapes=two.get("error"))
 
 ad.close()
 
