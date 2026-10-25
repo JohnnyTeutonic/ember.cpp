@@ -1,0 +1,58 @@
+{
+ "model": "synth_k4",
+ "native_gguf": "/home/jonat/ember_wt/state_tokens/chat_state_k4.gguf",
+ "sequences": 0,
+ "calls": 12,
+ "logit_rows": 1029,
+ "tol": 0.0001,
+ "integer_results_equal": true,
+ "wasm_vs_native": {
+  "call_on": {
+   "worst_rel": 2.443529884733529e-07,
+   "bit_equal": false,
+   "top1": "343/343"
+  },
+  "call_off": {
+   "worst_rel": 2.443529884733529e-07,
+   "bit_equal": false,
+   "top1": "343/343"
+  },
+  "call_fresh": {
+   "worst_rel": 2.443529884733529e-07,
+   "bit_equal": false,
+   "top1": "343/343"
+  }
+ },
+ "inside": {
+  "native": {
+   "call_on_vs_off": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "343/343"
+   },
+   "call_on_vs_fresh": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "343/343"
+   }
+  },
+  "wasm": {
+   "call_on_vs_off": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "343/343"
+   },
+   "call_on_vs_fresh": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "343/343"
+   }
+  }
+ },
+ "ms": {
+  "native": 15498.218632,
+  "wasm": 12960.598764
+ },
+ "calls_direct_refused": "2/2",
+ "pass": true
+}

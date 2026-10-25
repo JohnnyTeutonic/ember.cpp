@@ -1,0 +1,16 @@
+{
+ "gen": 32,
+ "gguf": "/mnt/c/ml_artifacts/state_gate/state4/state4.gguf",
+ "greedy_identical": "40/40",
+ "len": 24,
+ "load_ms": 310.777472,
+ "ms_per_prompt": 12.777546300000001,
+ "of": 40,
+ "pass": true,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "960/960",
+ "vocab": 400,
+ "worst_decode_rel": 2.570167720578219e-07,
+ "worst_prefill_rel": 2.570167720578219e-07
+}

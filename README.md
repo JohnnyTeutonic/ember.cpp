@@ -41,8 +41,8 @@ flowchart LR
 | Runtime-defined ops (`expr`: a paper's new activation or gate as a formula) | IR interpreter | ✅ | ✅ | not gated | |
 | Tied-block recursion (`weight_index`: one stored block applied several times) | IR interpreter | ✅ | not gated | not gated | |
 | Mixture-of-Recursions (`depth_route`: each token picks its depth) | IR interpreter | ✅ | runs on the CPU | not gated | |
-| Per-turn state tokens with eviction (`turn_state`) | IR interpreter | ✅ | ✅ | not gated | |
-| Attention residuals over depth (`llama_attnres`) | IR interpreter | ✅ | ✅ | not gated | |
+| Per-turn state tokens with eviction (`turn_state`) | IR interpreter | ✅ | ✅ | ✅ | |
+| Attention residuals over depth (`llama_attnres`) | IR interpreter | ✅ | ✅ | ✅ | |
 | Recurrent ops the document defines (`recurrence`: a paper's new state-space model or linear attention as data) | IR interpreter | ✅ | runs on the CPU | ✅ | |
 
 Every paperkiln family is gated the same way: **greedy replies identical to paperkiln's own
@@ -299,9 +299,11 @@ Recently landed:
   tokenise them too. They give ember chat replies identical to mtstudio's, 40/40.
 - **The conversation schema** (above), gated against mtstudio and against HF's
   `apply_chat_template` for Qwen2.5, Qwen3 and Gemma 3.
-- **Per-turn state tokens on CUDA.** The turn_state mask and eviction run on the device, with
-  greedy 40/40 and logits within 1.1e-6 of the CPU on paperkiln's state4, rewinds into evicted
-  turns included (`experiments/cuda_state_2026-10-25`).
+- **Per-turn state tokens on CUDA and in WebAssembly.** The turn_state mask and eviction run on
+  the device, with greedy 40/40 and logits within 1.1e-6 of the CPU on paperkiln's state4, rewinds
+  into evicted turns included (`experiments/cuda_state_2026-10-25`). In WebAssembly, state4 and the
+  attention-residual model ar3 give greedy 40/40 and logits within 3.8e-7 of the CPU, with
+  eviction exact (`experiments/wasm_state_2026-10-25`).
 
 In progress:
 - **The research programme's models.** These are training on Colab and RunPod: the 20M and 60M

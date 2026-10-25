@@ -1,0 +1,108 @@
+{
+ "model": "state4_q8_0",
+ "native_gguf": "/mnt/c/ml_artifacts/state_gate/state4/state4_q8_0.gguf",
+ "sequences": 40,
+ "calls": 0,
+ "logit_rows": 17488,
+ "tol": 0.0001,
+ "integer_results_equal": true,
+ "wasm_vs_native": {
+  "prefill_on": {
+   "worst_rel": 2.524677714790996e-07,
+   "bit_equal": false,
+   "top1": "3088/3088"
+  },
+  "prefill_off": {
+   "worst_rel": 2.524677714790996e-07,
+   "bit_equal": false,
+   "top1": "3088/3088"
+  },
+  "decode_on": {
+   "worst_rel": 2.524677714790996e-07,
+   "bit_equal": false,
+   "top1": "3088/3088"
+  },
+  "turns_on": {
+   "worst_rel": 2.524677714790996e-07,
+   "bit_equal": false,
+   "top1": "3088/3088"
+  },
+  "rewind_tail": {
+   "worst_rel": 2.524677714790996e-07,
+   "bit_equal": false,
+   "top1": "5136/5136"
+  }
+ },
+ "inside": {
+  "native": {
+   "on_vs_off": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "3088/3088"
+   },
+   "decode_vs_prefill": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "3088/3088"
+   },
+   "turns_vs_prefill": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "3088/3088"
+   },
+   "rewind_vs_prefill": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "5136/5136"
+   }
+  },
+  "wasm": {
+   "on_vs_off": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "3088/3088"
+   },
+   "decode_vs_prefill": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "3088/3088"
+   },
+   "turns_vs_prefill": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "3088/3088"
+   },
+   "rewind_vs_prefill": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "5136/5136"
+   }
+  }
+ },
+ "ms": {
+  "native": 2571.235301,
+  "wasm": 2107.805472
+ },
+ "greedy": {
+  "native": {
+   "teacher_forced": "40/40",
+   "free_running": "40/40"
+  },
+  "wasm": {
+   "teacher_forced": "40/40",
+   "free_running": "40/40"
+  }
+ },
+ "greedy_ids_equal": true,
+ "kv_rows_held": {
+  "wasm_equal_native": true,
+  "mean_on": 25.35,
+  "mean_off": 76.2
+ },
+ "rewinds": {
+  "n": 80,
+  "resume_moved": 80,
+  "direct_refused": "80/80"
+ },
+ "pass": true
+}
