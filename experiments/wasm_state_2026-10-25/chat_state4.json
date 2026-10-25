@@ -1,0 +1,376 @@
+{
+ "n": 40,
+ "ctx": 128,
+ "heap_bytes": 16777216,
+ "load_ms": 245,
+ "ms_per_reply": 17.475,
+ "reply_identical": "40/40",
+ "tokens_identical": "40/40",
+ "stop_identical": "40/40",
+ "prompt_tokens_and_turns_identical": "40/40",
+ "prepare_prompt_ids_identical": "40/40",
+ "prepare_counts_identical": "40/40",
+ "pass": true,
+ "replies": [
+  {
+   "i": 0,
+   "reply": "your name is hana.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 86,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 1,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 46,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 2,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 84,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 3,
+   "reply": "your name is hana.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 89,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 4,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 94,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 5,
+   "reply": "your name is hana.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 89,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 6,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 90,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 7,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 79,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 8,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 72,
+   "history_turns_used": 3,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 9,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 70,
+   "history_turns_used": 3,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 10,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 46,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 11,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 95,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 12,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 70,
+   "history_turns_used": 3,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 13,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 47,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 14,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 47,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 15,
+   "reply": "your name is hana.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 90,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 16,
+   "reply": "your name is hana.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 83,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 17,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 91,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 18,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 47,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 19,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 72,
+   "history_turns_used": 3,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 20,
+   "reply": "your name is hana.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 87,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 21,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 88,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 22,
+   "reply": "your name is hana.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 83,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 23,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 72,
+   "history_turns_used": 3,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 24,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 85,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 25,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 85,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 26,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 87,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 27,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 67,
+   "history_turns_used": 3,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 28,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 50,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 29,
+   "reply": "your name is hana.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 46,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 30,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 100,
+   "history_turns_used": 4,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 31,
+   "reply": "your name is hana.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 71,
+   "history_turns_used": 3,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 32,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 67,
+   "history_turns_used": 3,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 33,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 48,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 34,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 69,
+   "history_turns_used": 3,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 35,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 47,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 36,
+   "reply": "your name is hana.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 47,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 37,
+   "reply": "you like grey.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 68,
+   "history_turns_used": 3,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 38,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 47,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 39,
+   "reply": "you have a dog.",
+   "tokens": 5,
+   "stop_reason": "eos",
+   "prompt_tokens": 47,
+   "history_turns_used": 2,
+   "prompt_ids_equal": true
+  }
+ ]
+}
