@@ -1,0 +1,4 @@
+Q4_K: 4096 blocks, values in [-6.218e+04, 8.94e+05]
+Q5_K: 4096 blocks, values in [-6.089e+04, 1.931e+06]
+Q6_K: 4096 blocks, values in [-3.996e+06, 4.026e+06]
+gguf-py: /content/llamacpp_b6000/gguf-py/gguf/__init__.py

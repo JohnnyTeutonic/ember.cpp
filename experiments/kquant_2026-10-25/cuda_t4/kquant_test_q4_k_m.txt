@@ -1,0 +1,2 @@
+86 quantised tensors, 220200960 values compared: 0 differing bits
+PASS: every tensor bit-identical to gguf-py's dequantised F32

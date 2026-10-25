@@ -114,8 +114,13 @@ How they are checked:
 - **Any paperkiln network, not just llama.** paperkiln writes the model's graph into the GGUF
   (`paperkiln.ir`). ember's interpreter runs it on the CPU or GPU, with a CUDA-graph decode of
   its own, and refuses at load any op it cannot run, naming it.
-- **Quantised models.** Q8_0, K-quants, and Q4_0/Q4_1/Q5_0/Q5_1. The legacy formats are
-  bit-identical to the reference dequantiser and can stay in their blocks for large models.
+- **Quantised models.** Q8_0, the K-quants Q4_K, Q5_K and Q6_K, and Q4_0/Q4_1/Q5_0/Q5_1, on the
+  tuned path and the IR interpreter. Every format is bit-identical to gguf-py's reference
+  dequantiser and is multiplied with the F32 kernels, so a quantised file gives exactly the logits of
+  the F32 file gguf-py dequantises it to, on CPU and CUDA. Gated on paperkiln's pk_base_v1 Q4_K_M and
+  Q4_K_S (llama.cpp's own mixes, byte for byte): CUDA replies equal the CPU's 40/40; against the F32
+  model 36/40 first tokens and 14/40 whole replies, since 4-bit trades fidelity for size
+  ([`experiments/kquant_2026-10-25/`](experiments/kquant_2026-10-25/)).
 - **Serving features.** Server-sent-event streaming, an OpenAI-compatible API, KV prefix reuse
   across turns, speculative decoding, and a hardened public mode. The repetition penalty is
   defined jointly with paperkiln, and replies match mtstudio 40/40 at penalties 1.1 and 1.3 on

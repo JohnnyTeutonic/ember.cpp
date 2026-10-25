@@ -18,6 +18,8 @@ void TinyLlamaModel::ensure_embed_tokens_dequantized() {
         dequantize_vector_q6k_to_f32(this->embed_tokens_q6k, this->embed_tokens_f32, total_elements_embed, 1);
     } else if (!this->embed_tokens_q4k.empty()) {
         dequantize_vector_q4k_to_f32(this->embed_tokens_q4k, this->embed_tokens_f32, total_elements_embed, 1);
+    } else if (!this->embed_tokens_q5k.empty()) {
+        dequantize_vector_q5k_to_f32(this->embed_tokens_q5k, this->embed_tokens_f32, total_elements_embed);
     } else if (!this->embed_tokens_q8k.empty()) {
         dequantize_q8_k(this->embed_tokens_q8k, this->embed_tokens_f32, total_elements_embed, true);
     } else if (!this->embed_tokens_q8_0.empty()) {
@@ -58,16 +60,16 @@ bool TinyLlamaModel::dequantize_all_if_small(size_t max_params) {
         if (f32.empty()) return;
         ((quant.clear(), quant.shrink_to_fit()), ...);
     };
-    drop(embed_tokens_f32, embed_tokens_q4k, embed_tokens_q6k, embed_tokens_q8_0, embed_tokens_q8k);
-    drop(lm_head_f32, lm_head_q4k, lm_head_q6k, lm_head_q8_0, lm_head_q8k);
+    drop(embed_tokens_f32, embed_tokens_q4k, embed_tokens_q5k, embed_tokens_q6k, embed_tokens_q8_0, embed_tokens_q8k);
+    drop(lm_head_f32, lm_head_q4k, lm_head_q5k, lm_head_q6k, lm_head_q8_0, lm_head_q8k);
     for (auto& lw : layers) {
-        drop(lw.q_proj_f32, lw.q_proj_q4k, lw.q_proj_q6k, lw.q_proj_q8_0, lw.q_proj_q8k);
-        drop(lw.k_proj_f32, lw.k_proj_q4k, lw.k_proj_q6k, lw.k_proj_q8_0, lw.k_proj_q8k);
-        drop(lw.v_proj_f32, lw.v_proj_q4k, lw.v_proj_q6k, lw.v_proj_q8_0, lw.v_proj_q8k);
-        drop(lw.o_proj_f32, lw.o_proj_q4k, lw.o_proj_q6k, lw.o_proj_q8_0, lw.o_proj_q8k);
-        drop(lw.gate_proj_f32, lw.gate_proj_q4k, lw.gate_proj_q6k, lw.gate_proj_q8_0, lw.gate_proj_q8k);
-        drop(lw.up_proj_f32, lw.up_proj_q4k, lw.up_proj_q6k, lw.up_proj_q8_0, lw.up_proj_q8k);
-        drop(lw.down_proj_f32, lw.down_proj_q4k, lw.down_proj_q6k, lw.down_proj_q8_0, lw.down_proj_q8k);
+        drop(lw.q_proj_f32, lw.q_proj_q4k, lw.q_proj_q5k, lw.q_proj_q6k, lw.q_proj_q8_0, lw.q_proj_q8k);
+        drop(lw.k_proj_f32, lw.k_proj_q4k, lw.k_proj_q5k, lw.k_proj_q6k, lw.k_proj_q8_0, lw.k_proj_q8k);
+        drop(lw.v_proj_f32, lw.v_proj_q4k, lw.v_proj_q5k, lw.v_proj_q6k, lw.v_proj_q8_0, lw.v_proj_q8k);
+        drop(lw.o_proj_f32, lw.o_proj_q4k, lw.o_proj_q5k, lw.o_proj_q6k, lw.o_proj_q8_0, lw.o_proj_q8k);
+        drop(lw.gate_proj_f32, lw.gate_proj_q4k, lw.gate_proj_q5k, lw.gate_proj_q6k, lw.gate_proj_q8_0, lw.gate_proj_q8k);
+        drop(lw.up_proj_f32, lw.up_proj_q4k, lw.up_proj_q5k, lw.up_proj_q6k, lw.up_proj_q8_0, lw.up_proj_q8k);
+        drop(lw.down_proj_f32, lw.down_proj_q4k, lw.down_proj_q5k, lw.down_proj_q6k, lw.down_proj_q8_0, lw.down_proj_q8k);
     }
     return true;
 }
@@ -80,6 +82,8 @@ void TinyLlamaModel::ensure_lm_head_dequantized() {
         dequantize_vector_q6k_to_f32(this->lm_head_q6k, this->lm_head_f32, total_elements_lm_head, 1);
     } else if (!this->lm_head_q4k.empty()) {
         dequantize_vector_q4k_to_f32(this->lm_head_q4k, this->lm_head_f32, total_elements_lm_head, 1);
+    } else if (!this->lm_head_q5k.empty()) {
+        dequantize_vector_q5k_to_f32(this->lm_head_q5k, this->lm_head_f32, total_elements_lm_head);
     } else if (!this->lm_head_q8k.empty()) {
         dequantize_q8_k(this->lm_head_q8k, this->lm_head_f32, total_elements_lm_head, true);
     } else if (!this->lm_head_q8_0.empty()) {
@@ -100,6 +104,7 @@ void TinyLlamaModel::ensure_q_proj_dequantized(int layer_idx) {
     
     if (!lw.q_proj_q6k.empty()) dequantize_vector_q6k_to_f32(lw.q_proj_q6k, lw.q_proj_f32, q_proj_elements, 0);
     else if (!lw.q_proj_q4k.empty()) dequantize_vector_q4k_to_f32(lw.q_proj_q4k, lw.q_proj_f32, q_proj_elements, 0);
+    else if (!lw.q_proj_q5k.empty()) dequantize_vector_q5k_to_f32(lw.q_proj_q5k, lw.q_proj_f32, q_proj_elements);
     else if (!lw.q_proj_q8k.empty()) dequantize_q8_k(lw.q_proj_q8k, lw.q_proj_f32, q_proj_elements, true);
     else if (!lw.q_proj_q8_0.empty()) dequantize_vector_q8_0_to_f32(lw.q_proj_q8_0, lw.q_proj_f32, q_proj_elements, 0);
     else if (!lw.q_proj.empty()) lw.q_proj_f32 = bf16vec_to_float_vec(lw.q_proj);
@@ -113,41 +118,33 @@ void TinyLlamaModel::clear_layer_dequantized_weights(int layer_idx) {
         return;
     }
 
-    // For F32-native models (transformer_cpp exports) the f32 vectors ARE
-    // the master weights — there is no quantized/BF16 source to re-derive
-    // them from, so clearing is permanent destruction, not a memory
-    // optimization. This path was dormant for every 2-layer model (the
-    // trigger is l >= 2 in the forward loop) and first fired on the 4-layer
-    // mid model (2026-07-20): second forward pass threw "No Q proj weights".
-    {
-        const auto& lw = layers[layer_idx];
-        bool recoverable = !lw.q_proj_q6k.empty() || !lw.q_proj_q4k.empty() ||
-                           !lw.q_proj_q8k.empty() || !lw.q_proj_q8_0.empty() ||
-                           !lw.q_proj.empty();
-        if (!recoverable) {
-            Logger::info("clear_layer_dequantized_weights: layer " + std::to_string(layer_idx) +
-                         " is F32-native (no quantized source) — skipping clear.");
-            return;
-        }
-    }
-
-    Logger::info("Clearing dequantized weights for layer " + std::to_string(layer_idx) + " to save memory.");
-    
+    // Each f32 copy is cleared only when the weight has a quantised (or BF16) source to re-derive it
+    // from: for F32-native weights (transformer_cpp exports) the f32 vector IS the master copy, and
+    // clearing it is permanent destruction, not a memory optimisation (first hit 2026-07-20 on the
+    // 4-layer mid model: "No Q proj weights" on the second forward pass). Per weight, not per
+    // layer, so a layer whose weights mix sources keeps its f32-only ones.
     auto& layer = layers[layer_idx];
-    layer.q_proj_f32.clear();
-    layer.q_proj_f32.shrink_to_fit();
-    layer.k_proj_f32.clear();
-    layer.k_proj_f32.shrink_to_fit();
-    layer.v_proj_f32.clear();
-    layer.v_proj_f32.shrink_to_fit();
-    layer.o_proj_f32.clear();
-    layer.o_proj_f32.shrink_to_fit();
-    layer.gate_proj_f32.clear();
-    layer.gate_proj_f32.shrink_to_fit();
-    layer.up_proj_f32.clear();
-    layer.up_proj_f32.shrink_to_fit();
-    layer.down_proj_f32.clear();
-    layer.down_proj_f32.shrink_to_fit();
+    auto clear_if_recoverable = [](std::vector<float>& f32, bool recoverable) {
+        if (!recoverable) return 0;
+        f32.clear();
+        f32.shrink_to_fit();
+        return 1;
+    };
+#define EMBER_RECOVERABLE(w)                                                                              \
+    (!layer.w##_q4k.empty() || !layer.w##_q5k.empty() || !layer.w##_q6k.empty() || !layer.w##_q8k.empty() || \
+     !layer.w##_q8_0.empty() || !layer.w.empty())
+    int cleared = 0;
+    cleared += clear_if_recoverable(layer.q_proj_f32, EMBER_RECOVERABLE(q_proj));
+    cleared += clear_if_recoverable(layer.k_proj_f32, EMBER_RECOVERABLE(k_proj));
+    cleared += clear_if_recoverable(layer.v_proj_f32, EMBER_RECOVERABLE(v_proj));
+    cleared += clear_if_recoverable(layer.o_proj_f32, EMBER_RECOVERABLE(o_proj));
+    cleared += clear_if_recoverable(layer.gate_proj_f32, EMBER_RECOVERABLE(gate_proj));
+    cleared += clear_if_recoverable(layer.up_proj_f32, EMBER_RECOVERABLE(up_proj));
+    cleared += clear_if_recoverable(layer.down_proj_f32, EMBER_RECOVERABLE(down_proj));
+#undef EMBER_RECOVERABLE
+    if (cleared)
+        Logger::info("Cleared " + std::to_string(cleared) + " dequantized weights of layer " + std::to_string(layer_idx) +
+                     " to save memory.");
 }
 
 void TinyLlamaModel::ensure_k_proj_dequantized(int layer_idx) {
@@ -160,6 +157,7 @@ void TinyLlamaModel::ensure_k_proj_dequantized(int layer_idx) {
     
     if (!lw.k_proj_q6k.empty()) dequantize_vector_q6k_to_f32(lw.k_proj_q6k, lw.k_proj_f32, k_proj_elements, 0);
     else if (!lw.k_proj_q4k.empty()) dequantize_vector_q4k_to_f32(lw.k_proj_q4k, lw.k_proj_f32, k_proj_elements, 0);
+    else if (!lw.k_proj_q5k.empty()) dequantize_vector_q5k_to_f32(lw.k_proj_q5k, lw.k_proj_f32, k_proj_elements);
     else if (!lw.k_proj_q8k.empty()) dequantize_q8_k(lw.k_proj_q8k, lw.k_proj_f32, k_proj_elements, false);
     else if (!lw.k_proj_q8_0.empty()) dequantize_vector_q8_0_to_f32(lw.k_proj_q8_0, lw.k_proj_f32, k_proj_elements, 0);
     else if (!lw.k_proj.empty()) lw.k_proj_f32 = bf16vec_to_float_vec(lw.k_proj);
@@ -175,6 +173,7 @@ void TinyLlamaModel::ensure_v_proj_dequantized(int layer_idx) {
     
     if (!lw.v_proj_q6k.empty()) dequantize_vector_q6k_to_f32(lw.v_proj_q6k, lw.v_proj_f32, v_proj_elements, 0);
     else if (!lw.v_proj_q4k.empty()) dequantize_vector_q4k_to_f32(lw.v_proj_q4k, lw.v_proj_f32, v_proj_elements, 0);
+    else if (!lw.v_proj_q5k.empty()) dequantize_vector_q5k_to_f32(lw.v_proj_q5k, lw.v_proj_f32, v_proj_elements);
     else if (!lw.v_proj_q8k.empty()) dequantize_q8_k(lw.v_proj_q8k, lw.v_proj_f32, v_proj_elements, false);
     else if (!lw.v_proj_q8_0.empty()) dequantize_vector_q8_0_to_f32(lw.v_proj_q8_0, lw.v_proj_f32, v_proj_elements, 0);
     else if (!lw.v_proj.empty()) lw.v_proj_f32 = bf16vec_to_float_vec(lw.v_proj);
@@ -190,6 +189,7 @@ void TinyLlamaModel::ensure_o_proj_dequantized(int layer_idx) {
     
     if (!lw.o_proj_q6k.empty()) dequantize_vector_q6k_to_f32(lw.o_proj_q6k, lw.o_proj_f32, o_proj_elements, 0);
     else if (!lw.o_proj_q4k.empty()) dequantize_vector_q4k_to_f32(lw.o_proj_q4k, lw.o_proj_f32, o_proj_elements, 0);
+    else if (!lw.o_proj_q5k.empty()) dequantize_vector_q5k_to_f32(lw.o_proj_q5k, lw.o_proj_f32, o_proj_elements);
     else if (!lw.o_proj_q8k.empty()) dequantize_q8_k(lw.o_proj_q8k, lw.o_proj_f32, o_proj_elements, false);
     else if (!lw.o_proj_q8_0.empty()) dequantize_vector_q8_0_to_f32(lw.o_proj_q8_0, lw.o_proj_f32, o_proj_elements, 0);
     else if (!lw.o_proj.empty()) lw.o_proj_f32 = bf16vec_to_float_vec(lw.o_proj);
@@ -206,6 +206,7 @@ void TinyLlamaModel::ensure_gate_proj_dequantized(int layer_idx) {
     
     if (!lw.gate_proj_q6k.empty()) dequantize_vector_q6k_to_f32(lw.gate_proj_q6k, lw.gate_proj_f32, gate_proj_elements, 0);
     else if (!lw.gate_proj_q4k.empty()) dequantize_vector_q4k_to_f32(lw.gate_proj_q4k, lw.gate_proj_f32, gate_proj_elements, 0);
+    else if (!lw.gate_proj_q5k.empty()) dequantize_vector_q5k_to_f32(lw.gate_proj_q5k, lw.gate_proj_f32, gate_proj_elements);
     else if (!lw.gate_proj_q8k.empty()) dequantize_q8_k(lw.gate_proj_q8k, lw.gate_proj_f32, gate_proj_elements, false);
     else if (!lw.gate_proj_q8_0.empty()) dequantize_vector_q8_0_to_f32(lw.gate_proj_q8_0, lw.gate_proj_f32, gate_proj_elements, 0);
     else if (!lw.gate_proj.empty()) lw.gate_proj_f32 = bf16vec_to_float_vec(lw.gate_proj);
@@ -222,6 +223,7 @@ void TinyLlamaModel::ensure_up_proj_dequantized(int layer_idx) {
     
     if (!lw.up_proj_q6k.empty()) dequantize_vector_q6k_to_f32(lw.up_proj_q6k, lw.up_proj_f32, up_proj_elements, 0);
     else if (!lw.up_proj_q4k.empty()) dequantize_vector_q4k_to_f32(lw.up_proj_q4k, lw.up_proj_f32, up_proj_elements, 0);
+    else if (!lw.up_proj_q5k.empty()) dequantize_vector_q5k_to_f32(lw.up_proj_q5k, lw.up_proj_f32, up_proj_elements);
     else if (!lw.up_proj_q8k.empty()) dequantize_q8_k(lw.up_proj_q8k, lw.up_proj_f32, up_proj_elements, false);
     else if (!lw.up_proj_q8_0.empty()) dequantize_vector_q8_0_to_f32(lw.up_proj_q8_0, lw.up_proj_f32, up_proj_elements, 0);
     else if (!lw.up_proj.empty()) lw.up_proj_f32 = bf16vec_to_float_vec(lw.up_proj);
@@ -238,6 +240,7 @@ void TinyLlamaModel::ensure_down_proj_dequantized(int layer_idx) {
     
     if (!lw.down_proj_q6k.empty()) dequantize_vector_q6k_to_f32(lw.down_proj_q6k, lw.down_proj_f32, down_proj_elements, 0);
     else if (!lw.down_proj_q4k.empty()) dequantize_vector_q4k_to_f32(lw.down_proj_q4k, lw.down_proj_f32, down_proj_elements, 0);
+    else if (!lw.down_proj_q5k.empty()) dequantize_vector_q5k_to_f32(lw.down_proj_q5k, lw.down_proj_f32, down_proj_elements);
     else if (!lw.down_proj_q8k.empty()) dequantize_q8_k(lw.down_proj_q8k, lw.down_proj_f32, down_proj_elements, false);
     else if (!lw.down_proj_q8_0.empty()) dequantize_vector_q8_0_to_f32(lw.down_proj_q8_0, lw.down_proj_f32, down_proj_elements, 0);
     else if (!lw.down_proj.empty()) lw.down_proj_f32 = bf16vec_to_float_vec(lw.down_proj);
@@ -758,6 +761,8 @@ void TinyLlamaModel::free_layer_gpu_weights(int layer_idx) {
 // Q5_1 {d, m, qh[4], qs[16]}; element j of a block uses the low nibble of qs[j],
 // element j+16 the high nibble, and the Q5 formats take bit j (resp. j+16) of qh
 // as the fifth bit. x = (q - 8) d, q d + m, (q - 16) d, q d + m respectively.
+// Also the K-quants Q4_K, Q5_K and Q6_K (256-wide super-blocks), for the
+// interpreter and any tensor the llama path keeps no blocks for.
 // Returns false for any other type.
 bool dequant_legacy_to_f32(const GGUFTensorInfo& info, const uint8_t* src, std::vector<float>& out) {
   const GGMLType t = info.type;
@@ -769,9 +774,13 @@ bool dequant_legacy_to_f32(const GGUFTensorInfo& info, const uint8_t* src, std::
   }
   const bool q4_0 = t == GGMLType::GGML_TYPE_Q4_0, q4_1 = t == GGMLType::GGML_TYPE_Q4_1;
   const bool q5_0 = t == GGMLType::GGML_TYPE_Q5_0, q5_1 = t == GGMLType::GGML_TYPE_Q5_1;
-  if (!(q4_0 || q4_1 || q5_0 || q5_1)) return false;
-  if (n % 32 != 0) throw std::runtime_error("legacy-quantised tensor with " + std::to_string(n) + " elements (not a multiple of 32)");
-  const size_t bsz = ggml_type_size(t), nb = n / 32;
+  const bool k_quant = t == GGMLType::GGML_TYPE_Q4_K || t == GGMLType::GGML_TYPE_Q5_K || t == GGMLType::GGML_TYPE_Q6_K;
+  if (!(q4_0 || q4_1 || q5_0 || q5_1 || k_quant)) return false;
+  const size_t width = k_quant ? GGML_QK_K : 32;
+  if (n % width != 0)
+    throw std::runtime_error(std::string(ggml_type_name(t)) + " tensor with " + std::to_string(n) +
+                             " elements (not a multiple of " + std::to_string(width) + ")");
+  const size_t bsz = ggml_type_size(t), nb = n / width;
   if (info.size_in_bytes < nb * bsz) throw std::runtime_error("legacy-quantised tensor is shorter than its element count implies");
   out.resize(n);
   dequant_span_to_f32(t, src, 0, n, out.data());
@@ -813,6 +822,22 @@ bool dequant_span_to_f32(GGMLType t, const uint8_t* src, size_t first, size_t n,
   if (t == GGMLType::GGML_TYPE_Q8_0) {
     const block_q8_0* blocks = reinterpret_cast<const block_q8_0*>(src) + first / GGML_QK8_0;
     for (size_t b = 0; b < n / GGML_QK8_0; ++b) dequantize_q8_0_block(blocks + b, out + b * GGML_QK8_0);
+    return true;
+  }
+  // K-quants: 256-wide super-blocks (first and n multiples of GGML_QK_K), ember's block dequantisers.
+  if (t == GGMLType::GGML_TYPE_Q4_K) {
+    const block_q4_K* blocks = reinterpret_cast<const block_q4_K*>(src) + first / GGML_QK_K;
+    for (size_t b = 0; b < n / GGML_QK_K; ++b) dequantize_q4_k_m(blocks + b, out + b * GGML_QK_K, GGML_QK_K);
+    return true;
+  }
+  if (t == GGMLType::GGML_TYPE_Q5_K) {
+    const block_q5_K* blocks = reinterpret_cast<const block_q5_K*>(src) + first / GGML_QK_K;
+    for (size_t b = 0; b < n / GGML_QK_K; ++b) dequantize_q5_k(blocks + b, out + b * GGML_QK_K);
+    return true;
+  }
+  if (t == GGMLType::GGML_TYPE_Q6_K) {
+    const block_q6_K* blocks = reinterpret_cast<const block_q6_K*>(src) + first / GGML_QK_K;
+    for (size_t b = 0; b < n / GGML_QK_K; ++b) dequantize_q6_k(blocks + b, out + b * GGML_QK_K, GGML_QK_K);
     return true;
   }
   const bool q4_0 = t == GGMLType::GGML_TYPE_Q4_0, q4_1 = t == GGMLType::GGML_TYPE_Q4_1;
@@ -946,6 +971,11 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
         std::memcpy(model.lm_head_q4k.data(), tensor_data_ptr, info.size_in_bytes);
             break;
           }
+          case GGMLType::GGML_TYPE_Q5_K: {
+        model.lm_head_q5k.resize(info.size_in_bytes / sizeof(block_q5_K));
+        std::memcpy(model.lm_head_q5k.data(), tensor_data_ptr, info.size_in_bytes);
+            break;
+          }
           case GGMLType::GGML_TYPE_Q8_0: {
         size_t num_blocks = info.size_in_bytes / sizeof(block_q8_0);
         model.lm_head_q8_0.resize(num_blocks);
@@ -978,6 +1008,11 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
         size_t num_blocks = info.size_in_bytes / sizeof(block_q4_K);
         model.embed_tokens_q4k.resize(num_blocks);
         std::memcpy(model.embed_tokens_q4k.data(), tensor_data_ptr, info.size_in_bytes);
+            break;
+          }
+          case GGMLType::GGML_TYPE_Q5_K: {
+        model.embed_tokens_q5k.resize(info.size_in_bytes / sizeof(block_q5_K));
+        std::memcpy(model.embed_tokens_q5k.data(), tensor_data_ptr, info.size_in_bytes);
             break;
           }
           case GGMLType::GGML_TYPE_Q8_0: {
@@ -1068,6 +1103,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
             switch (info.type) {
               case GGMLType::GGML_TYPE_Q8_0: FAST_COPY_WEIGHT(layer.q_proj_q8_0, block_q8_0); break;
               case GGMLType::GGML_TYPE_Q4_K: FAST_COPY_WEIGHT(layer.q_proj_q4k, block_q4_K); break;
+              case GGMLType::GGML_TYPE_Q5_K: FAST_COPY_WEIGHT(layer.q_proj_q5k, block_q5_K); break;
               case GGMLType::GGML_TYPE_Q6_K: FAST_COPY_WEIGHT(layer.q_proj_q6k, block_q6_K); break;
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.q_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.q_proj, uint16_t); break;
@@ -1082,6 +1118,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
             switch (info.type) {
               case GGMLType::GGML_TYPE_Q8_0: FAST_COPY_WEIGHT(layer.k_proj_q8_0, block_q8_0); break;
               case GGMLType::GGML_TYPE_Q4_K: FAST_COPY_WEIGHT(layer.k_proj_q4k, block_q4_K); break;
+              case GGMLType::GGML_TYPE_Q5_K: FAST_COPY_WEIGHT(layer.k_proj_q5k, block_q5_K); break;
               case GGMLType::GGML_TYPE_Q6_K: FAST_COPY_WEIGHT(layer.k_proj_q6k, block_q6_K); break;
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.k_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.k_proj, uint16_t); break;
@@ -1092,6 +1129,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
             switch (info.type) {
               case GGMLType::GGML_TYPE_Q8_0: FAST_COPY_WEIGHT(layer.v_proj_q8_0, block_q8_0); break;
               case GGMLType::GGML_TYPE_Q4_K: FAST_COPY_WEIGHT(layer.v_proj_q4k, block_q4_K); break;
+              case GGMLType::GGML_TYPE_Q5_K: FAST_COPY_WEIGHT(layer.v_proj_q5k, block_q5_K); break;
               case GGMLType::GGML_TYPE_Q6_K: FAST_COPY_WEIGHT(layer.v_proj_q6k, block_q6_K); break;
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.v_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.v_proj, uint16_t); break;
@@ -1102,6 +1140,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
             switch (info.type) {
               case GGMLType::GGML_TYPE_Q8_0: FAST_COPY_WEIGHT(layer.o_proj_q8_0, block_q8_0); break;
               case GGMLType::GGML_TYPE_Q4_K: FAST_COPY_WEIGHT(layer.o_proj_q4k, block_q4_K); break;
+              case GGMLType::GGML_TYPE_Q5_K: FAST_COPY_WEIGHT(layer.o_proj_q5k, block_q5_K); break;
               case GGMLType::GGML_TYPE_Q6_K: FAST_COPY_WEIGHT(layer.o_proj_q6k, block_q6_K); break;
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.o_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.o_proj, uint16_t); break;
@@ -1131,6 +1170,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
             switch (info.type) {
               case GGMLType::GGML_TYPE_Q8_0: FAST_COPY_WEIGHT(layer.gate_proj_q8_0, block_q8_0); break;
               case GGMLType::GGML_TYPE_Q4_K: FAST_COPY_WEIGHT(layer.gate_proj_q4k, block_q4_K); break;
+              case GGMLType::GGML_TYPE_Q5_K: FAST_COPY_WEIGHT(layer.gate_proj_q5k, block_q5_K); break;
               case GGMLType::GGML_TYPE_Q6_K: FAST_COPY_WEIGHT(layer.gate_proj_q6k, block_q6_K); break;
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.gate_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.gate_proj, uint16_t); break;
@@ -1141,6 +1181,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
             switch (info.type) {
               case GGMLType::GGML_TYPE_Q8_0: FAST_COPY_WEIGHT(layer.up_proj_q8_0, block_q8_0); break;
               case GGMLType::GGML_TYPE_Q4_K: FAST_COPY_WEIGHT(layer.up_proj_q4k, block_q4_K); break;
+              case GGMLType::GGML_TYPE_Q5_K: FAST_COPY_WEIGHT(layer.up_proj_q5k, block_q5_K); break;
               case GGMLType::GGML_TYPE_Q6_K: FAST_COPY_WEIGHT(layer.up_proj_q6k, block_q6_K); break;
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.up_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.up_proj, uint16_t); break;
@@ -1151,6 +1192,7 @@ void map_gguf_weights(const GGUFData& gguf, TinyLlamaModel& model) {
             switch (info.type) {
               case GGMLType::GGML_TYPE_Q8_0: FAST_COPY_WEIGHT(layer.down_proj_q8_0, block_q8_0); break;
               case GGMLType::GGML_TYPE_Q4_K: FAST_COPY_WEIGHT(layer.down_proj_q4k, block_q4_K); break;
+              case GGMLType::GGML_TYPE_Q5_K: FAST_COPY_WEIGHT(layer.down_proj_q5k, block_q5_K); break;
               case GGMLType::GGML_TYPE_Q6_K: FAST_COPY_WEIGHT(layer.down_proj_q6k, block_q6_K); break;
               case GGMLType::GGML_TYPE_Q8_K: FAST_COPY_WEIGHT(layer.down_proj_q8k, block_q8_K); break;
               case GGMLType::GGML_TYPE_BF16: FAST_COPY_WEIGHT(layer.down_proj, uint16_t); break;

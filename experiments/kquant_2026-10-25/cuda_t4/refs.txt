@@ -1,0 +1,4 @@
+/content/work/pk_base_v1_q4_k_m_ref.gguf: 86 tensors dequantised to F32
+471ce0159682b0e0268543c0e4ea67005c4ca49e1a35619f2a568144f652ea29  pk_base_v1_q4_k_m_ref.gguf
+/content/work/pk_base_v1_q4_k_s_ref.gguf: 86 tensors dequantised to F32
+f7e7bda683a93a8758a9d067554193e494c045a397b951d7b7db18bad4bf580a  pk_base_v1_q4_k_s_ref.gguf

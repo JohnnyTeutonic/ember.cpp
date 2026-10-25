@@ -146,6 +146,18 @@ std::vector<float> TinyLlamaModel::lookup_embedding(int token_id) {
     return embedding_vec;
   }
 
+  else if (!embed_tokens_q5k.empty()) {
+    const size_t blocks_per_row = hs / GGML_QK_K, first = (size_t)token_id * blocks_per_row;
+    if (hs % GGML_QK_K != 0 || first + blocks_per_row > embed_tokens_q5k.size()) {
+      Logger::error("Q5_K embedding table: hidden size " + std::to_string(hs) + " or token " +
+                    std::to_string(token_id) + " does not fit its " + std::to_string(embed_tokens_q5k.size()) +
+                    " blocks");
+      return embedding_vec;
+    }
+    for (size_t b = 0; b < blocks_per_row; ++b) dequantize_q5_k(&embed_tokens_q5k[first + b], &embedding_vec[b * GGML_QK_K]);
+    return embedding_vec;
+  }
+
   else if (!embed_tokens_f32.empty()) {
     size_t offset = (size_t)token_id * hs;
     if (offset + hs > embed_tokens_f32.size()) {

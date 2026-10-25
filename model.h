@@ -268,6 +268,9 @@ struct LayerWeights {
   std::vector<float> gate_proj_f32, up_proj_f32, down_proj_f32;
   std::vector<block_q4_K> q_proj_q4k, k_proj_q4k, v_proj_q4k, o_proj_q4k;
   std::vector<block_q4_K> gate_proj_q4k, up_proj_q4k, down_proj_q4k;
+  // Q5_K: kept in its blocks, dequantised to the f32 copy before use (no Q5_K kernels).
+  std::vector<block_q5_K> q_proj_q5k, k_proj_q5k, v_proj_q5k, o_proj_q5k;
+  std::vector<block_q5_K> gate_proj_q5k, up_proj_q5k, down_proj_q5k;
   std::vector<block_q6_K> q_proj_q6k, k_proj_q6k, v_proj_q6k, o_proj_q6k;
   std::vector<block_q6_K> gate_proj_q6k, up_proj_q6k, down_proj_q6k;
   std::vector<block_q8_0> q_proj_q8_0, k_proj_q8_0, v_proj_q8_0, o_proj_q8_0;
@@ -540,6 +543,7 @@ class TinyLlamaModel {
   std::vector<uint16_t> final_norm;
   std::vector<float> embed_tokens_f32, lm_head_f32, final_norm_f32;
   std::vector<block_q4_K> embed_tokens_q4k, lm_head_q4k, final_norm_q4k;
+  std::vector<block_q5_K> embed_tokens_q5k, lm_head_q5k;
   std::vector<block_q6_K> embed_tokens_q6k, lm_head_q6k, final_norm_q6k;
   std::vector<block_q8_0> embed_tokens_q8_0, lm_head_q8_0;
   std::vector<block_q8_K> embed_tokens_q8k, lm_head_q8k;

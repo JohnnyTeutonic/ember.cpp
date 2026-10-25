@@ -1,0 +1,10 @@
+Q4_K blocks   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q4_K span     4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q4_K tensor   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q5_K blocks   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q5_K span     4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q5_K tensor   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q6_K blocks   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q6_K span     4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q6_K tensor   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+PASS: every value bit-identical to gguf-py

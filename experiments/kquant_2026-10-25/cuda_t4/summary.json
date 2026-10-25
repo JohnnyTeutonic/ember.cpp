@@ -1,0 +1,228 @@
+{
+ "logits": {
+  "cuda_q4_k_m vs cpu_q4_k_m": {
+   "max_abs": 8.463859558105469e-06,
+   "mean_abs": 8.815891439861723e-07,
+   "max_over_range": 3.0256646592617487e-07,
+   "bit_identical": 47407,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.020682334899902344
+  },
+  "cuda_q4_k_s vs cpu_q4_k_s": {
+   "max_abs": 6.67572021484375e-06,
+   "mean_abs": 8.837322946986248e-07,
+   "max_over_range": 2.3652541729165693e-07,
+   "bit_identical": 46880,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.0009469985961914062
+  },
+  "cuda_q4_k_m vs cuda_q4_k_m_ref": {
+   "max_abs": 0.0,
+   "mean_abs": 0.0,
+   "max_over_range": 0.0,
+   "bit_identical": 655360,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.020684242248535156
+  },
+  "cuda_q4_k_s vs cuda_q4_k_s_ref": {
+   "max_abs": 0.0,
+   "mean_abs": 0.0,
+   "max_over_range": 0.0,
+   "bit_identical": 655360,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.0009450912475585938
+  },
+  "cuda_ir_q4_k_m vs cpu_q4_k_m": {
+   "max_abs": 6.67572021484375e-06,
+   "mean_abs": 8.662992994623586e-07,
+   "max_over_range": 2.386439731248703e-07,
+   "bit_identical": 48323,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.020682334899902344
+  },
+  "cuda_ir_q4_k_s vs cpu_q4_k_s": {
+   "max_abs": 7.62939453125e-06,
+   "mean_abs": 8.67031557322262e-07,
+   "max_over_range": 2.7031476261903646e-07,
+   "bit_identical": 48216,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.0009469985961914062
+  },
+  "cuda_ir_q4_k_m vs cuda_ir_q4_k_m_ref": {
+   "max_abs": 0.0,
+   "mean_abs": 0.0,
+   "max_over_range": 0.0,
+   "bit_identical": 655360,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.02068328857421875
+  },
+  "cuda_ir_q4_k_s vs cuda_ir_q4_k_s_ref": {
+   "max_abs": 0.0,
+   "mean_abs": 0.0,
+   "max_over_range": 0.0,
+   "bit_identical": 655360,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.000946044921875
+  }
+ },
+ "replies": {
+  "cuda_q4_k_m": {
+   "vs_mtstudio_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 15,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     19,
+     20,
+     21,
+     22,
+     23,
+     27,
+     28,
+     30,
+     31,
+     32,
+     34,
+     36,
+     38
+    ]
+   },
+   "prompt_tokens_equal_paperkiln_tokeniser": 40,
+   "vs_cuda_q4_k_m_ref": {
+    "reply_identical": 40,
+    "token_count_identical": 40,
+    "differs_at": []
+   }
+  },
+  "cuda_q4_k_m_ref": {
+   "vs_mtstudio_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 15,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     19,
+     20,
+     21,
+     22,
+     23,
+     27,
+     28,
+     30,
+     31,
+     32,
+     34,
+     36,
+     38
+    ]
+   },
+   "prompt_tokens_equal_paperkiln_tokeniser": 40
+  },
+  "cuda_q4_k_s": {
+   "vs_mtstudio_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 17,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     20,
+     21,
+     22,
+     23,
+     28,
+     30,
+     31,
+     32,
+     34,
+     38,
+     39
+    ]
+   },
+   "prompt_tokens_equal_paperkiln_tokeniser": 40,
+   "vs_cuda_q4_k_s_ref": {
+    "reply_identical": 40,
+    "token_count_identical": 40,
+    "differs_at": []
+   }
+  },
+  "cuda_q4_k_s_ref": {
+   "vs_mtstudio_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 17,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     20,
+     21,
+     22,
+     23,
+     28,
+     30,
+     31,
+     32,
+     34,
+     38,
+     39
+    ]
+   },
+   "prompt_tokens_equal_paperkiln_tokeniser": 40
+  }
+ }
+}
