@@ -285,6 +285,7 @@ add_library(tinyllama_core STATIC
     tokenizer.cpp 
     logger.cpp 
     api.cpp
+    score.cpp
     gguf_parser.cpp
     quantization.cpp
     graph_ir.cpp

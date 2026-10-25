@@ -1,0 +1,11 @@
+sc_final2.sh on ember 17b3999 + this work (CPU, WSL), 26 Oct 2026
+pick_commit pk_requests: 198 requests in 117.57 s (1.7/s) {'over_ctx': 2, 'positions': 12167, 'queue_ms': 2.766422, 'requests': 198, 'reused_positions': 3523, 'score_ms': 117545.919109, 'scored': 196}
+pick: commit tree byte-identical to the gate run
+pythia_commit pythia_sub60: 60 requests in 223.82 s (0.3/s) {'over_ctx': 0, 'positions': 6325, 'queue_ms': 2.764248, 'requests': 60, 'reused_positions': 1596, 'score_ms': 223808.955406, 'scored': 60}
+== pythia_commit.pythia_sub60.jsonl vs pythia_def.pythia_requests.jsonl; bytes equal: no
+{'scored': 60, 'over_ctx_ref': 0, 'over_ctx_same': 60, 'fields_same': 60, 'requests_bit_equal': 60, 'logprob_worst_abs': 0.0, 'logprob_worst_at': None, 'logprob_worst_rounding': 0.0, 'sum_worst_abs': 0.0, 'argmax_same': 1473, 'argmax_positions': 1473} flips []
+smol_commit smol_sub60: 60 requests in 302.68 s (0.2/s) {'over_ctx': 0, 'positions': 6340, 'queue_ms': 2.285777, 'requests': 60, 'reused_positions': 1595, 'score_ms': 302668.39301, 'scored': 60}
+== smol_commit.smol_sub60.jsonl vs smol_def.smol_requests.jsonl; bytes equal: no
+{'scored': 60, 'over_ctx_ref': 0, 'over_ctx_same': 60, 'fields_same': 60, 'requests_bit_equal': 60, 'logprob_worst_abs': 0.0, 'logprob_worst_at': None, 'logprob_worst_rounding': 0.0, 'sum_worst_abs': 0.0, 'argmax_same': 1514, 'argmax_positions': 1514} flips []
+2db5de5829a2b4335b086759ff62daeb3f85bbe8c87c7130ccbcf274a543e8d0  /home/jonat/ember_score/build_cpu/tinyllama_server
+

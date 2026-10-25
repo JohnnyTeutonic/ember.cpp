@@ -378,6 +378,11 @@ class TinyLlamaModel {
                              cudaStream_t stream,
                              const char* operation_name = "GEMM");
 #endif // HAS_CUDA
+  // While set, smart_gemm_batch_cuda runs FP32 math only: no BF16 tensor cores, no TF32 (whatever
+  // EMBER_GEMM_TF32 says). POST /score sets it for its forwards (score.cpp): mtstudio score's
+  // log-probabilities are FP32 arithmetic. Off by default; nothing else sets it.
+  void set_gemm_fp32_only(bool on) { gemm_fp32_only_ = on; }
+  bool gemm_fp32_only() const { return gemm_fp32_only_; }
 
 #ifdef HAS_CUDA
   /**
@@ -537,6 +542,7 @@ class TinyLlamaModel {
   ModelConfig config_;
   bool use_bf16_tensor_cores_ = false;
   bool bf16_batch_gemm_failed_ = false;  // latched by smart_gemm_batch_cuda on the first BF16 failure
+  bool gemm_fp32_only_ = false;          // see set_gemm_fp32_only()
 
   std::vector<uint16_t> embed_tokens;
   std::vector<uint16_t> lm_head;

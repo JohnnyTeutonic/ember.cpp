@@ -2341,7 +2341,7 @@ void Interpreter::mor_step(int layer, Env& env, int T, int start_pos) {
       cpu::mor_gate(mor_xin_.data() + static_cast<size_t>(t) * d, x.v.data() + static_cast<size_t>(t) * d, d, mor_g_[t]);
 }
 
-std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int start_pos, bool all_rows) {
+std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int start_pos, bool all_rows, int tail_rows) {
   const int T = static_cast<int>(tokens.size());
   if (T == 0) return {};
   if (rec_floats_ > 0 && (start_pos < 0 || start_pos + T > max_len_))
@@ -2349,7 +2349,7 @@ std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int star
                              std::to_string(start_pos + T - 1) + " exceed model.ctx (" + std::to_string(max_len_) + ")");
 #ifdef HAS_CUDA
   if (gpu_) {
-    std::vector<float> out = forward_device(tokens, start_pos, all_rows);
+    std::vector<float> out = forward_device(tokens, start_pos, all_rows, tail_rows);
     seq_len_ = start_pos + T;
     return out;
   }
@@ -2379,16 +2379,17 @@ std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int star
     if (evict_) ts_evict_below(ts_seg_.back());
   }
   if (rec_floats_ > 0) rec_end(start_pos, T);
-  int rows = T;
-  if (!all_rows && T > 1) {  // head ops are row-wise: run them on the last row only
-    auto last_row = [T](Buf& b) {
-      if (b.width > 0 && b.v.size() == static_cast<size_t>(T) * b.width) b.v.erase(b.v.begin(), b.v.end() - b.width);
+  // Head ops are row-wise: run them on the last row only, or on the last tail_rows rows.
+  const int rows = all_rows ? T : std::min(T, std::max(1, tail_rows));
+  if (rows < T) {
+    auto last_rows = [T, rows](Buf& b) {
+      if (b.width > 0 && b.v.size() == static_cast<size_t>(T) * b.width)
+        b.v.erase(b.v.begin(), b.v.end() - static_cast<size_t>(rows) * b.width);
     };
     for (auto& kv : env) {
-      last_row(kv.second);
-      for (Buf& item : kv.second.items) last_row(item);  // a list's tensors
+      last_rows(kv.second);
+      for (Buf& item : kv.second.items) last_rows(item);  // a list's tensors
     }
-    rows = 1;
   }
   run_nodes(head_, -1, env, rows, start_pos, !all_rows);
   auto it = env.find("logits");
@@ -3574,7 +3575,8 @@ void Interpreter::ts_upload_codes(int start_pos, int T) {
   gpuErrchk(cudaMemcpyAsync(dts_code_, code.data(), code.size() * sizeof(int), cudaMemcpyHostToDevice, stream_));
 }
 
-std::vector<float> Interpreter::forward_device(const std::vector<int>& tokens, int start_pos, bool all_rows) {
+std::vector<float> Interpreter::forward_device(const std::vector<int>& tokens, int start_pos, bool all_rows,
+                                               int tail_rows) {
   const int T = static_cast<int>(tokens.size());
   // Per-turn state tokens: the CPU path's bookkeeping (codes, the rows held, eviction before the
   // call), then the rows' codes for the kernel; after the blocks, this call's rows are held and the
@@ -3611,24 +3613,24 @@ std::vector<float> Interpreter::forward_device(const std::vector<int>& tokens, i
   run_device(T, start_pos);
   ts_end();
   if (rec_floats_ > 0) rec_end(start_pos, T);
-  int rows = T;
-  if (!all_rows && T > 1) {  // head ops are row-wise: run them on the last row only
-    auto last_row = [T](DBuf& b) {
+  // Head ops are row-wise: run them on the last row only, or on the last tail_rows rows.
+  const int rows = all_rows ? T : std::min(T, std::max(1, tail_rows));
+  if (rows < T) {
+    auto last_rows = [T, rows](DBuf& b) {
       if (b.rows == T && b.alloc) {
-        b.p = b.alloc + static_cast<size_t>(T - 1) * b.width;
-        b.rows = 1;
+        b.p = b.alloc + static_cast<size_t>(T - rows) * b.width;
+        b.rows = rows;
       }
     };
     for (size_t sl = 0; sl < dbufs_.size(); ++sl) {
       DBuf& b = dbufs_[sl];
       if (b.is_list && b.rows == T) {  // a list's tensors
-        for (int k = 0; k < b.items; ++k) last_row(ditems_[sl][k]);
-        b.rows = 1;
+        for (int k = 0; k < b.items; ++k) last_rows(ditems_[sl][k]);
+        b.rows = rows;
       } else {
-        last_row(b);
+        last_rows(b);
       }
     }
-    rows = 1;
   }
   run_nodes_device(plan_head_, -1, rows, start_pos);
   const DBuf& logits = dbufs_[logits_slot_];

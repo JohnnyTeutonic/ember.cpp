@@ -58,6 +58,7 @@
 #include "chat_request.h"
 #include "determinism.h"
 #include "logger.h"
+#include "score.h"
 #include "tokenizer.h"
 #include "model_macros.h"
 
@@ -788,6 +789,97 @@ int main(int argc, char** argv) {
           sink.done();
           return true;
         });
+  });
+
+  // ---- POST /score: log-probabilities of continuations (score.h) ----------
+  // mtstudio score's semantics on token ids, for log-prob benchmarks: per request, one fresh forward
+  // over prompt + continuation[:-1] from position 0, the continuation's log-probabilities (log-softmax
+  // at temperature 1 in double), the argmax at each of its positions (mtstudio's banned specials left
+  // out) and their sum; over_ctx past ctx + 1 ids. A batch holds the session from its first request
+  // to its last. Off under EMBER_PUBLIC=1 (the open-internet settings serve chat only).
+  svr.Post("/score", [&session](const httplib::Request& req, httplib::Response& res) {
+    const auto t_request = std::chrono::steady_clock::now();
+    Waiting waiting_guard;
+    res.set_header("Access-Control-Allow-Origin", "*");
+    auto refuse = [&res](int status, const std::string& msg) {
+      res.status = status;
+      res.set_content(json{{"error", msg}}.dump(), "application/json");
+    };
+    if (public_mode) {
+      refuse(403, "/score is off on a public server (EMBER_PUBLIC=1)");
+      return;
+    }
+    const json body = json::parse(req.body, nullptr, false);
+    if (body.is_discarded()) {
+      refuse(400, "body must be JSON: {\"requests\": [{\"key\", \"prompt_ids\", \"continuation_ids\"}, ...]}");
+      return;
+    }
+    ember::ScoreModel m;
+    m.vocab = static_cast<size_t>(session->score_vocab());
+    m.ctx = static_cast<size_t>(session->score_context());
+    if (session->state_k() > 0 && session->chat_format()) {
+      const ember::ChatFormat& f = *session->chat_format();
+      m.state_k = static_cast<size_t>(session->state_k());
+      m.eot = f.eos_ids.at(0);
+      m.user = f.turn_ids.at(0);
+      m.assistant = f.turn_ids.at(1);
+    }
+    std::vector<ember::ScoreItem> items;
+    const std::string err = ember::parse_score_body(body, m, items);
+    if (!err.empty()) {
+      refuse(400, err);
+      return;
+    }
+    static const std::vector<char> banned = ember::score_banned(session->gguf_tokens(), m.vocab);
+    std::lock_guard<std::mutex> session_lock(session_mu);
+    const auto t_start = std::chrono::steady_clock::now();
+    json results = json::array();
+    size_t scored = 0, over = 0, positions = 0, reused_total = 0;
+    try {
+      bool first = true;
+      for (ember::ScoreItem& it : items) {
+        if (it.over_ctx) {
+          it.rec["over_ctx"] = true;
+          results.push_back(std::move(it.rec));
+          ++over;
+          continue;
+        }
+        std::vector<int> ctx = it.prompt;  // prompt + continuation[:-1]
+        ctx.insert(ctx.end(), it.cont.begin(), it.cont.end() - 1);
+        int reused = 0;
+        const std::vector<float> rows =
+            session->score_rows(ctx, static_cast<int>(it.prompt.size()) - 1, !first, &reused);
+        first = false;
+        ember::score_fill(it.rec, it.cont, rows.data(), m.vocab, banned);
+        results.push_back(std::move(it.rec));
+        ++scored;
+        positions += ctx.size();
+        reused_total += static_cast<size_t>(reused);
+      }
+    } catch (const std::invalid_argument& e) {
+      refuse(400, std::string("score: ") + e.what());
+      return;
+    } catch (const std::exception& e) {
+      refuse(500, std::string("score: ") + e.what());
+      return;
+    }
+    auto ms = [](auto a, auto b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
+    const auto t_end = std::chrono::steady_clock::now();
+    json out = {{"results", std::move(results)},
+                {"stats", {{"requests", items.size()},
+                           {"scored", scored},
+                           {"over_ctx", over},
+                           {"positions", positions},
+                           {"reused_positions", reused_total},
+                           {"queue_ms", ms(t_request, t_start)},
+                           {"score_ms", ms(t_start, t_end)}}}};
+    res.set_content(out.dump(), "application/json");
+  });
+  svr.Options("/score", [](const httplib::Request&, httplib::Response& res) {
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_header("Access-Control-Allow-Headers", "Content-Type");
+    res.set_header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.status = 204;
   });
 
   svr.Options("/chat", [](const httplib::Request& req, httplib::Response& res) {

@@ -1,0 +1,46 @@
+=== vm Sun Oct 25 04:12:32 PM UTC 2026 ===
+gpu Tesla T4, compute capability 75, nproc 2
+built in 205 s
+--- tuned llama path 16:16:12
+pick_cuda_def error ids_not_list: 400 {"error": "request 0: prompt_ids and continuation_ids must be lists of integers ([json.exception.type_error.302] type must be array, but is string)"}
+pick_cuda_def error ids_string_element: 400 {"error": "request 0: prompt_ids and continuation_ids must be lists of integers ([json.exception.type_error.302] type must be number, but is string)"}
+pick_cuda_def error text_fields_only: 400 {"error": "request 0: prompt_ids and continuation_ids are required (ember scores token ids; mtstudio's text fields are not served)"}
+pick_cuda_def error good_then_bad: 400 {"error": "request 1 has an empty prompt or continuation"}
+pick_cuda_def error empty_list: 200 {"results": [], "stats": {"over_ctx": 0, "positions": 0, "queue_ms": 0.005356, "requests": 0, "reused_positions": 0, "score_ms": 0.000309, "scored": 0}}
+pick_cuda_def /chat before == after /score: True
+pick_cuda_det1 pk_requests: 198 requests in 2.54 s (78.0/s) {'over_ctx': 2, 'positions': 12167, 'queue_ms': 2.585106, 'requests': 198, 'reused_positions': 0, 'score_ms': 2528.276615, 'scored': 196}
+pick_cuda_det1 pk_bench256: 256 requests in 4.76 s (53.8/s) {'over_ctx': 0, 'positions': 22933, 'queue_ms': 3.703572, 'requests': 256, 'reused_positions': 0, 'score_ms': 4740.84854, 'scored': 256}
+pick_cuda_det2 pk_requests: 198 requests in 2.60 s (76.1/s) {'over_ctx': 2, 'positions': 12167, 'queue_ms': 2.759198, 'requests': 198, 'reused_positions': 0, 'score_ms': 2593.402475, 'scored': 196}
+pick_cuda_det2 pk_bench256: 256 requests in 4.80 s (53.3/s) {'over_ctx': 0, 'positions': 22933, 'queue_ms': 3.732327, 'requests': 256, 'reused_positions': 0, 'score_ms': 4783.830586, 'scored': 256}
+pkbase_cuda_def error ids_not_list: 400 {"error": "request 0: prompt_ids and continuation_ids must be lists of integers ([json.exception.type_error.302] type must be array, but is string)"}
+pkbase_cuda_def error ids_string_element: 400 {"error": "request 0: prompt_ids and continuation_ids must be lists of integers ([json.exception.type_error.302] type must be number, but is string)"}
+pkbase_cuda_def error text_fields_only: 400 {"error": "request 0: prompt_ids and continuation_ids are required (ember scores token ids; mtstudio's text fields are not served)"}
+pkbase_cuda_def error good_then_bad: 400 {"error": "request 1 has an empty prompt or continuation"}
+pkbase_cuda_def error empty_list: 200 {"results": [], "stats": {"over_ctx": 0, "positions": 0, "queue_ms": 0.00512, "requests": 0, "reused_positions": 0, "score_ms": 0.000315, "scored": 0}}
+pkbase_cuda_def /chat before == after /score: True
+pkbase_cuda_det1 pk_requests: 198 requests in 4.73 s (41.9/s) {'over_ctx': 2, 'positions': 12167, 'queue_ms': 2.671196, 'requests': 198, 'reused_positions': 0, 'score_ms': 4717.59574, 'scored': 196}
+pkbase_cuda_det1 pk_bench256: 256 requests in 8.50 s (30.1/s) {'over_ctx': 0, 'positions': 22933, 'queue_ms': 3.733752, 'requests': 256, 'reused_positions': 0, 'score_ms': 8485.732436, 'scored': 256}
+pkbase_cuda_det2 pk_requests: 198 requests in 4.76 s (41.6/s) {'over_ctx': 2, 'positions': 12167, 'queue_ms': 2.715029, 'requests': 198, 'reused_positions': 0, 'score_ms': 4745.965131, 'scored': 196}
+pkbase_cuda_det2 pk_bench256: 256 requests in 8.63 s (29.7/s) {'over_ctx': 0, 'positions': 22933, 'queue_ms': 3.698406, 'requests': 256, 'reused_positions': 0, 'score_ms': 8610.673243, 'scored': 256}
+--- interpreter 16:17:30
+8e0ae26000627ed62de0e78e41860af70094558b9d2913385c842a6aa06cf3fc  /content/tp/qwen25/qwen2.5-0.5b-instruct-fp16.gguf
+97522db7c8b426c8ae91ee23697a7ea9c56fa51bf05736b62824476daabf08f3  /content/tp/pythia-160m/pythia-160m-f32.gguf
+pythia_cuda_def error ids_not_list: 400 {"error": "request 0: prompt_ids and continuation_ids must be lists of integers ([json.exception.type_error.302] type must be array, but is string)"}
+pythia_cuda_def error ids_string_element: 400 {"error": "request 0: prompt_ids and continuation_ids must be lists of integers ([json.exception.type_error.302] type must be number, but is string)"}
+pythia_cuda_def error text_fields_only: 400 {"error": "request 0: prompt_ids and continuation_ids are required (ember scores token ids; mtstudio's text fields are not served)"}
+pythia_cuda_def error good_then_bad: 400 {"error": "request 1 has an empty prompt or continuation"}
+pythia_cuda_def error empty_list: 200 {"results": [], "stats": {"over_ctx": 0, "positions": 0, "queue_ms": 0.005121, "requests": 0, "reused_positions": 0, "score_ms": 0.000335, "scored": 0}}
+pythia_cuda_def /chat before == after /score: True
+pythia_cuda_det1 pythia_requests: 194 requests in 3.59 s (54.0/s) {'over_ctx': 0, 'positions': 10541, 'queue_ms': 3.40567, 'requests': 194, 'reused_positions': 0, 'score_ms': 3580.861594, 'scored': 194}
+pythia_cuda_det1 pythia_bench256: 256 requests in 7.50 s (34.1/s) {'over_ctx': 0, 'positions': 21433, 'queue_ms': 3.498521, 'requests': 256, 'reused_positions': 0, 'score_ms': 7484.663983, 'scored': 256}
+pythia_cuda_det2 pythia_requests: 194 requests in 3.58 s (54.2/s) {'over_ctx': 0, 'positions': 10541, 'queue_ms': 3.801195, 'requests': 194, 'reused_positions': 0, 'score_ms': 3570.844967, 'scored': 194}
+pythia_cuda_det2 pythia_bench256: 256 requests in 7.39 s (34.6/s) {'over_ctx': 0, 'positions': 21433, 'queue_ms': 3.628652, 'requests': 256, 'reused_positions': 0, 'score_ms': 7378.610822, 'scored': 256}
+qwen_cuda_def error ids_not_list: 400 {"error": "request 0: prompt_ids and continuation_ids must be lists of integers ([json.exception.type_error.302] type must be array, but is string)"}
+qwen_cuda_def error ids_string_element: 400 {"error": "request 0: prompt_ids and continuation_ids must be lists of integers ([json.exception.type_error.302] type must be number, but is string)"}
+qwen_cuda_def error text_fields_only: 400 {"error": "request 0: prompt_ids and continuation_ids are required (ember scores token ids; mtstudio's text fields are not served)"}
+qwen_cuda_def error good_then_bad: 400 {"error": "request 1 has an empty prompt or continuation"}
+qwen_cuda_def error empty_list: 200 {"results": [], "stats": {"over_ctx": 0, "positions": 0, "queue_ms": 0.005148, "requests": 0, "reused_positions": 0, "score_ms": 0.000343, "scored": 0}}
+qwen_cuda_def /chat before == after /score: True
+qwen_cuda_det1 qwen_requests: 194 requests in 11.44 s (17.0/s) {'over_ctx': 0, 'positions': 10246, 'queue_ms': 5.321643, 'requests': 194, 'reused_positions': 0, 'score_ms': 11427.988556, 'scored': 194}
+qwen_cuda_det2 qwen_requests: 194 requests in 11.27 s (17.2/s) {'over_ctx': 0, 'positions': 10246, 'queue_ms': 5.566478, 'requests': 194, 'reused_positions': 0, 'score_ms': 11253.087574, 'scored': 194}
+=== done Sun Oct 25 04:19:02 PM UTC 2026 ===

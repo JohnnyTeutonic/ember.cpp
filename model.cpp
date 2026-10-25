@@ -80,6 +80,15 @@ void TinyLlamaModel::initialize_weights(const SafeTensorsLoader* loader,
 
     // DEFER lm_head dequantization until actually needed (it's huge)
     Logger::info("[INIT_WEIGHTS_GGUF] Deferring lm_head dequantization until needed to save memory");
+    // Tied embeddings: a GGUF with no output.weight (llama.cpp's converter omits it when the checkpoint ties the
+    // head to the embedding, e.g. SmolLM2) uses token_embd as the head, as llama.cpp does. Every head kernel then
+    // reads the f32 copy. Files with output.weight are untouched.
+    if (this->lm_head_f32.empty() && this->lm_head_q8_0.empty() && this->lm_head_q6k.empty() &&
+        this->lm_head_q4k.empty() && this->lm_head_q5k.empty() && this->lm_head_q8k.empty() &&
+        this->lm_head.empty() && !this->embed_tokens_f32.empty()) {
+      this->lm_head_f32 = this->embed_tokens_f32;
+      Logger::info("[INIT_WEIGHTS_GGUF] No output.weight: the head is tied to token_embd.weight");
+    }
 
     // DEFER all layer weight dequantization until the layer is actually used
     Logger::info("[INIT_WEIGHTS_GGUF] Deferring all layer weight dequantization until layers are used");
@@ -2522,7 +2531,7 @@ void TinyLlamaModel::smart_gemm_batch_cuda(bool transa_user, bool transb_user,
     
     // Tensor Cores are most beneficial for larger batch sizes
     const int tensor_core_threshold = 4; // Use BF16 Tensor Cores when batch size >= 4
-    bool use_tensor_cores = use_bf16_tensor_cores_ && !bf16_batch_gemm_failed_ &&
+    bool use_tensor_cores = use_bf16_tensor_cores_ && !bf16_batch_gemm_failed_ && !gemm_fp32_only_ &&
                             (m_user >= tensor_core_threshold);
     
     // Determine which BF16 weight to use based on operation name and weight pointer
@@ -2642,12 +2651,13 @@ void TinyLlamaModel::smart_gemm_batch_cuda(bool transa_user, bool transb_user,
         const char* v = std::getenv("EMBER_GEMM_TF32");
         return v == nullptr || std::string(v) != "0";
     }();
-    if (tf32) cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH);
+    const bool tf32_here = tf32 && !gemm_fp32_only_;  // POST /score: FP32 math only
+    if (tf32_here) cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH);
     gemm_f32_f32_cuda(cublas_handle_, transa_user, transb_user,
                       m_user, n_user, k_user, alpha_user,
                       A_f32_user, lda_user, B_f32_user, ldb_user,
                       beta_user, C_f32_user, ldc_user, stream);
-    if (tf32) cublasSetMathMode(cublas_handle_, CUBLAS_DEFAULT_MATH);
+    if (tf32_here) cublasSetMathMode(cublas_handle_, CUBLAS_DEFAULT_MATH);
 }
 #endif // HAS_CUDA
 

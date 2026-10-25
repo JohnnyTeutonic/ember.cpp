@@ -243,6 +243,23 @@ class TinyLlamaSession {
   int sample_step(std::vector<float>& logits, const std::vector<int>& context, float temperature, int top_k,
                   float top_p);
 
+  // POST /score (score.h, score.cpp; mtstudio score's semantics). score_rows: the logits of rows
+  // first_row .. ids.size() - 1 of one forward over `ids` from position 0, as a fresh prefill of `ids`
+  // gives them ([ids.size() - first_row][score_vocab()], row-major). With reuse_prefix, the forward
+  // keeps the leading positions (up to first_row) that `ids` shares with the previous score_rows
+  // call's ids when score_reuse_ok() (the result is then the same bits); the caller passes false
+  // for the first call of a batch and holds the session for the whole batch. *reused, if given,
+  // receives the positions kept. Afterwards generate() reuses nothing from the cache.
+  std::vector<float> score_rows(const std::vector<int>& ids, int first_row, bool reuse_prefix, int* reused = nullptr);
+  int score_vocab() const;    // the logits' width
+  int score_context() const;  // positions one forward holds (mtstudio's T)
+  // Prefix reuse gives the bits a fresh prefill gives: the CPU paths (every row computed apart
+  // from the batch it is in), not the device, recurrent state, eviction, depth routing or state
+  // tokens. EMBER_SCORE_REUSE=0 turns it off.
+  bool score_reuse_ok() const;
+  // The GGUF's tokenizer.ggml.tokens (empty without one): the argmax's banned specials by name.
+  const std::vector<std::string>& gguf_tokens() const;
+
  private:
   TinyLlamaSession(const TinyLlamaSession&) = delete;
   TinyLlamaSession& operator=(const TinyLlamaSession&) = delete;
@@ -285,6 +302,7 @@ class TinyLlamaSession {
   int last_stop_id_ = -1;
   std::function<void(int)> token_callback_;
   int state_k_ = 0, state_vocab_ = 0;  // see state_k(); the state ids are state_vocab_ + j
+  std::vector<int> score_ids_;  // the ids the last score_rows() left in the cache
 
   // Batch processing support
   int max_batch_size_ = 1;  // Maximum number of sequences for batch processing

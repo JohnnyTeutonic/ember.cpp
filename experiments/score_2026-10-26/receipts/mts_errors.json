@@ -1,0 +1,89 @@
+{
+ "not_json": {
+  "rc": 1,
+  "stderr": [
+   "mtstudio: [json.exception.parse_error.101] parse error at line 1, column 3: syntax error while parsing object key - invalid literal; last read: '{no'; expected string literal"
+  ],
+  "records_written": 0
+ },
+ "no_requests": {
+  "n/a": "mtstudio reads one request per line; no body object"
+ },
+ "request_not_object": {
+  "rc": 1,
+  "stderr": [
+   "mtstudio: [json.exception.type_error.304] cannot use at() with array"
+  ],
+  "records_written": 0
+ },
+ "empty_continuation": {
+  "rc": 1,
+  "stderr": [
+   "mtstudio: score: line 0 has an empty prompt or continuation"
+  ],
+  "records_written": 0
+ },
+ "empty_prompt": {
+  "rc": 1,
+  "stderr": [
+   "mtstudio: score: line 0 has an empty prompt or continuation"
+  ],
+  "records_written": 0
+ },
+ "prompt_id_negative": {
+  "rc": 1,
+  "stderr": [
+   "mtstudio: score: prompt id out of range"
+  ],
+  "records_written": 0
+ },
+ "prompt_id_vocab": {
+  "rc": 1,
+  "stderr": [
+   "mtstudio: score: prompt id out of range"
+  ],
+  "records_written": 0
+ },
+ "continuation_id_vocab": {
+  "rc": 1,
+  "stderr": [
+   "mtstudio: score: continuation id out of range"
+  ],
+  "records_written": 0
+ },
+ "ids_not_list": {
+  "rc": 1,
+  "stderr": [
+   "mtstudio: [json.exception.type_error.302] type must be array, but is string"
+  ],
+  "records_written": 0
+ },
+ "ids_string_element": {
+  "rc": 1,
+  "stderr": [
+   "mtstudio: [json.exception.type_error.302] type must be number, but is string"
+  ],
+  "records_written": 0
+ },
+ "text_fields_only": {
+  "rc": 0,
+  "stderr": [
+   "score: 1 continuations (0 over the context of 512) -> /home/jonat/ember_score/work/mts_err/err_text_fields_only.out.jsonl"
+  ],
+  "records_written": 1
+ },
+ "good_then_bad": {
+  "rc": 1,
+  "stderr": [
+   "mtstudio: score: line 1 has an empty prompt or continuation"
+  ],
+  "records_written": 1
+ },
+ "empty_list": {
+  "rc": 0,
+  "stderr": [
+   "score: 0 continuations (0 over the context of 512) -> /home/jonat/ember_score/work/mts_err/err_empty_list.out.jsonl"
+  ],
+  "records_written": 0
+ }
+}

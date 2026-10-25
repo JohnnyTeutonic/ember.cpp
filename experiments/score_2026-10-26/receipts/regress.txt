@@ -1,0 +1,17 @@
+recursion_gate rc=0: recursion_gate_cpu.json byte-identical
+mor_gate rc=0: mor_gate_cpu.json byte-identical
+mor_refusals rc=0: mor_refusals.json byte-identical
+attnres_gate rc=0: attnres_gate_cpu.json byte-identical
+state_tokens_gate rc=0: state_tokens_gate_cpu.json DIFFERS or missing
+state4_gate rc=0: state4_gate_cpu.json byte-identical
+regress_bits rc=1: regress_bits.json DIFFERS or missing
+regress_parity rc=0: regress_parity.json byte-identical
+g5_thirdparty rc=0: g5_thirdparty.json byte-identical
+adapter self-test rc=0: 156/156 checks pass, 2889 requests 
+cpu regression done
+
+state_tokens_gate: this work = HEAD byte for byte
+regress_bits vs HEAD rc=0: mor_gate_mor2p0 {"sequences": 8, "positions": 101, "rc": [0, 0], "bit_equal": true} pass True 
+{'cases': {'gpt2_tiny': {'sequences': 2, 'positions': 13, 'rc': [0, 0], 'bit_equal': True}, 'gpt2_tiny_scale_smoke_ir': {'sequences': 2, 'positions': 13, 'rc': [0, 0], 'bit_equal': True}, 'recursion_b2x4_0101': {'sequences': 8, 'positions': 101, 'rc': [0, 0], 'bit_equal': True}, 'chat_sftfinal_v3': {'sequences': 2, 'positions': 19, 'rc': [0, 0], 'bit_equal': True}, 'swa_tiny': {'sequences': 2, 'positions': 13, 'rc': [0, 0], 'bit_equal': True}, 'kimi_tiny': {'sequences': 2, 'positions': 13, 'rc': [0, 0], 'bit_equal': True}, 'mamba_tiny': {'sequences': 2, 'positions': 13, 'rc': [0, 0], 'bit_equal': True}, 'moe_tiny_v3': {'sequences': 2, 'positions': 13, 'rc': [0, 0], 'bit_equal': True}, 'attnres_tiny': {'sequences': 2, 'positions': 13, 'rc': [0, 0], 'bit_equal': True}, 'attnres_gate_ar3': {'sequences': 8, 'positions': 101, 'rc': [0, 0], 'bit_equal': True}, 'state_gate_state4': {'sequences'
+regression done
+
