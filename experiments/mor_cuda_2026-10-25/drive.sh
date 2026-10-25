@@ -31,7 +31,7 @@ maybe_refresh() {
 log "new $GPU session $S"
 out=$(c 600 new -s "$S" --gpu "$GPU" 2>&1)
 echo "$out" | grep -q READY || { log "session not ready: ${out: -300}"; exit 1; }
-for f in vm.sh COMMITS BIG_SHA256SUMS ember_new.tgz ember_head.tgz small.tgz $(cd $STAGE && ls tc.part*); do
+for f in vm.sh COMMITS BIG_SHA256SUMS ember_new.tgz ember_head.tgz small.tgz $(cd $STAGE && ls tc.part* LEGS 2>/dev/null); do
   maybe_refresh
   ok=0
   for attempt in 1 2 3; do
