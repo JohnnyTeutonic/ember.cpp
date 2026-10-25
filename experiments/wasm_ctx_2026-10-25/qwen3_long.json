@@ -1,0 +1,43 @@
+{
+ "n": 3,
+ "ctx": 256,
+ "heap_bytes": 1402929152,
+ "load_ms": 6118,
+ "ms_per_reply": 28643,
+ "reply_identical": "3/3",
+ "tokens_identical": "3/3",
+ "stop_identical": "3/3",
+ "prompt_tokens_and_turns_identical": "3/3",
+ "prepare_prompt_ids_identical": "3/3",
+ "prepare_counts_identical": "3/3",
+ "pass": true,
+ "replies": [
+  {
+   "i": 0,
+   "reply": "<think>\nOkay, the user asked about how the fall of the Soviet Union impacted the economies of Eastern Europe. Let me",
+   "tokens": 24,
+   "stop_reason": "length",
+   "prompt_tokens": 206,
+   "history_turns_used": 1,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 1,
+   "reply": "<think>\nOkay, the user wants a funny limerick about someone with a strange obsession. They specified the rhyme scheme",
+   "tokens": 24,
+   "stop_reason": "length",
+   "prompt_tokens": 165,
+   "history_turns_used": 1,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 2,
+   "reply": "<think>\nOkay, the user wants a narrative story about a protagonist discovering a secret society of time thieves. Let me start",
+   "tokens": 24,
+   "stop_reason": "length",
+   "prompt_tokens": 101,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  }
+ ]
+}

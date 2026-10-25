@@ -1,0 +1,106 @@
+{
+ "n": 10,
+ "ctx": 2048,
+ "heap_bytes": 2046558208,
+ "load_ms": 11870,
+ "ms_per_reply": 22171.6,
+ "reply_identical": "10/10",
+ "tokens_identical": "10/10",
+ "stop_identical": "10/10",
+ "prompt_tokens_and_turns_identical": "10/10",
+ "prepare_prompt_ids_identical": "10/10",
+ "prepare_counts_identical": "10/10",
+ "pass": true,
+ "replies": [
+  {
+   "i": 0,
+   "reply": "<think>\nOkay, the user just said \"Hi\". I need to respond appropriately. Let me think. Since they're just greeting, a simple \"Hello\"",
+   "tokens": 32,
+   "stop_reason": "length",
+   "prompt_tokens": 9,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 1,
+   "reply": "<think>\nOkay, the user wants me to offer additional services for each episode of their podcast production business, specifically mentioning social media promotion and video clips. Let me",
+   "tokens": 32,
+   "stop_reason": "length",
+   "prompt_tokens": 29,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 2,
+   "reply": "<think>\nOkay, I need to write a comprehensive essay on how animal-assisted therapy helps children with developmental challenges. Let me start by breaking down the requirements.",
+   "tokens": 32,
+   "stop_reason": "length",
+   "prompt_tokens": 69,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 3,
+   "reply": "<think>\nOkay, the user wants me to research and explain the historical evolution of various types of shoes, including athletic, high heels, boots, sandals, and",
+   "tokens": 32,
+   "stop_reason": "length",
+   "prompt_tokens": 109,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 4,
+   "reply": "<think>\nOkay, the user wants the queue size to adjust dynamically as elements are added or removed. Let me think about how to approach this.\n\nFirst, I",
+   "tokens": 32,
+   "stop_reason": "length",
+   "prompt_tokens": 23,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 5,
+   "reply": "<think>\nOkay, the user wants a 500-word short story in third-person limited point of view. The main character discovers a hidden talent, changes",
+   "tokens": 32,
+   "stop_reason": "length",
+   "prompt_tokens": 72,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 6,
+   "reply": "<think>\nOkay, let's see. The user wants to know how to make the dressing for the watermelon and arugula salad. They provided a recipe",
+   "tokens": 32,
+   "stop_reason": "length",
+   "prompt_tokens": 109,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 7,
+   "reply": "<think>\nOkay, the user is asking how to protect a wooden flute from extreme temperature fluctuations. Let me start by recalling what I know about wood and temperature.",
+   "tokens": 32,
+   "stop_reason": "length",
+   "prompt_tokens": 37,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 8,
+   "reply": "<think>\nOkay, let's see. The user wants me to continue the story of Strephon and explain why the ground where he lay would be strown.",
+   "tokens": 32,
+   "stop_reason": "length",
+   "prompt_tokens": 120,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 9,
+   "reply": "<think>\nOkay, the user wants a 500-word short story about a character waking up in a world without smell. Let me start by brainstorming",
+   "tokens": 32,
+   "stop_reason": "length",
+   "prompt_tokens": 68,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  }
+ ]
+}

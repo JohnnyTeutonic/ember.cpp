@@ -1,0 +1,4 @@
+n=40: WASM reply == mtstudio 40, token count 40/40, stop reason 40/40 (446 ms per reply in node)
+wasm_frozen40.json equal to the committed receipt (ms_per_reply aside): True
+n=60: WASM reply == mtstudio 60, token count 60/60, stop reason 60/60 (547 ms per reply in node)
+wasm_system_set_v1.json equal to the committed receipt (ms_per_reply aside): True

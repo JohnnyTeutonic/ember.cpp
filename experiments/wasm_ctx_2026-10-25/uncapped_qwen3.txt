@@ -1,0 +1,10 @@
+Qwen3-0.6B-Q8_0, 4gb page build, ember_set_ctx(0) (the file's own context): node's output
+ember_load: std::bad_alloc
+file:///home/jonat/wi/src/tools/wasm_chat_check.mjs:27
+if (ok !== 1) throw new Error('ember_load returned ' + ok);
+                    ^
+
+Error: ember_load returned -1
+
+Node.js v24.19.0
+exit 1
