@@ -70,14 +70,15 @@ key copied, plus `state_embd.weight` [4, 384] (seeded normal rows at the token e
 deviation), `paperkiln.state_tokens.k = 4`, and an IR with state_weight, mask turn_state and evict
 turn_state. family_hint stays "llama", so the routing above is exercised. The IR variants are
 `ts` (the embedded one), `ts_noevict`, `ts_causal` (state_weight with the causal mask) and `plain`.
-The gate is `state_tokens_gate.py` and its receipt is `state_tokens_gate_cpu.json`.
+The gate is `state_tokens_gate.py` and its receipt is `state_tokens_gate_cpu.json` (ember f4fc5e0's CPU build;
+the IR tools from `$KERAMOS_TOOLS`, else paperkiln's `spec/tools`, else its `tools/`).
 
 | check | result |
 |---|---|
 | (a) no state ids: turn_state (evict on and off) vs the original file's causal IR, 3 sequences (42-80 tokens, specials included) | prefill and decode bit-equal |
 | (b) prefill vs token-by-token decode, 3 multi-turn sequences with state blocks (84, 31, 55 tokens; an empty reply; one ends inside an open block), evict on and off | bit-equal; on = off bit-equal |
-| (b) the mask vs an independent numpy reference of section 1.3 (paperkiln's ir_numpy node by node, own attention and extended embedding) | within 6.4e-7 of the range, top-1 at every position |
-| (b) the mask is read: turn_state vs the causal mask, same ids | segment 0 bit-equal; later positions move by up to 7.4-13.6 (the causal reference itself is within 6.2e-7 of numpy) |
+| (b) the mask vs an independent numpy reference of section 1.3 (keramos's ir_numpy, from paperkiln's `spec/tools`, node by node; the gate's own attention and extended embedding) | within 8.3e-7 of the range, top-1 at every position |
+| (b) the mask is read: turn_state vs the causal mask, same ids | segment 0 bit-equal; later positions move by up to 7.4-13.6 (the causal reference itself is within 8.3e-7 of numpy) |
 | (c) eviction on vs off vs a fresh full prefill, 12 calls (`state_tokens_test run`): turn-by-turn prompts, replies token by token with the block, a regenerated reply, an edited turn 1 (rewind into an evicted turn), a five-turn prefill in one call, then a rewind into evicted turn 0 | logits bit-equal across all three at every call (max diff 0.0). The evicting engine refuses a forward straight into an evicted turn and resumes at its start (27 and 0). Rows held: 26 vs 132 after five turns |
 | (d) template rule (`state_tokens_test template`): 17 id sequences | all pass: block after a closing eot; eot + block before a `<|user|>` after a cut reply (also an empty one); a given block kept; eot outside an exchange untouched; an `<|assistant|>` with no open `<|user|>` starts nothing; incomplete, out-of-order, cut-off, misplaced and past-k state ids refused. Against paperkiln's serialiser on 3000 random sequences, see state4 below |
 | (d) /chat end to end, greedy, 5 requests, 3 servers (evict on, `EMBER_EVICT=0`, `EMBER_PREFIX_REUSE=0`) | reply ids and prompt ids equal across the three servers on every request. Reply 1 stopped by max_new_tokens 6, and the next prompt has `<|endoftext|>` + S_0..S_3 after it. Every state id sits in a complete block after `<|endoftext|>` and before `<|user|>`. Request 3 reused 49 tokens (through reply 2's generated eot and block); the regenerated reply reused 60. The edited turn-1 message reused 20 with eviction (turn 1's start) and 25 without (the edit) |
