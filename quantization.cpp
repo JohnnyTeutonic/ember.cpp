@@ -1087,8 +1087,10 @@ void dequantize_q8_k(const std::vector<block_q8_K>& q_data,
   }
 }
 
+// qs[j] * h(d), as ggml's dequantize_row_q8_0 (paperkiln spec/IR_SPEC.md 4.7): d keeps its sign (a
+// negative or -0 scale is not made positive; ggml's quantiser writes d >= 0, so real files are unchanged).
 void dequantize_q8_0_block(const block_q8_0* qblock, float* output) {
-  const float d_fp32 = fp16_to_fp32(qblock->d, true);
+  const float d_fp32 = fp16_to_fp32(qblock->d, false);
   for (int i = 0; i < GGML_QK8_0; ++i) {
     output[i] = d_fp32 * static_cast<float>(qblock->qs[i]);
   }
