@@ -27,13 +27,17 @@ SIMD=-msimd128
 # workers pre-spawned); it needs a cross-origin-isolated page (COOP/COEP).
 # EMBER_WASM_NAME=ember-mt names the outputs (pthread workers load the main
 # script by its own name, so a threaded build is built under its final name).
+# EMBER_WASM_CTX (default 2048): the page's context cap (ember_set_ctx; ?ctx=N at run time): the KV
+# state of an interpreted file holds at most that many positions, as EMBER_IR_CTX natively; a file
+# with a smaller context keeps its own; 0 means no cap.
+CTX="-DEMBER_WASM_CTX=${EMBER_WASM_CTX:-2048}"
 THREADS=
 [ -n "${EMBER_WASM_THREADS:-}" ] && THREADS="-pthread -sPTHREAD_POOL_SIZE=$EMBER_WASM_THREADS -DEMBER_WASM_THREADS=$EMBER_WASM_THREADS"
 cd "$REPO"
-em++ -O3 $SIMD $THREADS -std=c++17 -DNDEBUG -I"$REPO" -I"$INC" -Wno-unknown-pragmas \
+em++ -O3 $SIMD $THREADS $CTX -std=c++17 -DNDEBUG -I"$REPO" -I"$INC" -Wno-unknown-pragmas \
     $SRC deploy/wasm/ember_wasm.cpp \
     -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=${EMBER_WASM_MAX_MEMORY:-1gb} -sMODULARIZE=1 -sEXPORT_NAME=createEmber \
-    -sEXPORTED_FUNCTIONS=_ember_load,_ember_chat,_ember_prepare,_ember_sample,_ember_finish,_malloc,_free -sEXPORTED_RUNTIME_METHODS=ccall,FS,HEAPF32 \
+    -sEXPORTED_FUNCTIONS=_ember_set_ctx,_ember_ctx,_ember_load,_ember_chat,_ember_prepare,_ember_sample,_ember_finish,_malloc,_free -sEXPORTED_RUNTIME_METHODS=ccall,FS,HEAPF32 \
     -sFORCE_FILESYSTEM=1 -sENVIRONMENT=web,worker,node -sUSE_BOOST_HEADERS=1 -fexceptions \
     -o "$OUT/${EMBER_WASM_NAME:-ember}.js"
 rm -rf "$INC"
