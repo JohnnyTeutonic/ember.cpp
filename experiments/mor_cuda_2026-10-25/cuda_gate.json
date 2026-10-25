@@ -361,7 +361,7 @@
    "qwen25_05b": "identical"
   },
   "thirdparty_session1": {
-   "source": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/mor_cuda_2026-10-25/receipts/vm_session1.log",
+   "source": "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/mor_cuda_2026-10-25/receipts/vm_session1.txt",
    "ir_device_gate": {
     "qwen3_06b": {
      "rc": "rc=137",

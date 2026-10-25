@@ -1,0 +1,57 @@
+=== vm Sun Oct 25 10:35:40 AM UTC 2026 new=4b6a0b6 head=51eed18 ===
+compute capability 75
+--- deps 10:35:42
+--- checkpoints in the background 10:35:53
+--- builds 10:35:53
+built new in 215 s
+built head in 156 s
+--- (a) kernel test 10:42:04
+mor_kernels_test: mor_kernels_test: PASS (0 of 51 checks failed)
+--- (b) Mixture-of-Recursions, device vs CPU 10:42:13
+mor_device_gate mor3 rc=0: {"decode_vs_prefill_worst_rel": 1.9209529770881214e-07, "decode_worst_rel": 1.7480237717248764e-07, "depth_cpu_decode_equal_cpu_prefill": "40/40", "depth_decode": "40/40", "depth_prefill": "40/40", "depth_reference": "40/40", "depth_two_call": "40/40", "greedy_free_running_cpu": "40/40", "greedy_free_running_device": "40/40", "greedy_free_running_device_equal_cpu": "40/40", "greedy_teacher_forced_cpu": "40/40", "greedy_teacher_forced_device": "40/40", "logprob_worst_rel_cpu_vs_reference": 2.276596107274384e-07, "logprob_worst_rel_device_vs_reference": 2.7509978447350087e-07, "logprob_worst_rel_vs_cpu": 2.6020578308557624e-07, "prefill_worst_rel": 1.8491343092817667e-07, "rewind_worst_rel_vs_cpu": 2.0360700313174718e-07, "rewind_worst_rel_vs_fresh_cpu": 1.8491343092817667e-07, "rewinds": "160/160", "rows": 40, "rows_held_equal_cpu": "40/40", "rows_held_mean_per_application": 8.3625, "top1_vs_cpu": "1299/1299", "two_call_worst_rel": 1.8491343092817667e-07} null pass True
+mor_device_gate mor3_q8_0 rc=1: {"decode_vs_prefill_worst_rel": 1.854651001047878e-07, "decode_worst_rel": 1.8848464377910203e-07, "depth_cpu_decode_equal_cpu_prefill": "40/40", "depth_decode": "40/40", "depth_prefill": "40/40", "depth_reference": "39/40", "depth_two_call": "40/40", "greedy_free_running_cpu": "40/40", "greedy_free_running_device": "40/40", "greedy_free_running_device_equal_cpu": "40/40", "greedy_teacher_forced_cpu": "40/40", "greedy_teacher_forced_device": "40/40", "logprob_worst_rel_cpu_vs_reference": 0.012519579760788914, "logprob_worst_rel_device_vs_reference": 0.012519579385325625, "logprob_worst_rel_vs_cpu": 2.837528131435318e-07, "prefill_worst_rel": 1.8365415571705285e-07, "rewind_worst_rel_vs_cpu": 2.4038293138331034e-07, "rewind_worst_rel_vs_fresh_cpu": 1.8848464377910203e-07, "rewinds": "160/160", "rows": 40, "rows_held_equal_cpu": "40/40", "rows_held_mean_per_application": 8.35625, "top1_vs_cpu": "1299/1299", "two_call_worst_rel": 1.8365415571705285e-07} null pass False
+mor_device_gate mor2p0 rc=0: {"decode_vs_prefill_worst_rel": 2.2544620312522544e-07, "decode_worst_rel": 1.9740621395280282e-07, "depth_cpu_decode_equal_cpu_prefill": "40/40", "depth_decode": "40/40", "depth_prefill": "40/40", "depth_reference": "40/40", "depth_two_call": "40/40", "greedy_free_running_cpu": "40/40", "greedy_free_running_device": "40/40", "greedy_free_running_device_equal_cpu": "40/40", "greedy_teacher_forced_cpu": "40/40", "greedy_teacher_forced_device": "40/40", "logprob_worst_rel_cpu_vs_reference": 1.8675111025817043e-07, "logprob_worst_rel_device_vs_reference": 3.172540600661987e-07, "logprob_worst_rel_vs_cpu": 2.593104034719685e-07, "prefill_worst_rel": 1.9740621395280282e-07, "rewind_worst_rel_vs_cpu": 1.9740621395280282e-07, "rewind_worst_rel_vs_fresh_cpu": 1.9740621395280282e-07, "rewinds": "160/160", "rows": 40, "rows_held_equal_cpu": "40/40", "rows_held_mean_per_application": 8.360714285714284, "top1_vs_cpu": "1299/1299", "two_call_worst_rel": 1.9740621395280282e-07} null pass True
+mor_device_gate mor2p0_q8_0 rc=1: {"decode_vs_prefill_worst_rel": 1.958946744857373e-07, "decode_worst_rel": 1.9770855781492502e-07, "depth_cpu_decode_equal_cpu_prefill": "40/40", "depth_decode": "40/40", "depth_prefill": "40/40", "depth_reference": "40/40", "depth_two_call": "40/40", "greedy_free_running_cpu": "40/40", "greedy_free_running_device": "40/40", "greedy_free_running_device_equal_cpu": "40/40", "greedy_teacher_forced_cpu": "40/40", "greedy_teacher_forced_device": "40/40", "logprob_worst_rel_cpu_vs_reference": 0.0003617639325226951, "logprob_worst_rel_device_vs_reference": 0.0003617395342294678, "logprob_worst_rel_vs_cpu": 2.599026156830021e-07, "prefill_worst_rel": 2.012697302200663e-07, "rewind_worst_rel_vs_cpu": 2.3559457001635027e-07, "rewind_worst_rel_vs_fresh_cpu": 1.9950567813110528e-07, "rewinds": "160/160", "rows": 40, "rows_held_equal_cpu": "40/40", "rows_held_mean_per_application": 8.360714285714284, "top1_vs_cpu": "1299/1299", "two_call_worst_rel": 2.012697302200663e-07} null pass False
+mor_device_gate tc_mor3 rc=0: {"decode_vs_prefill_worst_rel": 5.77379873230475e-07, "decode_worst_rel": 3.876178469002533e-07, "depth_cpu_decode_equal_cpu_prefill": "16/16", "depth_decode": "16/16", "depth_prefill": "16/16", "depth_two_call": "16/16", "greedy_free_running_cpu": "0/16", "greedy_free_running_device": "0/16", "greedy_free_running_device_equal_cpu": "16/16", "greedy_teacher_forced_cpu": "0/16", "greedy_teacher_forced_device": "0/16", "logprob_worst_rel_vs_cpu": 3.390096300405523e-07, "prefill_worst_rel": 6.368007484789875e-07, "rewind_worst_rel_vs_cpu": 6.229572539468356e-07, "rewind_worst_rel_vs_fresh_cpu": 6.229572539468356e-07, "rewinds": "64/64", "rows": 16, "rows_held_equal_cpu": "16/16", "rows_held_mean_per_application": 34.40625, "top1_vs_cpu": "2640/2640", "two_call_worst_rel": 4.802917809514802e-07} {"cpu": {"decode_ms_per_token": 24.169030698412694, "prefill_ms": 345.918896, "prompt_len": 24}, "device": {"decode_ms_per_token": 1.4131761587301586, "prefill_ms": 3.752746, "prompt_len": 24}} pass True
+ir_device_gate mor3 rc=0: 40/40 320/320 2.0896611368350978e-07 1.8200970566755473e-07 pass True
+ir_device_gate mor2p0 rc=0: 40/40 320/320 1.8577079969428981e-07 1.6594522900275657e-07 pass True
+ir_device_gate tc_mor3 rc=0: 10/10 240/240 3.6493207154420275e-07 4.58336405884795e-07 pass True
+--- (c) the device-gate set: ir_device_gate (new) 10:44:09
+ir_device_gate syn_mistral_swa rc=0: 40/40 960/960 2.419039757357923e-06 2.046641629771282e-06 pass True
+ir_device_gate syn_gptneox rc=0: 40/40 960/960 4.275236528150474e-07 3.5018849564319667e-07 pass True
+ir_device_gate syn_gpt2 rc=0: 40/40 960/960 6.272220595905113e-07 5.606494396217582e-07 pass True
+ir_device_gate syn_mamba rc=0: 40/40 960/960 8.806377761590888e-07 6.535427197068245e-07 pass True
+ir_device_gate syn_gemma3 rc=0: 40/40 960/960 8.040019586525135e-07 6.508804381581313e-07 pass True
+ir_device_gate syn_gemma3_freq_scale rc=0: 40/40 960/960 6.471310427898385e-07 6.862774922763406e-07 pass True
+ir_device_gate syn_gemma3_weight_offset rc=0: 40/40 960/960 1.2314051810802344e-06 9.137638803884341e-07 pass True
+ir_device_gate gpt2_tiny_expr rc=0: 40/40 960/960 3.6081820941257443e-07 2.4174542128128457e-07 pass True
+ir_device_gate state4 rc=0: 40/40 960/960 7.6021285148948e-07 9.732434970881945e-07 pass True
+ir_device_gate ar3 rc=0: 40/40 320/320 1.842008024523758e-07 1.889465749780318e-07 pass True
+ir_device_gate rec_p1_b2x3_c1 rc=0: 40/40 320/320 4.852834699568062e-07 3.9705011178284146e-07 pass True
+ir_device_gate rec_p1_b2x3_c1_inject rc=0: 40/40 320/320 1.8109081136772217e-07 1.8109081136772217e-07 pass True
+ir_device_gate rec_b2x4 rc=0: 40/40 320/320 1.707152586937087e-07 1.9387107953902956e-07 pass True
+--- (c) device results new vs old build, bit for bit 10:44:32
+dump syn_mistral_swa: identical (3937280 bytes)
+dump syn_gptneox: identical (3937280 bytes)
+dump syn_gpt2: identical (3937280 bytes)
+dump syn_mamba: identical (3937280 bytes)
+dump syn_gemma3: identical (3937280 bytes)
+dump syn_gemma3_freq_scale: identical (3937280 bytes)
+dump syn_gemma3_weight_offset: identical (3937280 bytes)
+dump gpt2_tiny_expr: identical (62919680 bytes)
+dump state4: identical (3077120 bytes)
+dump state4_q8_0: identical (3077120 bytes)
+dump ar3: identical (39680 bytes)
+dump rec_p1_b2x3_c1: identical (39680 bytes)
+dump rec_p1_b2x3_c1_inject: identical (39680 bytes)
+dump rec_b2x4: identical (39680 bytes)
+third-party fetch: Fetching 8 files:   0%|          | 0/8 [00:00<?, ?it/s]Fetching 8 files:  12%|█▎        | 1/8 [00:00<00:01,  5.55it/s]Fetching 8 files:  50%|█████     | 4/8 [00:04<00:04,  1.23s/it]Fetching 8 files: 100%|██████████| 8/8 [00:04<00:00,  1.73it/s] downloads done 
+vm.sh: line 80:  8926 Killed                  env "$e" $BN/ir_device_gate $g --n $n --len $len --gen $gen > $OUT/dg_$name.json 2> $OUT/dg_$name.log
+ir_device_gate qwen3_06b rc=137: 
+ir_device_gate pythia_160m rc=1: 10/10 240/240 0.00026671820325958743 7.65698191175849e-05 pass False
+ir_device_gate gemma3_270m rc=0: 10/10 240/240 1.209591363583943e-05 2.4722059102290998e-05 pass True
+ir_device_gate qwen25_05b rc=0: 10/10 240/240 1.2180418721940088e-05 5.859508275999157e-05 pass True
+dump qwen3_06b: identical (1166873600 bytes)
+dump pythia_160m: identical (386339840 bytes)
+dump gemma3_270m: identical (2013271040 bytes)
+dump qwen25_05b: identical (1166873600 bytes)
