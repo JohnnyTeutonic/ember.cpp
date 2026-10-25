@@ -862,8 +862,15 @@ bool dequant_span_to_f32(GGMLType t, const uint8_t* src, size_t first, size_t n,
         lo |= ((qh >> j) & 1) << 4;
         hi |= ((qh >> (j + 16)) & 1) << 4;
       }
-      y[j] = static_cast<float>(lo - offset) * d + m;
-      y[j + 16] = static_cast<float>(hi - offset) * d + m;
+      // ggml's dequantize_row_q4_0 / q5_0 write the product alone, q4_1 / q5_1 the product plus m (paperkiln
+      // spec/IR_SPEC.md 4.7): adding a +0 m to a -0 product would give +0, so the 0-offset forms add nothing.
+      if (has_min) {
+        y[j] = static_cast<float>(lo - offset) * d + m;
+        y[j + 16] = static_cast<float>(hi - offset) * d + m;
+      } else {
+        y[j] = static_cast<float>(lo - offset) * d;
+        y[j + 16] = static_cast<float>(hi - offset) * d;
+      }
     }
   }
   return true;
