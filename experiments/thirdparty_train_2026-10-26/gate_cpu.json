@@ -1,0 +1,492 @@
+{
+ "build": "/home/jonat/tptrain/build_cpu",
+ "models": {
+  "tp_gqa": {
+   "sha256": {
+    "tp_gqa.gguf": true,
+    "tp_gqa.ir.json": true,
+    "tp_gqa_q8_0.gguf": true,
+    "v.gguf": true,
+    "score_in.jsonl": true,
+    "score_out.jsonl": true,
+    "spec.json": true
+   },
+   "manifest_sha256": "2c9f659ab795daaca0ff98b0b18998faf028b0d72f6674bd70aed2f0e5999ad9",
+   "sha256_all_match": true,
+   "tp_gqa": {
+    "ir_path_check": {
+     "family_hint": "llama",
+     "gguf": "/mnt/c/ml_artifacts/thirdparty_train_gate/tp_gqa/tp_gqa.gguf",
+     "path": "tuned",
+     "why": ""
+    },
+    "server": {
+     "health": true,
+     "log_bytes": 20992,
+     "ir_lines": [],
+     "path": "tuned"
+    },
+    "session": {
+     "path": "tuned",
+     "device": "cpu",
+     "heads": 4,
+     "kv_heads": 2,
+     "logprob_worst_rel": 1.6424375950593026e-07,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": false,
+     "decode_vs_prefill_worst_rel": 1.0985812427469607e-07,
+     "greedy_free_running": "40/40"
+    },
+    "ir_logits": {
+     "logprob_worst_rel": 1.6461048387383238e-07,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0
+    },
+    "session_vs_ir_logits": {
+     "prefill_bit_equal": false,
+     "decode_bit_equal": true,
+     "prefill_worst_rel": 1.0985810617148785e-07
+    },
+    "path": "tuned",
+    "pass": true
+   },
+   "tp_gqa_q8_0": {
+    "ir_path_check": {
+     "family_hint": "llama",
+     "gguf": "/mnt/c/ml_artifacts/thirdparty_train_gate/tp_gqa/tp_gqa_q8_0.gguf",
+     "path": "tuned",
+     "why": ""
+    },
+    "server": {
+     "health": true,
+     "log_bytes": 21179,
+     "ir_lines": [],
+     "path": "tuned"
+    },
+    "session": {
+     "path": "tuned",
+     "device": "cpu",
+     "heads": 4,
+     "kv_heads": 2,
+     "logprob_worst_rel": 0.00021344483076419263,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": false,
+     "decode_vs_prefill_worst_rel": 1.246014292313489e-07,
+     "greedy_free_running": "40/40"
+    },
+    "ir_logits": {
+     "logprob_worst_rel": 0.0002134387094713635,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0
+    },
+    "session_vs_ir_logits": {
+     "prefill_bit_equal": false,
+     "decode_bit_equal": true,
+     "prefill_worst_rel": 1.2460144669755704e-07
+    },
+    "path": "tuned",
+    "pass": true
+   },
+   "pass": true
+  },
+  "tp_qwen": {
+   "sha256": {
+    "tp_qwen.gguf": true,
+    "tp_qwen.ir.json": true,
+    "tp_qwen_q8_0.gguf": true,
+    "v.gguf": true,
+    "score_in.jsonl": true,
+    "score_out.jsonl": true,
+    "spec.json": true
+   },
+   "manifest_sha256": "b1775a5bbb8c5eb2e575356e3828ecef36cd3a5d44c09b3b101f94ba73158832",
+   "sha256_all_match": true,
+   "tp_qwen": {
+    "ir_path_check": {
+     "family_hint": "llama",
+     "gguf": "/mnt/c/ml_artifacts/thirdparty_train_gate/tp_qwen/tp_qwen.gguf",
+     "path": "interpreter",
+     "why": "model.d 32 != the file's embedding_length"
+    },
+    "server": {
+     "health": true,
+     "log_bytes": 20367,
+     "ir_lines": [
+      "2026-10-26 04:24:16 [INFO] [IR] family_hint llama, but not the tuned llama path's graph (model.d 32 != the file's embedding_length): the interpreter runs it",
+      "2026-10-26 04:24:16 [INFO] GGUF served by the paperkiln IR interpreter only (family_hint 'llama'): llama weights are not loaded.",
+      "2026-10-26 04:24:16 [INFO] [IR] interpreter ready: family_hint=llama, 2 blocks of 17 ops, 25 weights bound (0 kept quantised, 0 MiB; f32 0 MiB; dequantised at load), device cpu",
+      "2026-10-26 04:24:16 [INFO] [IR] document sha256:03abe23b5f94cc988d6ce5818a0b66a202bae775d115afb1bbbbd7a5f2b33b00",
+      "2026-10-26 04:24:16 [WARNING] Running the model through the paperkiln IR interpreter (CPU; family_hint 'llama'). The llama path's weights stay loaded but unused."
+     ],
+     "path": "interpreter"
+    },
+    "session": {
+     "path": "interpreter",
+     "device": "cpu",
+     "heads": 4,
+     "kv_heads": 2,
+     "logprob_worst_rel": 2.2059105438756967e-07,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0,
+     "greedy_free_running": "40/40"
+    },
+    "ir_logits": {
+     "logprob_worst_rel": 2.2059105438756967e-07,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0
+    },
+    "session_vs_ir_logits": {
+     "prefill_bit_equal": true,
+     "decode_bit_equal": true,
+     "prefill_worst_rel": 0.0
+    },
+    "path": "interpreter",
+    "pass": true
+   },
+   "tp_qwen_q8_0": {
+    "ir_path_check": {
+     "family_hint": "llama",
+     "gguf": "/mnt/c/ml_artifacts/thirdparty_train_gate/tp_qwen/tp_qwen_q8_0.gguf",
+     "path": "interpreter",
+     "why": "model.d 32 != the file's embedding_length"
+    },
+    "server": {
+     "health": true,
+     "log_bytes": 20361,
+     "ir_lines": [
+      "2026-10-26 04:24:19 [INFO] [IR] family_hint llama, but not the tuned llama path's graph (model.d 32 != the file's embedding_length): the interpreter runs it",
+      "2026-10-26 04:24:19 [INFO] GGUF served by the paperkiln IR interpreter only (family_hint 'llama'): llama weights are not loaded.",
+      "2026-10-26 04:24:19 [INFO] [IR] interpreter ready: family_hint=llama, 2 blocks of 17 ops, 25 weights bound (0 kept quantised, 0 MiB; f32 0 MiB; dequantised at load), device cpu",
+      "2026-10-26 04:24:19 [INFO] [IR] document sha256:03abe23b5f94cc988d6ce5818a0b66a202bae775d115afb1bbbbd7a5f2b33b00",
+      "2026-10-26 04:24:19 [WARNING] Running the model through the paperkiln IR interpreter (CPU; family_hint 'llama'). The llama path's weights stay loaded but unused."
+     ],
+     "path": "interpreter"
+    },
+    "session": {
+     "path": "interpreter",
+     "device": "cpu",
+     "heads": 4,
+     "kv_heads": 2,
+     "logprob_worst_rel": 0.00032881732800298276,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0,
+     "greedy_free_running": "40/40"
+    },
+    "ir_logits": {
+     "logprob_worst_rel": 0.00032881732800298276,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0
+    },
+    "session_vs_ir_logits": {
+     "prefill_bit_equal": true,
+     "decode_bit_equal": true,
+     "prefill_worst_rel": 0.0
+    },
+    "path": "interpreter",
+    "pass": true
+   },
+   "pass": true
+  },
+  "tp_mqa_partial": {
+   "sha256": {
+    "tp_mqa_partial.gguf": true,
+    "tp_mqa_partial.ir.json": true,
+    "tp_mqa_partial_q8_0.gguf": true,
+    "v.gguf": true,
+    "score_in.jsonl": true,
+    "score_out.jsonl": true,
+    "spec.json": true
+   },
+   "manifest_sha256": "431ded78de3578ec9b086978648c40f41f527e5b4197ccea3490a2fa223363ed",
+   "sha256_all_match": true,
+   "tp_mqa_partial": {
+    "ir_path_check": {
+     "family_hint": "llama",
+     "gguf": "/mnt/c/ml_artifacts/thirdparty_train_gate/tp_mqa_partial/tp_mqa_partial.gguf",
+     "path": "interpreter",
+     "why": "model.d 32 != the file's embedding_length"
+    },
+    "server": {
+     "health": true,
+     "log_bytes": 18910,
+     "ir_lines": [
+      "2026-10-26 04:24:22 [INFO] [IR] family_hint llama, but not the tuned llama path's graph (model.d 32 != the file's embedding_length): the interpreter runs it",
+      "2026-10-26 04:24:22 [INFO] GGUF served by the paperkiln IR interpreter only (family_hint 'llama'): llama weights are not loaded.",
+      "2026-10-26 04:24:22 [INFO] [IR] interpreter ready: family_hint=llama, 2 blocks of 15 ops, 21 weights bound (0 kept quantised, 0 MiB; f32 0 MiB; dequantised at load), device cpu",
+      "2026-10-26 04:24:22 [INFO] [IR] document sha256:34f35ed0b71cfd4d4cfb30a38bf4c27eeff6e382433b33fe6a37eb1f1a715bf7",
+      "2026-10-26 04:24:22 [WARNING] Running the model through the paperkiln IR interpreter (CPU; family_hint 'llama'). The llama path's weights stay loaded but unused."
+     ],
+     "path": "interpreter"
+    },
+    "session": {
+     "path": "interpreter",
+     "device": "cpu",
+     "heads": 4,
+     "kv_heads": 1,
+     "logprob_worst_rel": 2.2423237290448652e-07,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0,
+     "greedy_free_running": "40/40"
+    },
+    "ir_logits": {
+     "logprob_worst_rel": 2.2423237290448652e-07,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0
+    },
+    "session_vs_ir_logits": {
+     "prefill_bit_equal": true,
+     "decode_bit_equal": true,
+     "prefill_worst_rel": 0.0
+    },
+    "path": "interpreter",
+    "pass": true
+   },
+   "tp_mqa_partial_q8_0": {
+    "ir_path_check": {
+     "family_hint": "llama",
+     "gguf": "/mnt/c/ml_artifacts/thirdparty_train_gate/tp_mqa_partial/tp_mqa_partial_q8_0.gguf",
+     "path": "interpreter",
+     "why": "model.d 32 != the file's embedding_length"
+    },
+    "server": {
+     "health": true,
+     "log_bytes": 18925,
+     "ir_lines": [
+      "2026-10-26 04:24:25 [INFO] [IR] family_hint llama, but not the tuned llama path's graph (model.d 32 != the file's embedding_length): the interpreter runs it",
+      "2026-10-26 04:24:25 [INFO] GGUF served by the paperkiln IR interpreter only (family_hint 'llama'): llama weights are not loaded.",
+      "2026-10-26 04:24:25 [INFO] [IR] interpreter ready: family_hint=llama, 2 blocks of 15 ops, 21 weights bound (0 kept quantised, 0 MiB; f32 0 MiB; dequantised at load), device cpu",
+      "2026-10-26 04:24:25 [INFO] [IR] document sha256:34f35ed0b71cfd4d4cfb30a38bf4c27eeff6e382433b33fe6a37eb1f1a715bf7",
+      "2026-10-26 04:24:25 [WARNING] Running the model through the paperkiln IR interpreter (CPU; family_hint 'llama'). The llama path's weights stay loaded but unused."
+     ],
+     "path": "interpreter"
+    },
+    "session": {
+     "path": "interpreter",
+     "device": "cpu",
+     "heads": 4,
+     "kv_heads": 1,
+     "logprob_worst_rel": 0.00015023329208927578,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0,
+     "greedy_free_running": "40/40"
+    },
+    "ir_logits": {
+     "logprob_worst_rel": 0.00015023329208927578,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0
+    },
+    "session_vs_ir_logits": {
+     "prefill_bit_equal": true,
+     "decode_bit_equal": true,
+     "prefill_worst_rel": 0.0
+    },
+    "path": "interpreter",
+    "pass": true
+   },
+   "pass": true
+  },
+  "tp_neox_partial": {
+   "sha256": {
+    "tp_neox_partial.gguf": true,
+    "tp_neox_partial.ir.json": true,
+    "tp_neox_partial_q8_0.gguf": true,
+    "v.gguf": true,
+    "score_in.jsonl": true,
+    "score_out.jsonl": true,
+    "spec.json": true
+   },
+   "manifest_sha256": "565d6f4e1c3ed2780aa023dcad181aea572322974fc60b17191915cc5daae4eb",
+   "sha256_all_match": true,
+   "tp_neox_partial": {
+    "ir_path_check": {
+     "family_hint": "llama",
+     "gguf": "/mnt/c/ml_artifacts/thirdparty_train_gate/tp_neox_partial/tp_neox_partial.gguf",
+     "path": "interpreter",
+     "why": "model.d 32 != the file's embedding_length"
+    },
+    "server": {
+     "health": true,
+     "log_bytes": 18946,
+     "ir_lines": [
+      "2026-10-26 04:24:28 [INFO] [IR] family_hint llama, but not the tuned llama path's graph (model.d 32 != the file's embedding_length): the interpreter runs it",
+      "2026-10-26 04:24:28 [INFO] GGUF served by the paperkiln IR interpreter only (family_hint 'llama'): llama weights are not loaded.",
+      "2026-10-26 04:24:28 [INFO] [IR] interpreter ready: family_hint=llama, 2 blocks of 15 ops, 21 weights bound (0 kept quantised, 0 MiB; f32 0 MiB; dequantised at load), device cpu",
+      "2026-10-26 04:24:28 [INFO] [IR] document sha256:75a2a139cea25c6dac8a341db7589cec1dc3e9ad322c08f8d67e8ba4f3b70c9a",
+      "2026-10-26 04:24:28 [WARNING] Running the model through the paperkiln IR interpreter (CPU; family_hint 'llama'). The llama path's weights stay loaded but unused."
+     ],
+     "path": "interpreter"
+    },
+    "session": {
+     "path": "interpreter",
+     "device": "cpu",
+     "heads": 4,
+     "kv_heads": 4,
+     "logprob_worst_rel": 1.6912132957357323e-07,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0,
+     "greedy_free_running": "40/40"
+    },
+    "ir_logits": {
+     "logprob_worst_rel": 1.6912132957357323e-07,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0
+    },
+    "session_vs_ir_logits": {
+     "prefill_bit_equal": true,
+     "decode_bit_equal": true,
+     "prefill_worst_rel": 0.0
+    },
+    "path": "interpreter",
+    "pass": true
+   },
+   "tp_neox_partial_q8_0": {
+    "ir_path_check": {
+     "family_hint": "llama",
+     "gguf": "/mnt/c/ml_artifacts/thirdparty_train_gate/tp_neox_partial/tp_neox_partial_q8_0.gguf",
+     "path": "interpreter",
+     "why": "model.d 32 != the file's embedding_length"
+    },
+    "server": {
+     "health": true,
+     "log_bytes": 18951,
+     "ir_lines": [
+      "2026-10-26 04:24:31 [INFO] [IR] family_hint llama, but not the tuned llama path's graph (model.d 32 != the file's embedding_length): the interpreter runs it",
+      "2026-10-26 04:24:31 [INFO] GGUF served by the paperkiln IR interpreter only (family_hint 'llama'): llama weights are not loaded.",
+      "2026-10-26 04:24:31 [INFO] [IR] interpreter ready: family_hint=llama, 2 blocks of 15 ops, 21 weights bound (0 kept quantised, 0 MiB; f32 0 MiB; dequantised at load), device cpu",
+      "2026-10-26 04:24:31 [INFO] [IR] document sha256:75a2a139cea25c6dac8a341db7589cec1dc3e9ad322c08f8d67e8ba4f3b70c9a",
+      "2026-10-26 04:24:31 [WARNING] Running the model through the paperkiln IR interpreter (CPU; family_hint 'llama'). The llama path's weights stay loaded but unused."
+     ],
+     "path": "interpreter"
+    },
+    "session": {
+     "path": "interpreter",
+     "device": "cpu",
+     "heads": 4,
+     "kv_heads": 4,
+     "logprob_worst_rel": 0.00022020248303001306,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0,
+     "greedy_free_running": "40/40"
+    },
+    "ir_logits": {
+     "logprob_worst_rel": 0.00022020248303001306,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0
+    },
+    "session_vs_ir_logits": {
+     "prefill_bit_equal": true,
+     "decode_bit_equal": true,
+     "prefill_worst_rel": 0.0
+    },
+    "path": "interpreter",
+    "pass": true
+   },
+   "pass": true
+  },
+  "tp_mamba1": {
+   "sha256": {
+    "tp_mamba1.gguf": true,
+    "tp_mamba1.ir.json": true,
+    "v.gguf": true,
+    "score_in.jsonl": true,
+    "score_out.jsonl": true,
+    "spec.json": true
+   },
+   "manifest_sha256": "eb915ca25c079ee3f8617fa3f414ce52655fdf7c5b2184a31d45b8ac71f53575",
+   "sha256_all_match": true,
+   "tp_mamba1": {
+    "ir_path_check": {
+     "family_hint": "mamba1",
+     "gguf": "/mnt/c/ml_artifacts/thirdparty_train_gate/tp_mamba1/tp_mamba1.gguf",
+     "path": "interpreter",
+     "why": "family_hint is not llama"
+    },
+    "server": {
+     "health": true,
+     "log_bytes": 18383,
+     "ir_lines": [
+      "2026-10-26 04:24:35 [INFO] GGUF served by the paperkiln IR interpreter only (family_hint 'mamba1'): llama weights are not loaded.",
+      "2026-10-26 04:24:35 [INFO] [IR] interpreter ready: family_hint=mamba1, 2 blocks of 13 ops, 23 weights bound (0 kept quantised, 0 MiB; f32 0 MiB; dequantised at load), device cpu",
+      "2026-10-26 04:24:35 [INFO] [IR] document sha256:7dcc99d81a27e3c817dca4282624206e1db8df0b17a921da5b4d73a6e1dd76ec",
+      "2026-10-26 04:24:35 [INFO] [IR] recurrent state: 2 slot(s), 704 floats per block; up to 64 snapshots for prefix reuse and speculative rewinds",
+      "2026-10-26 04:24:35 [WARNING] Running the model through the paperkiln IR interpreter (CPU; family_hint 'mamba1'). The llama path's weights stay loaded but unused."
+     ],
+     "path": "interpreter"
+    },
+    "session": {
+     "path": "interpreter",
+     "device": "cpu",
+     "heads": 1,
+     "kv_heads": 1,
+     "logprob_worst_rel": 2.1919413095335604e-07,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0,
+     "greedy_free_running": "40/40"
+    },
+    "ir_logits": {
+     "logprob_worst_rel": 2.1919413095335604e-07,
+     "greedy": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "decode_bit_equal_prefill": true,
+     "decode_vs_prefill_worst_rel": 0.0
+    },
+    "session_vs_ir_logits": {
+     "prefill_bit_equal": true,
+     "decode_bit_equal": true,
+     "prefill_worst_rel": 0.0
+    },
+    "path": "interpreter",
+    "pass": true
+   },
+   "pass": true
+  }
+ },
+ "family_hint_llama_not_plain_on_interpreter": {
+  "tp_qwen": {
+   "tp_qwen": "interpreter",
+   "tp_qwen_q8_0": "interpreter"
+  },
+  "tp_mqa_partial": {
+   "tp_mqa_partial": "interpreter",
+   "tp_mqa_partial_q8_0": "interpreter"
+  },
+  "tp_neox_partial": {
+   "tp_neox_partial": "interpreter",
+   "tp_neox_partial_q8_0": "interpreter"
+  }
+ },
+ "critical_check_pass": true,
+ "pass": true
+}

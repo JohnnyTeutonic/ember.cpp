@@ -1,0 +1,575 @@
+{
+ "session_out": "/mnt/c/ml_artifacts/ember_tptrain_gate/ember-tptrain-1026-t4/out",
+ "gpu": "Tesla T4",
+ "nvcc": "Cuda compilation tools, release 13.0, V13.0.88",
+ "bins_sha256": [
+  "cc1c5f1b61a7a4b57b2a973f285949107cac8dfed82252c780f2a3b292bfc753  /content/b/tp_session_logits",
+  "31608346637a5122d595b19cc857c26e8ac0e71b1325a0ba75c46967dfb33a01  /content/b/state_device_gate",
+  "24293a94a3488ed208604286df3e5ca950967d3f395cc8117e2f24a3dc215ea4  /content/b/ir_device_gate"
+ ],
+ "models": {
+  "tp_gqa": {
+   "tp_gqa": {
+    "path": "tuned",
+    "device": "cuda",
+    "cpu_path": "tuned",
+    "served": {
+     "logprob_worst_rel_vs_mtstudio": 2.688187324053818e-07,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 1.7895371578376994e-07,
+     "prefill_vs_cpu_worst_rel": 1.9533070733985899e-07,
+     "decode_vs_cpu_worst_rel": 1.755633928029455e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    },
+    "state_device_gate": {
+     "summary": {
+      "free_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "kv_rows_held_equal": "40/40",
+      "sequences": 40,
+      "teacher_forced_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "top1_agree": "1419/1419",
+      "worst_decode_rel": 1.8271672731440883e-07,
+      "worst_decode_vs_prefill_rel": 2.49098605558461e-07,
+      "worst_on_vs_off_rel": 0.0,
+      "worst_prefill_off_rel": 1.724459235450651e-07,
+      "worst_prefill_on_rel": 1.724459235450651e-07,
+      "worst_turns_rel": 0.0
+     },
+     "pass": true
+    },
+    "ir_device_gate": {
+     "device_supported": true,
+     "family_hint": "llama",
+     "gen": 8,
+     "gguf": "/content/small/models/tp_gqa/tp_gqa.gguf",
+     "greedy_identical": "40/40",
+     "ids_file": null,
+     "len": 8,
+     "on_gpu": true,
+     "pass": true,
+     "prompts": 40,
+     "tol": 0.0001,
+     "top1_agree": "320/320",
+     "worst_decode_rel": 1.7292818488467015e-07,
+     "worst_prefill_rel": 1.5945522078260987e-07
+    },
+    "pass": true,
+    "interpreter_forced_on_device": {
+     "path": "interpreter",
+     "device": "cuda",
+     "logprob_worst_rel_vs_mtstudio": 2.721777711390571e-07,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 2.4909860168032885e-07,
+     "prefill_vs_cpu_worst_rel": 1.724459235450651e-07,
+     "decode_vs_cpu_worst_rel": 1.8271672731440883e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    },
+    "default_tf32_reported": {
+     "path": "tuned",
+     "device": "cuda",
+     "logprob_worst_rel_vs_mtstudio": 2.688187324053818e-07,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 1.7895371578376994e-07,
+     "prefill_vs_cpu_worst_rel": 1.9533070733985899e-07,
+     "decode_vs_cpu_worst_rel": 1.755633928029455e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    }
+   },
+   "tp_gqa_q8_0": {
+    "path": "tuned",
+    "device": "cuda",
+    "cpu_path": "tuned",
+    "served": {
+     "logprob_worst_rel_vs_mtstudio": 0.00021345366652422804,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 2.3778997238735282e-07,
+     "prefill_vs_cpu_worst_rel": 1.905198422009881e-07,
+     "decode_vs_cpu_worst_rel": 2.237718622591994e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    },
+    "state_device_gate": {
+     "summary": {
+      "free_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "kv_rows_held_equal": "40/40",
+      "sequences": 40,
+      "teacher_forced_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "top1_agree": "1419/1419",
+      "worst_decode_rel": 1.8482663292635947e-07,
+      "worst_decode_vs_prefill_rel": 1.8746249578443712e-07,
+      "worst_on_vs_off_rel": 0.0,
+      "worst_prefill_off_rel": 1.884064942964958e-07,
+      "worst_prefill_on_rel": 1.884064942964958e-07,
+      "worst_turns_rel": 0.0
+     },
+     "pass": true
+    },
+    "ir_device_gate": {
+     "device_supported": true,
+     "family_hint": "llama",
+     "gen": 8,
+     "gguf": "/content/small/models/tp_gqa/tp_gqa_q8_0.gguf",
+     "greedy_identical": "40/40",
+     "ids_file": null,
+     "len": 8,
+     "on_gpu": true,
+     "pass": true,
+     "prompts": 40,
+     "tol": 0.0001,
+     "top1_agree": "320/320",
+     "worst_decode_rel": 1.782979704270707e-07,
+     "worst_prefill_rel": 2.0293547782375867e-07
+    },
+    "pass": true,
+    "interpreter_forced_on_device": {
+     "path": "interpreter",
+     "device": "cuda",
+     "logprob_worst_rel_vs_mtstudio": 0.0002135069938634674,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 1.874624987129528e-07,
+     "prefill_vs_cpu_worst_rel": 1.884064942964958e-07,
+     "decode_vs_cpu_worst_rel": 1.8482663007961916e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    },
+    "default_tf32_reported": {
+     "path": "tuned",
+     "device": "cuda",
+     "logprob_worst_rel_vs_mtstudio": 0.00021345366652422804,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 2.3778997238735282e-07,
+     "prefill_vs_cpu_worst_rel": 1.905198422009881e-07,
+     "decode_vs_cpu_worst_rel": 2.237718622591994e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    }
+   },
+   "pass": true
+  },
+  "tp_qwen": {
+   "tp_qwen": {
+    "path": "interpreter",
+    "device": "cuda",
+    "cpu_path": "interpreter",
+    "served": {
+     "logprob_worst_rel_vs_mtstudio": 3.1837125075541193e-07,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 1.9133947775420264e-07,
+     "prefill_vs_cpu_worst_rel": 1.9693745032714387e-07,
+     "decode_vs_cpu_worst_rel": 1.9693745032714387e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    },
+    "state_device_gate": {
+     "summary": {
+      "free_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "kv_rows_held_equal": "40/40",
+      "sequences": 40,
+      "teacher_forced_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "top1_agree": "1419/1419",
+      "worst_decode_rel": 1.9693744547909908e-07,
+      "worst_decode_vs_prefill_rel": 1.9133947775420264e-07,
+      "worst_on_vs_off_rel": 0.0,
+      "worst_prefill_off_rel": 1.9693744547909908e-07,
+      "worst_prefill_on_rel": 1.9693744547909908e-07,
+      "worst_turns_rel": 0.0
+     },
+     "pass": true
+    },
+    "ir_device_gate": {
+     "device_supported": true,
+     "family_hint": "llama",
+     "gen": 8,
+     "gguf": "/content/small/models/tp_qwen/tp_qwen.gguf",
+     "greedy_identical": "40/40",
+     "ids_file": null,
+     "len": 8,
+     "on_gpu": true,
+     "pass": true,
+     "prompts": 40,
+     "tol": 0.0001,
+     "top1_agree": "320/320",
+     "worst_decode_rel": 2.3808009166654922e-07,
+     "worst_prefill_rel": 1.9693744547909908e-07
+    },
+    "pass": true
+   },
+   "tp_qwen_q8_0": {
+    "path": "interpreter",
+    "device": "cuda",
+    "cpu_path": "interpreter",
+    "served": {
+     "logprob_worst_rel_vs_mtstudio": 0.0003288175815934739,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 1.4204018184173466e-07,
+     "prefill_vs_cpu_worst_rel": 1.9182976566203713e-07,
+     "decode_vs_cpu_worst_rel": 1.9121793090056426e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    },
+    "state_device_gate": {
+     "summary": {
+      "free_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "kv_rows_held_equal": "40/40",
+      "sequences": 40,
+      "teacher_forced_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "top1_agree": "1419/1419",
+      "worst_decode_rel": 1.9121793394758908e-07,
+      "worst_decode_vs_prefill_rel": 1.4204018184173466e-07,
+      "worst_on_vs_off_rel": 0.0,
+      "worst_prefill_off_rel": 1.9182976566203713e-07,
+      "worst_prefill_on_rel": 1.9182976566203713e-07,
+      "worst_turns_rel": 0.0
+     },
+     "pass": true
+    },
+    "ir_device_gate": {
+     "device_supported": true,
+     "family_hint": "llama",
+     "gen": 8,
+     "gguf": "/content/small/models/tp_qwen/tp_qwen_q8_0.gguf",
+     "greedy_identical": "40/40",
+     "ids_file": null,
+     "len": 8,
+     "on_gpu": true,
+     "pass": true,
+     "prompts": 40,
+     "tol": 0.0001,
+     "top1_agree": "320/320",
+     "worst_decode_rel": 2.1523011327560863e-07,
+     "worst_prefill_rel": 1.8410573914293477e-07
+    },
+    "pass": true
+   },
+   "pass": true
+  },
+  "tp_mqa_partial": {
+   "tp_mqa_partial": {
+    "path": "interpreter",
+    "device": "cuda",
+    "cpu_path": "interpreter",
+    "served": {
+     "logprob_worst_rel_vs_mtstudio": 2.5674822899288593e-07,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 1.5148346622346643e-07,
+     "prefill_vs_cpu_worst_rel": 1.7475829871456388e-07,
+     "decode_vs_cpu_worst_rel": 1.7505829769547567e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    },
+    "state_device_gate": {
+     "summary": {
+      "free_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "kv_rows_held_equal": "40/40",
+      "sequences": 40,
+      "teacher_forced_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "top1_agree": "1419/1419",
+      "worst_decode_rel": 1.7505830024925968e-07,
+      "worst_decode_vs_prefill_rel": 1.5148346239892643e-07,
+      "worst_on_vs_off_rel": 0.0,
+      "worst_prefill_off_rel": 1.7475830634967996e-07,
+      "worst_prefill_on_rel": 1.7475830634967996e-07,
+      "worst_turns_rel": 0.0
+     },
+     "pass": true
+    },
+    "ir_device_gate": {
+     "device_supported": true,
+     "family_hint": "llama",
+     "gen": 8,
+     "gguf": "/content/small/models/tp_mqa_partial/tp_mqa_partial.gguf",
+     "greedy_identical": "40/40",
+     "ids_file": null,
+     "len": 8,
+     "on_gpu": true,
+     "pass": true,
+     "prompts": 40,
+     "tol": 0.0001,
+     "top1_agree": "320/320",
+     "worst_decode_rel": 2.1680243123980812e-07,
+     "worst_prefill_rel": 1.5509442536352196e-07
+    },
+    "pass": true
+   },
+   "tp_mqa_partial_q8_0": {
+    "path": "interpreter",
+    "device": "cuda",
+    "cpu_path": "interpreter",
+    "served": {
+     "logprob_worst_rel_vs_mtstudio": 0.00015028462848689915,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 1.8815076793853527e-07,
+     "prefill_vs_cpu_worst_rel": 1.887251891840273e-07,
+     "decode_vs_cpu_worst_rel": 2.249416100786213e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    },
+    "state_device_gate": {
+     "summary": {
+      "free_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "kv_rows_held_equal": "40/40",
+      "sequences": 40,
+      "teacher_forced_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "top1_agree": "1419/1419",
+      "worst_decode_rel": 2.2494161640346248e-07,
+      "worst_decode_vs_prefill_rel": 1.8815077236362433e-07,
+      "worst_on_vs_off_rel": 0.0,
+      "worst_prefill_off_rel": 1.8872518027972846e-07,
+      "worst_prefill_on_rel": 1.8872518027972846e-07,
+      "worst_turns_rel": 0.0
+     },
+     "pass": true
+    },
+    "ir_device_gate": {
+     "device_supported": true,
+     "family_hint": "llama",
+     "gen": 8,
+     "gguf": "/content/small/models/tp_mqa_partial/tp_mqa_partial_q8_0.gguf",
+     "greedy_identical": "40/40",
+     "ids_file": null,
+     "len": 8,
+     "on_gpu": true,
+     "pass": true,
+     "prompts": 40,
+     "tol": 0.0001,
+     "top1_agree": "320/320",
+     "worst_decode_rel": 1.6880001755520184e-07,
+     "worst_prefill_rel": 2.1775787606284353e-07
+    },
+    "pass": true
+   },
+   "pass": true
+  },
+  "tp_neox_partial": {
+   "tp_neox_partial": {
+    "path": "interpreter",
+    "device": "cuda",
+    "cpu_path": "interpreter",
+    "served": {
+     "logprob_worst_rel_vs_mtstudio": 2.55881562788854e-07,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 1.974676160514711e-07,
+     "prefill_vs_cpu_worst_rel": 2.1025714790857082e-07,
+     "decode_vs_cpu_worst_rel": 1.7002223735010823e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    },
+    "state_device_gate": {
+     "summary": {
+      "free_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "kv_rows_held_equal": "40/40",
+      "sequences": 40,
+      "teacher_forced_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "top1_agree": "1419/1419",
+      "worst_decode_rel": 1.7002224457699881e-07,
+      "worst_decode_vs_prefill_rel": 1.974676160514711e-07,
+      "worst_on_vs_off_rel": 0.0,
+      "worst_prefill_off_rel": 2.1025714238256244e-07,
+      "worst_prefill_on_rel": 2.1025714238256244e-07,
+      "worst_turns_rel": 0.0
+     },
+     "pass": true
+    },
+    "ir_device_gate": {
+     "device_supported": true,
+     "family_hint": "llama",
+     "gen": 8,
+     "gguf": "/content/small/models/tp_neox_partial/tp_neox_partial.gguf",
+     "greedy_identical": "40/40",
+     "ids_file": null,
+     "len": 8,
+     "on_gpu": true,
+     "pass": true,
+     "prompts": 40,
+     "tol": 0.0001,
+     "top1_agree": "320/320",
+     "worst_decode_rel": 1.7011576377725043e-07,
+     "worst_prefill_rel": 2.0919044761107648e-07
+    },
+    "pass": true
+   },
+   "tp_neox_partial_q8_0": {
+    "path": "interpreter",
+    "device": "cuda",
+    "cpu_path": "interpreter",
+    "served": {
+     "logprob_worst_rel_vs_mtstudio": 0.00022013690554996174,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 1.963965359971774e-07,
+     "prefill_vs_cpu_worst_rel": 1.9641820598387084e-07,
+     "decode_vs_cpu_worst_rel": 1.9641820598387084e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    },
+    "state_device_gate": {
+     "summary": {
+      "free_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "kv_rows_held_equal": "40/40",
+      "sequences": 40,
+      "teacher_forced_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "top1_agree": "1419/1419",
+      "worst_decode_rel": 1.9641819633884338e-07,
+      "worst_decode_vs_prefill_rel": 1.963965359971774e-07,
+      "worst_on_vs_off_rel": 0.0,
+      "worst_prefill_off_rel": 1.9641819633884338e-07,
+      "worst_prefill_on_rel": 1.9641819633884338e-07,
+      "worst_turns_rel": 0.0
+     },
+     "pass": true
+    },
+    "ir_device_gate": {
+     "device_supported": true,
+     "family_hint": "llama",
+     "gen": 8,
+     "gguf": "/content/small/models/tp_neox_partial/tp_neox_partial_q8_0.gguf",
+     "greedy_identical": "40/40",
+     "ids_file": null,
+     "len": 8,
+     "on_gpu": true,
+     "pass": true,
+     "prompts": 40,
+     "tol": 0.0001,
+     "top1_agree": "320/320",
+     "worst_decode_rel": 2.2152251737007286e-07,
+     "worst_prefill_rel": 1.9599672763863533e-07
+    },
+    "pass": true
+   },
+   "pass": true
+  },
+  "tp_mamba1": {
+   "tp_mamba1": {
+    "path": "interpreter",
+    "device": "cuda",
+    "cpu_path": "interpreter",
+    "served": {
+     "logprob_worst_rel_vs_mtstudio": 3.3485355440914443e-07,
+     "greedy_teacher_forced": "40/40",
+     "argmax_eq_mtstudio": "40/40",
+     "greedy_free_running": "40/40",
+     "decode_vs_prefill_worst_rel": 1.8424285972554723e-07,
+     "prefill_vs_cpu_worst_rel": 1.8496025296643878e-07,
+     "decode_vs_cpu_worst_rel": 1.8496025296643878e-07,
+     "top1_vs_cpu_prefill": "473/473",
+     "top1_vs_cpu_decode": "473/473"
+    },
+    "state_device_gate": {
+     "summary": {
+      "free_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "kv_rows_held_equal": "40/40",
+      "sequences": 40,
+      "teacher_forced_greedy": {
+       "cpu": "40/40",
+       "device": "40/40"
+      },
+      "top1_agree": "1419/1419",
+      "worst_decode_rel": 1.8496025296643878e-07,
+      "worst_decode_vs_prefill_rel": 1.8424285123918978e-07,
+      "worst_on_vs_off_rel": 0.0,
+      "worst_prefill_off_rel": 1.8496025296643878e-07,
+      "worst_prefill_on_rel": 1.8496025296643878e-07,
+      "worst_turns_rel": 0.0
+     },
+     "pass": true
+    },
+    "ir_device_gate": {
+     "device_supported": true,
+     "family_hint": "mamba1",
+     "gen": 8,
+     "gguf": "/content/small/models/tp_mamba1/tp_mamba1.gguf",
+     "greedy_identical": "40/40",
+     "ids_file": null,
+     "len": 8,
+     "on_gpu": true,
+     "pass": true,
+     "prompts": 40,
+     "tol": 0.0001,
+     "top1_agree": "320/320",
+     "worst_decode_rel": 1.8383755378397434e-07,
+     "worst_prefill_rel": 1.888178304453646e-07
+    },
+    "pass": true
+   },
+   "pass": true
+  }
+ },
+ "pass": true
+}
