@@ -52,9 +52,10 @@ CUDA leg met, not something WebAssembly adds.
 
 ## The browser page
 
-`deploy/wasm/build.sh` and `ember_wasm.cpp` pass no `EMBER_IR_CTX`, so in the page the interpreter
-allocates f32 KV state for the whole context each IR declares. From the declared shapes: Qwen2.5-0.5B
+At these sources (d49c3e1) `deploy/wasm/build.sh` and `ember_wasm.cpp` pass no `EMBER_IR_CTX`, so the
+page's interpreter allocates f32 KV state for the whole context each IR declares. From the declared shapes: Qwen2.5-0.5B
 (24 layers, 2 KV heads x 64, 32,768 positions) 0.8 GB; Gemma-3-270m (18 x 1 x 256, 32,768) 1.2 GB;
 Qwen3-0.6B (28 x 8 x 128, 40,960) 9.4 GB, beyond any 4 GB heap. The page also copies the file into
 its in-memory filesystem before loading it. So a page serving a third-party model needs a context cap
 first, at least for Qwen3. The gate above runs the same interpreter with the cap the native gates use.
+The page's cap (default 2048, `EMBER_WASM_CTX`, `?ctx=N`) is gated in `../wasm_ctx_2026-10-25/`.

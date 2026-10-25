@@ -1,0 +1,43 @@
+{
+ "n": 3,
+ "ctx": 256,
+ "heap_bytes": 2639724544,
+ "load_ms": 12228,
+ "ms_per_reply": 26171.666666666668,
+ "reply_identical": "3/3",
+ "tokens_identical": "3/3",
+ "stop_identical": "3/3",
+ "prompt_tokens_and_turns_identical": "3/3",
+ "prepare_prompt_ids_identical": "3/3",
+ "prepare_counts_identical": "3/3",
+ "pass": true,
+ "replies": [
+  {
+   "i": 0,
+   "reply": "The fall of the Soviet Union had a significant impact on the economies of Eastern Europe. The collapse of the Soviet Union led",
+   "tokens": 24,
+   "stop_reason": "length",
+   "prompt_tokens": 206,
+   "history_turns_used": 1,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 1,
+   "reply": "There once was a man with a strange obsession,\nWho spent his days in a trance.\nHe'd go to the moon",
+   "tokens": 24,
+   "stop_reason": "length",
+   "prompt_tokens": 165,
+   "history_turns_used": 1,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 2,
+   "reply": "In the heart of a bustling city, there was a group of time thieves known as the \"Time Lords.\" They were",
+   "tokens": 24,
+   "stop_reason": "length",
+   "prompt_tokens": 101,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  }
+ ]
+}

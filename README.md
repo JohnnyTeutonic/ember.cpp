@@ -99,9 +99,11 @@ How they are checked:
   a 0.5B model takes 1-3 minutes per prompt in WebAssembly). The official checkpoints need the 4 GB
   heap (`EMBER_WASM_MAX_MEMORY=4gb`; Pythia and Mamba fail to load in the 1 GB default). Logits
   agree within 2.0e-5 of the range, and Pythia's within 3.6e-4, the level its CUDA leg shows (up to
-  3.9e-4). The page itself sizes the KV state to the context each file declares, which for
-  Qwen3-0.6B is 9.4 GB, so serving one in the browser needs a context cap first
-  ([`experiments/wasm_families_2026-10-25/`](experiments/wasm_families_2026-10-25/)).
+  3.9e-4) ([`experiments/wasm_families_2026-10-25/`](experiments/wasm_families_2026-10-25/)). The
+  page caps the KV state at 2048 positions; uncapped, Qwen3-0.6B's declared context needs 9.4 GB.
+  With the cap, Qwen3-0.6B and Qwen2.5-0.5B load in the 4 GB build, and the page's chat replies equal
+  ember's CPU server's with the same cap, 10/10 each
+  ([`experiments/wasm_ctx_2026-10-25/`](experiments/wasm_ctx_2026-10-25/)).
 
 **Highlights**
 
@@ -193,6 +195,12 @@ bash tools/build_wasm_space.sh model.gguf out/ space/                   # the st
   (`deploy/wasm/web/webgpu/`) and otherwise WebAssembly SIMD; `?backend=wasm` forces the CPU.
 - **Larger models:** `EMBER_WASM_MAX_MEMORY=4gb` raises the WebAssembly heap (a 70M f32 MoE
   needs it).
+- **Context cap:** the KV state holds at most 2048 positions (`EMBER_WASM_CTX=N` at build, `?ctx=N`
+  on the page's URL, 0 for none), as `EMBER_IR_CTX` does natively; a file with a smaller context
+  keeps its own. Third-party files declare their whole trained context (Qwen3-0.6B: 40,960
+  positions, 9.4 GB of f32 KV); with the cap, Qwen3-0.6B and Qwen2.5-0.5B run in the 4 GB build.
+  Longer conversations follow the context rule: the oldest exchanges are dropped and the system
+  message is kept. See [docs/USAGE.md](docs/USAGE.md#the-browser-page-deploywasm).
 - **Threads:** `EMBER_WASM_THREADS=4` builds a pthreads variant for cross-origin-isolated pages.
 
 [`tools/webgpu_parity/`](tools/webgpu_parity/) checks that the page gives the same replies on

@@ -133,7 +133,7 @@ Operational logs go to `debugging.log` in the working directory.
 | `EMBER_IR=path` | run the interpreter from a side-file IR |
 | `EMBER_IR_ONLY=1` | load only through the interpreter (no llama weights) |
 | `EMBER_IR_BUILD=1` | build the IR from the metadata for a plain llama or mistral GGUF too (third-party families and windowed llama/mistral always get one) |
-| `EMBER_IR_CTX=N` | cap the interpreter's KV state at N positions (third-party files declare their whole trained context) |
+| `EMBER_IR_CTX=N` | cap the interpreter's KV state at N positions (third-party files declare their whole trained context); the browser page's cap is `EMBER_WASM_CTX` / `?ctx=N` (below) |
 | `EMBER_IR_DEVICE=cpu` | keep the interpreter on the CPU in a CUDA build |
 | `EMBER_IR_GRAPH=0` | disable the interpreter's CUDA-graph decode |
 | `EMBER_IR_QUANT=1` / `EMBER_IR_DEQUANT=1` | interpreter weights kept quantised / dequantised at load (default: quantised above 64M parameters, CPU only) |
@@ -141,6 +141,35 @@ Operational logs go to `debugging.log` in the working directory.
 | `EMBER_KERNEL_DEBUG=1` | the CUDA batch helpers' debug probes (each one synchronises) |
 | `TINYLLAMA_LOGITS_DUMP=file` | append each prompt's next-token logits to a file |
 | `TINYLLAMA_TOPK_DEBUG=1` | top-10 candidates at every sampled position, on stderr |
+
+## The browser page (`deploy/wasm/`)
+
+`deploy/wasm/build.sh OUT` builds `ember.js` + `ember.wasm`, and `tools/build_wasm_space.sh` adds
+the page. The page follows `/chat`'s request rules, including the context rule, under public caps
+(64 new tokens, 16 turns, 600-character messages).
+
+Build-time variables:
+
+| Variable | Effect |
+|---|---|
+| `EMBER_WASM_CTX=N` | the context cap (default 2048; 0: none): the KV state of a file the interpreter runs holds at most N positions, as `EMBER_IR_CTX` does natively; a file with a smaller context keeps its own |
+| `EMBER_WASM_MAX_MEMORY=4gb` | the heap ceiling (default 1gb); every official third-party checkpoint gated in WebAssembly needs 4gb |
+| `EMBER_WASM_SIMD=0` | build without WebAssembly SIMD |
+| `EMBER_WASM_THREADS=N`, `EMBER_WASM_NAME=ember-mt` | a pthreads build for cross-origin-isolated pages |
+
+The page's URL takes:
+- `?ctx=N`: the context cap for this load, overriding the build's (`?ctx=0` gives the file's own
+  context);
+- `?backend=wasm`: the CPU even when WebGPU is available.
+
+From JavaScript, `ember_set_ctx(n)` before `ember_load` sets the cap, and `ember_ctx()` gives the
+loaded model's context after the cap.
+
+Third-party files declare their whole trained context: Qwen3-0.6B declares 40,960 positions, 9.4 GB
+of f32 KV. With the default cap Qwen3-0.6B and Qwen2.5-0.5B load in the 4gb build. Prompts past the
+cap follow the context rule: the oldest exchanges are dropped and the system message is kept. The cap
+applies to files the IR interpreter runs, which includes every third-party family. A llama-architecture
+file on the tuned path keeps its declared context.
 
 ## Python package
 
