@@ -20,7 +20,17 @@ models copied to ext4 (copy_models.sh: ~/ember_wt/adapter_models). Checks:
   refuse     check accepts every gate model and refuses broken documents (accepted false); depth on a model
              without depth_route and run_node skip; keys outside the schema's closed sets (IR_SPEC 10.1 rules
              1, 4) refused, naming the key; "_" keys and tensor_index under weight_index accepted.
-Writes adapter_selftest_cpu.json beside this file; exits 1 on any failure."""
+  rev11      spec revision 1.1 (appended after the checks above, which it leaves unchanged): the suite's
+             recurrence models (pk_recurrence, and pk_kimi, pk_srd, pk_mamba, tp_mamba1 with their documents
+             rewritten as recurrences) prefill = token-by-token decode = random chunks, bits (logits and recurrent
+             tensors), truncate = a fresh run, snapshot / restore; each rewrite against the file's hand-written
+             ops (ROUNDING, bits reported); an init body (s = B - B equals +0 bit for bit, s = B changes the
+             logits, decodes = prefill and is re-applied by truncate 0); rule 30 (paperkiln.ir_sha256 equal to the
+             embedded document's digest, refused when wrong or not a string, also under a substituted document;
+             a file without the key loads); the digest vectors and dequantisation blocks; run_node on a
+             recurrence (rule 34 on a wrong width), run_node_grad and other ops skip.
+Writes adapter_selftest_cpu.json beside this file (or to ADAPTER_SELFTEST_OUT); exits 1 on any failure.
+ADAPTER_SCRATCH moves the scratch directory (default ~/ember_wt/adapter_scratch)."""
 import copy
 import json
 import os
@@ -34,7 +44,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # IR_ADAPTER_BIN tests another build (a pinned one); its report then goes to the scratch directory, not here.
 BIN = os.environ.get("IR_ADAPTER_BIN", os.path.expanduser("~/ember_wt/build_cpu/ir_adapter"))
 M = os.path.expanduser("~/ember_wt/adapter_models")
-SCRATCH = os.path.expanduser("~/ember_wt/adapter_scratch")
+SCRATCH = os.environ.get("ADAPTER_SCRATCH", os.path.expanduser("~/ember_wt/adapter_scratch"))
 os.makedirs(SCRATCH, exist_ok=True)
 
 
@@ -510,6 +520,168 @@ for model in ("ar3", "state4"):
     record(f"error/token_id_out_of_range/{model}", all("error" in e for e in errs),
            ids=bad, replies=[e.get("error") for e in errs])
     ad.ok("close", session=o["session"])
+
+from agreement import embedded  # noqa: E402
+# ---- spec revision 1.1 (paperkiln 7df7b10b): the recurrence op, the digest (rule 30), dequantisation, run_node.
+# Appended after every earlier check, so their requests, random draws and results are unchanged.
+SUITE = os.environ.get("IR_SUITE", "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance")
+rng11 = random.Random(1101)
+REC11 = {  # model: (gguf, document run in place of the file's or None, the original document's gguf for comparison)
+    "pk_recurrence": (f"{SUITE}/models/pk_recurrence/pk_recurrence.gguf", None),
+    "pk_kimi_rec": (f"{SUITE}/models/pk_kimi/pk_kimi.gguf", f"{SUITE}/recurrence/pk_kimi.ir.json"),
+    "pk_srd_rec": (f"{SUITE}/models/pk_srd/pk_srd.gguf", f"{SUITE}/recurrence/pk_srd.ir.json"),
+    "pk_mamba_rec": (f"{SUITE}/models/pk_mamba/pk_mamba.gguf", f"{SUITE}/recurrence/pk_mamba.ir.json"),
+    "tp_mamba1_rec": (f"{SUITE}/models/tp_mamba1/tp_mamba1.gguf", f"{SUITE}/recurrence/tp_mamba1.ir.json"),
+}
+
+
+def run11(gguf, ir, chunks, rep=("logits", "kv_rows", "kv_positions", "recurrent")):
+    s = ad.ok("open", gguf=gguf, ir=ir, evict=None)
+    outs = [ad.ok("forward", session=s["session"], ids=c, report=list(rep)) for c in chunks]
+    return s, outs
+
+
+for model, (gguf, ir) in REC11.items():
+    o = ad.ok("open", gguf=gguf, ir=ir, evict=None)
+    V = o["vocab"]
+    ad.ok("close", session=o["session"])
+    seqs = [[rng11.randrange(1, V) for _ in range(n)] for n in (5, 9, 12)]
+    for k, seq in enumerate(seqs):
+        s1, pre = run11(gguf, ir, [seq])
+        s2, dec = run11(gguf, ir, [[t] for t in seq])
+        cuts, i = [], 0
+        while i < len(seq):
+            j = min(len(seq), i + rng11.randint(1, 4))
+            cuts.append(seq[i:j])
+            i = j
+        s3, chk = run11(gguf, ir, cuts)
+        a, b, c = stack(pre), stack(dec), stack(chk)
+        ra, rb, rc = (rec_arrays(x[-1]["recurrent"]) for x in (pre, dec, chk))
+        ok = bits_equal(a, b) and bits_equal(a, c) and rec_equal(ra, rb) and rec_equal(ra, rc)
+        record(f"rev11/prefill/{model}/{k}", ok, positions=len(seq), decode_bits=bits_equal(a, b),
+               chunks_bits=bits_equal(a, c), recurrent_bits=rec_equal(ra, rb) and rec_equal(ra, rc))
+        for x in (s1, s2, s3):
+            ad.ok("close", session=x["session"])
+    # truncate and re-forward against a fresh run; snapshot / restore
+    seq = seqs[-1]
+    cut = len(seq) // 2
+    alt = list(reversed(seq[cut:]))
+    s, _ = run11(gguf, ir, [seq])
+    tr = ad.ok("truncate", session=s["session"], n=cut, report=["recurrent"])
+    after = ad.ok("forward", session=s["session"], ids=alt, report=["logits", "recurrent"])
+    f, fo = run11(gguf, ir, [seq[:cut], alt])
+    ok = rec_equal(rec_arrays(tr["recurrent"]), rec_arrays(fo[0]["recurrent"])) and \
+        bits_equal(f32(after["logits"]), f32(fo[1]["logits"])) and \
+        rec_equal(rec_arrays(after["recurrent"]), rec_arrays(fo[1]["recurrent"]))
+    record(f"rev11/truncate/{model}", ok, cut=cut, len=len(seq))
+    snap = ad.ok("snapshot", session=f["session"], tag="t")
+    x1 = ad.ok("forward", session=f["session"], ids=seq[:3], report=["logits", "recurrent"])
+    back = ad.ok("restore", session=f["session"], tag="t", report=["recurrent"])
+    x2 = ad.ok("forward", session=f["session"], ids=seq[:3], report=["logits", "recurrent"])
+    ok = back["len"] == snap["len"] and rec_equal(rec_arrays(back["recurrent"]), rec_arrays(fo[1]["recurrent"])) and \
+        bits_equal(f32(x1["logits"]), f32(x2["logits"])) and rec_equal(rec_arrays(x1["recurrent"]), rec_arrays(x2["recurrent"]))
+    record(f"rev11/snapshot/{model}", ok, at=snap["len"])
+    for x in (s, f):
+        ad.ok("close", session=x["session"])
+    # the rewrite against the file's own document (hand-written ops): ROUNDING, bits reported
+    if ir is not None:
+        seq = seqs[1]
+        s1, a1 = run11(gguf, ir, [seq], rep=("logits", "recurrent"))
+        s2, a2 = run11(gguf, None, [seq], rep=("logits", "recurrent"))
+        la, lb = stack(a1), stack(a2)
+        ra, rb = rec_arrays(a1[0]["recurrent"]), rec_arrays(a2[0]["recurrent"])
+        worst_rec = max(rel(ra[sl][i][t], rb[sl][i][t]) for sl in ra for i in range(len(ra[sl])) for t in ra[sl][i])
+        record(f"rev11/rewrite_vs_handwritten/{model}", rel(la, lb) <= 1e-5 and worst_rec <= 1e-5,
+               logits_bits=bits_equal(la, lb), logits_rel=rel(la, lb), recurrent_bits=rec_equal(ra, rb),
+               recurrent_rel=worst_rec)
+        for x in (s1, s2):
+            ad.ok("close", session=x["session"])
+
+# init bodies (IR_SPEC 6.10.1): pk_mamba's rewrite with s's initial state a body over its weights.
+PM = REC11["pk_mamba_rec"]
+
+
+def with_init(body):
+    def edit(d):
+        n = [x for x in d["block"]["nodes"] if x["op"] == "recurrence"][0]
+        n["init"] = [body]
+        d["block"]["state"][0]["tensors"][0]["init"] = "body"
+    return edit
+
+
+zero_init = variant(PM[1], "rev11_init_zero", with_init("s[r] = B[r] - B[r]"))
+b_init = variant(PM[1], "rev11_init_b", with_init("s[r] = B[r]"))
+seq = [3, 9, 4, 1, 7, 2]
+s0, o0 = run11(PM[0], PM[1], [seq], rep=("logits", "recurrent"))
+sz, oz = run11(PM[0], zero_init, [seq], rep=("logits", "recurrent"))
+sb, ob = run11(PM[0], b_init, [seq], rep=("logits", "recurrent"))
+sd, od = run11(PM[0], b_init, [[t] for t in seq], rep=("logits", "recurrent"))
+ad.ok("truncate", session=sb["session"], n=0, report=[])
+again = ad.ok("forward", session=sb["session"], ids=seq, report=["logits", "recurrent"])
+ok = bits_equal(stack(o0), stack(oz)) and not bits_equal(stack(o0), stack(ob)) and bits_equal(stack(ob), stack(od)) and \
+    bits_equal(stack(ob), f32(again["logits"])) and rec_equal(rec_arrays(ob[0]["recurrent"]), rec_arrays(again["recurrent"]))
+record("rev11/init_body/pk_mamba", ok, zero_body_equals_plus_zero=bits_equal(stack(o0), stack(oz)),
+       b_body_changes_logits=not bits_equal(stack(o0), stack(ob)), b_body_decode_bits=bits_equal(stack(ob), stack(od)),
+       b_body_after_truncate_0=bits_equal(stack(ob), f32(again["logits"])))
+for x in (s0, sz, sb, sd):
+    ad.ok("close", session=x["session"])
+
+# rule 30 (IR_SPEC 3.10): paperkiln.ir_sha256 checked against the embedded document, even under a substituted one.
+PR = REC11["pk_recurrence"][0]
+emb = embedded(PR)
+emb_path = os.path.join(SCRATCH, "adapter_rev11_embedded.ir.json")
+open(emb_path, "w", encoding="utf-8").write(json.dumps(emb))
+want = None
+import gguf as _gguf  # noqa: E402
+_r = _gguf.GGUFReader(PR)
+want = bytes(_r.fields["paperkiln.ir_sha256"].parts[-1]).decode()
+bad = ("0" if want[0] != "0" else "1") + want[1:]
+g_bad = copy_gguf(PR, os.path.join(SCRATCH, "adapter_rev11_bad_sha.gguf"),
+                  set_keys={"paperkiln.ir_sha256": ("STRING", bad)})
+g_none = copy_gguf(PR, os.path.join(SCRATCH, "adapter_rev11_no_sha.gguf"), drop_keys=("paperkiln.ir_sha256",))
+g_int = copy_gguf(PR, os.path.join(SCRATCH, "adapter_rev11_int_sha.gguf"),
+                  set_keys={"paperkiln.ir_sha256": ("UINT32", 7)})
+r_ok = ad.ok("check", gguf=PR, ir=None)
+r_bad = ad.ok("check", gguf=g_bad, ir=None)
+r_bad_ir = ad.ok("check", gguf=g_bad, ir=emb_path)
+r_none = ad.ok("check", gguf=g_none, ir=None)
+r_int = ad.ok("check", gguf=g_int, ir=None)
+dg = ad.ok("digest", text=json.dumps(emb), prose=False)
+record("rev11/rule30", r_ok["accepted"] and not r_bad["accepted"] and "3.10" in r_bad.get("message", "") and
+       not r_bad_ir["accepted"] and "3.10" in r_bad_ir.get("message", "") and r_none["accepted"] and
+       not r_int["accepted"] and dg.get("sha256") == want,
+       key=want, embedded_digest=dg.get("sha256"), wrong_key=r_bad.get("message"),
+       wrong_key_with_ir=r_bad_ir.get("message"), no_key=r_none["accepted"], int_key=r_int.get("message"))
+
+# digest and dequantize over the suite's vectors and blocks (the runner checks them too; here per reply shape)
+vec = json.load(open(f"{SUITE}/digest/vectors.json", encoding="utf-8"))["vectors"]
+good = 0
+for v in vec:
+    r = ad.ok("digest", text=v["text"], prose=v.get("prose", False))
+    good += ("refused" in r) if "refused" in v else (r.get("sha256") == v["sha256"] and r.get("canonical") == v["canonical"])
+record("rev11/digest_vectors", good == len(vec), vectors=len(vec), equal=good)
+blocks = json.load(open(f"{SUITE}/quant/blocks.json", encoding="utf-8"))["cases"]
+per_type = {}
+for c in blocks:
+    r = ad.ok("dequantize", type=c["type"], n=c["rows"] * c["n"], bytes=c["bytes"])
+    per_type[c["type"]] = bits_equal(f32(r["values"]).reshape(c["rows"], c["n"]), f32(c["expect"]))
+record("rev11/dequantize_blocks", all(per_type.values()), bits_equal=per_type)
+
+# run_node: recurrence cases; a width that is not the declaration's (rule 34); other ops and gradients skip
+ops = json.load(open(f"{SUITE}/ops/recurrence.json", encoding="utf-8"))["cases"]
+c = ops[1]
+r = ad.ok("run_node", node=c["node"], inputs=c["inputs"], weights=c["weights"], state=None)
+record("rev11/run_node/ssm_scan_body_bits", bits_equal(f32(r["outputs"]["y"]), f32(c["expect"]["y"])))
+bad_in = dict(c["inputs"])
+u = f32(c["inputs"]["u"])
+bad_in["u"] = {"shape": [u.shape[0], u.shape[1] - 1], "f32": "".join(c["inputs"]["u"]["f32"][i * 32:i * 32 + 24] for i in range(u.shape[0]))}
+r = ad.call("run_node", node=c["node"], inputs=bad_in, weights=c["weights"], state=None)
+record("rev11/run_node/width_rule34", "error" in r and "rule 34" in r["error"], reply=r)
+r = ad.call("run_node_grad", node=c["node"], inputs=c["inputs"], weights=c["weights"], out_grad=c["expect"]["y"])
+record("rev11/skip/run_node_grad", "skip" in r, reply=r)
+r = ad.call("run_node", node={"op": "relu", "in": ["x"], "out": "y"}, inputs={}, weights={}, state=None)
+record("rev11/skip/run_node_other_op", "skip" in r, reply=r)
+
 ad.close()
 
 report["requests"] = ad.n
@@ -518,5 +690,6 @@ report["pass"] = not failures
 n = len(report["checks"])
 print(f"{n - len(failures)}/{n} checks pass, {ad.n} requests" + ("" if not failures else ": FAIL " + ", ".join(failures)))
 out_dir = SCRATCH if "IR_ADAPTER_BIN" in os.environ else HERE
-json.dump(report, open(os.path.join(out_dir, "adapter_selftest_cpu.json"), "w"), indent=1)
+out_path = os.environ.get("ADAPTER_SELFTEST_OUT", os.path.join(out_dir, "adapter_selftest_cpu.json"))
+json.dump(report, open(out_path, "w"), indent=1)
 sys.exit(0 if not failures else 1)
