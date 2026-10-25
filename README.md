@@ -39,8 +39,8 @@ flowchart LR
 | Mamba-style state-space scan | IR interpreter | ✅ | ✅ | ✅ | |
 | SRD, AttnRes, flex (highway, plain residual) | IR interpreter | ✅ | ✅ | ✅ | |
 | Runtime-defined ops (`expr`: a paper's new activation or gate as a formula) | IR interpreter | ✅ | ✅ | not gated | |
-| Tied-block recursion (`weight_index`: one stored block applied several times) | IR interpreter | ✅ | not gated | not gated | |
-| Mixture-of-Recursions (`depth_route`: each token picks its depth) | IR interpreter | ✅ | runs on the CPU | not gated | |
+| Tied-block recursion (`weight_index`: one stored block applied several times) | IR interpreter | ✅ | ✅ | not gated | |
+| Mixture-of-Recursions (`depth_route`: each token picks its depth) | IR interpreter | ✅ | ✅ | not gated | |
 | Per-turn state tokens with eviction (`turn_state`) | IR interpreter | ✅ | ✅ | ✅ | |
 | Attention residuals over depth (`llama_attnres`) | IR interpreter | ✅ | ✅ | ✅ | |
 | Recurrent ops the document defines (`recurrence`: a paper's new state-space model or linear attention as data) | IR interpreter | ✅ | runs on the CPU | ✅ | |
@@ -312,11 +312,16 @@ Recently landed:
   into evicted turns included (`experiments/cuda_state_2026-10-25`). In WebAssembly, state4 and the
   attention-residual model ar3 give greedy 40/40 and logits within 3.8e-7 of the CPU, with
   eviction exact (`experiments/wasm_state_2026-10-25`).
+- **Mixture-of-Recursions on CUDA.** Each recursion step runs batched over its active tokens, at
+  their absolute positions, into each application's compact kv cache; the routing is the CPU's
+  code on the device's router logits. On paperkiln's mor3 and mor2p0 a T4 gives greedy 40/40,
+  logits within 2.0e-7 of the CPU, depth traces and kv rows held equal to the CPU's, and rewinds
+  160/160. The tiny-chat MoR3 model decodes in 1.4 ms per token there, against 24 ms on the CPU
+  (`experiments/mor_cuda_2026-10-25`).
 
 In progress:
 - **The research programme's models.** These are training on Colab and RunPod: the 20M and 60M
   depth sweeps, recursion and Mixture-of-Recursions arms, and then a 12-turn model.
-- **A CUDA kernel for Mixture-of-Recursions**, so CUDA builds stop serving it on the CPU.
 - **A new public chat model.** pk_base_v1's chat model, released through `release_chat.py`
   with the WebGPU page.
 
