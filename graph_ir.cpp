@@ -90,6 +90,22 @@ bool has(const json& n, const char* key) { return n.contains(key) && !n.at(key).
 bool is_per_layer(const json& v) { return v.is_object() && v.contains("per_layer"); }
 const json& at_layer(const json& v, int layer) { return is_per_layer(v) ? v.at("per_layer").at(layer) : v; }
 
+// IR_SPEC 10.1 rule 37, checked when the rows arrive (section 10.1.1): the widths a node reads must fit it.
+[[noreturn]] void binary_shapes(const std::string& op, int a, int b) {
+  throw std::runtime_error("IR_SPEC 5.10 (rule 37): " + op + " operands of two shapes, [T, " + std::to_string(a) +
+                           "] and [T, " + std::to_string(b) + "]");
+}
+// rope's q is heads x head_dim wide and its k kv_heads x head_dim (kv_heads defaults to heads), in application layer.
+void rope_widths(const Node& n, int layer, int qw, int kw) {
+  const int L = layer < 0 ? 0 : layer;
+  const int hd = at_layer(n.attrs.at("head_dim"), L).get<int>(), h = at_layer(n.attrs.at("heads"), L).get<int>();
+  const int hkv = n.attrs.contains("kv_heads") ? at_layer(n.attrs.at("kv_heads"), L).get<int>() : h;
+  if (qw != h * hd || kw != hkv * hd)
+    throw std::runtime_error("IR_SPEC 5.14 (rule 37): rope q is " + std::to_string(qw) + " wide and k " +
+                             std::to_string(kw) + ", not heads x head_dim = " + std::to_string(h * hd) +
+                             " and kv_heads x head_dim = " + std::to_string(hkv * hd));
+}
+
 // An integer attribute that is non-zero in some block.
 bool any_nonzero(const json& n, const char* key) {
   if (!has(n, key)) return false;
@@ -410,7 +426,7 @@ bool tuned_llama_match(const std::string& ir_json, const GGUFData& gguf, std::st
   };
   json j;
   try {
-    j = json::parse(ir_json);
+    j = parse_ir_document(ir_json);  // rule 35 too: the interpreter then refuses the document
   } catch (const std::exception& e) {
     return no(std::string("the document does not parse: ") + e.what());
   }
@@ -775,7 +791,7 @@ std::string build_ir_from_gguf(const GGUFData& g) {
 }
 
 Interpreter::Interpreter(const std::string& ir_json, const GGUFData& gguf, bool use_gpu) {
-  const json j = json::parse(ir_json);
+  const json j = parse_ir_document(ir_json);  // a member name twice is refused (IR_SPEC 3.2, rule 35)
   try {
     init(j, ir_json, gguf, use_gpu);
   } catch (const json::exception&) {
@@ -1946,8 +1962,10 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       const auto sizes = n.attrs.at("sizes").get<std::vector<int>>();
       int total = 0;
       for (int s : sizes) total += s;
-      if (total != x.width || sizes.size() != n.out.size())
-        throw std::runtime_error("IR split: sizes do not match the input width or the outputs");
+      if (sizes.size() != n.out.size()) throw std::runtime_error("IR split: sizes do not match the outputs");
+      if (total != x.width)
+        throw std::runtime_error("IR_SPEC 5.5 (rule 37): split sizes sum to " + std::to_string(total) +
+                                 ", not the input width " + std::to_string(x.width));
       int col = 0;
       for (size_t o = 0; o < sizes.size(); ++o) {
         Buf part{std::vector<float>(static_cast<size_t>(T) * sizes[o]), sizes[o]};
@@ -1976,6 +1994,9 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       // weight [g] shared (per-head q/k norm); a row of rows of width g.
       const int g = has(n.attrs, "group") ? n.attrs.at("group").get<int>() : x.width;
       const auto& w = weight(wname(n));
+      if (g > 0 && x.width % g != 0)
+        throw std::runtime_error("IR_SPEC 5.6 (rule 37): rmsnorm '" + wname(n) + "': group " + std::to_string(g) +
+                                 " does not divide the input width " + std::to_string(x.width));
       if (g <= 0 || x.width % g != 0 || w.size() != static_cast<size_t>(g))
         throw std::runtime_error("IR rmsnorm '" + wname(n) + "': group " + std::to_string(g) + " does not fit width " +
                                  std::to_string(x.width) + " and weight [" + std::to_string(w.size()) + "]");
@@ -2007,6 +2028,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
     } else if (n.op == "rope") {
       Buf q = in(n, 0), k = in(n, 1);
       const int hd = n.attrs.at("head_dim").get<int>();
+      rope_widths(n, layer, q.width, k.width);
       const auto& freqs = rope_table(layer);
       if (!rope_neox_ && rope_dim_ == head_dim_) {  // full interleaved: the llama path's kernel
         apply_rope_batch_cpu(q.v, k.v, T, q.width / hd, k.width / hd, hd, start_pos, freqs, max_len_,
@@ -2052,7 +2074,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "add" || n.op == "mul") {
       const Buf &a = in(n, 0), &b = in(n, 1);
-      if (a.v.size() != b.v.size()) throw std::runtime_error("IR " + n.op + ": operand sizes differ");
+      if (a.v.size() != b.v.size() || a.width != b.width) binary_shapes(n.op, a.width, b.width);
       Buf out{std::vector<float>(a.v.size()), a.width};
       if (n.op == "add")
         for (size_t i = 0; i < a.v.size(); ++i) out.v[i] = a.v[i] + b.v[i];
@@ -2086,7 +2108,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "sub") {  // a - b. EXACT.
       const Buf &a = in(n, 0), &b = in(n, 1);
-      if (a.v.size() != b.v.size() || a.width != b.width) throw std::runtime_error("IR sub: operand shapes differ");
+      if (a.v.size() != b.v.size() || a.width != b.width) binary_shapes(n.op, a.width, b.width);
       Buf out{std::vector<float>(a.v.size()), a.width};
       cpu::sub(a.v.data(), b.v.data(), out.v.data(), a.v.size());
       env[n.out.at(0)] = std::move(out);
@@ -2107,15 +2129,15 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       const auto& g = weight(wn);
       const int d = x.width;
       if (d <= 0 || g.size() != static_cast<size_t>(d))
-        throw std::runtime_error("IR scale '" + wn + "' has " + std::to_string(g.size()) + " values for width " +
-                                 std::to_string(d));
+        throw std::runtime_error("IR_SPEC 5.4 (rule 37): scale '" + wn + "' has " + std::to_string(g.size()) +
+                                 " values for width " + std::to_string(d));
       const float* b = nullptr;
       if (has(n.attrs, "bias")) {
         const std::string bn = layer_name(n.attrs.at("bias").get<std::string>(), layer);
         const auto& B = weight(bn);
         if (B.size() != static_cast<size_t>(d))
-          throw std::runtime_error("IR scale bias '" + bn + "' has " + std::to_string(B.size()) + " values for width " +
-                                   std::to_string(d));
+          throw std::runtime_error("IR_SPEC 5.4 (rule 37): scale bias '" + bn + "' has " + std::to_string(B.size()) +
+                                   " values for width " + std::to_string(d));
         b = B.data();
       }
       Buf out{std::vector<float>(x.v.size()), d};
@@ -2124,7 +2146,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
     } else if (n.op == "mul_col") {  // x [T, w] * c [T, 1]. EXACT.
       const Buf &x = in(n, 0), &c = in(n, 1);
       if (c.width != 1 || c.v.size() != static_cast<size_t>(T) || x.v.size() != static_cast<size_t>(T) * x.width)
-        throw std::runtime_error("IR mul_col: c must be [T, 1] beside x [T, w]");
+        throw std::runtime_error("IR_SPEC 5.12 (rule 37): mul_col: c must be [T, 1] beside x [T, w]");
       Buf out{std::vector<float>(x.v.size()), x.width};
       cpu::mul_col(x.v.data(), c.v.data(), out.v.data(), T, x.width);
       env[n.out.at(0)] = std::move(out);
@@ -2141,7 +2163,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       for (size_t k = 0; k < n.in.size(); ++k) {
         const Buf& a = in(n, k);
         if (a.width != x0.width || a.v.size() != x0.v.size())
-          throw std::runtime_error("IR expr: inputs must share one shape [T, w]");
+          throw std::runtime_error("IR_SPEC 5.19 (rule 37): expr inputs must share one shape [T, w]");
         ptrs.push_back(a.v.data());
       }
       if (x0.width <= 0 || x0.v.size() % x0.width) throw std::runtime_error("IR expr: input is not [T, w]");
@@ -2171,7 +2193,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       auto add_source = [&](const Buf& s) {
         if (d == 0) d = s.width;
         if (s.width != d || d <= 0 || s.v.size() != static_cast<size_t>(T) * d)
-          throw std::runtime_error("IR depth_attend: sources must all be [T, d]");
+          throw std::runtime_error("IR_SPEC 5.18 (rule 37): depth_attend sources must all be one shape [T, d]");
         src.push_back(s.v.data());
       };
       for (const Buf& s : L.items) add_source(s);
@@ -3026,7 +3048,9 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         const DBuf& x = in(s, 0);
         int total = 0;
         for (int sz : s.sizes) total += sz;
-        if (total != x.width) throw std::runtime_error("IR split: sizes do not match the input width or the outputs");
+        if (total != x.width)
+          throw std::runtime_error("IR_SPEC 5.5 (rule 37): split sizes sum to " + std::to_string(total) +
+                                   ", not the input width " + std::to_string(x.width));
         int col = 0;
         for (size_t o = 0; o < s.sizes.size(); ++o) {
           DBuf& part = dout(s.out[o], T, s.sizes[o], {&x});
@@ -3045,6 +3069,9 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
       case DOp::RmsNorm: {  // group g: rows of width g, one weight [g] (per-head q/k norm)
         const DBuf& x = in(s, 0);
         const int g = s.n ? s.n : x.width;
+        if (g > 0 && x.width % g != 0)
+          throw std::runtime_error("IR_SPEC 5.6 (rule 37): rmsnorm '" + s.wname + "': group " + std::to_string(g) +
+                                   " does not divide the input width " + std::to_string(x.width));
         if (g <= 0 || x.width % g != 0 || s.w_elems != static_cast<size_t>(g))
           throw std::runtime_error("IR rmsnorm '" + s.wname + "': group " + std::to_string(g) + " does not fit width " +
                                    std::to_string(x.width) + " and weight [" + std::to_string(s.w_elems) + "]");
@@ -3078,6 +3105,7 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
                                     cudaMemcpyDeviceToDevice, st));
           src = &dst;
         }
+        rope_widths(*s.node, layer, q->width, k->width);
         if (drowpos_) {  // a recursion step's active rows, each at its own position (mor_step_device)
           if (!s.neox && s.n_rot == s.hd) {
             ir_rope_at_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, drowpos_, s.rope, st);
@@ -3149,8 +3177,7 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
       case DOp::Add:
       case DOp::Mul: {
         const DBuf &a = in(s, 0), &b = in(s, 1);
-        if (static_cast<size_t>(a.rows) * a.width != static_cast<size_t>(b.rows) * b.width)
-          throw std::runtime_error("IR " + s.node->op + ": operand sizes differ");
+        if (a.rows != b.rows || a.width != b.width) binary_shapes(s.node->op, a.width, b.width);
         DBuf& out = dout(s.out[0], a.rows, a.width, {&a, &b});
         ir_binary_cuda(a.p, b.p, out.p, static_cast<size_t>(a.rows) * a.width, s.op == DOp::Add ? 0 : 1, st);
         break;
@@ -3174,7 +3201,7 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
       }
       case DOp::Sub: {
         const DBuf &a = in(s, 0), &b = in(s, 1);
-        if (a.rows != b.rows || a.width != b.width) throw std::runtime_error("IR sub: operand shapes differ");
+        if (a.rows != b.rows || a.width != b.width) binary_shapes(s.node->op, a.width, b.width);
         DBuf& out = dout(s.out[0], a.rows, a.width, {&a, &b});
         ir_binary_cuda(a.p, b.p, out.p, static_cast<size_t>(a.rows) * a.width, 2, st);
         break;
@@ -3196,15 +3223,16 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
       case DOp::Scale: {
         const DBuf& x = in(s, 0);
         if (s.w_elems != static_cast<size_t>(x.width))
-          throw std::runtime_error("IR scale '" + s.wname + "' has " + std::to_string(s.w_elems) + " values for width " +
-                                   std::to_string(x.width));
+          throw std::runtime_error("IR_SPEC 5.4 (rule 37): scale '" + s.wname + "' has " + std::to_string(s.w_elems) +
+                                   " values for width " + std::to_string(x.width));
         DBuf& out = dout(s.out[0], x.rows, x.width, {&x});
         ir_scale_cuda(x.p, s.w, s.b, out.p, x.rows, x.width, st);
         break;
       }
       case DOp::MulCol: {
         const DBuf &x = in(s, 0), &c = in(s, 1);
-        if (c.width != 1 || c.rows != T || x.rows != T) throw std::runtime_error("IR mul_col: c must be [T, 1] beside x [T, w]");
+        if (c.width != 1 || c.rows != T || x.rows != T)
+          throw std::runtime_error("IR_SPEC 5.12 (rule 37): mul_col: c must be [T, 1] beside x [T, w]");
         DBuf& out = dout(s.out[0], T, x.width, {&x, &c});
         ir_mul_col_cuda(x.p, c.p, out.p, T, x.width, st);
         break;
@@ -3255,7 +3283,8 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         int d = 0;
         auto add_source = [&](const DBuf& b) {
           if (d == 0) d = b.width;
-          if (b.width != d || d <= 0 || b.rows != T) throw std::runtime_error("IR depth_attend: sources must all be [T, d]");
+          if (b.width != d || d <= 0 || b.rows != T)
+            throw std::runtime_error("IR_SPEC 5.18 (rule 37): depth_attend sources must all be one shape [T, d]");
           src.push_back(b.p);
         };
         for (int k = 0; k < L.items; ++k) add_source(ditems_[s.in[0]][k]);
@@ -3294,7 +3323,8 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         std::vector<const DBuf*> bufs;
         for (size_t k = 0; k < s.in.size(); ++k) {
           const DBuf& a = in(s, k);
-          if (a.width != x0.width || a.rows != x0.rows) throw std::runtime_error("IR expr: inputs must share one shape [T, w]");
+          if (a.width != x0.width || a.rows != x0.rows)
+            throw std::runtime_error("IR_SPEC 5.19 (rule 37): expr inputs must share one shape [T, w]");
           ins.push_back(a.p);
           bufs.push_back(&a);
         }

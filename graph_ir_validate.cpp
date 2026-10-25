@@ -420,6 +420,12 @@ void slot_fit(const json& node, const json& slot, int L, Errs& errs) {
     return;
   }
   if (op == "recurrence") {  // rules 31-33 (graph_ir_recurrence.h)
+    // A slot whose tensors rule 13 refuses (no name, shape or init 0 / "body") is not compared with the node: the
+    // fault is rule 13's alone.
+    if (get(slot, "tensors").is_array())
+      for (const auto& t : slot.at("tensors"))
+        if (!t.is_object() || !(get(t, "init") == json(0) || get(t, "init") == "body") || !get(t, "shape").is_array())
+          return;
     try {
       const std::string why = rec::Recurrence::compile(node).slot_errors(slot);
       if (!why.empty()) errs.push_back(E("6.10", "(rule 33) " + why));
@@ -717,6 +723,71 @@ void state_token_doc_errors(const json& doc, Errs& errs) {
     }
 }
 
+// Rule 36 (revision 1.2): every value a node reads is written before it, in the order of section 3.5 (embed, the
+// block as application 0, head; tokens and pos excepted); the embed section writes x and the head logits; under
+// depth_route the block's nodes after it read only x, pos and values written before them in the same
+// application, and the head only x and the embed section's values (section 7.4(b)).
+void read_errors(const json& doc, Errs& errs) {
+  auto names = [](const json& v) {
+    std::vector<std::string> out;
+    if (v.is_string()) out.push_back(v.get<std::string>());
+    if (v.is_array())
+      for (const auto& x : v)
+        if (x.is_string()) out.push_back(x.get<std::string>());
+    return out;
+  };
+  auto nodes_of = [](const json& doc, const char* sect) -> const json& {
+    const json& n = get(get(doc, sect), "nodes");
+    return n.is_array() ? n : kNull();
+  };
+  std::set<std::string> written, embed_written;
+  auto check = [&](const std::string& sect, size_t j, const json& n, const std::set<std::string>& scope,
+                   bool inputs_free, const char* section, const std::string& why) {
+    for (const auto& v : names(get(n, "in")))
+      if (!scope.count(v) && !(inputs_free && (v == "tokens" || v == "pos")))
+        errs.push_back(E(std::string(section) + " (rule 36)", sect + "[" + std::to_string(j) + "] " +
+                                                                    show(get(n, "op")) + " reads " + q(v) + ", " + why));
+  };
+  for (const char* sect : {"embed", "block", "head"})
+    if (!get(get(doc, sect), "nodes").is_array()) return;  // rule 1 names the section
+  const json& embed = nodes_of(doc, "embed");
+  for (size_t j = 0; embed.is_array() && j < embed.size(); ++j) {
+    check("embed", j, embed[j], written, true, "3.5", "which no node before it writes");
+    for (const auto& o : names(get(embed[j], "out"))) written.insert(o);
+  }
+  if (!written.count("x")) errs.push_back(E("3.5 (rule 36)", "the embed section writes no 'x'"));
+  embed_written = written;
+  const json& block = nodes_of(doc, "block");
+  size_t route = block.is_array() ? block.size() : 0;
+  if (block.is_array() && !block.empty() && op_of(block[0]) == "depth_route") route = 0;  // else rule 20
+  std::set<std::string> step = {"x", "pos"};  // what a recursion step sees (7.4(b))
+  for (size_t j = 0; block.is_array() && j < block.size(); ++j) {
+    if (j <= route) {
+      check("block", j, block[j], written, true, "3.5", "which no node before it writes (application 0)");
+    } else {
+      check("block", j, block[j], step, false, "7.4",
+            "outside what a depth_route step sees (x, pos and the values written before it in the application)");
+      for (const auto& o : names(get(block[j], "out"))) step.insert(o);
+    }
+    for (const auto& o : names(get(block[j], "out"))) written.insert(o);
+  }
+  const bool mor = block.is_array() && route < block.size();
+  std::set<std::string> head_scope = mor ? embed_written : written;
+  if (mor) head_scope.insert("x");
+  const json& head = nodes_of(doc, "head");
+  bool logits = false;
+  for (size_t j = 0; head.is_array() && j < head.size(); ++j) {
+    check("head", j, head[j], head_scope, true, mor ? "7.4" : "3.5",
+          mor ? "a block value other than x (under depth_route the head reads x and the embed section's values)"
+              : "which no node before it writes");
+    for (const auto& o : names(get(head[j], "out"))) {
+      head_scope.insert(o);
+      logits = logits || o == "logits";
+    }
+  }
+  if (!logits) errs.push_back(E("3.5 (rule 36)", "the head writes no 'logits'"));
+}
+
 // ---------------------------------------------------------------- the container rules (24, 26-28)
 
 std::optional<double> meta_num(const GGUFData& g, const std::string& key) {
@@ -755,6 +826,8 @@ void container_errors(const json& doc, const GGUFData& g, Errs& errs) {
   // Rule 24: the file's paperkiln.ir_version, a uint32 equal to its embedded document's ir_version.
   if (const auto emb = meta_str(g, "paperkiln.ir")) {
     json e;
+    // Rule 35 governs the document read (the Interpreter's parse_ir_document): a file whose own document holds a
+    // duplicate name loads with another document in its place, as the reference validator accepts it.
     try {
       e = json::parse(*emb);
     } catch (const std::exception&) {
@@ -876,12 +949,107 @@ void container_errors(const json& doc, const GGUFData& g, Errs& errs) {
 
 }  // namespace
 
+json parse_ir_document(const std::string& text) {
+  // nlohmann's parse keeps the last of two members with one name; its callback sees every key as it is read,
+  // so each open object keeps the names it has seen.
+  std::vector<std::set<std::string>> open;
+  std::string dup;
+  int dup_depth = -1;
+  const json::parser_callback_t cb = [&](int depth, json::parse_event_t ev, json& parsed) {
+    if (ev == json::parse_event_t::object_start) {
+      open.emplace_back();
+    } else if (ev == json::parse_event_t::object_end) {
+      if (!open.empty()) open.pop_back();
+    } else if (ev == json::parse_event_t::key && dup_depth < 0 && !open.empty() && parsed.is_string() &&
+               !open.back().insert(parsed.get<std::string>()).second) {
+      dup = parsed.get<std::string>();
+      dup_depth = depth;
+    }
+    return true;
+  };
+  json j = json::parse(text, cb);
+  if (dup_depth >= 0)
+    throw std::runtime_error(E("3.2 (rule 35)", "an object holds the member name " +
+                                                    json(dup).dump(-1, ' ', false, json::error_handler_t::replace) +
+                                                    " twice (nesting depth " + std::to_string(dup_depth) +
+                                                    "): a document names each member of an object once"));
+  return j;
+}
+
+namespace {
+
+// The section and rule a schema failure breaks (IR_SPEC 10.1, revision 1.2): rule 1 only for what no other rule
+// names (the types of values, the closed key sets of the document, its sections and its slots, the required
+// sections); the version is rule 2, the model's fields rule 3, an op or an attribute its op does not define rule 4,
+// an attribute value outside its closed set rule 5, a required attribute rule 8, causal not true rule 14, a slot's
+// kind rule 11 and its fields rules 12 and 13, kv_from rule 22, weight_index rule 18 and a recurrence's
+// declarations rule 31.
+std::string schema_rule(const json& doc, const std::string& path, const std::string& msg) {
+  static const std::regex kNode(R"(^doc\.(embed|block|head)\.nodes\[(\d+)\](?: \([A-Za-z0-9_]+\))?(.*)$)");
+  static const std::regex kSlot(R"(^doc\.block\.state\[(\d+)\](.*)$)");
+  static const std::set<std::string> kClosed = {"gelu.approx", "rope.pairing", "rope.rope_heads", "attention.mask",
+                                                "moe_ffn.gate_norm", "moe_ffn.activation", "linear_attention.feature_map",
+                                                "depth_route.route", "depth_route.gate"};
+  static const std::set<std::string> kRecDecl = {"index", "inputs", "weights", "init", "let", "update", "readout"};
+  const bool unknown_key = msg.rfind("has the key '", 0) == 0;
+  const bool required = msg.rfind("lacks the required key '", 0) == 0;
+  auto key_of = [&](const std::string& rest) {  // ".mask" or ".mask.per_layer[0]" -> "mask"
+    if (rest.size() < 2 || rest[0] != '.') return std::string();
+    const size_t e = rest.find_first_of(".[", 1);
+    return rest.substr(1, e == std::string::npos ? std::string::npos : e - 1);
+  };
+  std::smatch m;
+  if (std::regex_match(path, m, kNode)) {
+    const json& nodes = get(get(doc, m[1].str()), "nodes");
+    const size_t j = std::stoul(m[2].str());
+    const std::string op = nodes.is_array() && j < nodes.size() ? op_of(nodes[j]) : "";
+    const std::string rest = m[3].str(), key = key_of(rest);
+    const bool io = key == "in" || key == "out" || (required && (msg.find("'in'") != std::string::npos ||
+                                                                 msg.find("'out'") != std::string::npos));
+    if (io) return "3.5 (rule 7)";  // the arity: what a node reads and writes
+    if (unknown_key || key == "op") return "3.5 (rule 4)";
+    if (required && rest.empty()) return "3.5 (rule 8)";
+    if (key == "tensor_index" || kClosed.count(op + "." + key)) return "3.5 (rule 5)";
+    if (key == "causal" && (op == "attention" || op == "linear_attention"))
+      return op == "attention" ? "5.15 (rule 14)" : "6.4 (rule 14)";
+    if (op == "recurrence" && kRecDecl.count(key)) return "6.10 (rule 31)";
+    return "3.5 (rule 1)";
+  }
+  if (std::regex_match(path, m, kSlot)) {
+    const json& slots = get(get(doc, "block"), "state");
+    const size_t j = std::stoul(m[1].str());
+    const json& slot = slots.is_array() && j < slots.size() ? slots[j] : kNull();
+    const std::string rest = m[2].str(), key = key_of(rest);
+    if (unknown_key && get(slot, "kind") == "recurrent") return "6.3 (rule 13)";
+    if (unknown_key) return msg.find("'kv_from'") != std::string::npos ? "7.6 (rule 22)" : "6.1 (rule 1)";
+    if (key == "kind" || (required && msg.find("'kind'") != std::string::npos)) return "6.1 (rule 11)";
+    if (get(slot, "kind") == "kv") {
+      if (key == "dtype" || key == "evict" || key == "kv_rows") return "6.2 (rule 5)";
+      return "6.2 (rule 12)";
+    }
+    if (get(slot, "kind") == "recurrent") return "6.3 (rule 13)";
+    return "6.1 (rule 1)";
+  }
+  if (path.rfind("doc.ir_version", 0) == 0) return "2.3 (rule 2)";
+  if (path.rfind("doc.model", 0) == 0) {  // the model's fields d, vocab, ctx and n_layers are rule 3
+    bool field = false;
+    for (const char* k : {"vocab", "d", "n_layers", "ctx"})
+      field = field || key_of(path.substr(9)) == k || (required && msg.find(std::string("'") + k + "'") != std::string::npos);
+    return field ? "3.3 (rule 3)" : "3.3 (rule 1)";
+  }
+  if (path.rfind("doc.block.weight_index", 0) == 0) return "7.1 (rule 18)";
+  if (path.rfind("doc.block.repeat", 0) == 0) return "3.3 (rule 3)";
+  return "3.2 (rule 1)";
+}
+
+}  // namespace
+
 std::vector<std::string> ir_schema_errors(const json& doc) {
   Failures f;
   eval(schema(), doc, "doc", f);
   std::vector<std::string> out;
   std::set<std::string> seen;
-  for (const auto& [p, m] : f) add_unique(out, seen, E("10.1 rule 1", p + " " + m));
+  for (const auto& [p, m] : f) add_unique(out, seen, E(schema_rule(doc, p, m), p + " " + m));
   return out;
 }
 
@@ -895,6 +1063,7 @@ std::vector<std::string> ir_document_errors(const json& doc) {
   state_errors(doc, errs);
   depth_route_errors(doc, errs);
   state_token_doc_errors(doc, errs);
+  read_errors(doc, errs);
   std::vector<std::string> out;
   std::set<std::string> seen;
   for (const auto& m : errs) add_unique(out, seen, m);

@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
       if (!f) throw std::runtime_error(std::string("cannot read ") + argv[i]);
       std::stringstream ss;
       ss << f.rdbuf();
-      errs = ember_ir::ir_document_errors(nlohmann::json::parse(ss.str()));
+      errs = ember_ir::ir_document_errors(ember_ir::parse_ir_document(ss.str()));  // rule 35 too
     } catch (const std::exception& e) {
       errs = {e.what()};
     }
