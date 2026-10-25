@@ -15,6 +15,7 @@
 #include <variant>
 
 #include "cpu_attention.h"
+#include "determinism.h"
 #include "gguf_structs.h"
 #include "graph_ir_expr.h"
 #include "graph_ir_mamba.h"
@@ -2541,7 +2542,9 @@ void Interpreter::load_state(const State& s) {
 
 void Interpreter::init_device() {
   gpuErrchk(cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking));
+  ember::deterministic_cublas_env();  // EMBER_DETERMINISTIC=1 only (determinism.h)
   if (cublasCreate(&cublas_) != CUBLAS_STATUS_SUCCESS) throw std::runtime_error("IR CUDA: cublasCreate failed");
+  if (ember::deterministic()) cublasSetAtomicsMode(cublas_, CUBLAS_ATOMICS_NOT_ALLOWED);
   cublasSetStream(cublas_, stream_);
   size_t floats = 0;
   for (auto& w : weights_) {  // the host copies are not used on this path: release them
