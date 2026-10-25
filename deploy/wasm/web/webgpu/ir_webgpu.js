@@ -627,7 +627,6 @@ export function exprShader(src, nIn) {
     ? `{ var j = 0u; var m = ${r.body}; for (j = 1u; j < W; j++) { let v = ${r.body}; if (v > m) { m = v; } } red[${k}] = m; }`
     : `{ var acc = 0.0; for (var j = 0u; j < W; j++) { acc = acc + (${r.body}); } red[${k}] = acc; }`).join('\n    ');
   return `${P}${MATH}
-override W: u32 = 1u;
 ${binds}
 @group(0) @binding(${nIn + 1}) var<storage, read_write> y: array<f32>;
 var<workgroup> red: array<f32, ${Math.max(1, reds.length)}>;
@@ -635,6 +634,7 @@ fn relu_s(e: f32) -> f32 { return select(0.0, e, e > 0.0); }
 fn max_s(a: f32, b: f32) -> f32 { return select(b, a, a >= b); }
 fn min_s(a: f32, b: f32) -> f32 { return select(b, a, a <= b); }
 @compute @workgroup_size(${RG}) fn main(@builtin(local_invocation_id) l: vec3u) {
+  let W = p[0];   // the row width (binding 0 is read, so the auto layout keeps it)
   if (l.x == 0u) {
     ${redCode}
   }
@@ -977,7 +977,7 @@ export async function createIr(device, ggufBuffer, docIn, opts = {}) {
       const xs = n.in.map((_, k) => tens(n, k)), w = xs[0].w;
       if (xs.some((t) => t.w !== w)) throw new Error('IR expr: inputs must share one width');
       const y = put(out[0], w);
-      emit('expr:' + n.expr + '|' + n.in.length, [words([w]), ...xs.map((t) => t.buf), y.buf], [1, 1], { W: w }, exprShader(n.expr, n.in.length));
+      emit('expr:' + n.expr + '|' + n.in.length, [words([w]), ...xs.map((t) => t.buf), y.buf], [1, 1], undefined, exprShader(n.expr, n.in.length));
     } else if (op === 'linear_attention') {
       const q = tens(n, 0), k = tens(n, 1), v = tens(n, 2), w = n.heads * n.head_dim, r = rec[l][n.state];
       const y = put(out[0], w);

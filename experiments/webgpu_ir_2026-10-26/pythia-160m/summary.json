@@ -1,0 +1,22 @@
+{
+ "gguf": "pythia-160m-f32.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "gptneox",
+ "prompts": 40,
+ "of": 40,
+ "len": 24,
+ "gen": 32,
+ "vocab": 50304,
+ "ctx": 1024,
+ "dispatches_per_token": 243,
+ "worst_rel": 0.0001628436496973604,
+ "median_rel": 0.000014227585620091799,
+ "worst_spec_rel": 0.0001598588204588942,
+ "top1_agree": "960/960",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "gpu_errors": 0,
+ "pass": false,
+ "load_ms": 16422.049899999998,
+ "ms_per_prompt": 47360.10286
+}

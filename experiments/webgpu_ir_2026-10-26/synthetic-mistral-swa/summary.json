@@ -1,0 +1,21 @@
+{
+ "gguf": "mistral_swa.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "llama",
+ "prompts": 40,
+ "of": 40,
+ "len": 24,
+ "gen": 32,
+ "vocab": 512,
+ "ctx": 256,
+ "dispatches_per_token": 54,
+ "worst_rel": 0.0000025840494380338484,
+ "median_rel": 0.000001208172577225903,
+ "worst_spec_rel": 0.00000508550158461051,
+ "top1_agree": "960/960",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "pass": true,
+ "load_ms": 501.8239,
+ "ms_per_prompt": 1236.9230825000002
+}

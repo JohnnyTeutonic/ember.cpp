@@ -1,0 +1,17 @@
+{
+ "gguf": "swa_tiny.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "backend": "ir_webgpu",
+ "family_hint": "gpt2_swa",
+ "n": 40,
+ "webgpu_vs_wasm": 40,
+ "webgpu_vs_ember_cpu": 11,
+ "wasm_vs_ember_cpu": 11,
+ "tokens": 2171,
+ "ms_per_reply": {
+  "webgpu_swiftshader": 1928.3906474999997,
+  "wasm_node": 136.27943249999998
+ },
+ "errors": 0,
+ "first_diffs": []
+}

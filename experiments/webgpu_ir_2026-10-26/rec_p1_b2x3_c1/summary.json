@@ -1,0 +1,21 @@
+{
+ "gguf": "r.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "llama_recursive",
+ "prompts": 40,
+ "of": 40,
+ "len": 8,
+ "gen": 8,
+ "vocab": 15,
+ "ctx": 16,
+ "dispatches_per_token": 139,
+ "worst_rel": 4.524390179531034e-7,
+ "median_rel": 1.3108400607010707e-7,
+ "worst_spec_rel": 6.258487701416016e-7,
+ "top1_agree": "320/320",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "pass": true,
+ "load_ms": 368.58889999999997,
+ "ms_per_prompt": 560.1971350000001
+}
