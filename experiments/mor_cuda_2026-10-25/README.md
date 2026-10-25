@@ -4,7 +4,7 @@ ember 66c8b2c runs Mixture-of-Recursions documents (`depth_route`, causal token 
 `"active"`; IR_SPEC 7.4, 7.5) on the interpreter's CUDA path, so `device_supported()` accepts them and CUDA builds
 stop serving them on the CPU. The CPU path is unchanged and stays the EXACT reference; device results are ROUNDING
 against it. Gated on Colab T4s (sm_75). Session `ember-mor-1025` ran every leg but lost its VM (it left the session
-list) during the last third-party dumps, before `out/` came home; its log came home (`receipts/vm_session1.log`), and
+list) during the last third-party dumps, before `out/` came home; its log came home (`receipts/vm_session1.txt`), and
 the third-party results below are from it. Session `ember-mor-1025b` reran the local legs (`/content/LEGS` "local")
 and gives the rest of `receipts/`; its driver stopped it at the end. The VMs built 4b6a0b6 and 258d747 (66c8b2c plus
 this folder's scripts) and ember main before it, 51eed18. The legs both sessions ran gave the same numbers.
