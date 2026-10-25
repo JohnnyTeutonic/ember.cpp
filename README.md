@@ -110,6 +110,10 @@ How they are checked:
 - **Fast where it matters.** CUDA prefill is 7.5x to 188x faster than the original path, up to
   4,096 tokens ([docs/TTFT.md](docs/TTFT.md)). A whole decode step is captured as one CUDA
   graph: 2.7 ms/token and a first streamed word in 16-20 ms on a laptop RTX 4060.
+- **Reproducible when asked.** `EMBER_DETERMINISTIC=1` makes CUDA prefill and decode logits bit-identical run
+  to run on the same GPU and build (fixed-order decode reductions, pinned cuBLAS workspace), at no measurable
+  cost; off by default, and off changes nothing
+  ([docs/USAGE.md](docs/USAGE.md), [`experiments/determinism_2026-10-26/`](experiments/determinism_2026-10-26/)).
 - **The visitor's GPU, in the browser.** The chat page runs the forward pass through WebGPU when
   the browser has it, and falls back to WebAssembly when it does not. On an Intel laptop GPU it
   answers in 166 ms per reply against 646 ms for WebAssembly, with replies identical to ember's
