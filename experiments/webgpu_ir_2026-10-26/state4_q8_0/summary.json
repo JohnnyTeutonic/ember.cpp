@@ -1,0 +1,21 @@
+{
+ "gguf": "state4_q8_0.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "llama_state",
+ "prompts": 40,
+ "of": 40,
+ "len": 24,
+ "gen": 32,
+ "vocab": 400,
+ "ctx": 128,
+ "dispatches_per_token": 37,
+ "worst_rel": 0.000001185884095493218,
+ "median_rel": 4.158373791230045e-7,
+ "worst_spec_rel": 0.000002237138759184037,
+ "top1_agree": "960/960",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "pass": true,
+ "load_ms": 381.9841,
+ "ms_per_prompt": 990.2035525000001
+}

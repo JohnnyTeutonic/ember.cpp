@@ -33,22 +33,27 @@ flowchart LR
 | Llama 2/3, TinyLlama (GGUF, SafeTensors) | tuned path | ✅ | ✅ | ✅ | ✅ (f32, Q8_0) |
 | paperkiln llama chat models | tuned path | ✅ | ✅ | ✅ | ✅ |
 | Mixture of experts (llama.cpp expert layout) | tuned path, routed experts | ✅ | ✅ | ✅ | ✅ |
-| GPT-2 (layernorm, GELU, learned positions) | IR interpreter | ✅ | ✅ | ✅ | |
-| Sliding-window attention with sinks | IR interpreter | ✅ | ✅ | ✅ | |
-| Kimi linear attention (recurrent state) | IR interpreter | ✅ | ✅ | ✅ | |
-| Mamba-style state-space scan | IR interpreter | ✅ | ✅ | ✅ | |
-| SRD, AttnRes, flex (highway, plain residual) | IR interpreter | ✅ | ✅ | ✅ | |
-| Runtime-defined ops (`expr`: a paper's new activation or gate as a formula) | IR interpreter | ✅ | ✅ | not gated | |
-| Tied-block recursion (`weight_index`: one stored block applied several times) | IR interpreter | ✅ | ✅ | not gated | |
-| Mixture-of-Recursions (`depth_route`: each token picks its depth) | IR interpreter | ✅ | ✅ | not gated | |
-| Per-turn state tokens with eviction (`turn_state`) | IR interpreter | ✅ | ✅ | ✅ | |
-| Attention residuals over depth (`llama_attnres`) | IR interpreter | ✅ | ✅ | ✅ | |
-| Recurrent ops the document defines (`recurrence`: a paper's new state-space model or linear attention as data) | IR interpreter | ✅ | runs on the CPU | ✅ | |
+| GPT-2 (layernorm, GELU, learned positions) | IR interpreter | ✅ | ✅ | ✅ | ✅ |
+| Sliding-window attention with sinks | IR interpreter | ✅ | ✅ | ✅ | ✅ |
+| Kimi linear attention (recurrent state) | IR interpreter | ✅ | ✅ | ✅ | ✅ |
+| Mamba-style state-space scan | IR interpreter | ✅ | ✅ | ✅ | ✅ |
+| SRD, AttnRes, flex (highway, plain residual) | IR interpreter | ✅ | ✅ | ✅ | ✅ |
+| Runtime-defined ops (`expr`: a paper's new activation or gate as a formula) | IR interpreter | ✅ | ✅ | not gated | ✅ |
+| Tied-block recursion (`weight_index`: one stored block applied several times) | IR interpreter | ✅ | ✅ | not gated | ✅ |
+| Mixture-of-Recursions (`depth_route`: each token picks its depth) | IR interpreter | ✅ | ✅ | not gated | ✅ |
+| Per-turn state tokens with eviction (`turn_state`) | IR interpreter | ✅ | ✅ | ✅ | ✅ (every row kept) |
+| Attention residuals over depth (`llama_attnres`) | IR interpreter | ✅ | ✅ | ✅ | ✅ |
+| Recurrent ops the document defines (`recurrence`: a paper's new state-space model or linear attention as data) | IR interpreter | ✅ | runs on the CPU | ✅ | runs in WebAssembly |
 
 Every paperkiln family is gated the same way: **greedy replies identical to paperkiln's own
 sampler on 40 frozen prompts**, on each backend, including a trained 70M mixture-of-experts
 model. The receipts are in [`experiments/`](experiments/). "Runs on the CPU" means a CUDA build
-serves that family on its CPU path, because the device kernels for it are not written yet.
+serves that family on its CPU path, because the device kernels for it are not written yet; "runs in
+WebAssembly" means the browser page serves it on the CPU for the same reason. The WebGPU column of the
+IR rows is gated on a software adapter (SwiftShader), against ember's CPU interpreter: greedy 40/40, the
+top-1 at every position and logits within 1.2e-6 of the range, plus the page's chat path against
+WebAssembly and ember's CPU replies ([`experiments/webgpu_ir_2026-10-26/`](experiments/webgpu_ir_2026-10-26/));
+its speed on a GPU is not measured yet.
 
 The last four rows serve paperkiln's research programme,
 [tiny chat from scratch](https://github.com/JohnnyTeutonic/paperkiln#research-programme-tiny-chat-from-scratch):
@@ -60,15 +65,15 @@ ember serves every arm's models and checks paperkiln's generation in its post jo
 metadata at load (`build_ir_from_gguf`, a C++ port of keramos's `tools/gguf_ir.py`, node for
 node) and runs on the interpreter:
 
-| Family (official checkpoint gated) | What the graph has | CPU | CUDA | WASM |
-|---|---|:---:|:---:|:---:|
-| Qwen2.5 (0.5B-Instruct, f16) | q/k/v biases, NEOX RoPE, tied head, ChatML | ✅ | ✅ | ✅ |
-| Qwen3 (0.6B, Q8_0 read in place) | per-head q/k RMSNorm | ✅ | ✅ | ✅ |
-| Gemma 3 (270m-it) | sliding window on 5 of every 6 layers, per-layer RoPE base, sandwich norms, GeGLU | ✅ | ✅ | ✅ |
-| GPT-NeoX / Pythia (160m) | partial NEOX rotary, parallel residual, exact GELU | ✅ | ✅ | ✅ |
-| Mamba-1 (130m) | causal depthwise convolution and selective scan, recurrent state | ✅ | ✅ | ✅ |
-| Mistral (sliding window) | the window as an attribute on the llama graph | ✅ | ✅ | ✅ |
-| GPT-2 (124M) | fused qkv, LayerNorm, learned positions | ✅ | ✅ | ✅ |
+| Family (official checkpoint gated) | What the graph has | CPU | CUDA | WASM | WebGPU |
+|---|---|:---:|:---:|:---:|:---:|
+| Qwen2.5 (0.5B-Instruct, f16) | q/k/v biases, NEOX RoPE, tied head, ChatML | ✅ | ✅ | ✅ | not gated |
+| Qwen3 (0.6B, Q8_0 read in place) | per-head q/k RMSNorm | ✅ | ✅ | ✅ | 1 of 10 prompts (memory) |
+| Gemma 3 (270m-it) | sliding window on 5 of every 6 layers, per-layer RoPE base, sandwich norms, GeGLU | ✅ | ✅ | ✅ | not gated |
+| GPT-NeoX / Pythia (160m) | partial NEOX rotary, parallel residual, exact GELU | ✅ | ✅ | ✅ | ✅ |
+| Mamba-1 (130m) | causal depthwise convolution and selective scan, recurrent state | ✅ | ✅ | ✅ | ✅ |
+| Mistral (sliding window) | the window as an attribute on the llama graph | ✅ | ✅ | ✅ | ✅ (tiny random model) |
+| GPT-2 (124M) | fused qkv, LayerNorm, learned positions | ✅ | ✅ | ✅ | ✅ (tiny random model) |
 
 How they are checked:
 - **The graph.** The IR ember builds equals `gguf_ir.py`'s field by field, on every family.
@@ -104,6 +109,13 @@ How they are checked:
   With the cap, Qwen3-0.6B and Qwen2.5-0.5B load in the 4 GB build, and the page's chat replies equal
   ember's CPU server's with the same cap, 10/10 each
   ([`experiments/wasm_ctx_2026-10-25/`](experiments/wasm_ctx_2026-10-25/)).
+- **WebGPU.** The page's WGSL interpreter (`deploy/wasm/web/webgpu/ir_webgpu.js`) on a software adapter
+  (SwiftShader, CPU only: no GPU work on the laptop) against ember's CPU build, on the WASM leg's
+  prompts: greedy replies identical and the top-1 agreeing at every position on Pythia-160m and
+  Mamba-130m (40/40, 960/960) and on the tiny Mistral and GPT-2 models; logits within 1.6e-4 (Pythia)
+  and 3.3e-4 (Mamba) of the range, the float32 level of their CUDA legs (2.0e-4, 1.0e-4). Gemma-3-270m
+  and Qwen2.5-0.5B were not run: the laptop lacked the memory for a software-adapter copy of them
+  ([`experiments/webgpu_ir_2026-10-26/`](experiments/webgpu_ir_2026-10-26/)).
 
 **Highlights**
 
@@ -117,7 +129,8 @@ How they are checked:
 - **The visitor's GPU, in the browser.** The chat page runs the forward pass through WebGPU when
   the browser has it, and falls back to WebAssembly when it does not. On an Intel laptop GPU it
   answers in 166 ms per reply against 646 ms for WebAssembly, with replies identical to ember's
-  CPU on all 40 prompts. Q8_0 weights stay quantised on the GPU.
+  CPU on all 40 prompts. Q8_0 weights stay quantised on the GPU. Every IR family but `recurrence`
+  runs there too, through a WGSL interpreter of the document (gated on a software adapter).
 - **Any paperkiln network, not just llama.** paperkiln writes the model's graph into the GGUF
   (`paperkiln.ir`). ember's interpreter runs it on the CPU or GPU, with a CUDA-graph decode of
   its own, and refuses at load any op it cannot run, naming it.
@@ -196,7 +209,9 @@ bash tools/build_wasm_space.sh model.gguf out/ space/                   # the st
 
 `space/` is the whole site: open `index.html` from any static server.
 - **Backends:** the page's worker uses WebGPU when the browser offers it
-  (`deploy/wasm/web/webgpu/`) and otherwise WebAssembly SIMD; `?backend=wasm` forces the CPU.
+  (`deploy/wasm/web/webgpu/`) and otherwise WebAssembly SIMD; `?backend=wasm` forces the CPU. It
+  follows ember's choice of path (`ember_ir_doc`): `llama_webgpu.js` for files on the tuned llama path,
+  `ir_webgpu.js` for any other IR document whose ops it has, WebAssembly for the rest.
 - **Larger models:** `EMBER_WASM_MAX_MEMORY=4gb` raises the WebAssembly heap (a 70M f32 MoE
   needs it).
 - **Context cap:** the KV state holds at most 2048 positions (`EMBER_WASM_CTX=N` at build, `?ctx=N`

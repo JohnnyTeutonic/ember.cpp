@@ -1,0 +1,21 @@
+{
+ "gguf": "swa_tiny.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "gpt2_swa",
+ "prompts": 40,
+ "of": 40,
+ "len": 24,
+ "gen": 32,
+ "vocab": 8192,
+ "ctx": 256,
+ "dispatches_per_token": 40,
+ "worst_rel": 4.5538865745255335e-7,
+ "median_rel": 3.180980507552302e-7,
+ "worst_spec_rel": 8.264126284264006e-7,
+ "top1_agree": "960/960",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "pass": true,
+ "load_ms": 470.468,
+ "ms_per_prompt": 1569.9970249999997
+}

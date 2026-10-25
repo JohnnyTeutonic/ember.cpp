@@ -1,0 +1,21 @@
+{
+ "gguf": "kimi_tiny.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "kimi",
+ "prompts": 40,
+ "of": 40,
+ "len": 24,
+ "gen": 32,
+ "vocab": 8192,
+ "ctx": 128,
+ "dispatches_per_token": 38,
+ "worst_rel": 4.622941024394082e-7,
+ "median_rel": 3.546957855827088e-7,
+ "worst_spec_rel": 8.321551688052979e-7,
+ "top1_agree": "960/960",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "pass": true,
+ "load_ms": 351.09569999999997,
+ "ms_per_prompt": 1331.2451749999996
+}
