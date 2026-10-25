@@ -1,0 +1,42 @@
+=== vm Sun Oct 25 04:30:50 PM UTC 2026 ember=5ad59b0569eeb6c0faa2d64058ae1fcab04533ab ===
+compute capability 75, nproc 2
+small sha256 ok
+--- deps 16:30:50
+--- build 16:31:05
+CUDA toolkit and cuBLAS found
+built (sm_75) in 177 s
+--- legs 16:34:02
+session tp_gqa rc=0: tuned cuda 4 2
+state_device_gate tp_gqa rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 1.8271672731440883e-07, "worst_decode_vs_prefill_rel": 2.49098605558461e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 1.724459235450651e-07, "worst_prefill_on_rel": 1.724459235450651e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate tp_gqa rc=0: 40/40 320/320 1.5945522078260987e-07 1.7292818488467015e-07 pass True
+session (EMBER_INTERPRETER=1) tp_gqa rc=0: interpreter cuda
+session (default TF32) tp_gqa rc=0
+session tp_gqa_q8_0 rc=0: tuned cuda 4 2
+state_device_gate tp_gqa_q8_0 rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 1.8482663292635947e-07, "worst_decode_vs_prefill_rel": 1.8746249578443712e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 1.884064942964958e-07, "worst_prefill_on_rel": 1.884064942964958e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate tp_gqa_q8_0 rc=0: 40/40 320/320 2.0293547782375867e-07 1.782979704270707e-07 pass True
+session (EMBER_INTERPRETER=1) tp_gqa_q8_0 rc=0: interpreter cuda
+session (default TF32) tp_gqa_q8_0 rc=0
+session tp_qwen rc=0: interpreter cuda 4 2
+state_device_gate tp_qwen rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 1.9693744547909908e-07, "worst_decode_vs_prefill_rel": 1.9133947775420264e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 1.9693744547909908e-07, "worst_prefill_on_rel": 1.9693744547909908e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate tp_qwen rc=0: 40/40 320/320 1.9693744547909908e-07 2.3808009166654922e-07 pass True
+session tp_qwen_q8_0 rc=0: interpreter cuda 4 2
+state_device_gate tp_qwen_q8_0 rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 1.9121793394758908e-07, "worst_decode_vs_prefill_rel": 1.4204018184173466e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 1.9182976566203713e-07, "worst_prefill_on_rel": 1.9182976566203713e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate tp_qwen_q8_0 rc=0: 40/40 320/320 1.8410573914293477e-07 2.1523011327560863e-07 pass True
+session tp_mqa_partial rc=0: interpreter cuda 4 1
+state_device_gate tp_mqa_partial rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 1.7505830024925968e-07, "worst_decode_vs_prefill_rel": 1.5148346239892643e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 1.7475830634967996e-07, "worst_prefill_on_rel": 1.7475830634967996e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate tp_mqa_partial rc=0: 40/40 320/320 1.5509442536352196e-07 2.1680243123980812e-07 pass True
+session tp_mqa_partial_q8_0 rc=0: interpreter cuda 4 1
+state_device_gate tp_mqa_partial_q8_0 rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 2.2494161640346248e-07, "worst_decode_vs_prefill_rel": 1.8815077236362433e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 1.8872518027972846e-07, "worst_prefill_on_rel": 1.8872518027972846e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate tp_mqa_partial_q8_0 rc=0: 40/40 320/320 2.1775787606284353e-07 1.6880001755520184e-07 pass True
+session tp_neox_partial rc=0: interpreter cuda 4 4
+state_device_gate tp_neox_partial rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 1.7002224457699881e-07, "worst_decode_vs_prefill_rel": 1.974676160514711e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 2.1025714238256244e-07, "worst_prefill_on_rel": 2.1025714238256244e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate tp_neox_partial rc=0: 40/40 320/320 2.0919044761107648e-07 1.7011576377725043e-07 pass True
+session tp_neox_partial_q8_0 rc=0: interpreter cuda 4 4
+state_device_gate tp_neox_partial_q8_0 rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 1.9641819633884338e-07, "worst_decode_vs_prefill_rel": 1.963965359971774e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 1.9641819633884338e-07, "worst_prefill_on_rel": 1.9641819633884338e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate tp_neox_partial_q8_0 rc=0: 40/40 320/320 1.9599672763863533e-07 2.2152251737007286e-07 pass True
+session tp_mamba1 rc=0: interpreter cuda 1 1
+state_device_gate tp_mamba1 rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 1.8496025296643878e-07, "worst_decode_vs_prefill_rel": 1.8424285123918978e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 1.8496025296643878e-07, "worst_prefill_on_rel": 1.8496025296643878e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate tp_mamba1 rc=0: 40/40 320/320 1.888178304453646e-07 1.8383755378397434e-07 pass True
+--- pack 16:34:23
+packed 1.3M
+=== done Sun Oct 25 04:34:23 PM UTC 2026 ===

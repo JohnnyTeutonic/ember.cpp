@@ -1,0 +1,12 @@
+{"family_hint":"llama","gguf":"/home/jonat/tptrain/relabel/tp_qwen_as_llama.gguf","path":"interpreter","why":"the block has 17 nodes"}
+{"relabelled": "tp_qwen", "served_path": "interpreter", "device": "cpu", "logits_and_greedy_bit_equal_to_original_file": true}
+{"family_hint":"llama","gguf":"/home/jonat/tptrain/relabel/tp_mqa_partial_as_llama.gguf","path":"interpreter","why":"rope is not interleaved on every head, n_rot = head_dim, freq_scale 1"}
+{"relabelled": "tp_mqa_partial", "served_path": "interpreter", "device": "cpu", "logits_and_greedy_bit_equal_to_original_file": true}
+{"family_hint":"llama","gguf":"/home/jonat/tptrain/relabel/tp_neox_partial_as_llama.gguf","path":"interpreter","why":"rope is not interleaved on every head, n_rot = head_dim, freq_scale 1"}
+{"relabelled": "tp_neox_partial", "served_path": "interpreter", "device": "cpu", "logits_and_greedy_bit_equal_to_original_file": true}
+{"family_hint":"mamba1","gguf":"/home/jonat/tptrain/relabel/tp_mamba1_as_llama.gguf","path":"interpreter","why":"family_hint is not llama"}
+{"relabelled": "tp_mamba1", "served_path": "interpreter", "device": "cpu", "logits_and_greedy_bit_equal_to_original_file": true}
+tp_mamba1_as_llama.gguf llama {'llama.context_length': 16, 'llama.embedding_length': 32, 'llama.block_count': 2, 'llama.vocab_size': 15}
+tp_mqa_partial_as_llama.gguf llama {'llama.context_length': 16, 'llama.embedding_length': 32, 'llama.block_count': 2, 'llama.feed_forward_length': 96, 'llama.attention.head_count': 4, 'llama.attention.head_count_kv': 1, 'llama.attention.layer_norm_rms_epsilon': 9.999999747378752e-06, 'llama.vocab_size': 15, 'llama.rope.freq_base': 10000.0, 'llama.rope.dimension_count': 4}
+tp_neox_partial_as_llama.gguf llama {'llama.context_length': 16, 'llama.embedding_length': 32, 'llama.block_count': 2, 'llama.feed_forward_length': 96, 'llama.attention.head_count': 4, 'llama.attention.head_count_kv': 4, 'llama.attention.layer_norm_rms_epsilon': 9.999999747378752e-06, 'llama.vocab_size': 15, 'llama.rope.freq_base': 10000.0, 'llama.rope.dimension_count': 4}
+tp_qwen_as_llama.gguf llama {'llama.context_length': 16, 'llama.embedding_length': 32, 'llama.block_count': 2, 'llama.feed_forward_length': 96, 'llama.attention.head_count': 4, 'llama.attention.head_count_kv': 2, 'llama.attention.layer_norm_rms_epsilon': 9.999999747378752e-06, 'llama.vocab_size': 15, 'llama.rope.freq_base': 1000000.0, 'llama.rope.dimension_count': 8}
