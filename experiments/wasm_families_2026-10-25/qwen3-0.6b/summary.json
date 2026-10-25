@@ -1,0 +1,16 @@
+{
+ "gen": 32,
+ "gguf": "/mnt/c/ml_artifacts/thirdparty/qwen3-0.6b/Qwen3-0.6B-Q8_0.gguf",
+ "greedy_identical": "10/10",
+ "len": 24,
+ "load_ms": 120778.267557,
+ "ms_per_prompt": 152511.36769580003,
+ "of": 40,
+ "pass": true,
+ "prompts": 10,
+ "tol": 0.0001,
+ "top1_agree": "240/240",
+ "vocab": 151936,
+ "worst_decode_rel": 9.78358116398727e-07,
+ "worst_prefill_rel": 9.78358116398727e-07
+}

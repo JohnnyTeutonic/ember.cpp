@@ -1,0 +1,16 @@
+{
+ "gen": 32,
+ "gguf": "/mnt/c/ml_artifacts/thirdparty/pythia-160m/pythia-160m-f32.gguf",
+ "greedy_identical": "40/40",
+ "len": 24,
+ "load_ms": 181246.575448,
+ "ms_per_prompt": 10597.733050400002,
+ "of": 40,
+ "pass": false,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "960/960",
+ "vocab": 50304,
+ "worst_decode_rel": 0.0003628147757403825,
+ "worst_prefill_rel": 0.0003628147757403825
+}

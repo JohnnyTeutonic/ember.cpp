@@ -1,0 +1,16 @@
+{
+ "gen": 32,
+ "gguf": "/mnt/c/ml_artifacts/thirdparty/gemma-3-270m-it/gemma-3-270m-it-f32.gguf",
+ "greedy_identical": "40/40",
+ "len": 24,
+ "load_ms": 260377.032429,
+ "ms_per_prompt": 10813.4885034,
+ "of": 40,
+ "pass": true,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "960/960",
+ "vocab": 262144,
+ "worst_decode_rel": 1.3835736830035512e-05,
+ "worst_prefill_rel": 1.3835736830035512e-05
+}
