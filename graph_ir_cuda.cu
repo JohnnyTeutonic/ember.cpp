@@ -485,7 +485,129 @@ __global__ void window_attention_kernel(const float* __restrict__ Q, const float
   }
 }
 
+// Attention mask turn_state (IR_SPEC 6.8.2) over a compact kv cache, one block per (token, q head).
+// codes[r] = 2 s + c for the position row r holds (s its segment, c = 1 at a state position); the
+// call's token t is at row row0 + t (row0 read from *drow when given: the captured decode step), and
+// sees row j <= row0 + t iff s(j) == s(t) or c(j) == 1. The rows are walked in ascending order,
+// kWinChunk at a time, as window_attention_kernel walks its keys: visible rows scored into shared
+// memory (a warp per row), masked rows -inf (never read), an online softmax over the chunks. A chunk
+// with no visible row is skipped; the query's own row is always visible, so the last chunk has one.
+__global__ void turn_state_attention_kernel(const float* __restrict__ Q, const float* __restrict__ K,
+                                            const float* __restrict__ V, float* __restrict__ out, int hq, int hkv,
+                                            int hd, int row0, const int* __restrict__ codes, float scale,
+                                            const int* __restrict__ drow) {
+  const int t = blockIdx.x, h = blockIdx.y;
+  if (drow) row0 = *drow;
+  const int n = row0 + t + 1;
+  const int qs = codes[row0 + t] >> 1;
+  const int kvh = h / (hq / hkv);
+  extern __shared__ float sm[];
+  float* q = sm;       // [hd]
+  float* s = sm + hd;  // [kWinChunk]
+  __shared__ float red[kThreads / 32];
+  for (int d = threadIdx.x; d < hd; d += blockDim.x) q[d] = Q[((size_t)t * hq + h) * hd + d];
+  __syncthreads();
+  const int lane = threadIdx.x & 31, warp = threadIdx.x >> 5, nwarps = blockDim.x >> 5;
+  float acc[kWinDimsPerThread] = {0.0f, 0.0f, 0.0f, 0.0f};
+  float M = -INFINITY, L = 0.0f;
+  for (int c0 = 0; c0 < n; c0 += kWinChunk) {
+    const int cn = min(kWinChunk, n - c0);
+    for (int i = warp; i < cn; i += nwarps) {
+      const int code = codes[c0 + i];
+      if ((code >> 1) != qs && !(code & 1)) {  // masked (uniform over the warp)
+        if (lane == 0) s[i] = -INFINITY;
+        continue;
+      }
+      const float* kr = K + ((size_t)(c0 + i) * hkv + kvh) * hd;
+      float dot = 0.0f;
+      for (int d = lane; d < hd; d += 32) dot += q[d] * kr[d];
+      for (int o = 16; o > 0; o >>= 1) dot += __shfl_xor_sync(0xffffffff, dot, o);
+      if (lane == 0) s[i] = dot * scale;
+    }
+    __syncthreads();
+    float mx = -INFINITY;
+    for (int i = threadIdx.x; i < cn; i += blockDim.x) mx = fmaxf(mx, s[i]);
+    const float cm = block_reduce(mx, true, red);
+    if (cm == -INFINITY) {  // every row of the chunk is masked (uniform over the block)
+      __syncthreads();
+      continue;
+    }
+    const float newM = fmaxf(M, cm);
+    const float rescale = expf(M - newM);  // 0 on the first visible chunk (M = -inf)
+    float sum = 0.0f;
+    for (int i = threadIdx.x; i < cn; i += blockDim.x) {
+      const float e = expf(s[i] - newM);  // exactly 0 for a masked row
+      s[i] = e;
+      sum += e;
+    }
+    L = L * rescale + block_reduce(sum, false, red);  // block_reduce syncs: s[] is complete
+    for (int r = 0; r < kWinDimsPerThread; ++r) {
+      const int d = threadIdx.x + r * blockDim.x;
+      if (d >= hd) break;
+      float a = 0.0f;
+      for (int i = 0; i < cn; ++i)
+        if (s[i] != 0.0f) a += s[i] * V[((size_t)(c0 + i) * hkv + kvh) * hd + d];
+      acc[r] = acc[r] * rescale + a;
+    }
+    M = newM;
+    __syncthreads();  // s[] is rewritten by the next chunk
+  }
+  const float inv = 1.0f / (L + 1e-9f);  // softmax_vector_cpu's normaliser
+  for (int r = 0; r < kWinDimsPerThread; ++r) {
+    const int d = threadIdx.x + r * blockDim.x;
+    if (d >= hd) break;
+    out[((size_t)t * hq + h) * hd + d] = acc[r] * inv;
+  }
+}
+
+// Row w of K and V takes row idx[w], for w = w0 .. n-1, in ascending order, in place: idx ascends and
+// idx[w] >= w, so a row is read before any later step overwrites it (one block, a barrier per row).
+__global__ void kv_compact_kernel(float* __restrict__ K, float* __restrict__ V, const int* __restrict__ idx, int w0,
+                                  int n, int row) {
+  for (int w = w0; w < n; ++w) {
+    const int r = idx[w];
+    if (r != w)
+      for (int i = threadIdx.x; i < row; i += blockDim.x) {
+        K[(size_t)w * row + i] = K[(size_t)r * row + i];
+        V[(size_t)w * row + i] = V[(size_t)r * row + i];
+      }
+    __syncthreads();
+  }
+}
+
+// out[t] = table[id] for a text id, state[id - vocab] for a state id (IR_SPEC 6.8.1). EXACT (a copy).
+__global__ void embedding_state_kernel(const float* __restrict__ table, const float* __restrict__ state, int vocab,
+                                       const int* __restrict__ tokens, float* __restrict__ out, int d) {
+  const int t = blockIdx.x;
+  const int id = tokens[t];
+  const float* src = id >= vocab ? state + (size_t)(id - vocab) * d : table + (size_t)id * d;
+  for (int i = threadIdx.x; i < d; i += blockDim.x) out[(size_t)t * d + i] = src[i];
+}
+
 }  // namespace
+
+void ir_turn_state_attention_cuda(const float* q, const float* K, const float* V, float* out, int T, int row0,
+                                  const int* codes, int hq, int hkv, int hd, float scale, cudaStream_t stream,
+                                  const int* drow) {
+  if (hkv <= 0 || hq % hkv != 0 || hd > kThreads * kWinDimsPerThread)
+    throw std::runtime_error("IR CUDA turn_state attention: unsupported shape (head_dim " + std::to_string(hd) + ")");
+  const size_t shm = (size_t)(hd + kWinChunk) * sizeof(float);
+  turn_state_attention_kernel<<<dim3(T, hq), kThreads, shm, stream>>>(q, K, V, out, hq, hkv, hd, row0, codes, scale,
+                                                                      drow);
+  check_launch("turn_state attention");
+}
+
+void ir_kv_compact_cuda(float* K, float* V, const int* idx, int w0, int n, int row, cudaStream_t stream) {
+  if (w0 >= n) return;
+  kv_compact_kernel<<<1, kThreads, 0, stream>>>(K, V, idx, w0, n, row);
+  check_launch("kv compact");
+}
+
+void ir_embedding_state_cuda(const float* table, const float* state, int vocab, const int* tokens, float* out, int T,
+                             int d, cudaStream_t stream) {
+  embedding_state_kernel<<<T, 128, 0, stream>>>(table, state, vocab, tokens, out, d);
+  check_launch("embedding (state rows)");
+}
 
 void ir_window_attention_cuda(const float* q, const float* K, const float* V, float* out, int T, int start_pos,
                               int hq, int hkv, int hd, float scale, int window, int sinks, cudaStream_t stream,

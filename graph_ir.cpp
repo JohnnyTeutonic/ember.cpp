@@ -418,8 +418,7 @@ bool tuned_llama_match(const std::string& ir_json, const GGUFData& gguf, std::st
 }
 
 bool device_supported(const std::string& ir_json) {
-  // Per-turn state tokens have no device kernel yet: the CPU serves them.
-  if (has_state_tokens(ir_json)) return false;
+  // Per-turn state tokens (state_weight, mask turn_state, evict turn_state) run on either path.
   const json j = json::parse(ir_json);
   // depth_attend reads at most every tensor ever put in a list (list inputs
   // and appends, the block's once per repeat) plus its own extra inputs.
@@ -1531,6 +1530,29 @@ void Interpreter::ts_evict_below(int seg) {
   // Keep every state row and the text rows of segments >= seg; move them down in every block's
   // cache, in order (row w < row r, so the copies never overlap).
   const size_t row = static_cast<size_t>(kv_heads_) * head_dim_;
+#ifdef HAS_CUDA
+  if (gpu_) {  // the same rows kept, in the same order, compacted in each block's device cache
+    std::vector<int> idx;
+    std::vector<int> kept;
+    for (size_t r = 0; r < kv_pos_.size(); ++r) {
+      const int p = kv_pos_[r];
+      if (ts_sidx_.at(p) < 0 && ts_seg_.at(p) < seg) continue;
+      idx.push_back(static_cast<int>(r));
+      kept.push_back(p);
+    }
+    int w0 = 0;
+    while (w0 < static_cast<int>(idx.size()) && idx[w0] == w0) ++w0;
+    if (w0 < static_cast<int>(idx.size())) {
+      // Pageable source: the copy has read idx when cudaMemcpyAsync returns.
+      gpuErrchk(cudaMemcpyAsync(dkv_idx_, idx.data(), idx.size() * sizeof(int), cudaMemcpyHostToDevice, stream_));
+      for (int l = 0; l < n_layers_; ++l)
+        ir_kv_compact_cuda(dk_[l], dv_[l], dkv_idx_, w0, static_cast<int>(idx.size()), static_cast<int>(row), stream_);
+    }
+    kv_pos_ = std::move(kept);
+    evicted_below_ = seg;
+    return;
+  }
+#endif
   size_t w = 0;
   for (size_t r = 0; r < kv_pos_.size(); ++r) {
     const int p = kv_pos_[r];
@@ -1610,9 +1632,10 @@ void Interpreter::ts_begin(const std::vector<int>& tokens, int start_pos) {
   if (kv_row0_ + T > max_len_)
     throw std::runtime_error("IR attention: " + std::to_string(kv_row0_ + T) + " kv rows exceed the kv state (" +
                              std::to_string(max_len_) + ")");
-  // Visible rows per query (section 1.3), ascending: held rows, then this call's rows up to t.
-  ts_vis_.assign(T, {});
-  for (int t = 0; t < T; ++t) {
+  // Visible rows per query (section 1.3), ascending: held rows, then this call's rows up to t. The
+  // device path's kernel reads each row's code instead (ts_upload_codes).
+  ts_vis_.assign(gpu_ ? 0 : T, {});
+  for (int t = 0; t < T && !gpu_; ++t) {
     const int s = segs[t];
     auto visible = [&](int j) { return ts_seg_[j] == s || (ts_sidx_[j] >= 0 && ts_seg_[j] < s); };
     std::vector<int>& v = ts_vis_[t];
@@ -2440,8 +2463,13 @@ void Interpreter::init_device() {
     gpuErrchk(cudaMemcpy(drec_init_, rec_.data(), bytes, cudaMemcpyHostToDevice));
     gpuErrchk(cudaMemcpy(drec_, rec_.data(), bytes, cudaMemcpyHostToDevice));
   }
-  gpuErrchk(cudaMalloc(&dstep_, 2 * sizeof(int)));
-  gpuErrchk(cudaHostAlloc(reinterpret_cast<void**>(&hstep_), 2 * sizeof(int), cudaHostAllocDefault));
+  gpuErrchk(cudaMalloc(&dstep_, 3 * sizeof(int)));
+  gpuErrchk(cudaHostAlloc(reinterpret_cast<void**>(&hstep_), 3 * sizeof(int), cudaHostAllocDefault));
+  hstep_[2] = 0;
+  if (turn_state_) {  // per-row codes for the turn_state kernel, and eviction's row list
+    gpuErrchk(cudaMalloc(&dts_code_, static_cast<size_t>(max_len_) * sizeof(int)));
+    gpuErrchk(cudaMalloc(&dkv_idx_, static_cast<size_t>(max_len_) * sizeof(int)));
+  }
   gpuErrchk(cudaHostAlloc(reinterpret_cast<void**>(&hlogits_), static_cast<size_t>(vocab_) * sizeof(float),
                           cudaHostAllocDefault));
   Logger::info("[IR] CUDA device path: " + std::to_string(dweights_.size()) + " weights (" +
@@ -2509,6 +2537,7 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
         if (s.op == DOp::LayerNorm && !s.b) throw std::runtime_error("IR layernorm '" + s.wname + "' has no bias");
         s.eps = n.attrs.value("eps", 1e-5f);
         if (s.op == DOp::RmsNorm && has(n.attrs, "group")) s.n = n.attrs.at("group").get<int>();
+        if (s.op == DOp::Embedding && has(n.attrs, "state_weight")) s.state_w = dweight(state_weight_);
         break;
       case DOp::Split:
         s.sizes = n.attrs.at("sizes").get<std::vector<int>>();
@@ -2531,6 +2560,7 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
         s.hkv = n.attrs.at("kv_heads").get<int>();
         if (s.hd != head_dim_ || s.hkv != kv_heads_) throw std::runtime_error("IR attention shape differs from its kv state");
         s.scale = n.attrs.contains("scale") ? n.attrs.at("scale").get<float>() : 1.0f / std::sqrt(float(s.hd));
+        s.ts = n.attrs.value("mask", "causal") == "turn_state";
         attention_window(n, layer < 0 ? 0 : layer, s.window, s.sinks);
         if (s.window > 0 && layer <= 0)
           Logger::info("[IR] CUDA sliding-window attention (ir_window_attention_cuda): window " +
@@ -2689,6 +2719,9 @@ void Interpreter::free_device() {
   drope_ = drec_ = drec_init_ = nullptr;
   drec_rows_ = dmoe_ = dexpr_ = DBuf{};
   if (dtokens_) cudaFree(dtokens_);
+  if (dts_code_) cudaFree(dts_code_);
+  if (dkv_idx_) cudaFree(dkv_idx_);
+  dts_code_ = dkv_idx_ = nullptr;
   if (dstep_) cudaFree(dstep_);
   if (hstep_) cudaFreeHost(hstep_);
   if (hlogits_) cudaFreeHost(hlogits_);
@@ -2800,11 +2833,21 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
       case DOp::Embedding: {
         const int d = s.w_ne0;
         const size_t rows = std::min<size_t>(s.w_elems / d, static_cast<size_t>(vocab_));  // IR_SPEC 5.1
-        for (int t = 0; t < T; ++t)
-          if (htokens_[t] < 0 || static_cast<size_t>(htokens_[t]) >= rows)
-            throw std::runtime_error("IR embedding: token id " + std::to_string(htokens_[t]) + " out of range");
+        for (int t = 0; t < T; ++t) {
+          const int id = htokens_[t];
+          if (s.state_w && id >= vocab_) {  // the extended embedding (IR_SPEC 6.8.1)
+            if (id >= vocab_ + state_k_)
+              throw std::runtime_error("IR embedding: token id " + std::to_string(id) + " is past the state slots (vocab " +
+                                       std::to_string(vocab_) + ", k " + std::to_string(state_k_) + ")");
+          } else if (id < 0 || static_cast<size_t>(id) >= rows) {
+            throw std::runtime_error("IR embedding: token id " + std::to_string(id) + " out of range");
+          }
+        }
         DBuf& out = dout(s.out[0], T, d, {});
-        ir_embedding_cuda(s.w, capturing_ ? dstep_ : dtokens_, out.p, T, d, st);  // dstep_[0]: the token
+        if (s.state_w)
+          ir_embedding_state_cuda(s.w, s.state_w, vocab_, capturing_ ? dstep_ : dtokens_, out.p, T, d, st);
+        else
+          ir_embedding_cuda(s.w, capturing_ ? dstep_ : dtokens_, out.p, T, d, st);  // dstep_[0]: the token
         break;
       }
       case DOp::PosEmbedding: {
@@ -2901,6 +2944,13 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         const size_t row = static_cast<size_t>(hkv) * hd;
         float* K = dk_[layer];
         float* V = dv_[layer];
+        if (s.ts) {  // the compact cache (ts_begin): this call's rows from kv_row0_, dstep_[2] in the graph
+          const int* drow = dpos_ ? dstep_ + 2 : nullptr;
+          ir_kv_write_cuda(K, V, k.p, v.p, T, static_cast<int>(row), kv_row0_, st, drow);
+          DBuf& out = dout(s.out[0], T, hq * hd, {&q, &k, &v});
+          ir_turn_state_attention_cuda(q.p, K, V, out.p, T, kv_row0_, dts_code_, hq, hkv, hd, s.scale, st, drow);
+          break;
+        }
         ir_kv_write_cuda(K, V, k.p, v.p, T, static_cast<int>(row), start_pos, st, dpos_);
         DBuf& out = dout(s.out[0], T, hq * hd, {&q, &k, &v});
         if (s.window > 0)  // the cache keeps every position, so the window reads it in place
@@ -3182,7 +3232,8 @@ bool Interpreter::decode_graph(int token, int start_pos) {
     return false;
   hstep_[0] = token;
   hstep_[1] = start_pos;
-  gpuErrchk(cudaMemcpyAsync(dstep_, hstep_, 2 * sizeof(int), cudaMemcpyHostToDevice, stream_));
+  hstep_[2] = kv_row0_;  // the turn_state compact cache's row for this token (unused otherwise)
+  gpuErrchk(cudaMemcpyAsync(dstep_, hstep_, 3 * sizeof(int), cudaMemcpyHostToDevice, stream_));
   if (!graph_exec_ || graph_epoch_ != alloc_epoch_) {
     htokens_.assign(1, token);
     if (!capture_decode(start_pos)) return false;
@@ -3193,10 +3244,33 @@ bool Interpreter::decode_graph(int token, int start_pos) {
   return true;
 }
 
+void Interpreter::ts_upload_codes(int start_pos, int T) {
+  // Row r's code 2 s + c: held rows (kv_pos_) then this call's, at kv_row0_ + t. Pageable source:
+  // the copy has read it when cudaMemcpyAsync returns.
+  const int n = kv_row0_ + T;
+  std::vector<int> code(static_cast<size_t>(n));
+  for (int r = 0; r < n; ++r) {
+    const int p = r < kv_row0_ ? kv_pos_[r] : start_pos + (r - kv_row0_);
+    code[r] = 2 * ts_seg_[p] + (ts_sidx_[p] >= 0 ? 1 : 0);
+  }
+  gpuErrchk(cudaMemcpyAsync(dts_code_, code.data(), code.size() * sizeof(int), cudaMemcpyHostToDevice, stream_));
+}
+
 std::vector<float> Interpreter::forward_device(const std::vector<int>& tokens, int start_pos, bool all_rows) {
   const int T = static_cast<int>(tokens.size());
+  // Per-turn state tokens: the CPU path's bookkeeping (codes, the rows held, eviction before the
+  // call), then the rows' codes for the kernel; after the blocks, this call's rows are held and the
+  // finished segments' text rows go (lazy eviction), as forward() does on the CPU.
+  if (state_k_ > 0 || turn_state_) ts_begin(tokens, start_pos);
+  if (turn_state_) ts_upload_codes(start_pos, T);
+  auto ts_end = [&] {
+    if (!turn_state_) return;
+    for (int t = 0; t < T; ++t) kv_pos_.push_back(start_pos + t);
+    if (evict_) ts_evict_below(ts_seg_.back());
+  };
   if (rec_floats_ > 0) rec_begin(start_pos, T, all_rows);
   if (T == 1 && decode_graph(tokens[0], start_pos)) {
+    ts_end();
     if (rec_floats_ > 0) rec_end(start_pos, T);
     gpuErrchk(cudaStreamSynchronize(stream_));
     return std::vector<float>(hlogits_, hlogits_ + graph_vocab_);
@@ -3210,6 +3284,7 @@ std::vector<float> Interpreter::forward_device(const std::vector<int>& tokens, i
   gpuErrchk(cudaMemcpyAsync(dtokens_, tokens.data(), static_cast<size_t>(T) * sizeof(int), cudaMemcpyHostToDevice,
                             stream_));
   run_device(T, start_pos);
+  ts_end();
   if (rec_floats_ > 0) rec_end(start_pos, T);
   int rows = T;
   if (!all_rows && T > 1) {  // head ops are row-wise: run them on the last row only
