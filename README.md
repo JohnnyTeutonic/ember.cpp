@@ -73,7 +73,10 @@ How they are checked:
 - **The graph.** The IR ember builds equals `gguf_ir.py`'s field by field, on every family.
 - **CPU.** Every position's top-1 agrees with paperkiln's numpy evaluation of the same IR, and
   decode equals prefill. Qwen2.5 and Qwen3 also give greedy replies identical to HF transformers
-  on 40/40 chat prompts, with ember's own tokeniser and template.
+  on 40/40 chat prompts, with ember's own tokeniser and template. The tokeniser applies Unicode
+  NFC between the added tokens, as HF's does: its ids equal HF's on 337 strings that NFC changes
+  (decomposed accents, Hangul jamo, combining sequences, compatibility characters NFC keeps, mixed
+  scripts), raw and templated ([`experiments/qwen_nfc_2026-10-25/`](experiments/qwen_nfc_2026-10-25/)).
 - **CUDA.** CUDA against the CPU interpreter on 40 prompts: greedy replies identical (40/40) and
   the top-1 agreeing at every position, on a laptop RTX 4060 and a Colab L4. Pythia flipped one
   position in 960 on the RTX 4060 and none on the L4, where it is 960/960.

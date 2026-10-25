@@ -1,0 +1,43 @@
+{
+ "tokenizers": "0.22.1",
+ "python_unicodedata": "15.0.0",
+ "suites": {
+  "single": {
+   "strings": 1112063,
+   "changed_by_nfc": 1120,
+   "ember_eq_hf": 1112063,
+   "ember_eq_python": 1112063,
+   "differences_from_hf": []
+  },
+  "decomposition": {
+   "strings": 3087,
+   "changed_by_nfc": 1909,
+   "ember_eq_hf": 3087,
+   "ember_eq_python": 3085,
+   "differences_from_hf": []
+  },
+  "marks": {
+   "strings": 304260,
+   "changed_by_nfc": 131746,
+   "ember_eq_hf": 304260,
+   "ember_eq_python": 281881,
+   "differences_from_hf": []
+  },
+  "hangul": {
+   "strings": 22743,
+   "changed_by_nfc": 22344,
+   "ember_eq_hf": 22743,
+   "ember_eq_python": 22743,
+   "differences_from_hf": []
+  },
+  "random": {
+   "strings": 200000,
+   "changed_by_nfc": 124972,
+   "ember_eq_hf": 200000,
+   "ember_eq_python": 198215,
+   "differences_from_hf": []
+  }
+ },
+ "nfc_check_stderr": "unicode_nfc.h: Unicode 15.0.0, filtered to HF's NFC",
+ "pass": true
+}
