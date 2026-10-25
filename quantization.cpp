@@ -220,6 +220,39 @@ void dequantize_q4_k_m(const block_q4_K* qblock, float* output,
   }
 }
 
+// ggml-quants.c dequantize_row_q5_K (and gguf-py's Q5_K.dequantize_blocks): Q4_K's scales and
+// minimums, with the fifth bit of element l of sub-block s at bit s of qh[l]. The same float
+// operations in the same order (d * sc, then (d * sc) * q - dmin * m), so the values are equal.
+void dequantize_q5_k(const block_q5_K* qblock, float* output) {
+  const float d = fp16_to_fp32(qblock->d, false);
+  const float dmin = fp16_to_fp32(qblock->dmin, false);
+  const uint8_t* ql = qblock->qs;
+  const uint8_t* qh = qblock->qh;
+  float* y = output;
+  uint8_t u1 = 1, u2 = 2;
+  for (int j = 0, is = 0; j < GGML_QK_K; j += 64, is += 2) {
+    uint8_t sc, m;
+    get_scale_min_k4(is + 0, qblock->scales, &sc, &m);
+    const float d1 = d * static_cast<float>(sc), m1 = dmin * static_cast<float>(m);
+    get_scale_min_k4(is + 1, qblock->scales, &sc, &m);
+    const float d2 = d * static_cast<float>(sc), m2 = dmin * static_cast<float>(m);
+    for (int l = 0; l < 32; ++l) *y++ = d1 * static_cast<float>((ql[l] & 0x0F) + (qh[l] & u1 ? 16 : 0)) - m1;
+    for (int l = 0; l < 32; ++l) *y++ = d2 * static_cast<float>((ql[l] >> 4) + (qh[l] & u2 ? 16 : 0)) - m2;
+    ql += 32;
+    u1 <<= 2;
+    u2 <<= 2;
+  }
+}
+
+void dequantize_vector_q5k_to_f32(const std::vector<block_q5_K>& q_weights, std::vector<float>& f32_weights,
+                                  size_t total_num_elements) {
+  if (total_num_elements % GGML_QK_K != 0 || q_weights.size() != total_num_elements / GGML_QK_K)
+    throw std::runtime_error("dequantize_vector_q5k_to_f32: " + std::to_string(q_weights.size()) +
+                             " Q5_K blocks for " + std::to_string(total_num_elements) + " elements");
+  f32_weights.resize(total_num_elements);
+  for (size_t i = 0; i < q_weights.size(); ++i) dequantize_q5_k(&q_weights[i], f32_weights.data() + i * GGML_QK_K);
+}
+
 void dequantize_q6_k(const block_q6_K* qblock, float* output,
                      int num_weights_in_block, bool log_this_block) {
   if (num_weights_in_block != GGML_QK_K) {
@@ -673,7 +706,7 @@ size_t ggml_type_size(GGMLType type) {
     case GGMLType::GGML_TYPE_Q8_1:
       return 40;
     case GGMLType::GGML_TYPE_Q5_K:
-      return 116;
+      return sizeof(block_q5_K);  // 176 (ggml's block_q5_K)
     case GGMLType::GGML_TYPE_Q8_K:
       return 290;
     case GGMLType::GGML_TYPE_I16:
@@ -696,6 +729,7 @@ size_t ggml_type_block_size(GGMLType type) {
     case GGMLType::GGML_TYPE_Q2_K:
     case GGMLType::GGML_TYPE_Q3_K:
     case GGMLType::GGML_TYPE_Q4_K:
+    case GGMLType::GGML_TYPE_Q5_K:
     case GGMLType::GGML_TYPE_Q6_K:
 
       return GGML_QK_K;

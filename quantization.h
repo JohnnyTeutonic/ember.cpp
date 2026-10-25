@@ -29,6 +29,7 @@
 struct block_q2_K;
 struct block_q3_K;
 struct block_q4_K;
+struct block_q5_K;
 struct block_q6_K;
 
 /**
@@ -61,6 +62,22 @@ struct block_q4_K {
     uint8_t qs[GGML_QK_K / 2]; /**< Quantized values */
 };
 static_assert(sizeof(block_q4_K) == 2 + 2 + 12 + 128, "Size mismatch for standard block_q4_K");
+
+/**
+ * @brief 5-bit K-quantized block structure (ggml's block_q5_K)
+ *
+ * Q4_K's super-block scale, minimum and packed 6-bit sub-block scales, plus
+ * one high bit per weight: element l of 32-element sub-block s is
+ * d * sc[s] * ((qs[32 * (s / 2) + l] >> 4 * (s % 2) & 15) | ((qh[l] >> s & 1) << 4)) - dmin * m[s].
+ */
+struct block_q5_K {
+    uint16_t d;                 /**< Super-block scale (f16) */
+    uint16_t dmin;              /**< Super-block minimum scale (f16) */
+    uint8_t scales[12];         /**< Sub-block scales and minimums, 6 bits each */
+    uint8_t qh[GGML_QK_K / 8];  /**< High (fifth) bit of each weight */
+    uint8_t qs[GGML_QK_K / 2];  /**< Low four bits of each weight */
+};
+static_assert(sizeof(block_q5_K) == 2 + 2 + 12 + 32 + 128, "Size mismatch for block_q5_K");
 
 /**
  * @brief 6-bit K-quantized block structure
@@ -166,6 +183,20 @@ void dequantize_q2_k(const void* q_data, float* f_data,
  */
 void dequantize_q4_k_m(const block_q4_K* qblock, float* RESTRICT output_f32,
                        int num_elements, bool log_this_block = false);
+
+/**
+ * @brief Dequantizes a Q5_K block (256 weights) to float32, as ggml's dequantize_row_q5_K
+ * @param qblock Pointer to Q5_K block
+ * @param output_f32 Output float array (GGML_QK_K values)
+ */
+void dequantize_q5_k(const block_q5_K* qblock, float* RESTRICT output_f32);
+
+/**
+ * @brief Dequantizes a vector of Q5_K blocks to float32 (total_num_elements a multiple of GGML_QK_K)
+ */
+void dequantize_vector_q5k_to_f32(const std::vector<block_q5_K>& q_weights,
+                                  std::vector<float>& f32_weights,
+                                  size_t total_num_elements);
 
 /**
  * @brief Dequantizes a Q6_K quantized block to float32

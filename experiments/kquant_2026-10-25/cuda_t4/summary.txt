@@ -1,0 +1,12 @@
+cuda_q4_k_m vs cpu_q4_k_m: max |d| 8.46e-06, mean 8.82e-07, max/range 3.03e-07, bit-identical 47407/655360, top-1 40/40 (ref smallest margin 0.0207)
+cuda_q4_k_s vs cpu_q4_k_s: max |d| 6.68e-06, mean 8.84e-07, max/range 2.37e-07, bit-identical 46880/655360, top-1 40/40 (ref smallest margin 0.0009)
+cuda_q4_k_m vs cuda_q4_k_m_ref: max |d| 0, mean 0, max/range 0.00e+00, bit-identical 655360/655360, top-1 40/40 (ref smallest margin 0.0207)
+cuda_q4_k_s vs cuda_q4_k_s_ref: max |d| 0, mean 0, max/range 0.00e+00, bit-identical 655360/655360, top-1 40/40 (ref smallest margin 0.0009)
+cuda_ir_q4_k_m vs cpu_q4_k_m: max |d| 6.68e-06, mean 8.66e-07, max/range 2.39e-07, bit-identical 48323/655360, top-1 40/40 (ref smallest margin 0.0207)
+cuda_ir_q4_k_s vs cpu_q4_k_s: max |d| 7.63e-06, mean 8.67e-07, max/range 2.70e-07, bit-identical 48216/655360, top-1 40/40 (ref smallest margin 0.0009)
+cuda_ir_q4_k_m vs cuda_ir_q4_k_m_ref: max |d| 0, mean 0, max/range 0.00e+00, bit-identical 655360/655360, top-1 40/40 (ref smallest margin 0.0207)
+cuda_ir_q4_k_s vs cuda_ir_q4_k_s_ref: max |d| 0, mean 0, max/range 0.00e+00, bit-identical 655360/655360, top-1 40/40 (ref smallest margin 0.0009)
+cuda_q4_k_m {"vs_mtstudio_f32": {"reply_identical": 14, "token_count_identical": 15}, "prompt_tokens_equal_paperkiln_tokeniser": 40, "vs_cuda_q4_k_m_ref": {"reply_identical": 40, "token_count_identical": 40}}
+cuda_q4_k_m_ref {"vs_mtstudio_f32": {"reply_identical": 14, "token_count_identical": 15}, "prompt_tokens_equal_paperkiln_tokeniser": 40}
+cuda_q4_k_s {"vs_mtstudio_f32": {"reply_identical": 14, "token_count_identical": 17}, "prompt_tokens_equal_paperkiln_tokeniser": 40, "vs_cuda_q4_k_s_ref": {"reply_identical": 40, "token_count_identical": 40}}
+cuda_q4_k_s_ref {"vs_mtstudio_f32": {"reply_identical": 14, "token_count_identical": 17}, "prompt_tokens_equal_paperkiln_tokeniser": 40}

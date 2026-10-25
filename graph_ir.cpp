@@ -1373,13 +1373,16 @@ void Interpreter::bind_tensor(const std::string& name, const GGUFData& gguf, boo
   const uint8_t* src = base + info.offset;
   std::vector<int64_t> shape(info.shape.begin(), info.shape.end());
   const GGMLType t = info.type;
+  const bool k_quant = t == GGMLType::GGML_TYPE_Q4_K || t == GGMLType::GGML_TYPE_Q5_K || t == GGMLType::GGML_TYPE_Q6_K;
   const bool block_type = t == GGMLType::GGML_TYPE_Q8_0 || t == GGMLType::GGML_TYPE_Q4_0 ||
-                          t == GGMLType::GGML_TYPE_Q4_1 || t == GGMLType::GGML_TYPE_Q5_0 || t == GGMLType::GGML_TYPE_Q5_1;
+                          t == GGMLType::GGML_TYPE_Q4_1 || t == GGMLType::GGML_TYPE_Q5_0 || t == GGMLType::GGML_TYPE_Q5_1 ||
+                          k_quant;
+  const int64_t width = k_quant ? GGML_QK_K : 32;  // elements per block
   const bool half = t == GGMLType::GGML_TYPE_F16 || t == GGMLType::GGML_TYPE_BF16;
-  if (keep_quantised && !dequant_all_ && !shape.empty() && (half || (block_type && shape[0] % 32 == 0))) {
+  if (keep_quantised && !dequant_all_ && !shape.empty() && (half || (block_type && shape[0] % width == 0))) {
     // Rows (ne0 elements) start on block boundaries, so a row is a whole
     // number of blocks and dequantises on its own.
-    const size_t bytes = half ? info.num_elements * 2 : info.num_elements / 32 * ggml_type_size(t);
+    const size_t bytes = half ? info.num_elements * 2 : info.num_elements / width * ggml_type_size(t);
     if (info.size_in_bytes < bytes)
       throw std::runtime_error("IR weight '" + name + "' is shorter than its element count implies");
     Weight w;

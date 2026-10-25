@@ -1,0 +1,391 @@
+{
+ "logits": {
+  "q4_k_m vs f32": {
+   "max_abs": 1.275455042719841,
+   "mean_abs": 0.1733222662634089,
+   "max_over_range": 0.046052552997856204,
+   "bit_identical": 1,
+   "values": 655360,
+   "top1_agree": 36,
+   "ref_smallest_top1_margin": 0.0034351348876953125
+  },
+  "q4_k_s vs f32": {
+   "max_abs": 1.5137762278318405,
+   "mean_abs": 0.18508065257037148,
+   "max_over_range": 0.05465755955651781,
+   "bit_identical": 0,
+   "values": 655360,
+   "top1_agree": 36,
+   "ref_smallest_top1_margin": 0.0034351348876953125
+  },
+  "q4_k_m vs q4_k_m_ref": {
+   "max_abs": 0.0,
+   "mean_abs": 0.0,
+   "max_over_range": 0.0,
+   "bit_identical": 655360,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.020682334899902344
+  },
+  "q4_k_s vs q4_k_s_ref": {
+   "max_abs": 0.0,
+   "mean_abs": 0.0,
+   "max_over_range": 0.0,
+   "bit_identical": 655360,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.0009469985961914062
+  },
+  "q4_k_m_ref vs f32": {
+   "max_abs": 1.275455042719841,
+   "mean_abs": 0.1733222662634089,
+   "max_over_range": 0.046052552997856204,
+   "bit_identical": 1,
+   "values": 655360,
+   "top1_agree": 36,
+   "ref_smallest_top1_margin": 0.0034351348876953125
+  },
+  "q4_k_s_ref vs f32": {
+   "max_abs": 1.5137762278318405,
+   "mean_abs": 0.18508065257037148,
+   "max_over_range": 0.05465755955651781,
+   "bit_identical": 0,
+   "values": 655360,
+   "top1_agree": 36,
+   "ref_smallest_top1_margin": 0.0034351348876953125
+  },
+  "ir_q4_k_m vs ir_q4_k_m_ref": {
+   "max_abs": 0.0,
+   "mean_abs": 0.0,
+   "max_over_range": 0.0,
+   "bit_identical": 655360,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.020684242248535156
+  },
+  "ir_q4_k_s vs ir_q4_k_s_ref": {
+   "max_abs": 0.0,
+   "mean_abs": 0.0,
+   "max_over_range": 0.0,
+   "bit_identical": 655360,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.000946044921875
+  },
+  "ir_q4_k_m vs q4_k_m": {
+   "max_abs": 4.76837158203125e-06,
+   "mean_abs": 5.376980950044797e-07,
+   "max_over_range": 1.704599808034788e-07,
+   "bit_identical": 77318,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.020682334899902344
+  },
+  "ir_q4_k_s vs q4_k_s": {
+   "max_abs": 4.76837158203125e-06,
+   "mean_abs": 5.184131808791403e-07,
+   "max_over_range": 1.689467266368978e-07,
+   "bit_identical": 81270,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.0009469985961914062
+  },
+  "ir_f32 vs f32": {
+   "max_abs": 4.76837158203125e-06,
+   "mean_abs": 5.083845197227654e-07,
+   "max_over_range": 1.72170462807289e-07,
+   "bit_identical": 81516,
+   "values": 655360,
+   "top1_agree": 40,
+   "ref_smallest_top1_margin": 0.0034351348876953125
+  }
+ },
+ "replies": {
+  "f32": {
+   "vs_mtstudio_f32": {
+    "reply_identical": 40,
+    "token_count_identical": 40,
+    "differs_at": []
+   },
+   "prompt_tokens_equal_paperkiln_tokeniser": 40
+  },
+  "q4_k_m": {
+   "vs_mtstudio_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 15,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     19,
+     20,
+     21,
+     22,
+     23,
+     27,
+     28,
+     30,
+     31,
+     32,
+     34,
+     36,
+     38
+    ]
+   },
+   "prompt_tokens_equal_paperkiln_tokeniser": 40,
+   "vs_ember_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 15,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     19,
+     20,
+     21,
+     22,
+     23,
+     27,
+     28,
+     30,
+     31,
+     32,
+     34,
+     36,
+     38
+    ]
+   },
+   "vs_q4_k_m_ref": {
+    "reply_identical": 40,
+    "token_count_identical": 40,
+    "differs_at": []
+   }
+  },
+  "q4_k_m_ref": {
+   "vs_mtstudio_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 15,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     19,
+     20,
+     21,
+     22,
+     23,
+     27,
+     28,
+     30,
+     31,
+     32,
+     34,
+     36,
+     38
+    ]
+   },
+   "prompt_tokens_equal_paperkiln_tokeniser": 40,
+   "vs_ember_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 15,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     19,
+     20,
+     21,
+     22,
+     23,
+     27,
+     28,
+     30,
+     31,
+     32,
+     34,
+     36,
+     38
+    ]
+   }
+  },
+  "q4_k_s": {
+   "vs_mtstudio_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 17,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     20,
+     21,
+     22,
+     23,
+     28,
+     30,
+     31,
+     32,
+     34,
+     38,
+     39
+    ]
+   },
+   "prompt_tokens_equal_paperkiln_tokeniser": 40,
+   "vs_ember_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 17,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     20,
+     21,
+     22,
+     23,
+     28,
+     30,
+     31,
+     32,
+     34,
+     38,
+     39
+    ]
+   },
+   "vs_q4_k_s_ref": {
+    "reply_identical": 40,
+    "token_count_identical": 40,
+    "differs_at": []
+   }
+  },
+  "q4_k_s_ref": {
+   "vs_mtstudio_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 17,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     20,
+     21,
+     22,
+     23,
+     28,
+     30,
+     31,
+     32,
+     34,
+     38,
+     39
+    ]
+   },
+   "prompt_tokens_equal_paperkiln_tokeniser": 40,
+   "vs_ember_f32": {
+    "reply_identical": 14,
+    "token_count_identical": 17,
+    "differs_at": [
+     0,
+     3,
+     4,
+     5,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     20,
+     21,
+     22,
+     23,
+     28,
+     30,
+     31,
+     32,
+     34,
+     38,
+     39
+    ]
+   }
+  }
+ }
+}

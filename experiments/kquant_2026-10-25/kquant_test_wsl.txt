@@ -1,0 +1,24 @@
+== kquant_blocks.py (gguf-py: llama.cpp b6000 4762ad73) + kquant_test blocks
+Q4_K: 4096 blocks, values in [-6.218e+04, 8.94e+05]
+Q5_K: 4096 blocks, values in [-6.089e+04, 1.931e+06]
+Q6_K: 4096 blocks, values in [-3.996e+06, 4.026e+06]
+gguf-py: /home/jonat/llamacpp_b6000/gguf-py/gguf/__init__.py
+Q4_K blocks   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q4_K span     4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q4_K tensor   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q5_K blocks   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q5_K span     4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q5_K tensor   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q6_K blocks   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q6_K span     4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+Q6_K tensor   4096 blocks,  1048576 values: 0 differing bits (max |d| 0)
+PASS: every value bit-identical to gguf-py
+== negative control: one reference bit flipped per type (must FAIL)
+flipped one bit in each of the three records
+FAIL
+== kquant_test gguf pk_base_v1_q4_k_m.gguf vs its gguf-py F32 (471ce0159682b0e0...)
+86 quantised tensors, 220200960 values compared: 0 differing bits
+PASS: every tensor bit-identical to gguf-py's dequantised F32
+== kquant_test gguf pk_base_v1_q4_k_s.gguf vs its gguf-py F32 (f7e7bda683a93a87...)
+86 quantised tensors, 220200960 values compared: 0 differing bits
+PASS: every tensor bit-identical to gguf-py's dequantised F32

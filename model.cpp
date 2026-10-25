@@ -63,18 +63,7 @@ void TinyLlamaModel::initialize_weights(const SafeTensorsLoader* loader,
 
     // Only dequantize embed_tokens and final_norm immediately (small and always needed)
     if (this->embed_tokens_f32.empty()) {
-      size_t total_elements_embed = static_cast<size_t>(config_.vocab_size) * config_.hidden_size;
-      if (!this->embed_tokens_q6k.empty()) {
-        dequantize_vector_q6k_to_f32(this->embed_tokens_q6k, this->embed_tokens_f32, total_elements_embed, 1);
-      } else if (!this->embed_tokens_q4k.empty()) {
-        dequantize_vector_q4k_to_f32(this->embed_tokens_q4k, this->embed_tokens_f32, total_elements_embed, 1);
-      } else if (!this->embed_tokens_q8k.empty()) {
-        dequantize_q8_k(this->embed_tokens_q8k, this->embed_tokens_f32, total_elements_embed, true);
-      } else if (!this->embed_tokens_q8_0.empty()) {
-        dequantize_vector_q8_0_to_f32(this->embed_tokens_q8_0, this->embed_tokens_f32, total_elements_embed, 1);
-      } else if (!this->embed_tokens.empty()) { 
-        this->embed_tokens_f32 = bf16vec_to_float_vec(this->embed_tokens);
-      }
+      ensure_embed_tokens_dequantized();  // every quantised table type, Q5_K included
       if (!this->embed_tokens_f32.empty()) {
         Logger::info("[INIT_WEIGHTS_GGUF_DEQUANT] embed_tokens_f32 populated. Size: " + std::to_string(this->embed_tokens_f32.size()));
       }
@@ -1356,7 +1345,9 @@ std::vector<float> TinyLlamaModel::forward_cpu_logits_batch(
     rmsnorm_batch_cpu(final_batch_activations, w_final_norm_vec, final_batch_norm_out,
                       num_tokens_in_batch, hs, eps);
     
-    // 2. Batched LM Head multiplication
+    // 2. Batched LM Head multiplication: from the f32 copy, as forward() does (a Q5_K head has no
+    // kernel of its own, and every quantised head then gives the decode step's values).
+    ensure_lm_head_dequantized();
     std::vector<float> batch_logits_out(num_tokens_in_batch * vs);
 
     if (!lm_head_f32.empty()) {
