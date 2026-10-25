@@ -17,6 +17,7 @@
 //                            set by build.sh). Returns the cap now set.
 //   ember_load(path)        load a GGUF from the in-memory filesystem; 1 in chat mode
 //   ember_ctx()             the loaded model's context (after the cap); 0 with no model
+//   ember_ir_doc()          the IR document the interpreter runs ("" on the tuned llama path)
 //   ember_chat(json)        {"user_input", "system", "history": [{"user","assistant"}]
 //                            or [{"role","content"}] (a leading {"role": "system"} entry
 //                            instead of "system"), "thinking", "temperature", "top_k",
@@ -116,6 +117,13 @@ extern "C" {
 EMSCRIPTEN_KEEPALIVE int ember_set_ctx(int n) {
     g_ctx_cap = n > 0 ? n : 0;
     return g_ctx_cap;
+}
+
+// The IR document the session's interpreter runs, or "" when the tuned llama path serves the file
+// (the page's WebGPU path then runs llama_webgpu.js; otherwise ir_webgpu.js runs this document).
+EMSCRIPTEN_KEEPALIVE const char* ember_ir_doc() {
+    g_out = g_session ? g_session->ir_document() : std::string();
+    return g_out.c_str();
 }
 
 EMSCRIPTEN_KEEPALIVE int ember_ctx() { return g_session ? g_session->get_config().max_position_embeddings : 0; }

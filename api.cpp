@@ -537,6 +537,7 @@ TinyLlamaSession::TinyLlamaSession(const std::string& model_path_arg,
                  ember_ir::device_supported(ir);
 #endif
         ir_ = std::make_unique<ember_ir::Interpreter>(ir, *gd, ir_gpu);
+        ir_doc_ = ir;
         Logger::warning("Running the model through the paperkiln IR interpreter (" +
                         std::string(ir_->on_gpu() ? "CUDA" : "CPU") + "; family_hint '" + family +
                         "'). The llama path's weights stay loaded but unused.");
