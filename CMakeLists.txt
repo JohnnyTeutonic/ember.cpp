@@ -455,6 +455,12 @@ if(NOT SKBUILD)
         # The interpreter on the CUDA device against the CPU (tools/ir_device_gate.cpp).
         add_executable(ir_device_gate tools/ir_device_gate.cpp)
         target_link_libraries(ir_device_gate PRIVATE tinyllama_core)
+        # Given sequences (state ids, eviction, rewinds) on the device against the CPU (tools/state_device_gate.cpp).
+        add_executable(state_device_gate tools/state_device_gate.cpp)
+        target_link_libraries(state_device_gate PRIVATE tinyllama_core)
+        # ir_device_gate's device half to a file, for comparing two builds bit for bit (tools/ir_device_dump.cpp).
+        add_executable(ir_device_dump tools/ir_device_dump.cpp)
+        target_link_libraries(ir_device_dump PRIVATE tinyllama_core)
     endif()
 
     add_executable(tinyllama_server

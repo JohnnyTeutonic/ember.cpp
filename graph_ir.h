@@ -369,6 +369,8 @@ class Interpreter {
     float eps = 1e-5f, scale = 0.0f, shift = 0.0f;       // eps: also linear_attention's den_floor
     bool flag = false;  // gelu: tanh form; moe_ffn: renorm gates
     std::vector<int> sizes;  // split
+    const float* state_w = nullptr;  // embedding: the state rows (state_weight), ids vocab .. vocab + k - 1
+    bool ts = false;                 // attention: mask turn_state
   };
   void init_device();
   void compile_device();
@@ -411,6 +413,14 @@ class Interpreter {
   int dtokens_cap_ = 0;
   std::vector<int> htokens_;  // this call's tokens (range checks on the host)
   DBuf dmoe_;  // moe_ffn scratch
+  // Per-turn state tokens on the device: the host bookkeeping is the CPU path's (ts_begin,
+  // ts_evict_below, kv_pos_); dts_code_ [max_len_] holds each kv row's code 2 s + c for the
+  // turn_state kernel, uploaded before every call (ts_upload_codes), and eviction compacts the
+  // device caches in place through the row list dkv_idx_ [max_len_]. A call's first kv row is
+  // kv_row0_ (dstep_[2] in the captured decode step).
+  void ts_upload_codes(int start_pos, int T);
+  int* dts_code_ = nullptr;
+  int* dkv_idx_ = nullptr;
 
   // Device recurrent state: drec_ [n_layers][rec_floats_] (fixed: a restore
   // copies into it, so a captured graph keeps reading the live state);
@@ -425,7 +435,7 @@ class Interpreter {
 
   // CUDA graph of the T = 1 step (EMBER_IR_GRAPH=0 disables): captured once,
   // replayed with the token and position in device memory (dstep_ = [token,
-  // pos]; dpos_ points at the position while capturing). Any buffer growth
+  // pos, kv row]; dpos_ points at the position while capturing). Any buffer growth
   // (alloc_epoch_) invalidates it; it is captured again at the next T = 1.
   cudaGraphExec_t graph_exec_ = nullptr;
   int* dstep_ = nullptr;
@@ -493,9 +503,9 @@ bool has_windowed_attention(const std::string& ir_json);
 bool has_recurrent_state(const std::string& ir_json);
 
 // True when the CUDA path has a kernel for every op of the IR (recurrent
-// state included) within its limits (depth_attend sources, ssm_scan n);
-// otherwise the interpreter must run on the CPU. Per-turn state tokens
-// (state_weight, mask "turn_state", evict) have no device kernel yet.
+// state and per-turn state tokens included: state_weight, mask "turn_state",
+// evict) within its limits (depth_attend sources, ssm_scan n); otherwise the
+// interpreter must run on the CPU.
 bool device_supported(const std::string& ir_json);
 
 // True when the IR uses per-turn state tokens: an embedding with

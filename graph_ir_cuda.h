@@ -59,6 +59,23 @@ void ir_window_attention_cuda(const float* q, const float* K, const float* V, fl
                               int hq, int hkv, int hd, float scale, int window, int sinks, cudaStream_t stream,
                               const int* dpos = nullptr);
 
+// Per-turn state tokens (IR_SPEC 6.8; CPU forms graph_ir.cpp ts_begin / ts_evict_below and
+// cpu_attention.cpp attention_rows_batch_cpu).
+// Attention mask turn_state for q [T][hq*hd] over a compact cache K, V [row][hkv][hd]: codes[r] =
+// 2 s + c for the position row r holds (s its segment, c = 1 at a state position), the call's token t
+// at row row0 + t (from *drow when given); row j <= row0 + t is visible iff s(j) == s(t) or c(j) == 1.
+// Rows ascending, an online softmax over chunks of 1024 rows, masked rows never read: ROUNDING against
+// the CPU's sequential sums. head_dim <= 1024. Any T, decode included.
+void ir_turn_state_attention_cuda(const float* q, const float* K, const float* V, float* out, int T, int row0,
+                                  const int* codes, int hq, int hkv, int hd, float scale, cudaStream_t stream,
+                                  const int* drow = nullptr);
+// Eviction's compaction: rows w0 .. n-1 of K and V [row][row floats] take rows idx[w] (idx ascending,
+// idx[w] >= w), in place. EXACT (copies).
+void ir_kv_compact_cuda(float* K, float* V, const int* idx, int w0, int n, int row, cudaStream_t stream);
+// The extended embedding: out[t] = table[id] for id < vocab, state[id - vocab] otherwise. EXACT.
+void ir_embedding_state_cuda(const float* table, const float* state, int vocab, const int* tokens, float* out, int T,
+                             int d, cudaStream_t stream);
+
 // The gated and attention-residual ops (CPU forms graph_ir_ops.h, same order
 // of operations; every product and sum rounded on its own).
 // relu: max(0, x) as std::max(0.0f, x) (-0 and NaN give +0). EXACT.
