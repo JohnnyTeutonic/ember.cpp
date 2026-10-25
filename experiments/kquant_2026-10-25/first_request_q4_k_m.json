@@ -1,0 +1,21 @@
+{
+ "gguf": "/mnt/c/ml_artifacts/next_base/base/pk_base_v1_q4_k_m.gguf",
+ "prompts": {
+  "0": {
+   "after_first_eq_before_later_bits": "16384/16384",
+   "before_first_eq_before_later_bits": "16384/16384",
+   "max_abs_before_first_vs_later": 0.0,
+   "reply_before_first": "Yes, I do. I'm afraid of the dark.",
+   "reply_before_later": "Yes, I do. I'm afraid of the dark.",
+   "reply_after_first": "Yes, I do. I'm afraid of the dark."
+  },
+  "9": {
+   "after_first_eq_before_later_bits": "16384/16384",
+   "before_first_eq_before_later_bits": "16384/16384",
+   "max_abs_before_first_vs_later": 0.0,
+   "reply_before_first": "No, I don't think so. I think it's just a natural reaction to the smell of smelly cheese.",
+   "reply_before_later": "No, I don't think so. I think it's just a natural reaction to the smell of smelly cheese.",
+   "reply_after_first": "No, I don't think so. I think it's just a natural reaction to the smell of smelly cheese."
+  }
+ }
+}

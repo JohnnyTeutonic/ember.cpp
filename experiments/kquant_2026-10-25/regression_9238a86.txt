@@ -1,0 +1,32 @@
+CPU and WASM regression of ember 9238a86 (this change) on WSL, 25 Oct 2026: chat_template_2026-10-24's
+rerun_all.sh gates, run as ../cuda_state_2026-10-25/cpu_regress.sh and wasm_regress.sh do (2 cores under the
+budget; receipts written to ~/kq2/out and compared with the committed ones as `git show HEAD:<path>` gives
+them, so the working tree's receipts are untouched). Build ~/kq2/new from git archive 9238a86; regress.py
+bits' BASE rebuilt from git archive 69d7ca2 (ir_logits).
+
+recursion_gate rc=0: recursion_gate_cpu.json byte-identical
+mor_gate rc=0: mor_gate_cpu.json byte-identical
+mor_refusals rc=0: mor_refusals.json byte-identical
+attnres_gate rc=0: attnres_gate_cpu.json byte-identical
+state4_gate rc=0: state4_gate_cpu.json byte-identical
+regress_parity rc=0: regress_parity.json byte-identical
+  the ten parity receipts replayed from scratch, each byte_identical true, pk_base_v1 f32 and Q8_0 included
+g5_thirdparty rc=0: g5_thirdparty.json byte-identical
+wasm_frozen40.json equal to the committed receipt (ms_per_reply aside): True   (WASM reply == mtstudio 40/40)
+wasm_system_set_v1.json equal to the committed receipt (ms_per_reply aside): True   (60/60)
+adapter self-test rc=0: 119/119 checks pass, 2374 requests (adapter_selftest_cpu.json rewritten in place, unchanged)
+
+state_tokens_gate rc=0: state_tokens_gate_cpu.json equal to the committed receipt with its numpy-reference
+  fields removed (vs_numpy_rel, causal_vs_numpy_rel, top1_vs_numpy: paperkiln's tools/ir_numpy.py side), as
+  ../cuda_state_2026-10-25/receipts/cpu_regress.txt found for aadeed2.
+regress_bits rc=0: 15 of 16 cases bit-equal to ember 69d7ca2; gpt2_tiny_recursion_0101 rc [0, -6] (abort):
+  its hand-made IR is refused at load since IR_SPEC validation (e358153, f4516ff), by aa50a61's build as well
+  (same receipt). Neither is a change of 9238a86.
+
+The CPU prefill LM head (forward_cpu_logits_batch now always takes the f32 copy): first_request.py,
+first-token logits of prompts 0 and 9, the parent bc94c04 (with only the nine-digit dump) as a server's first
+request and after a warm-up request, and 9238a86 as the first request: bit-identical, 16384/16384 each, on
+pk_base_v1_q8_0_all (Q8_0 head) and pk_base_v1_q4_k_m (Q6_K head); replies identical
+(first_request_q8_0.json, first_request_q4_k_m.json). The quantised heads' own kernels accumulate in double,
+as the f32 kernel does, so on these files the old first request already gave the f32 copy's floats.
+No receipt changed, so none was refreshed.

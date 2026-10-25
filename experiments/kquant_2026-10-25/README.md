@@ -30,8 +30,11 @@ exits): ember had no Q5_K at all, and `ggml_type_size` gave it 116 bytes, not 17
   the check looked only at `q_proj`, so a layer mixing sources could have lost an f32-only weight. It is now
   per weight (and knows Q5_K).
 - **The CPU's batched LM head** (the prefill's last-token logits) now uses the f32 copy, as the decode step
-  does. Before, a quantised head took its own kernel on the first request (the f32 copy did not exist yet)
-  and the f32 copy on later ones, so the first request's first-token logits depended on request history.
+  does; a Q5_K head has no kernel of its own. Before, a quantised head took its own kernel on a server's
+  first request (the f32 copy did not exist yet) and the f32 copy on later ones. Those kernels accumulate in
+  double as the f32 one does, and on pk_base_v1's Q8_0 and Q4_K_M files (Q8_0 and Q6_K heads) the old first
+  request, a later request and 9238a86 give bit-identical first-token logits (`first_request.py`); no
+  committed receipt moved (`regression_9238a86.txt`).
 - `TINYLLAMA_LOGITS_DUMP` writes nine significant digits, so a dump reads back as the same float32 and two
   dumps compare bit for bit (it wrote six).
 - New: `tools/kquant_test.cpp` and `tools/kquant_blocks.py` (below).
@@ -127,7 +130,9 @@ files themselves.
 
 - `gate.py` (probe / replies / summary), `run_cpu.sh` (the CPU half, under `scripts/cpu_budget.py`, 2 cores),
   `summary.json` (every CPU comparison), `*_replies.jsonl` (CPU replies), `cuda_vs_cpu.py` / `.json`,
-  `mts_spot.py` / `.jsonl`, `kquant_test_wsl.txt` (the kernel test and its negative control; "values
+  `mts_spot.py` / `.jsonl`, `regression_9238a86.txt` (rerun_all.sh's gates, the parity replays, WASM and
+  the IR adapter self-test 119/119 at 9238a86: no receipt moved by this change), `first_request.py` /
+  `first_request_*.json`, `kquant_test_wsl.txt` (the kernel test and its negative control; "values
   compared" counts each K-quant tensor twice, once per route).
 - `stage.sh`, `drive.sh`, `vm.sh` (the Colab session, path C of microtorch/AGENTS.md), `cuda_t4/` (its
   summary, replies, kernel tests, references' sha256, hardware, vm.log).
