@@ -61,13 +61,13 @@ node) and runs on the interpreter:
 
 | Family (official checkpoint gated) | What the graph has | CPU | CUDA | WASM |
 |---|---|:---:|:---:|:---:|
-| Qwen2.5 (0.5B-Instruct, f16) | q/k/v biases, NEOX RoPE, tied head, ChatML | ✅ | ✅ | not gated |
-| Qwen3 (0.6B, Q8_0 read in place) | per-head q/k RMSNorm | ✅ | ✅ | not gated |
-| Gemma 3 (270m-it) | sliding window on 5 of every 6 layers, per-layer RoPE base, sandwich norms, GeGLU | ✅ | ✅ | not gated |
-| GPT-NeoX / Pythia (160m) | partial NEOX rotary, parallel residual, exact GELU | ✅ | ✅ | not gated |
-| Mamba-1 (130m) | causal depthwise convolution and selective scan, recurrent state | ✅ | ✅ | not gated |
-| Mistral (sliding window) | the window as an attribute on the llama graph | ✅ | ✅ | not gated |
-| GPT-2 (124M) | fused qkv, LayerNorm, learned positions | ✅ | ✅ | not gated |
+| Qwen2.5 (0.5B-Instruct, f16) | q/k/v biases, NEOX RoPE, tied head, ChatML | ✅ | ✅ | ✅ |
+| Qwen3 (0.6B, Q8_0 read in place) | per-head q/k RMSNorm | ✅ | ✅ | ✅ |
+| Gemma 3 (270m-it) | sliding window on 5 of every 6 layers, per-layer RoPE base, sandwich norms, GeGLU | ✅ | ✅ | ✅ |
+| GPT-NeoX / Pythia (160m) | partial NEOX rotary, parallel residual, exact GELU | ✅ | ✅ | ✅ |
+| Mamba-1 (130m) | causal depthwise convolution and selective scan, recurrent state | ✅ | ✅ | ✅ |
+| Mistral (sliding window) | the window as an attribute on the llama graph | ✅ | ✅ | ✅ |
+| GPT-2 (124M) | fused qkv, LayerNorm, learned positions | ✅ | ✅ | ✅ |
 
 How they are checked:
 - **The graph.** The IR ember builds equals `gguf_ir.py`'s field by field, on every family.
@@ -90,10 +90,17 @@ How they are checked:
   float64 evaluation of the same graph, because float32 conditioning grows with depth: on
   Mamba-130m and GPT-2 124M ember is closer to float64 than numpy's float32 is.
 - **Scope.** The CPU column was checked on official checkpoints for every family except Mistral,
-  which was checked on a tiny random model. CUDA for Mistral and GPT-2 was checked on tiny random
-  models.
-- **WASM.** WebAssembly compiles the same CPU interpreter, but no third-party family has been
-  gated in the browser yet.
+  which was checked on a tiny random model. CUDA and WASM for Mistral and GPT-2 were checked on
+  tiny random models.
+- **WASM.** The interpreter compiled to WebAssembly (the page's sources and flags, in node) against
+  ember's CPU build, on the CUDA leg's prompts: greedy replies identical and the top-1 agreeing at
+  every position, on all 40 prompts per family (960/960), and on 10 for Qwen2.5 and Qwen3 (240/240;
+  a 0.5B model takes 1-3 minutes per prompt in WebAssembly). The official checkpoints need the 4 GB
+  heap (`EMBER_WASM_MAX_MEMORY=4gb`; Pythia and Mamba fail to load in the 1 GB default). Logits
+  agree within 2.0e-5 of the range, and Pythia's within 3.6e-4, the level its CUDA leg shows (up to
+  3.9e-4). The page itself sizes the KV state to the context each file declares, which for
+  Qwen3-0.6B is 9.4 GB, so serving one in the browser needs a context cap first
+  ([`experiments/wasm_families_2026-10-25/`](experiments/wasm_families_2026-10-25/)).
 
 **Highlights**
 
@@ -273,8 +280,6 @@ In progress:
 - **The research programme's models.** These are training on Colab and RunPod: the 20M and 60M
   depth sweeps, recursion and Mixture-of-Recursions arms, and then a 12-turn model.
 - **A CUDA kernel for Mixture-of-Recursions**, so CUDA builds stop serving it on the CPU.
-- **The third-party families on every backend.** The WebAssembly gate per family (a 0.5B model
-  needs the 4 GB heap).
 - **A new public chat model.** pk_base_v1's chat model, released through `release_chat.py`
   with the WebGPU page.
 
