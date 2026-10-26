@@ -163,7 +163,7 @@ Operational logs go to `debugging.log` in the working directory.
 | `EMBER_SCORE_REUSE=0` | `/score`: no prefix reuse between a call's requests (the bits do not change) |
 | `EMBER_SCORE_FULL=1` | `/score`: every request a fresh prefill computing every row's logits (the reference the default path is checked against) |
 | `EMBER_SPEC=k` | speculative decoding with prompt-lookup drafts of up to k tokens (greedy only); on CUDA a verification pass is one captured graph costing about one decode step (`experiments/verify_2026-10-27`) |
-| `EMBER_VERIFY_LINEAR=rows` | with `EMBER_SPEC`: the verification rows through the decode step's own GEMV, bit-identical to decode under `EMBER_DETERMINISTIC=1` (slower; default `smallm`) |
+| `EMBER_VERIFY_LINEAR=rows` | with `EMBER_SPEC`: the verification rows through the decode step's own GEMV, bit-identical to decode under `EMBER_DETERMINISTIC=1` (slower). Unset, the mode decides: `rows` under `EMBER_DETERMINISTIC=1`, `smallm` otherwise; `smallm`, `gemm` or `gemvb` set explicitly override the mode |
 | `EMBER_VERIFY=legacy` | with `EMBER_SPEC`: the per-launch verification pass of 20 Oct 2026 |
 | `EMBER_DECODE_GRAPH=0` | disable the CUDA-graph decode on the llama path |
 | `EMBER_DECODE_ATTN=legacy` | the one-block-per-head decode attention kernel instead of split-K |
@@ -181,7 +181,7 @@ Operational logs go to `debugging.log` in the working directory.
 | `EMBER_IR_QUANT=1` / `EMBER_IR_DEQUANT=1` | interpreter weights kept quantised / dequantised at load (default: quantised above 64M parameters, CPU only) |
 | `EMBER_DECODE_TIMING=1`, `EMBER_OP_TIMING=1` | per-phase decode and per-op prefill timing |
 | `EMBER_KERNEL_DEBUG=1` | the CUDA batch helpers' debug probes (each one synchronises) |
-| `TINYLLAMA_LOGITS_DUMP=file` | append each prompt's next-token logits to a file |
+| `TINYLLAMA_LOGITS_DUMP=file` | append the full logit vector at every sampled position to a file, one line per generated token (under `EMBER_SPEC`, each verification row a token is taken from, fetched from the device for the dump) |
 | `TINYLLAMA_TOPK_DEBUG=1` | top-10 candidates at every sampled position, on stderr |
 
 ### Deterministic CUDA mode (`EMBER_DETERMINISTIC=1`)
@@ -195,6 +195,15 @@ tuned llama path and the IR interpreter (whose device path was already fixed-ord
 (decode and prefill within 1-2% noise on a T4). Not promised across GPUs, CUDA or cuBLAS versions, or builds. Unset,
 every path is exactly as before (same kernels; `/health` has no `deterministic` field). Receipts:
 `experiments/determinism_2026-10-26/`.
+
+With `EMBER_SPEC=k` the mode also selects `EMBER_VERIFY_LINEAR=rows` unless that variable is set: every row of the
+CUDA verification pass is then the decode step's own arithmetic, so speculation's ids, and the logits of every token
+it accepts, are bit-identical to plain decode in the mode (CUDA, L4: k = 2, 4, 8 on two models, 60 requests each,
+every row of every generated token, `experiments/verify_det_2026-10-27/`). The `rows` pass costs n linear launches
+per layer, so speculation gains less in the mode: 1.10-1.22x plain decode on pick_e1_L16 and 1.30-1.34x on
+pk_base_v1 over those requests, against 1.40-1.55x for pick_e1_L16 with `smallm`
+(`experiments/verify_2026-10-27/`). Setting `EMBER_VERIFY_LINEAR` explicitly overrides the mode, and gives up the
+guarantee for any value but `rows`.
 
 ## The browser page (`deploy/wasm/`)
 

@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "determinism.h"
 #include "logger.h"
 #include "verify_kernels.h"
 
@@ -27,8 +28,11 @@ using ember_verify::VerifyLinear;
 TinyLlamaModel::VerifyOptions& TinyLlamaModel::verify_options() {
   if (!verify_opts_read_) {
     verify_opts_read_ = true;
+    // Unset (or empty), the linear option follows the mode: EMBER_DETERMINISTIC=1 takes `rows`, the decode step's
+    // own GEMV per row, so every verification row is the decode step's bits and speculation's ids are plain
+    // decode's; otherwise `smallm`. An explicit EMBER_VERIFY_LINEAR always wins.
     const char* lin = std::getenv("EMBER_VERIFY_LINEAR");
-    const std::string l = lin ? lin : "";
+    const std::string l = lin && *lin ? lin : (ember::deterministic() ? "rows" : "");
     verify_opts_.linear = l == "gemm"    ? static_cast<int>(VerifyLinear::kGemm)
                           : l == "gemvb" ? static_cast<int>(VerifyLinear::kGemvBatched)
                           : l == "rows"  ? static_cast<int>(VerifyLinear::kRows)
