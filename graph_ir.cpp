@@ -463,6 +463,7 @@ bool device_supported(const std::string& ir_json) {
         mor = mor || op == "depth_route";
         block_pos_embedding = block_pos_embedding || op == "pos_embedding";
       }
+      if (op == "attention" && n.contains("position_bias")) return false;  // CPU only (IR_SPEC 5.15, revision 1.3)
       if (op == "expr") {  // the CUDA form's limits (graph_ir_expr.h lower)
         try {
           expr::lower(expr::cached(n.at("expr").get<std::string>(), n.at("in").size()));
@@ -519,7 +520,7 @@ std::string find_ir(const GGUFData& gguf) {
                            "(built: llama, mistral, qwen2, qwen3, gpt2, gptneox, gemma3, mamba)");
 }
 
-std::string build_ir_from_gguf(const GGUFData& g) {
+std::string build_ir_from_gguf(const GGUFData& g, bool log) {
   const std::string arch = meta_string(g, "general.architecture").value_or("");
   if (!has_ir_builder(arch)) throw std::runtime_error("no IR builder for general.architecture = '" + arch + "'");
   const std::string p = arch + ".";
@@ -615,6 +616,10 @@ std::string build_ir_from_gguf(const GGUFData& g) {
     auto proj = [&](const std::string& name, const std::string& out) {
       return linear("h", B + name + ".weight", out, bias ? B + name + ".bias" : "");
     };
+    // Mixtral's layout (llama.cpp's llama graph; IR_SPEC 9.3, revision 1.3): llama.expert_count and ffn_gate_inp
+    // put a moe_ffn in place of the SwiGLU.
+    const bool moe = arch == "llama" && meta_number(g, p + "expert_count").value_or(0) > 0 &&
+                     shape_has("blk.0.ffn_gate_inp.weight");
     nodes = json::array({rmsnorm("x", B + "attn_norm.weight", eps, "h"), proj("attn_q", "q"), proj("attn_k", "k"),
                          proj("attn_v", "v")});
     if (qk_norm) {
@@ -624,15 +629,29 @@ std::string build_ir_from_gguf(const GGUFData& g) {
     for (json n : {rope(H, KV, hd, n_rot, f32_value(theta), pairing),
                    attention(H, KV, hd, 1.0 / std::sqrt(static_cast<double>(hd)), window),
                    linear("a", B + "attn_output.weight", "o"), op("add", {"x", "o"}, "x"),
-                   rmsnorm("x", B + "ffn_norm.weight", eps, "h2"), linear("h2", B + "ffn_gate.weight", "g"),
-                   linear("h2", B + "ffn_up.weight", "u"), op("silu", {"g"}, "g"), op("mul", {"g", "u"}, "gu"),
-                   linear("gu", B + "ffn_down.weight", "f"), op("add", {"x", "f"}, "x")})
+                   rmsnorm("x", B + "ffn_norm.weight", eps, "h2")})
       nodes.push_back(n);
+    if (moe) {
+      nodes.push_back(op("moe_ffn", {"h2"}, "f",
+                         {{"router", B + "ffn_gate_inp.weight"},
+                          {"experts", {{"gate", B + "ffn_gate_exps.weight"}, {"up", B + "ffn_up_exps.weight"},
+                                       {"down", B + "ffn_down_exps.weight"}}},
+                          {"n_experts", static_cast<int>(get("expert_count"))},
+                          {"top_k", static_cast<int>(get("expert_used_count"))},
+                          {"gate_norm", "renorm"},
+                          {"activation", "silu"}}));
+    } else {
+      for (json n : {linear("h2", B + "ffn_gate.weight", "g"), linear("h2", B + "ffn_up.weight", "u"),
+                     op("silu", {"g"}, "g"), op("mul", {"g", "u"}, "gu"), linear("gu", B + "ffn_down.weight", "f")})
+        nodes.push_back(n);
+    }
+    nodes.push_back(op("add", {"x", "f"}, "x"));
     head = tied_head(json::array({rmsnorm("x", "output_norm.weight", eps, "h")}));
     state = json::array({kv_state(H, KV, hd, ctx, window)});
     summary = "heads " + std::to_string(H) + "/" + std::to_string(KV) + " x " + std::to_string(hd) + ", n_rot " +
               std::to_string(n_rot) + ", " + pairing + " RoPE" + (window ? ", window " + std::to_string(window) : "") +
-              (bias ? ", q/k/v biases" : "") + (qk_norm ? ", per-head q/k RMSNorm" : "");
+              (bias ? ", q/k/v biases" : "") + (qk_norm ? ", per-head q/k RMSNorm" : "") +
+              (moe ? ", moe_ffn " + std::to_string(static_cast<int>(get("expert_count"))) + " experts" : "");
   } else if (arch == "gpt2" || arch == "gptneox") {
     // LayerNorm blocks over a fused, biased qkv (q | k | v as llama.cpp's convert
     // writes it; for gptneox it has already de-interleaved HF's per-head [q k v] rows).
@@ -785,8 +804,9 @@ std::string build_ir_from_gguf(const GGUFData& g) {
   doc["modes"] = {{"prefill", "all nodes over T tokens"},
                   {"decode", "the same graph with T = 1, attention reads and appends to the kv state, a recurrent op "
                              "reads and replaces its recurrent state"}};
-  Logger::info("[IR] built the IR for general.architecture = " + arch + " from its metadata: d " + std::to_string(d) +
-               ", " + std::to_string(n_layers) + " layers, " + summary + (tied ? ", tied head" : ""));
+  if (log)
+    Logger::info("[IR] built the IR for general.architecture = " + arch + " from its metadata: d " + std::to_string(d) +
+                 ", " + std::to_string(n_layers) + " layers, " + summary + (tied ? ", tied head" : ""));
   return doc.dump();
 }
 
@@ -1092,6 +1112,9 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
     if (!rec_slots_.empty()) throw std::runtime_error("IR depth_route with recurrent state is not implemented in ember");
     if (window_ > 0 || !window_layer_.empty() || sinks_ > 0)
       throw std::runtime_error("IR depth_route with windowed attention is not implemented in ember");
+    for (const auto& n : block_)
+      if (n.op == "attention" && has(n.attrs, "position_bias"))
+        throw std::runtime_error("IR depth_route with attention position_bias is not implemented in ember");
     mor_rows_.assign(n_layers_, {});
   }
   // Per-turn state tokens (paperkiln IR_SPEC_DRAFT.md 1.1, 1.3, 1.4): the extended embedding
@@ -1524,6 +1547,9 @@ void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData
       bind_tensor(w, gguf, n.op == "linear" || n.op == "embedding");
     }
     if (has(n.attrs, "bias")) bind_tensor(layer_name(n.attrs.at("bias").get<std::string>(), layer), gguf);
+    if (n.op == "attention" && has(n.attrs, "position_bias") && n.attrs.at("position_bias").is_object() &&
+        n.attrs.at("position_bias").contains("weight") && n.attrs.at("position_bias").at("weight").is_string())
+      bind_tensor(layer_name(n.attrs.at("position_bias").at("weight").get<std::string>(), layer), gguf);
     // rmsnorm weight_offset c: the weight is read as w + c, rounded to f32 once at load (Gemma's (1 + w)
     // for a file holding HF's raw w; llama.cpp's convert already stores 1 + w).
     if (n.op == "rmsnorm" && has(n.attrs, "weight_offset") && n.attrs.at("weight_offset").get<float>() != 0.0f) {
@@ -2065,7 +2091,17 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       Buf out{{}, hq * hd};
       int window = 0, sinks = 0;
       attention_window(n, layer, window, sinks);
-      if (ts)
+      if (has(n.attrs, "position_bias")) {  // T5's relative position bias (IR_SPEC 5.15, revision 1.3)
+        const json& pb = n.attrs.at("position_bias");
+        const std::vector<int> buckets = pb.at("buckets").get<std::vector<int>>();
+        const auto& W = weight(layer_name(pb.at("weight").get<std::string>(), layer));
+        std::vector<int> qpos(static_cast<size_t>(T));
+        for (int t = 0; t < T; ++t) qpos[t] = start_pos + t;
+        // under turn_state the compact cache's row r holds position kv_pos_[r]; elsewhere row r is position r
+        const std::vector<std::vector<int>> rows = ts ? ts_vis_ : attention_visible_rows(T, start_pos, window, sinks);
+        attention_bias_batch_cpu(q.v, cache, out.v, T, rows, ts ? &kv_pos_ : nullptr, qpos, hq, hkv, hd, scale, W.data(),
+                                 buckets);
+      } else if (ts)
         attention_rows_batch_cpu(q.v, cache, out.v, T, ts_vis_, hq, hkv, hd, scale);
       else if (window > 0)
         attention_window_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale, window, sinks);

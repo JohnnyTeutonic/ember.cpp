@@ -2,6 +2,7 @@
 #include "graph_ir_validate.h"
 
 #include <algorithm>
+#include <functional>
 #include <map>
 #include <optional>
 #include <regex>
@@ -12,6 +13,7 @@
 #include <variant>
 
 #include "gguf_structs.h"
+#include "graph_ir.h"
 #include "graph_ir_expr.h"
 #include "graph_ir_recurrence.h"
 #include "graph_ir_schema.h"
@@ -233,6 +235,7 @@ std::vector<Sect> sections(const json& doc) {
 }
 
 const std::set<std::string> kNotPerLayer = {"op", "in", "out", "state", "tensor_index", "sizes", "expr", "weight", "bias",
+                                            "position_bias",  // attention's (IR_SPEC 5.15, revision 1.3)
                                             "router", "experts", "state_weight", "tied_to", "a", "b", "c", "d",
                                             // recurrence (IR_SPEC 6.10.1: every key structural)
                                             "index", "inputs", "weights", "init", "let", "update", "readout"};
@@ -764,6 +767,8 @@ void read_errors(const json& doc, Errs& errs) {
   for (size_t j = 0; block.is_array() && j < block.size(); ++j) {
     if (j <= route) {
       check("block", j, block[j], written, true, "3.5", "which no node before it writes (application 0)");
+      if (j == route)  // depth_route's out is written before the step's nodes (reading it is rule 17a's)
+        for (const auto& o : names(get(block[j], "out"))) step.insert(o);
     } else {
       check("block", j, block[j], step, false, "7.4",
             "outside what a depth_route step sees (x, pos and the values written before it in the application)");
@@ -945,6 +950,236 @@ void container_errors(const json& doc, const GGUFData& g, Errs& errs) {
       if (name != "paperkiln/1") errs.push_back(E("8.2", "state tokens are defined over paperkiln/1 only, not " + name));
     }
   }
+  // Rule 39 (container): each application's position_bias table is ne {heads, B}, B greater than every bucket.
+  const int L = is_int(get(blk, "repeat")) ? blk.at("repeat").get<int>() : 0;
+  const json& wmi = get(get(blk, "weight_index"), "per_layer");
+  for (const auto& [sect, j, np] : sections(doc)) {
+    const json& n = *np;
+    const json& pb = get(n, "position_bias");
+    if (op_of(n) != "attention" || !pb.is_object() || !get(pb, "weight").is_string() || !get(pb, "buckets").is_array())
+      continue;
+    int64_t top = -1;
+    for (const auto& b : pb.at("buckets"))
+      if (is_int(b)) top = std::max(top, b.get<int64_t>());
+    const auto heads = layers(get(n, "heads"), std::max(L, 1));
+    for (int i = 0; i < (sect == "block" ? L : 1); ++i) {
+      std::string w = pb.at("weight").get<std::string>();
+      const size_t at = w.find("{i}");
+      if (at != std::string::npos) {
+        const bool mapped = wmi.is_array() && i < static_cast<int>(wmi.size()) && is_int(wmi[i]) && !n.contains("tensor_index");
+        w.replace(at, 3, std::to_string(mapped ? wmi[i].get<int64_t>() : i));
+      }
+      const auto* got = ne(w);
+      if (!got || !heads || !is_int((*heads)[i])) continue;  // rule 25 names a missing tensor
+      const int64_t H = (*heads)[i].get<int64_t>();
+      if (!(got->size() == 2 && static_cast<int64_t>((*got)[0]) == H && static_cast<int64_t>((*got)[1]) > top)) {
+        errs.push_back(E("5.15 (rule 39)", sect + "[" + std::to_string(j) + "] attention position_bias " + q(w) +
+                                               (sect == "block" ? " (application " + std::to_string(i) + ")" : "") +
+                                               " has ne " + ne_str(*got) + ", not {heads, B} = {" + std::to_string(H) +
+                                               ", B} with B greater than every bucket (" + std::to_string(top) + ")"));
+        break;
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------- rule 38 (revision 1.3): the architecture
+
+// A document as rule 38 compares it (IR_SPEC 3.1): "_" members gone; the informative keys and attributes gone;
+// optional attributes at their section 3.5 defaults gone; values renamed in the order they are written (tokens and
+// pos kept) and slots in the order nodes name them, with what each name the block reads before writing it holds
+// after the block; add's and mul's operands in one order; every number the f32 it rounds to; a linear's weight
+// the tensor it reads (its tied_to resolved against the file's tensors).
+json rule38_form(const json& doc, const GGUFData& g) {
+  std::function<json(const json&)> strip = [&](const json& v) -> json {
+    if (v.is_object()) {
+      json o = json::object();
+      for (const auto& kv : v.items())
+        if (kv.key().empty() || kv.key()[0] != '_') o[kv.key()] = strip(kv.value());
+      return o;
+    }
+    if (v.is_array()) {
+      json a = json::array();
+      for (const auto& x : v) a.push_back(strip(x));
+      return a;
+    }
+    if (v.is_number()) return json(static_cast<double>(static_cast<float>(v.get<double>())));
+    return v;
+  };
+  const json d = strip(doc);
+  std::map<std::string, std::string> cur, slot;
+  int next = 0;
+  auto read = [&](const std::string& nm) {
+    if (nm == "tokens" || nm == "pos") return nm;
+    auto it = cur.find(nm);
+    return it == cur.end() ? "?" + nm : it->second;
+  };
+  auto has_tensor = [&](std::string nm) {
+    const size_t at = nm.find("{i}");
+    if (at != std::string::npos) nm.replace(at, 3, "0");
+    return g.tensor_infos_map.count(nm) > 0;
+  };
+  auto num_is = [](const json& v, double x) { return v.is_number() && v.get<double>() == static_cast<double>(static_cast<float>(x)); };
+  auto node_form = [&](json n, bool in_block, std::vector<std::string>* carried, std::set<std::string>* written) {
+    const std::string op = n.value("op", "");
+    std::vector<std::string> ins;
+    if (n.contains("in") && n.at("in").is_array())
+      for (const auto& x : n.at("in"))
+        if (x.is_string()) {
+          const std::string nm = x.get<std::string>();
+          if (in_block && carried && written && !written->count(nm) && nm != "tokens" && nm != "pos" &&
+              std::find(carried->begin(), carried->end(), nm) == carried->end())
+            carried->push_back(nm);
+          ins.push_back(read(nm));
+        }
+    if ((op == "add" || op == "mul") && ins.size() == 2 && ins[1] < ins[0]) std::swap(ins[0], ins[1]);
+    n["in"] = ins;
+    if (n.contains("state") && n.at("state").is_string()) {
+      const std::string st = n.at("state").get<std::string>();
+      if (!slot.count(st)) slot[st] = "s" + std::to_string(slot.size());
+      n["state"] = slot[st];
+    }
+    // informative attributes and optional ones at their defaults (IR_SPEC 3.5)
+    if (op == "attention") {
+      n.erase("softmax");
+      if (n.value("mask", json("causal")) == "causal") n.erase("mask");
+    }
+    if (op == "moe_ffn") n.erase("routing");
+    if ((op == "linear" || op == "scale") && n.contains("bias") && n.at("bias").is_null()) n.erase("bias");
+    if (op == "linear") {
+      if (n.contains("tied_to") && n.at("tied_to").is_string() &&
+          !(n.contains("weight") && n.at("weight").is_string() && has_tensor(n.at("weight").get<std::string>())))
+        n["weight"] = n.at("tied_to");
+      n.erase("tied_to");
+    }
+    if (op == "rmsnorm" && n.contains("weight_offset") && num_is(n.at("weight_offset"), 0.0)) n.erase("weight_offset");
+    if (op == "rope") {
+      if (n.contains("kv_heads") && n.at("kv_heads") == get(n, "heads")) n.erase("kv_heads");
+      if (n.contains("n_rot") && n.at("n_rot") == get(n, "head_dim")) n.erase("n_rot");
+      if (n.contains("freq_scale") && num_is(n.at("freq_scale"), 1.0)) n.erase("freq_scale");
+    }
+    if (op == "depth_attend" && n.contains("eps") && num_is(n.at("eps"), 1e-5)) n.erase("eps");
+    if (op == "embedding" && n.contains("state_weight") && n.at("state_weight").is_null()) n.erase("state_weight");
+    if (op == "conv1d_causal" && n.contains("bias") && n.at("bias").is_null()) n.erase("bias");
+    if (op == "selective_scan") {
+      if (n.contains("d") && n.at("d").is_null()) n.erase("d");
+      if (n.value("dt_softplus", json(true)) == json(true)) n.erase("dt_softplus");
+    }
+    json outs = json::array();
+    const json& o = get(n, "out");
+    std::vector<std::string> on;
+    if (o.is_string()) on.push_back(o.get<std::string>());
+    if (o.is_array())
+      for (const auto& x : o)
+        if (x.is_string()) on.push_back(x.get<std::string>());
+    for (const auto& nm : on) {
+      const std::string v = "v" + std::to_string(next++);
+      cur[nm] = v;
+      if (written) written->insert(nm);
+      outs.push_back(v);
+    }
+    n["out"] = o.is_string() && outs.size() == 1 ? outs[0] : outs;
+    return n;
+  };
+  json out = json::object();
+  json model = get(d, "model");
+  if (model.is_object() && model.value("dtype", json("f32")) == "f32") model.erase("dtype");
+  out["model"] = model;
+  json embed = json::array();
+  for (const auto& n : get(get(d, "embed"), "nodes").is_array() ? d.at("embed").at("nodes") : json::array())
+    embed.push_back(node_form(n, false, nullptr, nullptr));
+  out["embed"] = embed;
+  const std::map<std::string, std::string> before = cur;
+  std::vector<std::string> carried;
+  std::set<std::string> written;
+  json block = json::array();
+  const json& bl = get(d, "block");
+  for (const auto& n : get(bl, "nodes").is_array() ? bl.at("nodes") : json::array())
+    block.push_back(node_form(n, true, &carried, &written));
+  json carry = json::array();
+  for (const auto& nm : carried) {
+    const auto b = before.find(nm);
+    carry.push_back(json::array({b == before.end() ? "?" + nm : b->second, read(nm)}));
+  }
+  std::sort(carry.begin(), carry.end());
+  json slots = json::array();
+  if (get(bl, "state").is_array())
+    for (json s : bl.at("state")) {
+      const std::string nm = show(get(s, "name"));
+      s["name"] = slot.count(nm) ? slot[nm] : "?" + nm;
+      if (get(s, "kind") == "kv" && s.value("dtype", json("f32")) == "f32") s.erase("dtype");
+      slots.push_back(s);
+    }
+  std::sort(slots.begin(), slots.end(), [](const json& a, const json& b) { return a.at("name") < b.at("name"); });
+  out["block"] = {{"repeat", get(bl, "repeat")}, {"nodes", block}, {"state", slots}, {"carried", carry}};
+  if (bl.is_object() && bl.contains("weight_index")) out["block"]["weight_index"] = bl.at("weight_index");
+  json head = json::array();
+  for (const auto& n : get(get(d, "head"), "nodes").is_array() ? d.at("head").at("nodes") : json::array())
+    head.push_back(node_form(n, false, nullptr, nullptr));
+  out["head"] = head;
+  return out;
+}
+
+// The first place two rule-38 forms differ ("" when equal), as path: a against b.
+std::string first_difference(const json& a, const json& b, const std::string& path) {
+  if (a.type() != b.type() && !(a.is_number() && b.is_number()))
+    return path + ": " + short_dump(a) + " against " + short_dump(b);
+  if (a.is_object()) {
+    std::set<std::string> keys;
+    for (const auto& kv : a.items()) keys.insert(kv.key());
+    for (const auto& kv : b.items()) keys.insert(kv.key());
+    for (const auto& k : keys) {
+      if (!a.contains(k)) return path + "." + k + ": absent against " + short_dump(b.at(k));
+      if (!b.contains(k)) return path + "." + k + ": " + short_dump(a.at(k)) + " against absent";
+      const std::string d = first_difference(a.at(k), b.at(k), path + "." + k);
+      if (!d.empty()) return d;
+    }
+    return "";
+  }
+  if (a.is_array()) {
+    for (size_t i = 0; i < std::min(a.size(), b.size()); ++i) {
+      const std::string d = first_difference(a[i], b[i], path + "[" + std::to_string(i) + "]");
+      if (!d.empty()) return d;
+    }
+    if (a.size() != b.size())
+      return path + ": " + std::to_string(a.size()) + " entries against " + std::to_string(b.size());
+    return "";
+  }
+  if (a.is_number() && b.is_number()) return a.get<double>() == b.get<double>() ? "" : path + ": " + a.dump() + " against " + b.dump();
+  return a == b ? "" : path + ": " + short_dump(a) + " against " + short_dump(b);
+}
+
+void architecture_errors(const GGUFData& g, Errs& errs) {
+  const auto emb = meta_str(g, "paperkiln.ir");
+  if (!emb) return;  // a third-party file: no document to compare
+  const std::string arch = meta_str(g, "general.architecture").value_or("");
+  if (arch == "paperkiln") return;
+  const std::string tail = "; a file whose model is not that architecture's graph has general.architecture "
+                           "\"paperkiln\", which no llama.cpp release builds a graph for";
+  if (!has_ir_builder(arch)) {
+    errs.push_back(E("3.1 (rule 38)", "general.architecture " + q(arch) +
+                                          " is neither \"paperkiln\" nor an architecture of section 9.3" + tail));
+    return;
+  }
+  json doc;
+  try {
+    doc = json::parse(*emb);
+  } catch (const std::exception&) {
+    return;  // rule 1 / 3.1 name it
+  }
+  json built;
+  try {
+    built = json::parse(build_ir_from_gguf(g, false));
+  } catch (const std::exception& e) {
+    errs.push_back(E("3.1 (rule 38)", "general.architecture " + q(arch) + ": its metadata builds no graph (" + e.what() +
+                                          ")" + tail));
+    return;
+  }
+  const std::string d = first_difference(rule38_form(doc, g), rule38_form(built, g), "document");
+  if (!d.empty())
+    errs.push_back(E("3.1 (rule 38)", "general.architecture " + q(arch) + ": the embedded document is not the " + arch +
+                                          " graph its metadata describes (section 9.3; first difference, document "
+                                          "against graph: " + d + ")" + tail));
 }
 
 }  // namespace
@@ -1004,6 +1239,9 @@ std::string schema_rule(const json& doc, const std::string& path, const std::str
     const size_t j = std::stoul(m[2].str());
     const std::string op = nodes.is_array() && j < nodes.size() ? op_of(nodes[j]) : "";
     const std::string rest = m[3].str(), key = key_of(rest);
+    if (key == "position_bias")  // attention's (5.15, revision 1.3); a per-layer one breaks rule 6
+      return nodes.is_array() && j < nodes.size() && is_pl(get(nodes[j], "position_bias")) ? "3.8 (rule 6)"
+                                                                                           : "5.15 (rule 39)";
     const bool io = key == "in" || key == "out" || (required && (msg.find("'in'") != std::string::npos ||
                                                                  msg.find("'out'") != std::string::npos));
     if (io) return "3.5 (rule 7)";  // the arity: what a node reads and writes
@@ -1073,6 +1311,7 @@ std::vector<std::string> ir_document_errors(const json& doc) {
 std::vector<std::string> ir_container_errors(const json& doc, const GGUFData& gguf) {
   Errs errs;
   container_errors(doc, gguf, errs);
+  architecture_errors(gguf, errs);
   std::vector<std::string> out;
   std::set<std::string> seen;
   for (const auto& m : errs) add_unique(out, seen, m);

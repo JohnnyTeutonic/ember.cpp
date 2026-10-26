@@ -514,9 +514,16 @@ std::string find_ir(const GGUFData& gguf);
 //     RMSNorm, NEOX RoPE and GeGLU; window and theta 10000 on layers with
 //     i % 6 < 5, the file's theta (and linear scaling) on the rest;
 //   mamba: Mamba-1 blocks (conv1d_causal, selective_scan) with no positions.
-// The head is tied to token_embd.weight when output.weight is absent (gptneox
-// always has its own). Throws naming the architecture or the missing key.
-std::string build_ir_from_gguf(const GGUFData& gguf);
+// A llama file with llama.expert_count and blk.0.ffn_gate_inp.weight (Mixtral's
+// layout, IR_SPEC 9.3 revision 1.3) has a moe_ffn (router ffn_gate_inp, experts
+// ffn_{gate,up,down}_exps, top_k expert_used_count, renorm, silu) in place of
+// the SwiGLU. The head is tied to token_embd.weight when output.weight is absent
+// (gptneox always has its own). Throws naming the architecture or the missing
+// key. log false: no log line (rule 38's check, graph_ir_validate.h).
+std::string build_ir_from_gguf(const GGUFData& gguf, bool log = true);
+
+// The architectures build_ir_from_gguf builds (IR_SPEC 9.3).
+bool has_ir_builder(const std::string& arch);
 
 // ember's tuned llama path (model.cpp, api.cpp) computes one graph, and a document may take it only when it
 // is that graph (paperkiln spec/IR_SPEC.md 9.1: family_hint is never semantics; it is a pre-filter here):
