@@ -654,6 +654,8 @@ export function irSupport(doc) {
     for (const n of nodesOf(doc)) {
       if (!SUPPORTED.has(n.op)) return { ok: false, reason: `op '${n.op}' has no WGSL kernel` };
       if (n.op === 'rope' && n.rope_heads === 'first') return { ok: false, reason: 'rope_heads "first"' };
+      // T5's relative position bias (IR_SPEC 5.15, revision 1.3) has no WGSL kernel: the CPU interpreter runs it.
+      if (n.op === 'attention' && n.position_bias !== undefined) return { ok: false, reason: 'attention position_bias' };
       if (n.op === 'expr') {
         if (n.in.length > 9) return { ok: false, reason: 'expr with more than 9 inputs' };
         compileExpr(n.expr, n.in.length);

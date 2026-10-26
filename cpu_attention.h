@@ -67,6 +67,30 @@ void attention_rows_batch_cpu(
     float attention_scale
 );
 
+// The visible kv rows of each query of a batch at positions start_pos .. start_pos + T - 1 over a cache whose row r
+// holds position r: [0, sink_hi) then [win_lo, p] (swa_visible_ranges), or 0 .. p when window is 0.
+std::vector<std::vector<int>> attention_visible_rows(int num_tokens_in_batch, int start_pos_in_sequence, int window,
+                                                     int sinks);
+// attention_rows_batch_cpu with T5's relative position bias (paperkiln IR_SPEC 5.15 position_bias, revision 1.3):
+// each score is (q . k) * scale, rounded, then + bias[b(p - j) * num_q_heads + h], rounded, with p the query's
+// position (query_pos[t]), j the key's (key_pos[row], or the row itself when key_pos is null) and
+// b(n) = buckets[min(n, buckets.size() - 1)]; bias is the table [B][num_q_heads] row-major. Under grouped-query
+// attention the query head's column. Softmax and accumulation as attention_rows_batch_cpu.
+void attention_bias_batch_cpu(
+    const std::vector<float>& q_batch_roped,
+    const KVCacheLayer& current_layer_kv_cache,
+    std::vector<float>& batch_attn_output,
+    int num_tokens_in_batch,
+    const std::vector<std::vector<int>>& rows,
+    const std::vector<int>* key_pos,
+    const std::vector<int>& query_pos,
+    int num_q_heads,
+    int num_kv_heads,
+    int head_dim,
+    float attention_scale,
+    const float* bias,
+    const std::vector<int>& buckets
+);
 void update_kv_cache_batch_cpu_sequence_aware(
     KVCache* kv_cache,
     int layer_idx,
