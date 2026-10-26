@@ -1,0 +1,212 @@
+== pick_det (NVIDIA L4)
+ prefix 32: decode 1.007 ms, host sampler 0.235 ms
+   legacy steps   n2:1.659 n3:1.815 n4:1.972 n5:2.172 n6:2.378 n7:2.732 n8:2.829 n9:3.015
+   graph_gemm_batched       n2:1.106 n3:1.158 n4:1.139 n5:1.16 n6:1.174 n7:1.326 n8:1.243 n9:1.251
+   graph_gemm_perrow        n2:1.242 n3:1.433 n4:1.548 n5:1.708 n6:1.865 n7:2.164 n8:2.214 n9:2.376
+   graph_gemvb_batched      n2:1.051 n3:1.079 n4:1.117 n5:1.229 n6:1.318 n7:1.408 n8:1.509 n9:1.585
+   graph_rows_batched       n2:1.431 n3:1.863 n4:2.295 n5:2.734 n6:3.167 n7:3.6 n8:4.041 n9:4.48
+   graph_smallm_batched     n2:0.977 n3:0.985 n4:0.991 n5:1.006 n6:1.027 n7:1.027 n8:1.027 n9:1.07
+   nograph_gemm_perrow      n2:1.564 n3:1.693 n4:1.828 n5:2.014 n6:2.196 n7:2.526 n8:2.593 n9:2.771
+   +rows to host   n2:1.047 n3:1.088 n4:1.128 n5:1.177 n6:1.224 n7:1.264 n8:1.294 n9:1.374
+   stages n5 gemm   attention:0.276 copy:0.094 down:0.279 embed:0.006 final_norm:0.007 gate_up:0.384 lm_head:0.097 o_proj:0.210 qkv:0.444 residual:0.226 rmsnorm:0.204 rope_kv:0.178 select:0.020 sum:2.507 swiglu:0.084
+   stages n5 gemvb  attention:0.274 copy:0.093 down:0.268 embed:0.006 final_norm:0.006 gate_up:0.380 lm_head:0.138 o_proj:0.207 qkv:0.433 residual:0.217 rmsnorm:0.201 rope_kv:0.171 select:0.020 sum:2.495 swiglu:0.081
+   stages n5 rows   attention:0.218 copy:0.096 down:0.614 embed:0.006 final_norm:0.006 gate_up:1.760 lm_head:0.080 o_proj:0.886 qkv:2.595 residual:0.220 rmsnorm:0.192 rope_kv:0.176 select:0.020 sum:6.954 swiglu:0.083
+   stages n5 smallm attention:0.276 copy:0.095 down:0.165 embed:0.006 final_norm:0.006 gate_up:0.268 lm_head:0.088 o_proj:0.122 qkv:0.250 residual:0.221 rmsnorm:0.204 rope_kv:0.176 select:0.020 sum:1.979 swiglu:0.082
+   stages n9 gemm   attention:0.278 copy:0.096 down:0.314 embed:0.006 final_norm:0.006 gate_up:0.391 lm_head:0.111 o_proj:0.212 qkv:0.450 residual:0.223 rmsnorm:0.201 rope_kv:0.174 select:0.021 sum:2.565 swiglu:0.082
+   stages n9 gemvb  attention:0.277 copy:0.094 down:0.319 embed:0.006 final_norm:0.006 gate_up:0.449 lm_head:0.181 o_proj:0.235 qkv:0.464 residual:0.218 rmsnorm:0.199 rope_kv:0.172 select:0.020 sum:2.723 swiglu:0.082
+   stages n9 rows   attention:0.229 copy:0.097 down:1.036 embed:0.006 final_norm:0.006 gate_up:3.119 lm_head:0.135 o_proj:1.566 qkv:4.642 residual:0.222 rmsnorm:0.192 rope_kv:0.176 select:0.020 sum:11.530 swiglu:0.083
+   stages n9 smallm attention:0.276 copy:0.091 down:0.173 embed:0.006 final_norm:0.006 gate_up:0.280 lm_head:0.089 o_proj:0.126 qkv:0.273 residual:0.213 rmsnorm:0.199 rope_kv:0.171 select:0.020 sum:2.005 swiglu:0.081
+   bits gemm_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 8.58306884765625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemm_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 8.58306884765625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_batched          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 6.198883056640625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_perrow           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 6.198883056640625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits legacy                 {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.0013580322265625e-05, 'argmax_equal': 9}
+   bits rows_batched           {'rows_bit_identical': 9, 'rows': 9, 'max_abs': 0.0, 'argmax_equal': 9, 'pick_ok': 9}
+   bits rows_perrow            {'rows_bit_identical': 9, 'rows': 9, 'max_abs': 0.0, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_batched         {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 5.245208740234375e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_perrow          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 5.245208740234375e-06, 'argmax_equal': 9, 'pick_ok': 9}
+ prefix 384: decode 1.483 ms, host sampler 0.229 ms
+   legacy steps   n2:2.013 n3:2.475 n4:2.895 n5:3.338 n6:3.766 n7:4.311 n8:4.678 n9:5.109
+   graph_gemm_batched       n2:1.358 n3:1.397 n4:1.382 n5:1.39 n6:1.399 n7:1.5 n8:1.445 n9:1.445
+   graph_gemm_perrow        n2:1.777 n3:2.215 n4:2.608 n5:3.026 n6:3.429 n7:3.932 n8:4.28 n9:4.684
+   graph_gemvb_batched      n2:1.322 n3:1.342 n4:1.367 n5:1.434 n6:1.484 n7:1.529 n8:1.565 n9:1.608
+   graph_rows_batched       n2:1.342 n3:1.696 n4:2.039 n5:2.355 n6:2.676 n7:3.002 n8:3.32 n9:3.645
+   graph_smallm_batched     n2:1.271 n3:1.278 n4:1.28 n5:1.285 n6:1.296 n7:1.299 n8:1.298 n9:1.327
+   nograph_gemm_perrow      n2:1.947 n3:2.397 n4:2.803 n5:3.237 n6:3.655 n7:4.186 n8:4.536 n9:4.953
+   +rows to host   n2:1.318 n3:1.347 n4:1.374 n5:1.399 n6:1.433 n7:1.459 n8:1.48 n9:1.532
+   stages n5 gemm   attention:1.168 copy:0.093 down:0.276 embed:0.006 final_norm:0.006 gate_up:0.380 lm_head:0.096 o_proj:0.204 qkv:0.436 residual:0.221 rmsnorm:0.201 rope_kv:0.173 select:0.020 sum:3.363 swiglu:0.082
+   stages n5 gemvb  attention:1.167 copy:0.094 down:0.271 embed:0.006 final_norm:0.006 gate_up:0.379 lm_head:0.137 o_proj:0.208 qkv:0.430 residual:0.220 rmsnorm:0.201 rope_kv:0.172 select:0.020 sum:3.392 swiglu:0.082
+   stages n5 rows   attention:0.679 copy:0.097 down:0.619 embed:0.006 final_norm:0.006 gate_up:1.764 lm_head:0.080 o_proj:0.892 qkv:2.606 residual:0.224 rmsnorm:0.192 rope_kv:0.176 select:0.020 sum:7.444 swiglu:0.083
+   stages n5 smallm attention:1.168 copy:0.092 down:0.163 embed:0.006 final_norm:0.006 gate_up:0.265 lm_head:0.087 o_proj:0.119 qkv:0.248 residual:0.214 rmsnorm:0.201 rope_kv:0.171 select:0.020 sum:2.841 swiglu:0.081
+   stages n9 gemm   attention:1.167 copy:0.095 down:0.315 embed:0.006 final_norm:0.006 gate_up:0.390 lm_head:0.110 o_proj:0.213 qkv:0.446 residual:0.223 rmsnorm:0.202 rope_kv:0.173 select:0.020 sum:3.449 swiglu:0.083
+   stages n9 gemvb  attention:1.167 copy:0.095 down:0.321 embed:0.006 final_norm:0.006 gate_up:0.450 lm_head:0.180 o_proj:0.235 qkv:0.464 residual:0.219 rmsnorm:0.201 rope_kv:0.173 select:0.020 sum:3.620 swiglu:0.084
+   stages n9 rows   attention:0.692 copy:0.099 down:1.089 embed:0.006 final_norm:0.006 gate_up:3.264 lm_head:0.136 o_proj:1.639 qkv:4.852 residual:0.229 rmsnorm:0.196 rope_kv:0.179 select:0.020 sum:12.493 swiglu:0.084
+   stages n9 smallm attention:1.167 copy:0.093 down:0.174 embed:0.006 final_norm:0.006 gate_up:0.281 lm_head:0.089 o_proj:0.130 qkv:0.274 residual:0.220 rmsnorm:0.204 rope_kv:0.174 select:0.020 sum:2.920 swiglu:0.081
+   bits gemm_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 9.059906005859375e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemm_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 9.059906005859375e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_batched          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 5.245208740234375e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_perrow           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 5.245208740234375e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits legacy                 {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 7.62939453125e-06, 'argmax_equal': 9}
+   bits rows_batched           {'rows_bit_identical': 9, 'rows': 9, 'max_abs': 0.0, 'argmax_equal': 9, 'pick_ok': 9}
+   bits rows_perrow            {'rows_bit_identical': 9, 'rows': 9, 'max_abs': 0.0, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_batched         {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.291534423828125e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_perrow          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.291534423828125e-06, 'argmax_equal': 9, 'pick_ok': 9}
+== pick_off (NVIDIA L4)
+ prefix 32: decode 1.007 ms, host sampler 0.230 ms
+   legacy steps   n2:1.66 n3:1.813 n4:1.968 n5:2.165 n6:2.364 n7:2.721 n8:2.82 n9:3.006
+   graph_gemm_batched       n2:1.105 n3:1.159 n4:1.14 n5:1.157 n6:1.164 n7:1.323 n8:1.236 n9:1.245
+   graph_gemm_perrow        n2:1.238 n3:1.433 n4:1.548 n5:1.704 n6:1.857 n7:2.156 n8:2.211 n9:2.365
+   graph_gemvb_batched      n2:1.052 n3:1.078 n4:1.117 n5:1.227 n6:1.308 n7:1.394 n8:1.471 n9:1.561
+   graph_rows_batched       n2:1.43 n3:1.862 n4:2.293 n5:2.731 n6:3.159 n7:3.6 n8:4.028 n9:4.46
+   graph_smallm_batched     n2:0.978 n3:0.984 n4:0.99 n5:1.005 n6:1.023 n7:1.024 n8:1.023 n9:1.065
+   nograph_gemm_perrow      n2:1.577 n3:1.692 n4:1.83 n5:2.012 n6:2.188 n7:2.523 n8:2.59 n9:2.767
+   +rows to host   n2:1.048 n3:1.091 n4:1.126 n5:1.174 n6:1.226 n7:1.261 n8:1.293 n9:1.371
+   stages n5 gemm   attention:0.275 copy:0.097 down:0.273 embed:0.006 final_norm:0.006 gate_up:0.377 lm_head:0.097 o_proj:0.203 qkv:0.436 residual:0.224 rmsnorm:0.200 rope_kv:0.174 select:0.020 sum:2.471 swiglu:0.082
+   stages n5 gemvb  attention:0.274 copy:0.096 down:0.269 embed:0.006 final_norm:0.006 gate_up:0.379 lm_head:0.137 o_proj:0.207 qkv:0.432 residual:0.223 rmsnorm:0.199 rope_kv:0.173 select:0.020 sum:2.503 swiglu:0.082
+   stages n5 rows   attention:0.220 copy:0.102 down:0.656 embed:0.006 final_norm:0.006 gate_up:1.900 lm_head:0.081 o_proj:0.971 qkv:2.804 residual:0.236 rmsnorm:0.197 rope_kv:0.184 select:0.020 sum:7.470 swiglu:0.086
+   stages n5 smallm attention:0.274 copy:0.091 down:0.163 embed:0.006 final_norm:0.006 gate_up:0.265 lm_head:0.088 o_proj:0.117 qkv:0.247 residual:0.213 rmsnorm:0.199 rope_kv:0.169 select:0.020 sum:1.938 swiglu:0.080
+   stages n9 gemm   attention:0.282 copy:0.102 down:0.330 embed:0.006 final_norm:0.006 gate_up:0.406 lm_head:0.111 o_proj:0.227 qkv:0.476 residual:0.245 rmsnorm:0.211 rope_kv:0.185 select:0.021 sum:2.695 swiglu:0.087
+   stages n9 gemvb  attention:0.278 copy:0.096 down:0.318 embed:0.006 final_norm:0.006 gate_up:0.448 lm_head:0.180 o_proj:0.229 qkv:0.462 residual:0.223 rmsnorm:0.199 rope_kv:0.173 select:0.021 sum:2.722 swiglu:0.083
+   stages n9 rows   attention:0.229 copy:0.099 down:1.018 embed:0.006 final_norm:0.006 gate_up:3.119 lm_head:0.135 o_proj:1.565 qkv:4.633 residual:0.228 rmsnorm:0.193 rope_kv:0.179 select:0.020 sum:11.516 swiglu:0.085
+   stages n9 smallm attention:0.277 copy:0.092 down:0.172 embed:0.006 final_norm:0.006 gate_up:0.279 lm_head:0.089 o_proj:0.126 qkv:0.273 residual:0.218 rmsnorm:0.199 rope_kv:0.171 select:0.020 sum:2.010 swiglu:0.080
+   bits gemm_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 9.5367431640625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemm_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 8.58306884765625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_batched          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 6.079673767089844e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_perrow           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 5.245208740234375e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits legacy                 {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 9.5367431640625e-06, 'argmax_equal': 9}
+   bits rows_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.814697265625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits rows_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.5299530029296875e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_batched         {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 5.7220458984375e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_perrow          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 5.602836608886719e-06, 'argmax_equal': 9, 'pick_ok': 9}
+ prefix 384: decode 1.473 ms, host sampler 0.228 ms
+   legacy steps   n2:2.027 n3:2.488 n4:2.907 n5:3.351 n6:3.789 n7:4.341 n8:4.704 n9:5.141
+   graph_gemm_batched       n2:1.366 n3:1.403 n4:1.389 n5:1.395 n6:1.401 n7:1.508 n8:1.45 n9:1.453
+   graph_gemm_perrow        n2:1.789 n3:2.23 n4:2.619 n5:3.035 n6:3.448 n7:3.958 n8:4.304 n9:4.713
+   graph_gemvb_batched      n2:1.331 n3:1.349 n4:1.375 n5:1.44 n6:1.491 n7:1.535 n8:1.57 n9:1.611
+   graph_rows_batched       n2:1.302 n3:1.63 n4:1.978 n5:2.298 n6:2.639 n7:2.984 n8:3.316 n9:3.639
+   graph_smallm_batched     n2:1.279 n3:1.286 n4:1.288 n5:1.293 n6:1.303 n7:1.306 n8:1.304 n9:1.335
+   nograph_gemm_perrow      n2:1.96 n3:2.412 n4:2.819 n5:3.252 n6:3.678 n7:4.212 n8:4.567 n9:4.99
+   +rows to host   n2:1.328 n3:1.357 n4:1.383 n5:1.408 n6:1.444 n7:1.467 n8:1.487 n9:1.541
+   stages n5 gemm   attention:1.168 copy:0.096 down:0.272 embed:0.006 final_norm:0.006 gate_up:0.380 lm_head:0.097 o_proj:0.202 qkv:0.431 residual:0.226 rmsnorm:0.201 rope_kv:0.174 select:0.020 sum:3.359 swiglu:0.081
+   stages n5 gemvb  attention:1.167 copy:0.094 down:0.268 embed:0.006 final_norm:0.006 gate_up:0.379 lm_head:0.136 o_proj:0.205 qkv:0.430 residual:0.223 rmsnorm:0.200 rope_kv:0.173 select:0.020 sum:3.391 swiglu:0.082
+   stages n5 rows   attention:0.680 copy:0.101 down:0.648 embed:0.006 final_norm:0.006 gate_up:1.879 lm_head:0.081 o_proj:0.949 qkv:2.773 residual:0.233 rmsnorm:0.197 rope_kv:0.181 select:0.020 sum:7.839 swiglu:0.085
+   stages n5 smallm attention:1.168 copy:0.092 down:0.163 embed:0.006 final_norm:0.006 gate_up:0.265 lm_head:0.088 o_proj:0.119 qkv:0.249 residual:0.218 rmsnorm:0.199 rope_kv:0.171 select:0.020 sum:2.844 swiglu:0.080
+   stages n9 gemm   attention:1.166 copy:0.097 down:0.313 embed:0.006 final_norm:0.006 gate_up:0.390 lm_head:0.110 o_proj:0.216 qkv:0.448 residual:0.228 rmsnorm:0.200 rope_kv:0.174 select:0.020 sum:3.456 swiglu:0.083
+   stages n9 gemvb  attention:1.166 copy:0.097 down:0.322 embed:0.006 final_norm:0.006 gate_up:0.452 lm_head:0.180 o_proj:0.234 qkv:0.467 residual:0.223 rmsnorm:0.200 rope_kv:0.175 select:0.021 sum:3.632 swiglu:0.085
+   stages n9 rows   attention:0.692 copy:0.100 down:1.060 embed:0.006 final_norm:0.006 gate_up:3.225 lm_head:0.135 o_proj:1.622 qkv:4.804 residual:0.231 rmsnorm:0.194 rope_kv:0.181 select:0.021 sum:12.363 swiglu:0.085
+   stages n9 smallm attention:1.168 copy:0.093 down:0.174 embed:0.006 final_norm:0.006 gate_up:0.280 lm_head:0.089 o_proj:0.127 qkv:0.273 residual:0.219 rmsnorm:0.200 rope_kv:0.172 select:0.020 sum:2.908 swiglu:0.081
+   bits gemm_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 8.58306884765625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemm_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.049041748046875e-05, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_batched          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.291534423828125e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_perrow           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.0531158447265625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits legacy                 {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 8.58306884765625e-06, 'argmax_equal': 9}
+   bits rows_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.291534423828125e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits rows_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.814697265625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_batched         {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.76837158203125e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_perrow          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.814697265625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+== pk_det (NVIDIA L4)
+ prefix 32: decode 2.264 ms, host sampler 0.234 ms
+   legacy steps   n2:1.137 n3:1.213 n4:1.36 n5:1.427 n6:1.488 n7:1.567 n8:1.624 n9:1.688
+   graph_gemm_batched       n2:0.979 n3:1.005 n4:1.098 n5:1.11 n6:1.117 n7:1.135 n8:1.143 n9:1.146
+   graph_gemm_perrow        n2:1.026 n3:1.084 n4:1.204 n5:1.266 n6:1.315 n7:1.376 n8:1.42 n9:1.475
+   graph_gemvb_batched      n2:0.995 n3:1.147 n4:1.277 n5:1.456 n6:1.624 n7:1.763 n8:1.905 n9:2.041
+   graph_rows_batched       n2:1.471 n3:1.937 n4:2.394 n5:2.85 n6:3.303 n7:3.762 n8:4.22 n9:4.682
+   graph_smallm_batched     n2:0.873 n3:0.886 n4:0.892 n5:0.913 n6:0.938 n7:0.957 n8:0.947 n9:0.97
+   nograph_gemm_perrow      n2:1.1 n3:1.166 n4:1.307 n5:1.372 n6:1.428 n7:1.49 n8:1.545 n9:1.604
+   +rows to host   n2:0.901 n3:0.927 n4:0.95 n5:0.984 n6:1.011 n7:1.037 n8:1.047 n9:1.082
+   stages n5 gemm   attention:0.213 copy:0.077 down:0.534 embed:0.006 final_norm:0.007 gate_up:0.811 lm_head:0.220 o_proj:0.311 qkv:0.720 residual:0.190 rmsnorm:0.172 rope_kv:0.137 select:0.020 sum:3.487 swiglu:0.068
+   stages n5 gemvb  attention:0.212 copy:0.074 down:1.000 embed:0.006 final_norm:0.007 gate_up:0.983 lm_head:0.325 o_proj:0.252 qkv:0.588 residual:0.172 rmsnorm:0.166 rope_kv:0.131 select:0.035 sum:4.014 swiglu:0.063
+   stages n5 rows   attention:0.210 copy:0.075 down:1.666 embed:0.006 final_norm:0.007 gate_up:2.854 lm_head:0.350 o_proj:0.469 qkv:1.284 residual:0.171 rmsnorm:0.165 rope_kv:0.132 select:0.034 sum:7.487 swiglu:0.065
+   stages n5 smallm attention:0.214 copy:0.076 down:0.368 embed:0.007 final_norm:0.007 gate_up:0.704 lm_head:0.206 o_proj:0.183 qkv:0.460 residual:0.178 rmsnorm:0.170 rope_kv:0.135 select:0.021 sum:2.793 swiglu:0.064
+   stages n9 gemm   attention:0.215 copy:0.077 down:0.535 embed:0.006 final_norm:0.007 gate_up:0.812 lm_head:0.250 o_proj:0.310 qkv:0.721 residual:0.190 rmsnorm:0.171 rope_kv:0.138 select:0.020 sum:3.520 swiglu:0.068
+   stages n9 gemvb  attention:0.226 copy:0.077 down:1.383 embed:0.006 final_norm:0.007 gate_up:1.356 lm_head:0.457 o_proj:0.324 qkv:0.793 residual:0.179 rmsnorm:0.173 rope_kv:0.136 select:0.037 sum:5.220 swiglu:0.066
+   stages n9 rows   attention:0.214 copy:0.077 down:2.890 embed:0.007 final_norm:0.007 gate_up:4.750 lm_head:0.500 o_proj:0.776 qkv:2.217 residual:0.173 rmsnorm:0.165 rope_kv:0.133 select:0.035 sum:12.008 swiglu:0.065
+   stages n9 smallm attention:0.213 copy:0.072 down:0.374 embed:0.006 final_norm:0.007 gate_up:0.718 lm_head:0.208 o_proj:0.185 qkv:0.476 residual:0.169 rmsnorm:0.165 rope_kv:0.131 select:0.020 sum:2.806 swiglu:0.062
+   bits gemm_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.52587890625e-05, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemm_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.52587890625e-05, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_batched          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.814697265625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_perrow           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.814697265625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits legacy                 {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.621246337890625e-05, 'argmax_equal': 9}
+   bits rows_batched           {'rows_bit_identical': 9, 'rows': 9, 'max_abs': 0.0, 'argmax_equal': 9, 'pick_ok': 9}
+   bits rows_perrow            {'rows_bit_identical': 9, 'rows': 9, 'max_abs': 0.0, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_batched         {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.874301910400391e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_perrow          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.874301910400391e-06, 'argmax_equal': 9, 'pick_ok': 9}
+ prefix 384: decode 2.941 ms, host sampler 0.231 ms
+   legacy steps   n2:1.226 n3:1.396 n4:1.624 n5:1.792 n6:1.958 n7:2.127 n8:2.292 n9:2.458
+   graph_gemm_batched       n2:0.973 n3:0.986 n4:1.048 n5:1.06 n6:1.064 n7:1.079 n8:1.088 n9:1.1
+   graph_gemm_perrow        n2:1.124 n3:1.282 n4:1.49 n5:1.646 n6:1.798 n7:1.956 n8:2.111 n9:2.264
+   graph_gemvb_batched      n2:0.989 n3:1.118 n4:1.224 n5:1.362 n6:1.488 n7:1.595 n8:1.708 n9:1.793
+   graph_rows_batched       n2:1.352 n3:1.706 n4:2.057 n5:2.409 n6:2.766 n7:3.126 n8:3.483 n9:3.844
+   graph_smallm_batched     n2:0.901 n3:0.91 n4:0.914 n5:0.929 n6:0.947 n7:0.96 n8:0.961 n9:0.981
+   nograph_gemm_perrow      n2:1.192 n3:1.358 n4:1.581 n5:1.742 n6:1.899 n7:2.064 n8:2.225 n9:2.383
+   +rows to host   n2:0.924 n3:0.944 n4:0.957 n5:0.982 n6:1.008 n7:1.029 n8:1.038 n9:1.066
+   stages n5 gemm   attention:0.889 copy:0.074 down:0.520 embed:0.006 final_norm:0.007 gate_up:0.803 lm_head:0.220 o_proj:0.300 qkv:0.710 residual:0.181 rmsnorm:0.167 rope_kv:0.132 select:0.020 sum:4.092 swiglu:0.063
+   stages n5 gemvb  attention:0.890 copy:0.072 down:0.998 embed:0.006 final_norm:0.007 gate_up:0.979 lm_head:0.325 o_proj:0.251 qkv:0.579 residual:0.171 rmsnorm:0.166 rope_kv:0.130 select:0.034 sum:4.670 swiglu:0.063
+   stages n5 rows   attention:0.888 copy:0.075 down:1.667 embed:0.006 final_norm:0.007 gate_up:2.846 lm_head:0.350 o_proj:0.462 qkv:1.267 residual:0.170 rmsnorm:0.166 rope_kv:0.131 select:0.034 sum:8.133 swiglu:0.065
+   stages n5 smallm attention:0.894 copy:0.070 down:0.366 embed:0.006 final_norm:0.007 gate_up:0.704 lm_head:0.206 o_proj:0.180 qkv:0.457 residual:0.167 rmsnorm:0.164 rope_kv:0.130 select:0.020 sum:3.431 swiglu:0.060
+   stages n9 gemm   attention:0.891 copy:0.072 down:0.522 embed:0.006 final_norm:0.007 gate_up:0.801 lm_head:0.248 o_proj:0.300 qkv:0.708 residual:0.181 rmsnorm:0.165 rope_kv:0.131 select:0.020 sum:4.116 swiglu:0.064
+   stages n9 gemvb  attention:0.940 copy:0.074 down:1.376 embed:0.006 final_norm:0.007 gate_up:1.341 lm_head:0.456 o_proj:0.315 qkv:0.784 residual:0.173 rmsnorm:0.171 rope_kv:0.132 select:0.037 sum:5.876 swiglu:0.065
+   stages n9 rows   attention:0.896 copy:0.076 down:2.890 embed:0.006 final_norm:0.007 gate_up:4.750 lm_head:0.499 o_proj:0.770 qkv:2.190 residual:0.173 rmsnorm:0.166 rope_kv:0.132 select:0.035 sum:12.654 swiglu:0.065
+   stages n9 smallm attention:0.887 copy:0.070 down:0.375 embed:0.006 final_norm:0.007 gate_up:0.719 lm_head:0.208 o_proj:0.185 qkv:0.475 residual:0.168 rmsnorm:0.163 rope_kv:0.130 select:0.020 sum:3.475 swiglu:0.061
+   bits gemm_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.1920928955078125e-05, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemm_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.1920928955078125e-05, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_batched          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.4570693969726562e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_perrow           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.4570693969726562e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits legacy                 {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.0967254638671875e-05, 'argmax_equal': 9}
+   bits rows_batched           {'rows_bit_identical': 9, 'rows': 9, 'max_abs': 0.0, 'argmax_equal': 9, 'pick_ok': 9}
+   bits rows_perrow            {'rows_bit_identical': 9, 'rows': 9, 'max_abs': 0.0, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_batched         {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.0531158447265625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_perrow          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.0531158447265625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+== pk_off (NVIDIA L4)
+ prefix 32: decode 2.252 ms, host sampler 0.234 ms
+   legacy steps   n2:1.138 n3:1.209 n4:1.355 n5:1.424 n6:1.488 n7:1.562 n8:1.624 n9:1.694
+   graph_gemm_batched       n2:0.981 n3:0.996 n4:1.081 n5:1.096 n6:1.111 n7:1.13 n8:1.142 n9:1.155
+   graph_gemm_perrow        n2:1.009 n3:1.074 n4:1.197 n5:1.257 n6:1.31 n7:1.37 n8:1.416 n9:1.473
+   graph_gemvb_batched      n2:0.98 n3:1.14 n4:1.281 n5:1.453 n6:1.611 n7:1.759 n8:1.906 n9:2.035
+   graph_rows_batched       n2:1.465 n3:1.912 n4:2.375 n5:2.824 n6:3.279 n7:3.744 n8:4.207 n9:4.679
+   graph_smallm_batched     n2:0.873 n3:0.886 n4:0.89 n5:0.913 n6:0.932 n7:0.956 n8:0.951 n9:0.973
+   nograph_gemm_perrow      n2:1.093 n3:1.155 n4:1.29 n5:1.35 n6:1.407 n7:1.471 n8:1.529 n9:1.587
+   +rows to host   n2:0.903 n3:0.93 n4:0.95 n5:0.981 n6:1.011 n7:1.039 n8:1.046 n9:1.085
+   stages n5 gemm   attention:0.209 copy:0.071 down:0.523 embed:0.006 final_norm:0.007 gate_up:0.800 lm_head:0.219 o_proj:0.299 qkv:0.708 residual:0.173 rmsnorm:0.167 rope_kv:0.132 select:0.021 sum:3.397 swiglu:0.062
+   stages n5 gemvb  attention:0.209 copy:0.072 down:0.999 embed:0.006 final_norm:0.007 gate_up:0.979 lm_head:0.325 o_proj:0.252 qkv:0.580 residual:0.167 rmsnorm:0.165 rope_kv:0.132 select:0.035 sum:3.990 swiglu:0.061
+   stages n5 rows   attention:0.210 copy:0.074 down:1.666 embed:0.006 final_norm:0.007 gate_up:2.845 lm_head:0.351 o_proj:0.475 qkv:1.311 residual:0.166 rmsnorm:0.166 rope_kv:0.131 select:0.034 sum:7.505 swiglu:0.063
+   stages n5 smallm attention:0.210 copy:0.068 down:0.365 embed:0.006 final_norm:0.007 gate_up:0.699 lm_head:0.206 o_proj:0.179 qkv:0.457 residual:0.163 rmsnorm:0.164 rope_kv:0.132 select:0.020 sum:2.739 swiglu:0.061
+   stages n9 gemm   attention:0.212 copy:0.070 down:0.523 embed:0.006 final_norm:0.007 gate_up:0.796 lm_head:0.248 o_proj:0.300 qkv:0.710 residual:0.173 rmsnorm:0.165 rope_kv:0.129 select:0.021 sum:3.423 swiglu:0.063
+   stages n9 gemvb  attention:0.224 copy:0.076 down:1.385 embed:0.007 final_norm:0.007 gate_up:1.347 lm_head:0.456 o_proj:0.327 qkv:0.785 residual:0.178 rmsnorm:0.173 rope_kv:0.140 select:0.038 sum:5.208 swiglu:0.066
+   stages n9 rows   attention:0.213 copy:0.080 down:2.894 embed:0.006 final_norm:0.007 gate_up:4.728 lm_head:0.500 o_proj:0.815 qkv:2.331 residual:0.172 rmsnorm:0.168 rope_kv:0.134 select:0.036 sum:12.152 swiglu:0.067
+   stages n9 smallm attention:0.210 copy:0.069 down:0.375 embed:0.006 final_norm:0.007 gate_up:0.716 lm_head:0.208 o_proj:0.185 qkv:0.478 residual:0.163 rmsnorm:0.164 rope_kv:0.130 select:0.020 sum:2.791 swiglu:0.061
+   bits gemm_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.71661376953125e-05, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemm_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.52587890625e-05, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_batched          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.291534423828125e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_perrow           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.814697265625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits legacy                 {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.52587890625e-05, 'argmax_equal': 9}
+   bits rows_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.814697265625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits rows_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.76837158203125e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_batched         {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.337860107421875e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_perrow          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.5762786865234375e-06, 'argmax_equal': 9, 'pick_ok': 9}
+ prefix 384: decode 2.941 ms, host sampler 0.235 ms
+   legacy steps   n2:1.225 n3:1.397 n4:1.625 n5:1.792 n6:1.957 n7:2.123 n8:2.289 n9:2.455
+   graph_gemm_batched       n2:0.97 n3:0.985 n4:1.044 n5:1.061 n6:1.069 n7:1.085 n8:1.094 n9:1.104
+   graph_gemm_perrow        n2:1.125 n3:1.284 n4:1.491 n5:1.647 n6:1.799 n7:1.955 n8:2.111 n9:2.263
+   graph_gemvb_batched      n2:0.985 n3:1.121 n4:1.229 n5:1.368 n6:1.487 n7:1.604 n8:1.712 n9:1.808
+   graph_rows_batched       n2:1.346 n3:1.706 n4:2.057 n5:2.419 n6:2.78 n7:3.146 n8:3.495 n9:3.849
+   graph_smallm_batched     n2:0.901 n3:0.91 n4:0.914 n5:0.933 n6:0.949 n7:0.966 n8:0.964 n9:0.982
+   nograph_gemm_perrow      n2:1.191 n3:1.355 n4:1.576 n5:1.739 n6:1.896 n7:2.058 n8:2.219 n9:2.378
+   +rows to host   n2:0.926 n3:0.946 n4:0.958 n5:0.985 n6:1.012 n7:1.033 n8:1.041 n9:1.07
+   stages n5 gemm   attention:0.888 copy:0.073 down:0.524 embed:0.006 final_norm:0.007 gate_up:0.804 lm_head:0.220 o_proj:0.304 qkv:0.710 residual:0.179 rmsnorm:0.167 rope_kv:0.133 select:0.021 sum:4.100 swiglu:0.064
+   stages n5 gemvb  attention:0.885 copy:0.071 down:0.999 embed:0.006 final_norm:0.007 gate_up:0.975 lm_head:0.325 o_proj:0.250 qkv:0.576 residual:0.166 rmsnorm:0.165 rope_kv:0.131 select:0.035 sum:4.651 swiglu:0.061
+   stages n5 rows   attention:0.887 copy:0.075 down:1.668 embed:0.006 final_norm:0.007 gate_up:2.841 lm_head:0.351 o_proj:0.476 qkv:1.306 residual:0.167 rmsnorm:0.167 rope_kv:0.131 select:0.034 sum:8.176 swiglu:0.063
+   stages n5 smallm attention:0.892 copy:0.077 down:0.370 embed:0.007 final_norm:0.007 gate_up:0.706 lm_head:0.207 o_proj:0.184 qkv:0.459 residual:0.178 rmsnorm:0.175 rope_kv:0.138 select:0.021 sum:3.487 swiglu:0.066
+   stages n9 gemm   attention:0.887 copy:0.071 down:0.520 embed:0.006 final_norm:0.007 gate_up:0.799 lm_head:0.248 o_proj:0.299 qkv:0.708 residual:0.176 rmsnorm:0.165 rope_kv:0.130 select:0.020 sum:4.098 swiglu:0.063
+   stages n9 gemvb  attention:0.944 copy:0.073 down:1.381 embed:0.006 final_norm:0.007 gate_up:1.346 lm_head:0.456 o_proj:0.318 qkv:0.786 residual:0.170 rmsnorm:0.170 rope_kv:0.133 select:0.037 sum:5.891 swiglu:0.064
+   stages n9 rows   attention:0.892 copy:0.077 down:2.897 embed:0.007 final_norm:0.007 gate_up:4.736 lm_head:0.501 o_proj:0.846 qkv:2.411 residual:0.177 rmsnorm:0.169 rope_kv:0.135 select:0.036 sum:12.957 swiglu:0.066
+   stages n9 smallm attention:0.886 copy:0.069 down:0.374 embed:0.006 final_norm:0.007 gate_up:0.719 lm_head:0.208 o_proj:0.185 qkv:0.475 residual:0.165 rmsnorm:0.164 rope_kv:0.130 select:0.020 sum:3.470 swiglu:0.062
+   bits gemm_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.1444091796875e-05, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemm_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.0967254638671875e-05, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_batched          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.933906555175781e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits gemvb_perrow           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.814697265625e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits legacy                 {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 1.049041748046875e-05, 'argmax_equal': 9}
+   bits rows_batched           {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.337860107421875e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits rows_perrow            {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 3.4570693969726562e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_batched         {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.291534423828125e-06, 'argmax_equal': 9, 'pick_ok': 9}
+   bits smallm_perrow          {'rows_bit_identical': 0, 'rows': 9, 'max_abs': 4.0531158447265625e-06, 'argmax_equal': 9, 'pick_ok': 9}

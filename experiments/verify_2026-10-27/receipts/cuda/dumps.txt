@@ -1,0 +1,16 @@
+ar_x5_q8_0 head_vs_new=identical bytes=39680
+state4 head_vs_new=identical bytes=3077120
+state4_q8_0 head_vs_new=identical bytes=3077120
+mor3 head_vs_new=identical bytes=39680
+mor3_q8_0 head_vs_new=identical bytes=39680
+mor2p0 head_vs_new=identical bytes=39680
+ar3 head_vs_new=identical bytes=39680
+rec_p1_b2x3_c1 head_vs_new=identical bytes=39680
+rec_p1_b2x3_c1_inject head_vs_new=identical bytes=39680
+rec_b2x4 head_vs_new=identical bytes=39680
+syn_mistral_swa head_vs_new=identical bytes=3937280
+syn_gptneox head_vs_new=identical bytes=3937280
+syn_gpt2 head_vs_new=identical bytes=3937280
+syn_mamba head_vs_new=identical bytes=3937280
+syn_gemma3 head_vs_new=identical bytes=3937280
+gpt2_tiny head_vs_new=identical bytes=62919680

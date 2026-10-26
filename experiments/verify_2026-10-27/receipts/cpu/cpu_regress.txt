@@ -1,0 +1,23 @@
+CPU legs (cpu_legs.sh, WSL, 27 Oct 2026): this work's CPU build ~/vf/build_cpu (HAS_CUDA=OFF, Release) against the
+committed receipts (git show HEAD:<path>), and 70ed063's CPU build ~/vf/head_cpu where noted.
+
+regress_bits old side: /home/jonat/vf/head_cpu/ir_logits
+recursion_gate rc=0: recursion_gate_cpu.json byte-identical
+mor_gate rc=0: mor_gate_cpu.json byte-identical
+mor_refusals rc=0: mor_refusals.json byte-identical
+attnres_gate rc=0: attnres_gate_cpu.json byte-identical
+state_tokens_gate rc=0: state_tokens_gate_cpu.json DIFFERS or missing
+state4_gate rc=0: state4_gate_cpu.json byte-identical
+regress_bits rc=0: regress_bits.json DIFFERS or missing
+regress_parity rc=0: regress_parity.json byte-identical
+g5_thirdparty rc=0: g5_thirdparty.json byte-identical
+adapter self-test rc=1:     raise RuntimeError(f"{method} {params.get('session', '')}: {r}") RuntimeError: open : {'error': 'IR_SPEC 3.1 (rule 38): general.architecture \'gpt2\': the embedded document is not the gpt2 graph its metadata describes (section 9.3; first difference, document against graph: document.block.nodes[3].den_floor: 9.99999993922529e-09 against absent); a file whose model is not that architecture\'s graph has general.architecture "paperkiln", which no llama.cpp release builds a graph for', 'id': 631} 
+
+state_tokens_gate: this work's receipt = 70ed063's own CPU build's, byte for byte (both differ from the committed
+  file in the numpy-reference distances only, as ../determinism_2026-10-26 found).
+regress_bits: old side 70ed063's ir_logits (69d7ca2's build is gone); bit-equal on every case both builds run;
+   {'gpt2_tiny': (True, [0, 0]), 'gpt2_tiny_scale_smoke_ir': (True, [0, 0]), 'recursion_b2x4_0101': (True, [0, 0]), 'chat_sftfinal_v3': (True, [0, 0]), 'swa_tiny': (False, [-6, -6]), 'kimi_tiny': (False, [-6, -6]), 'mamba_tiny': (True, [0, 0]), 'moe_tiny_v3': (True, [0, 0]), 'attnres_tiny': (True, [0, 0]), 'attnres_gate_ar3': (True, [0, 0]), 'state_gate_state4': (True, [0, 0]), 'recursion_gate_p1_b2x3_c1': (True, [0, 0]), 'recursion_gate_p1_b2x3_c1_inject': (True, [0, 0]), 'recursion_gate_b2x4': (True, [0, 0]), 'mor_gate_mor3': (True, [0, 0]), 'mor_gate_mor2p0': (True, [0, 0])}
+  swa_tiny and kimi_tiny abort (rc -6) in both builds: 70ed063 refuses them already, so the receipt differs from the
+  committed one there and nowhere else.
+adapter self-test: fails at the same rule-38 refusal with 70ed063's own ir_adapter (output identical line for line):
+  a pre-existing state of 70ed063, not this change.

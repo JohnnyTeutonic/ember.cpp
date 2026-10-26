@@ -101,6 +101,26 @@ static std::vector<int> prompt_lookup_draft(const std::vector<int>& h, int k) {
   return {};
 }
 
+#ifdef HAS_CUDA
+// What sample_top_k_top_p_temperature(row, temperature, top_k = 1, ...) returns for a verification row, from the
+// row's device record (speculative_verify.cpp), or -1 when the record cannot decide it. Below temperature 0.05 the
+// sampler takes max_element: the first index of the largest logit. Otherwise it keeps the largest (float
+// probability, index) pair: the last index of the largest logit, provided no smaller logit rounds to the same float
+// probability, which holds once the runner-up's scaled logit is below -1e-5 (the two probabilities are then more
+// than two float steps apart). The sampler then draws from its one-element distribution; the same draw is made here,
+// so the session's RNG moves exactly as it would.
+static int greedy_from_pick(const ember_verify::RowPick& p, float temperature, std::mt19937& rng) {
+  if (p.nan || !std::isfinite(p.max) || p.first < 0 || p.last < 0) return -1;
+  if (temperature < 0.05f) return p.first;
+  const float scaled = (p.second - p.max) * (1.0f / temperature);
+  if (!(scaled < -1e-5f)) return -1;
+  const std::vector<float> one(1, 1.0f);
+  std::discrete_distribution<int> dist(one.begin(), one.end());
+  (void)dist(rng);
+  return p.last;
+}
+#endif
+
 // CTRL-style repetition penalty over recently generated tokens. Tiny
 // word-level models fall into short degenerate cycles ("you are very kind."
 // x12, 2026-07-19); penalizing the last window of generated ids breaks the
@@ -1093,15 +1113,31 @@ if (prefill_enabled) {
           std::copy(e.begin(), e.end(), emb.begin() + (size_t)i * hs);
         }
         std::vector<float> all;
-        if (ir_) {
+#ifdef HAS_CUDA
+        // The verification pass as a captured CUDA graph with a greedy pick per
+        // row on the device (speculative_verify.cpp); EMBER_VERIFY=legacy, or a
+        // shape it does not cover, takes the passes below.
+        static const bool verify_legacy = [] {
+          const char* v = std::getenv("EMBER_VERIFY");
+          return v && std::string(v) == "legacy";
+        }();
+        std::vector<ember_verify::RowPick> picks;
+        const bool have_picks = !ir_ && !verify_legacy && config_.num_cpu_offload_layers == 0 &&
+                                model_->forward_device_verify_graph(batch, pos, &kv_cache_, &picks);
+#else
+        const bool have_picks = false;
+#endif
+        if (have_picks) {
+          // every row's pick is in `picks`; its logits stay on the device
+        } else if (ir_) {
           all = ir_->forward(batch, pos, /*all_rows=*/true);
         } else if (config_.num_cpu_offload_layers == config_.num_hidden_layers) {
           all = model_->forward_cpu_logits_batch(
               model_->forward_cpu_batch(emb, n, config_.num_hidden_layers, pos, &kv_cache_), n);
         } else {
 #ifdef HAS_CUDA
-          // The graph-like verification path (about one decode step per pass);
-          // the batched prefill when it does not apply.
+          // The per-launch verification path; the batched prefill when it does
+          // not apply.
           if (config_.num_cpu_offload_layers == 0) all = model_->forward_device_verify(batch, pos, &kv_cache_);
           if (all.empty()) {
           float* d_emb = nullptr;
@@ -1112,16 +1148,32 @@ if (prefill_enabled) {
           }
 #endif
         }
-        if (all.size() != (size_t)n * vs) {
+        if (!have_picks && all.size() != (size_t)n * vs) {
           Logger::error("Speculative verification returned " + std::to_string(all.size()) + " logits; stopping.");
           break;
         }
         int accepted = 0;
         bool stop = false;
         for (int i = 0; i < n; ++i) {
-          std::vector<float> lg(all.begin() + (size_t)i * vs, all.begin() + (size_t)(i + 1) * vs);
-          apply_repetition_penalty(lg, generated_token_ids, repetition_penalty_);
-          const int t = sample_top_k_top_p_temperature(lg, temperature, top_k, top_p, rng_);
+          int t = -1;
+#ifdef HAS_CUDA
+          if (have_picks && repetition_penalty_ <= 1.0f) t = greedy_from_pick(picks[i], temperature, rng_);
+          if (have_picks && t < 0) {  // the record cannot decide: the row itself
+            std::vector<float> lg = model_->verify_row_logits(i);
+            if (lg.size() != static_cast<size_t>(vs)) {
+              Logger::error("Speculative verification: row " + std::to_string(i) + " unavailable; stopping.");
+              stop = true;
+              break;
+            }
+            apply_repetition_penalty(lg, generated_token_ids, repetition_penalty_);
+            t = sample_top_k_top_p_temperature(lg, temperature, top_k, top_p, rng_);
+          }
+#endif
+          if (!have_picks) {
+            std::vector<float> lg(all.begin() + (size_t)i * vs, all.begin() + (size_t)(i + 1) * vs);
+            apply_repetition_penalty(lg, generated_token_ids, repetition_penalty_);
+            t = sample_top_k_top_p_temperature(lg, temperature, top_k, top_p, rng_);
+          }
           generated_token_ids.push_back(t);
           generated_count++;
           emit_token(t);
