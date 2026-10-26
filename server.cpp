@@ -196,6 +196,10 @@ static json bpe_run(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r, 
                       {"batch_prefill", tb.batch_prefill},
                       {"prefill_wall_ms", tb.prefill_wall_ms},
                       {"prefill_gpu_span_ms", tb.prefill_gpu_span_ms}};
+  if (tb.spec_draft_calls > 0) {  // speculation on (EMBER_SPEC): the drafter's own time
+    res_json["ttft"]["spec_draft_ms"] = tb.spec_draft_ms;
+    res_json["ttft"]["spec_draft_calls"] = tb.spec_draft_calls;
+  }
   return res_json;
 }
 
@@ -547,6 +551,10 @@ int main(int argc, char** argv) {
               {"prefix_reused_tokens", tb.prefix_reused_tokens}, {"spec_drafted", tb.spec_drafted}, {"spec_accepted", tb.spec_accepted}, {"spec_passes", tb.spec_passes},
               {"prefix_hit_rate", tb.prefix_hit_rate},
               {"op_ms", tb.op_ms}};
+          if (tb.spec_draft_calls > 0) {  // speculation on (EMBER_SPEC): the drafter's own time
+            res_json["ttft"]["spec_draft_ms"] = tb.spec_draft_ms;
+            res_json["ttft"]["spec_draft_calls"] = tb.spec_draft_calls;
+          }
 
           res.set_content(res_json.dump(), "application/json");
           Logger::info("Response sent successfully.");
