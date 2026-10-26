@@ -127,7 +127,8 @@ def validator(doc, gguf):
         doc = embedded(gguf) if not third else gguf_ir.build(*gguf_ir.read_meta(gguf))
     errs = V.doc_errors(doc) + V.gguf_errors(doc, meta, tensors)
     if third:  # rule 24 is about paperkiln.ir's companion key, which a third-party file has no reason to carry
-        errs = [e for e in errs if not e.startswith("IR_SPEC 3.1: paperkiln.ir_version")]
+        # ("IR_SPEC 3.1: ..." before keramos v1.2.0, "IR_SPEC 3.1 (rule 24): ..." since the rule citations)
+        errs = [e for e in errs if not (e.startswith("IR_SPEC 3.1") and "paperkiln.ir_version" in e)]
     return errs
 
 
