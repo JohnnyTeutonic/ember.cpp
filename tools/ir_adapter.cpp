@@ -10,7 +10,7 @@
 // "exact": true).
 //
 // Methods: hello, check, open, forward, truncate, snapshot, restore, close, digest, dequantize, render_chat, and
-// run_node for recurrence and expr nodes (other ops and run_node_grad reply skip). A session owns one GGUF, one
+// run_node for recurrence, expr and attention nodes (other ops and run_node_grad reply skip). A session owns one GGUF, one
 // interpreter and the ids it has seen.
 //   check / open: "ir" names a document that replaces the file's (ember's EMBER_IR); null reads the
 //     GGUF's paperkiln.ir (or the IR ember builds from third-party metadata). EMBER_IR from the
@@ -35,7 +35,9 @@
 //   run_node: a recurrence node (graph_ir_recurrence.h) as application 0 ({i} is 0), token by token over the
 //     inputs' rows from the slot's initial state (or "state"'s tensors); outputs {out: [T, w]} and the slot's
 //     tensors after the last row. An expr node (graph_ir_expr.h): the interpreter's expression over its inputs
-//     [T, w], their shapes checked as the interpreter checks them (rule 37); state {}.
+//     [T, w], their shapes checked as the interpreter checks them (rule 37); state {}. An attention node with section
+//     11.2's defaults (its own slot, rows at positions 0 .. T-1, mask causal) through the interpreter's kernels,
+//     position_bias included; state {} (a kv slot is not reported).
 // Reports: logits and depth (forward only), kv_rows, kv_positions, recurrent; depth is [] for a document
 // without depth_route, kv_rows / kv_positions {} without a kv slot, recurrent {} without one. ember keeps one kv
 // slot per block; kv_rows and kv_positions give, per application, the rows its cache holds after
@@ -58,6 +60,7 @@
 #include <nlohmann/json.hpp>
 
 #include "chat_template.h"
+#include "cpu_attention.h"
 #include "gguf_parser.h"
 #include "graph_ir.h"
 #include "graph_ir_expr.h"
@@ -262,7 +265,7 @@ class Adapter {
  private:
   static json hello() {
     return {{"engine", "ember.cpp"},
-            {"version", "ir_adapter 3 (IR versions 0 and 1; spec revision 1.2)"},
+            {"version", "ir_adapter 4 (IR versions 0 and 1; spec revision 1.3)"},
             {"backend", "cpu"},
             {"exact", true},
             {"profiles", {"core", "state", "recursion", "thirdparty", "recurrence", "chat"}},
@@ -303,6 +306,59 @@ class Adapter {
   }
 
   // An expr node alone (IR_SPEC 5.19): the interpreter's evaluation (graph_ir_expr.h) and its shape checks.
+  // An attention node alone (IR_SPEC 5.15; section 11.2's defaults): a kv slot of its own heads, kv_heads, head_dim,
+  // window and sinks, empty at the start, its rows at positions 0 .. T-1, mask causal; the interpreter's kernels
+  // (cpu_attention.h), position_bias through attention_bias_batch_cpu. The kv slot is not reported (state {}).
+  static json run_attention(const json& node, const json& inputs, const json& weights) {
+    auto attr = [&](const char* k, const json& dflt) {  // application 0's value
+      const json& v = node.contains(k) ? node.at(k) : dflt;
+      return v.is_object() && v.contains("per_layer") ? v.at("per_layer").at(0) : v;
+    };
+    if (attr("mask", json("causal")) != "causal") throw Skip{"run_node: attention mask turn_state needs token ids"};
+    const int H = attr("heads", nullptr).get<int>(), hd = attr("head_dim", nullptr).get<int>();
+    const int KV = attr("kv_heads", json(H)).get<int>();
+    const int window = attr("window", json(0)).get<int>(), sinks = attr("sinks", json(0)).get<int>();
+    const float scale = attr("scale", nullptr).get<float>();
+    const std::vector<std::string> ins = node.at("in").get<std::vector<std::string>>();
+    if (ins.size() != 3) throw std::runtime_error("IR_SPEC 10.1 rule 7: attention reads [q, k, v]");
+    std::vector<int64_t> sq, sk, sv;
+    std::vector<float> q = floats(inputs.at(ins[0]), &sq), k = floats(inputs.at(ins[1]), &sk),
+                       v = floats(inputs.at(ins[2]), &sv);
+    if (sq.size() != 2 || sk != sv || sk.size() != 2 || sq[0] != sk[0] || sq[1] != H * hd || sk[1] != KV * hd)
+      throw std::runtime_error("run_node: attention q must be [T, heads x head_dim] and k, v [T, kv_heads x head_dim]");
+    const int T = static_cast<int>(sq[0]);
+    KVCacheLayer cache;
+    cache.k = std::move(k);
+    cache.v = std::move(v);
+    std::vector<float> out;
+    if (node.contains("position_bias")) {
+      const json& pb = node.at("position_bias");
+      std::string wn = pb.at("weight").get<std::string>();
+      const auto at = wn.find("{i}");
+      if (at != std::string::npos) wn.replace(at, 3, "0");
+      if (!weights.contains(wn)) throw std::runtime_error("run_node: no weight '" + wn + "'");
+      std::vector<int64_t> sw;
+      const std::vector<float> W = floats(weights.at(wn), &sw);
+      const std::vector<int> buckets = pb.at("buckets").get<std::vector<int>>();
+      int top = -1;
+      for (int b : buckets) top = std::max(top, b);
+      if (buckets.empty() || *std::min_element(buckets.begin(), buckets.end()) < 0 || sw.size() != 2 || sw[1] != H ||
+          sw[0] <= top)
+        throw std::runtime_error("IR_SPEC 5.15 (rule 39): position_bias table must be [B, heads] with B above every bucket");
+      std::vector<int> qpos(static_cast<size_t>(T));
+      for (int t = 0; t < T; ++t) qpos[t] = t;
+      attention_bias_batch_cpu(q, cache, out, T, attention_visible_rows(T, 0, window, sinks), nullptr, qpos, H, KV, hd,
+                               scale, W.data(), buckets);
+    } else {
+      attention_window_batch_cpu(q, cache, out, T, 0, H, KV, hd, scale, window, sinks);
+    }
+    json r;
+    r["outputs"] = json::object();
+    r["outputs"][node.at("out").get<std::string>()] = tensor({T, static_cast<int64_t>(H) * hd}, out.data(), out.size());
+    r["state"] = json::object();
+    return r;
+  }
+
   static json run_expr(const json& node, const json& inputs) {
     if (!node.contains("expr") || !node.at("expr").is_string()) throw std::runtime_error("IR_SPEC 5.19: expr needs its expr");
     const std::vector<std::string> ins = node.at("in").get<std::vector<std::string>>();
@@ -355,8 +411,10 @@ class Adapter {
   static json run_node(const json& p) {
     const json& node = p.at("node");
     if (node.value("op", "") == "expr") return run_expr(node, p.at("inputs"));
+    if (node.value("op", "") == "attention") return run_attention(node, p.at("inputs"), p.value("weights", json::object()));
     if (node.value("op", "") != "recurrence")
-      throw Skip{"run_node: ember's adapter runs recurrence and expr nodes only (whole-model methods for the other ops)"};
+      throw Skip{"run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other "
+                 "ops)"};
     const ember_ir::rec::Recurrence prog = ember_ir::rec::Recurrence::compile(node);
     std::vector<std::string> ins;
     if (node.at("in").is_string())
