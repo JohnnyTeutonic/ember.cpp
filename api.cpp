@@ -187,6 +187,14 @@ static void debug_dump_topk(const std::vector<float>& logits) {
   fprintf(stderr, "%s\n", os.str().c_str());
 }
 
+// Either debug dump above is on: the speculative path then fetches every row it
+// samples from, so the dump holds one line per generated token, as plain decode's.
+static bool logits_debug_on() {
+  static const bool on = std::getenv("TINYLLAMA_LOGITS_DUMP") != nullptr ||
+                         std::getenv("TINYLLAMA_TOPK_DEBUG") != nullptr;
+  return on;
+}
+
 static int sample_top_k_top_p_temperature(const std::vector<float>& logits,
                                           float temperature, int top_k,
                                           float top_p, std::mt19937& rng) {
@@ -1158,7 +1166,9 @@ if (prefill_enabled) {
           int t = -1;
 #ifdef HAS_CUDA
           if (have_picks && repetition_penalty_ <= 1.0f) t = greedy_from_pick(picks[i], temperature, rng_);
-          if (have_picks && t < 0) {  // the record cannot decide: the row itself
+          // The record cannot decide, or a debug dump wants the row: the row itself
+          // (with the record's pick kept when it decided).
+          if (have_picks && (t < 0 || logits_debug_on())) {
             std::vector<float> lg = model_->verify_row_logits(i);
             if (lg.size() != static_cast<size_t>(vs)) {
               Logger::error("Speculative verification: row " + std::to_string(i) + " unavailable; stopping.");
@@ -1166,12 +1176,14 @@ if (prefill_enabled) {
               break;
             }
             apply_repetition_penalty(lg, generated_token_ids, repetition_penalty_);
-            t = sample_top_k_top_p_temperature(lg, temperature, top_k, top_p, rng_);
+            debug_dump_topk(lg);
+            if (t < 0) t = sample_top_k_top_p_temperature(lg, temperature, top_k, top_p, rng_);
           }
 #endif
           if (!have_picks) {
             std::vector<float> lg(all.begin() + (size_t)i * vs, all.begin() + (size_t)(i + 1) * vs);
             apply_repetition_penalty(lg, generated_token_ids, repetition_penalty_);
+            debug_dump_topk(lg);
             t = sample_top_k_top_p_temperature(lg, temperature, top_k, top_p, rng_);
           }
           generated_token_ids.push_back(t);

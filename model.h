@@ -426,7 +426,8 @@ class TinyLlamaModel {
   // Logits of row r of the last forward_device_verify_graph pass (one device-to-host copy).
   std::vector<float> verify_row_logits(int r);
   // Measurement knobs of forward_device_verify_graph, read from the environment on first use
-  // (EMBER_VERIFY_LINEAR = smallm | gemm | gemvb | rows, EMBER_VERIFY_GRAPH=0, EMBER_VERIFY_ATTN=perrow,
+  // (EMBER_VERIFY_LINEAR = smallm | gemm | gemvb | rows; unset, rows under EMBER_DETERMINISTIC=1, else smallm;
+  // EMBER_VERIFY_GRAPH=0, EMBER_VERIFY_ATTN=perrow,
   // EMBER_VERIFY_TIMING=1: per-stage synchronised timing, graph off). Changing them drops the captured graphs.
   struct VerifyOptions {
     int linear = 0;  // ember_verify::VerifyLinear
