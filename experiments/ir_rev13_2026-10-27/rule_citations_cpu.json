@@ -1,0 +1,2802 @@
+{
+ "keramos": "da9ead6175925aa6b19758aa828cdc42236a45a6",
+ "cases": 171,
+ "agree": 171,
+ "results": [
+  {
+   "case": "top_unknown",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.2 (rule 1): doc has the key 'extras', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc has the key 'extras', which its specification does not define"
+   ]
+  },
+  {
+   "case": "ir_version_missing",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.2 (rule 1): doc lacks the required key 'ir_version'"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc lacks the required key 'ir_version'"
+   ]
+  },
+  {
+   "case": "ir_version_string",
+   "agree": true,
+   "ember_rules": [
+    2
+   ],
+   "ref_rules": [
+    2
+   ],
+   "ember": [
+    "IR_SPEC 2.3 (rule 2): doc.ir_version must be of type \"integer\", not \"1\""
+   ],
+   "ref": [
+    "IR_SPEC 2.3 (rule 2): doc.ir_version must be of type integer, not \"1\""
+   ]
+  },
+  {
+   "case": "ir_version_negative",
+   "agree": true,
+   "ember_rules": [
+    2
+   ],
+   "ref_rules": [
+    2
+   ],
+   "ember": [
+    "IR_SPEC 2.3 (rule 2): doc.ir_version -1 is below the minimum 0",
+    "IR_SPEC 2.3: ir_version -1 is not supported (ember reads 0, 1)"
+   ],
+   "ref": [
+    "IR_SPEC 2.3 (rule 2): doc.ir_version -1 is below the minimum 0",
+    "IR_SPEC 2.3 (rule 2): ir_version -1 is not supported (this validator reads 0, 1)"
+   ]
+  },
+  {
+   "case": "family_hint_missing",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.2 (rule 1): doc lacks the required key 'family_hint'"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc lacks the required key 'family_hint'"
+   ]
+  },
+  {
+   "case": "family_hint_int",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.2 (rule 1): doc.family_hint must be of type \"string\", not 3"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.family_hint must be of type string, not 3"
+   ]
+  },
+  {
+   "case": "model_vocab_missing",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'vocab'",
+    "IR_SPEC 3.3: model.vocab missing or not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'vocab'",
+    "IR_SPEC 3.3 (rule 3): model.vocab missing or not a positive integer"
+   ]
+  },
+  {
+   "case": "model_vocab_zero",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model.vocab 0 is below the minimum 1",
+    "IR_SPEC 3.3: model.vocab missing or not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model.vocab 0 is below the minimum 1",
+    "IR_SPEC 3.3 (rule 3): model.vocab missing or not a positive integer"
+   ]
+  },
+  {
+   "case": "model_vocab_string",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model.vocab must be of type \"integer\", not \"x\"",
+    "IR_SPEC 3.3: model.vocab missing or not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model.vocab must be of type integer, not \"x\"",
+    "IR_SPEC 3.3 (rule 3): model.vocab missing or not a positive integer"
+   ]
+  },
+  {
+   "case": "model_d_missing",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'd'",
+    "IR_SPEC 3.3: model.d missing or not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'd'",
+    "IR_SPEC 3.3 (rule 3): model.d missing or not a positive integer"
+   ]
+  },
+  {
+   "case": "model_d_zero",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model.d 0 is below the minimum 1",
+    "IR_SPEC 3.3: model.d missing or not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model.d 0 is below the minimum 1",
+    "IR_SPEC 3.3 (rule 3): model.d missing or not a positive integer"
+   ]
+  },
+  {
+   "case": "model_d_string",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model.d must be of type \"integer\", not \"x\"",
+    "IR_SPEC 3.3: model.d missing or not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model.d must be of type integer, not \"x\"",
+    "IR_SPEC 3.3 (rule 3): model.d missing or not a positive integer"
+   ]
+  },
+  {
+   "case": "model_n_layers_missing",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'n_layers'",
+    "IR_SPEC 3.3: model.n_layers missing or not a positive integer",
+    "IR_SPEC 3.3: block.repeat 2 != model.n_layers None"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'n_layers'",
+    "IR_SPEC 3.3 (rule 3): model.n_layers missing or not a positive integer",
+    "IR_SPEC 3.3 (rule 3): block.repeat 2 != model.n_layers None"
+   ]
+  },
+  {
+   "case": "model_n_layers_zero",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model.n_layers 0 is below the minimum 1",
+    "IR_SPEC 3.3: model.n_layers missing or not a positive integer",
+    "IR_SPEC 3.3: block.repeat 2 != model.n_layers 0"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model.n_layers 0 is below the minimum 1",
+    "IR_SPEC 3.3 (rule 3): model.n_layers missing or not a positive integer",
+    "IR_SPEC 3.3 (rule 3): block.repeat 2 != model.n_layers 0"
+   ]
+  },
+  {
+   "case": "model_n_layers_string",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model.n_layers must be of type \"integer\", not \"x\"",
+    "IR_SPEC 3.3: model.n_layers missing or not a positive integer",
+    "IR_SPEC 3.3: block.repeat 2 != model.n_layers x"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model.n_layers must be of type integer, not \"x\"",
+    "IR_SPEC 3.3 (rule 3): model.n_layers missing or not a positive integer",
+    "IR_SPEC 3.3 (rule 3): block.repeat 2 != model.n_layers x"
+   ]
+  },
+  {
+   "case": "model_ctx_missing",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'ctx'",
+    "IR_SPEC 3.3: model.ctx missing or not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'ctx'",
+    "IR_SPEC 3.3 (rule 3): model.ctx missing or not a positive integer"
+   ]
+  },
+  {
+   "case": "model_ctx_zero",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model.ctx 0 is below the minimum 1",
+    "IR_SPEC 3.3: model.ctx missing or not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model.ctx 0 is below the minimum 1",
+    "IR_SPEC 3.3 (rule 3): model.ctx missing or not a positive integer"
+   ]
+  },
+  {
+   "case": "model_ctx_string",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model.ctx must be of type \"integer\", not \"x\"",
+    "IR_SPEC 3.3: model.ctx missing or not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model.ctx must be of type integer, not \"x\"",
+    "IR_SPEC 3.3 (rule 3): model.ctx missing or not a positive integer"
+   ]
+  },
+  {
+   "case": "model_unknown",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 1): doc.model has the key 'hidden', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.model has the key 'hidden', which its specification does not define"
+   ]
+  },
+  {
+   "case": "model_dtype_f16",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 1): doc.model.dtype \"f16\" is not one of [\"f32\"]"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.model.dtype \"f16\" is not one of ['f32']"
+   ]
+  },
+  {
+   "case": "block_unknown",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.2 (rule 1): doc.block has the key 'loop', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.block has the key 'loop', which its specification does not define"
+   ]
+  },
+  {
+   "case": "block_repeat_string",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.block.repeat must be of type \"integer\", not \"2\"",
+    "IR_SPEC 3.3: block.repeat 2 != model.n_layers 2"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.block.repeat must be of type integer, not \"2\"",
+    "IR_SPEC 3.3 (rule 3): block.repeat 2 != model.n_layers 2"
+   ]
+  },
+  {
+   "case": "block_repeat_zero",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.block.repeat 0 is below the minimum 1",
+    "IR_SPEC 3.3: block.repeat 0 != model.n_layers 2"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.block.repeat 0 is below the minimum 1",
+    "IR_SPEC 3.3 (rule 3): block.repeat 0 != model.n_layers 2"
+   ]
+  },
+  {
+   "case": "block_nodes_missing",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1,
+    11
+   ],
+   "ember": [
+    "IR_SPEC 3.2 (rule 1): doc.block lacks the required key 'nodes'",
+    "IR_SPEC 6.1: state slot kv is read by no node"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.block lacks the required key 'nodes'",
+    "IR_SPEC 6.1 (rule 11): state slot kv is read by no node"
+   ]
+  },
+  {
+   "case": "embed_unknown",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.2 (rule 1): doc.embed has the key 'loop', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.embed has the key 'loop', which its specification does not define"
+   ]
+  },
+  {
+   "case": "head_missing",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.2 (rule 1): doc lacks the required key 'head'"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc lacks the required key 'head'"
+   ]
+  },
+  {
+   "case": "embed_missing",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.2 (rule 1): doc lacks the required key 'embed'"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc lacks the required key 'embed'"
+   ]
+  },
+  {
+   "case": "tokenizer_unknown",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.2 (rule 1): doc.tokenizer has the key 'zz', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.tokenizer has the key 'zz', which its specification does not define"
+   ]
+  },
+  {
+   "case": "op_unknown",
+   "agree": true,
+   "ember_rules": [
+    4
+   ],
+   "ref_rules": [
+    4
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[0].op \"warp\" is not one of [\"embedding\",\"pos_embedding\",\"linear\",\"scale\",\"split\",\"rmsnorm\",\"layernorm\",\"gelu\",\"silu\",\"sigmoid\",\"relu\",\"add\",\"mul\",\"sub\",\"affine\",\"mul_col\",\"rms_row\",\"rope\",\"attention\",\"moe_ffn\",\"list\",\"append\",\"depth_attend\",\"expr\",\"linear_attention\",\"ssm_scan\",\"conv1d_causal\",\"selective_scan\",\"depth_route\",\"recurrence\"]"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[0].op \"warp\" is not one of ['embedding', 'pos_embedding', 'linear', 'scale', 'split', 'rmsnorm', 'layernorm', 'gelu', 'silu', 'sigmoid', 'relu', 'add', 'mul', 'sub', 'affine', 'mul_col', 'rms_row', 'rope', 'attention', 'moe_ffn', 'list', 'append', 'depth_attend', 'expr', 'linear_attention', 'ssm_scan', 'conv1d_causal', 'selective_scan', 'depth_route', 'recurrence']"
+   ]
+  },
+  {
+   "case": "op_int",
+   "agree": true,
+   "ember_rules": [
+    4
+   ],
+   "ref_rules": [
+    4
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[0].op 3 is not one of [\"embedding\",\"pos_embedding\",\"linear\",\"scale\",\"split\",\"rmsnorm\",\"layernorm\",\"gelu\",\"silu\",\"sigmoid\",\"relu\",\"add\",\"mul\",\"sub\",\"affine\",\"mul_col\",\"rms_row\",\"rope\",\"attention\",\"moe_ffn\",\"list\",\"append\",\"depth_attend\",\"expr\",\"linear_attention\",\"ssm_scan\",\"conv1d_causal\",\"selective_scan\",\"depth_route\",\"recurrence\"]"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[0].op 3 is not one of ['embedding', 'pos_embedding', 'linear', 'scale', 'split', 'rmsnorm', 'layernorm', 'gelu', 'silu', 'sigmoid', 'relu', 'add', 'mul', 'sub', 'affine', 'mul_col', 'rms_row', 'rope', 'attention', 'moe_ffn', 'list', 'append', 'depth_attend', 'expr', 'linear_attention', 'ssm_scan', 'conv1d_causal', 'selective_scan', 'depth_route', 'recurrence']"
+   ]
+  },
+  {
+   "case": "attr_unknown",
+   "agree": true,
+   "ember_rules": [
+    4
+   ],
+   "ref_rules": [
+    4
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[5] (attention) has the key 'flavour', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[5] has the key 'flavour', which its specification does not define"
+   ]
+  },
+  {
+   "case": "attr_of_other_op",
+   "agree": true,
+   "ember_rules": [
+    4
+   ],
+   "ref_rules": [
+    4
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[0] (rmsnorm) has the key 'theta', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[0] has the key 'theta', which its specification does not define"
+   ]
+  },
+  {
+   "case": "rmsnorm_eps_missing",
+   "agree": true,
+   "ember_rules": [
+    8
+   ],
+   "ref_rules": [
+    8
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 8): doc.block.nodes[0] lacks the required key 'eps'"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 8): doc.block.nodes[0] lacks the required key 'eps'"
+   ]
+  },
+  {
+   "case": "rmsnorm_eps_string",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 1): doc.block.nodes[0].eps must be of type \"number\", not \"x\""
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.block.nodes[0].eps must be of type number, not \"x\""
+   ]
+  },
+  {
+   "case": "rope_theta_missing",
+   "agree": true,
+   "ember_rules": [
+    8
+   ],
+   "ref_rules": [
+    8
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 8): doc.block.nodes[4] lacks the required key 'theta'"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 8): doc.block.nodes[4] lacks the required key 'theta'"
+   ]
+  },
+  {
+   "case": "rope_pairing_bad",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[4].pairing \"x\" is not one of [\"interleaved\",\"neox\"]"
+   ],
+   "ref": [
+    "IR_SPEC 5.14 (rule 5): doc.block.nodes[4].pairing \"x\" is not one of ['interleaved', 'neox']"
+   ]
+  },
+  {
+   "case": "rope_heads_bad",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[4].rope_heads \"some\" is not one of [\"all\",\"first\"]"
+   ],
+   "ref": [
+    "IR_SPEC 5.14 (rule 5): doc.block.nodes[4].rope_heads \"some\" is not one of ['all', 'first']"
+   ]
+  },
+  {
+   "case": "rope_heads_string",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 1): doc.block.nodes[4].heads must be of type \"integer\", not \"x\""
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.block.nodes[4].heads must be of type integer, not \"x\""
+   ]
+  },
+  {
+   "case": "rope_n_rot_odd",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    10
+   ],
+   "ember": [
+    "IR_SPEC 5.14: block[4] rope: n_rot 3 is not even and in 1 .. head_dim 8"
+   ],
+   "ref": [
+    "IR_SPEC 5.14 (rule 10): block[4] rope: n_rot 3 is not even and in 1 .. head_dim 8"
+   ]
+  },
+  {
+   "case": "attention_mask_bad",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[5].mask \"bidirectional\" is not one of [\"causal\",\"turn_state\"]",
+    "IR_SPEC 6.8.2: attention mask 'bidirectional' (causal or turn_state)"
+   ],
+   "ref": [
+    "IR_SPEC 6.8.2 (rule 5): doc.block.nodes[5].mask \"bidirectional\" is not one of ['causal', 'turn_state']",
+    "IR_SPEC 6.8.2 (rule 5): attention mask 'bidirectional' (causal or turn_state)"
+   ]
+  },
+  {
+   "case": "attention_causal_false",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    14
+   ],
+   "ember": [
+    "IR_SPEC 5.15: block[5] attention: causal must be true (Q6)"
+   ],
+   "ref": [
+    "IR_SPEC 5.15 (rule 14): block[5] attention: causal must be true (Q6)"
+   ]
+  },
+  {
+   "case": "attention_scale_missing",
+   "agree": true,
+   "ember_rules": [
+    8
+   ],
+   "ref_rules": [
+    8
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 8): doc.block.nodes[5] lacks the required key 'scale'"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 8): doc.block.nodes[5] lacks the required key 'scale'"
+   ]
+  },
+  {
+   "case": "attention_state_missing",
+   "agree": true,
+   "ember_rules": [
+    8
+   ],
+   "ref_rules": [
+    8,
+    11
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 8): doc.block.nodes[5] lacks the required key 'state'",
+    "IR_SPEC 6.1: block: attention reads state 'None', not a declared kv slot",
+    "IR_SPEC 6.1: state slot kv is read by no node"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 8): doc.block.nodes[5] lacks the required key 'state'",
+    "IR_SPEC 6.1 (rule 11): block: attention reads state None, not a declared kv slot",
+    "IR_SPEC 6.1 (rule 11): state slot kv is read by no node"
+   ]
+  },
+  {
+   "case": "attention_window_negative",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1,
+    10,
+    12
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 1): doc.block.nodes[5].window -1 is below the minimum 0",
+    "IR_SPEC 5.15: block[5] attention: window and sinks must be >= 0",
+    "IR_SPEC 5.15: attention window -1 (application 0) differs from its kv state kv's 0"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.block.nodes[5].window -1 is below the minimum 0",
+    "IR_SPEC 5.15 (rule 10): block[5] attention: window and sinks must be >= 0",
+    "IR_SPEC 5.15 (rule 12): attention window -1 (application 0) differs from its kv state kv's 0"
+   ]
+  },
+  {
+   "case": "node_in_missing",
+   "agree": true,
+   "ember_rules": [
+    7
+   ],
+   "ref_rules": [
+    7
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 7): doc.block.nodes[0] lacks the required key 'in'",
+    "IR_SPEC 10.1 rule 7: block[0] rmsnorm reads 0 value(s), not 1"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 7): doc.block.nodes[0] lacks the required key 'in'",
+    "IR_SPEC 3.5 (rule 7): block[0] rmsnorm reads 0 value(s), not 1"
+   ]
+  },
+  {
+   "case": "node_out_missing",
+   "agree": true,
+   "ember_rules": [
+    7,
+    36
+   ],
+   "ref_rules": [
+    7,
+    36
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 7): doc.block.nodes[0] lacks the required key 'out'",
+    "IR_SPEC 10.1 rule 7: block[0] rmsnorm writes one value",
+    "IR_SPEC 3.5 (rule 36): block[1] linear reads 'h', which no node before it writes (application 0)"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 7): doc.block.nodes[0] lacks the required key 'out'",
+    "IR_SPEC 3.5 (rule 7): block[0] rmsnorm writes one value",
+    "IR_SPEC 3.5 (rule 36): block[1] linear reads 'h' (its input 0), which no earlier node writes"
+   ]
+  },
+  {
+   "case": "node_in_string",
+   "agree": true,
+   "ember_rules": [
+    7
+   ],
+   "ref_rules": [
+    7
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 7): doc.block.nodes[0].in must be of type \"array\", not \"x\"",
+    "IR_SPEC 10.1 rule 7: block[0] rmsnorm reads 0 value(s), not 1"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 7): doc.block.nodes[0].in must be of type array, not \"x\"",
+    "IR_SPEC 3.5 (rule 7): block[0] rmsnorm reads 0 value(s), not 1"
+   ]
+  },
+  {
+   "case": "node_out_list",
+   "agree": true,
+   "ember_rules": [
+    7
+   ],
+   "ref_rules": [
+    7
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 7): doc.block.nodes[0].out must be of type \"string\", not [\"h\"]",
+    "IR_SPEC 10.1 rule 7: block[0] rmsnorm writes one value"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 7): doc.block.nodes[0].out must be of type string, not [\"h\"]",
+    "IR_SPEC 3.5 (rule 7): block[0] rmsnorm writes one value"
+   ]
+  },
+  {
+   "case": "add_one_input",
+   "agree": true,
+   "ember_rules": [
+    7
+   ],
+   "ref_rules": [
+    7
+   ],
+   "ember": [
+    "IR_SPEC 10.1 rule 7: block[7] add reads 1 value(s), not 2"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 7): block[7] add reads 1 value(s), not 2"
+   ]
+  },
+  {
+   "case": "tensor_index_bad",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5,
+    19
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[0].tensor_index \"x\" is not one of [\"application\"]",
+    "IR_SPEC 7.2: block[0] rmsnorm: tensor_index needs a block with weight_index"
+   ],
+   "ref": [
+    "IR_SPEC 7.2 (rule 5): doc.block.nodes[0].tensor_index \"x\" is not one of ['application']",
+    "IR_SPEC 7.2 (rule 19): block[0] rmsnorm: tensor_index needs a block with weight_index"
+   ]
+  },
+  {
+   "case": "slot_kind_bad",
+   "agree": true,
+   "ember_rules": [
+    11
+   ],
+   "ref_rules": [
+    11
+   ],
+   "ember": [
+    "IR_SPEC 6.1 (rule 11): doc.block.state[0].kind \"paged\" is not one of [\"kv\",\"recurrent\"]",
+    "IR_SPEC 6.1: state slot kv: unknown kind paged",
+    "IR_SPEC 6.1: block: attention reads state 'kv', not a declared kv slot"
+   ],
+   "ref": [
+    "IR_SPEC 6.1 (rule 11): doc.block.state[0].kind \"paged\" is not one of ['kv', 'recurrent']",
+    "IR_SPEC 6.1 (rule 11): state slot kv: unknown kind paged",
+    "IR_SPEC 6.1 (rule 11): block: attention reads state 'kv', not a declared kv slot"
+   ]
+  },
+  {
+   "case": "slot_kind_missing",
+   "agree": true,
+   "ember_rules": [
+    11
+   ],
+   "ref_rules": [
+    1,
+    11
+   ],
+   "ember": [
+    "IR_SPEC 6.1 (rule 11): doc.block.state[0] lacks the required key 'kind'",
+    "IR_SPEC 6.1: state slot kv: unknown kind None",
+    "IR_SPEC 6.1: block: attention reads state 'kv', not a declared kv slot"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.block.state[0] lacks the required key 'kind'",
+    "IR_SPEC 6.1 (rule 11): state slot kv: unknown kind None",
+    "IR_SPEC 6.1 (rule 11): block: attention reads state 'kv', not a declared kv slot"
+   ]
+  },
+  {
+   "case": "slot_unknown",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 6.1 (rule 1): doc.block.state[0] has the key 'pages', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.block.state[0] has the key 'pages', which its specification does not define"
+   ]
+  },
+  {
+   "case": "kv_heads_missing",
+   "agree": true,
+   "ember_rules": [
+    12
+   ],
+   "ref_rules": [
+    12
+   ],
+   "ember": [
+    "IR_SPEC 6.2 (rule 12): doc.block.state[0] lacks the required key 'heads'",
+    "IR_SPEC 6.2: kv state kv: heads missing"
+   ],
+   "ref": [
+    "IR_SPEC 6.2 (rule 12): doc.block.state[0] lacks the required key 'heads'",
+    "IR_SPEC 6.2 (rule 12): kv state kv: heads missing"
+   ]
+  },
+  {
+   "case": "kv_max_len_missing",
+   "agree": true,
+   "ember_rules": [
+    12
+   ],
+   "ref_rules": [
+    12
+   ],
+   "ember": [
+    "IR_SPEC 6.2 (rule 12): doc.block.state[0] lacks the required key 'max_len'",
+    "IR_SPEC 6.2: kv state kv: max_len missing"
+   ],
+   "ref": [
+    "IR_SPEC 6.2 (rule 12): doc.block.state[0] lacks the required key 'max_len'",
+    "IR_SPEC 6.2 (rule 12): kv state kv: max_len missing"
+   ]
+  },
+  {
+   "case": "kv_window_missing",
+   "agree": true,
+   "ember_rules": [
+    12
+   ],
+   "ref_rules": [
+    12
+   ],
+   "ember": [
+    "IR_SPEC 6.2 (rule 12): doc.block.state[0] lacks the required key 'window'",
+    "IR_SPEC 6.2: kv state kv: window missing",
+    "IR_SPEC 5.15: attention window 0 (application 0) differs from its kv state kv's None"
+   ],
+   "ref": [
+    "IR_SPEC 6.2 (rule 12): doc.block.state[0] lacks the required key 'window'",
+    "IR_SPEC 6.2 (rule 12): kv state kv: window missing",
+    "IR_SPEC 5.15 (rule 12): attention window 0 (application 0) differs from its kv state kv's None"
+   ]
+  },
+  {
+   "case": "kv_heads_zero",
+   "agree": true,
+   "ember_rules": [
+    12
+   ],
+   "ref_rules": [
+    12
+   ],
+   "ember": [
+    "IR_SPEC 6.2 (rule 12): doc.block.state[0].heads 0 is below the minimum 1"
+   ],
+   "ref": [
+    "IR_SPEC 6.2 (rule 12): doc.block.state[0].heads 0 is below the minimum 1"
+   ]
+  },
+  {
+   "case": "kv_dtype_f16",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 6.2 (rule 5): doc.block.state[0].dtype \"f16\" is not one of [\"f32\"]"
+   ],
+   "ref": [
+    "IR_SPEC 6.2 (rule 5): doc.block.state[0].dtype \"f16\" is not one of ['f32']"
+   ]
+  },
+  {
+   "case": "kv_evict_lru",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 6.2 (rule 5): doc.block.state[0].evict \"lru\" is not one of [\"turn_state\"]",
+    "IR_SPEC 6.8.3: kv state kv: evict 'lru' (only turn_state is defined)"
+   ],
+   "ref": [
+    "IR_SPEC 6.8.3 (rule 5): doc.block.state[0].evict \"lru\" is not one of ['turn_state']",
+    "IR_SPEC 6.8.3 (rule 5): kv state kv: evict 'lru' (only turn_state is defined)"
+   ]
+  },
+  {
+   "case": "kv_rows_all",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 6.2 (rule 5): doc.block.state[0].kv_rows \"all\" is not one of [\"active\"]",
+    "IR_SPEC 7.5: kv state kv: kv_rows 'all' (only \"active\" is defined)"
+   ],
+   "ref": [
+    "IR_SPEC 7.5 (rule 5): doc.block.state[0].kv_rows \"all\" is not one of ['active']",
+    "IR_SPEC 7.5 (rule 5): kv state kv: kv_rows 'all' (only \"active\" is defined)"
+   ]
+  },
+  {
+   "case": "kv_from",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    22
+   ],
+   "ember": [
+    "IR_SPEC 7.6: kv state kv: kv_from is reserved and not implemented"
+   ],
+   "ref": [
+    "IR_SPEC 7.6 (rule 22): kv state kv: kv_from is reserved and not implemented"
+   ]
+  },
+  {
+   "case": "per_layer_head",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    6
+   ],
+   "ember": [
+    "IR_SPEC 3.8: head[0] rmsnorm: per-layer 'eps' outside the block"
+   ],
+   "ref": [
+    "IR_SPEC 3.8 (rule 6): head[0] rmsnorm: per-layer 'eps' outside the block"
+   ]
+  },
+  {
+   "case": "per_layer_length",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    6
+   ],
+   "ember": [
+    "IR_SPEC 3.8: block[0] rmsnorm: per-layer 'eps' has 1 entries for block.repeat 2"
+   ],
+   "ref": [
+    "IR_SPEC 3.8 (rule 6): block[0] rmsnorm: per-layer 'eps' has 1 entries for block.repeat 2"
+   ]
+  },
+  {
+   "case": "weight_index_string",
+   "agree": true,
+   "ember_rules": [
+    18
+   ],
+   "ref_rules": [
+    1,
+    18
+   ],
+   "ember": [
+    "IR_SPEC 7.1 (rule 18): doc.block.weight_index.per_layer must be of type \"array\", not \"x\"",
+    "IR_SPEC 7.1: block.weight_index must be {per_layer: [block.repeat integers >= 0]}"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.block.weight_index.per_layer must be of type array, not \"x\"",
+    "IR_SPEC 7.1 (rule 18): block.weight_index must be {per_layer: [block.repeat integers >= 0]}"
+   ]
+  },
+  {
+   "case": "weight_index_strings",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    18
+   ],
+   "ember": [
+    "IR_SPEC 7.1: block.weight_index must be {per_layer: [block.repeat integers >= 0]}"
+   ],
+   "ref": [
+    "IR_SPEC 7.1 (rule 18): block.weight_index must be {per_layer: [block.repeat integers >= 0]}"
+   ]
+  },
+  {
+   "case": "weight_index_negative",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    18
+   ],
+   "ember": [
+    "IR_SPEC 7.1: block.weight_index must be {per_layer: [block.repeat integers >= 0]}"
+   ],
+   "ref": [
+    "IR_SPEC 7.1 (rule 18): block.weight_index must be {per_layer: [block.repeat integers >= 0]}"
+   ]
+  },
+  {
+   "case": "reads_unwritten",
+   "agree": true,
+   "ember_rules": [
+    36
+   ],
+   "ref_rules": [
+    36
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 36): block[7] add reads 'nowhere', which no node before it writes (application 0)"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 36): block[7] add reads 'nowhere' (its input 1), which no earlier node writes"
+   ]
+  },
+  {
+   "case": "head_no_logits",
+   "agree": true,
+   "ember_rules": [
+    36
+   ],
+   "ref_rules": [
+    36
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 36): the head writes no 'logits'"
+   ],
+   "ref": [
+    "IR_SPEC 3.4 (rule 36): the head writes no logits"
+   ]
+  },
+  {
+   "case": "embed_no_x",
+   "agree": true,
+   "ember_rules": [
+    36
+   ],
+   "ref_rules": [
+    36
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 36): the embed section writes no 'x'",
+    "IR_SPEC 3.5 (rule 36): block[0] rmsnorm reads 'x', which no node before it writes (application 0)",
+    "IR_SPEC 3.5 (rule 36): block[7] add reads 'x', which no node before it writes (application 0)"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 36): the embed section writes no x",
+    "IR_SPEC 3.5 (rule 36): block[0] rmsnorm reads 'x' (its input 0), which no earlier node writes",
+    "IR_SPEC 3.5 (rule 36): block[7] add reads 'x' (its input 0), which no earlier node writes"
+   ]
+  },
+  {
+   "case": "rec_index_zero",
+   "agree": true,
+   "ember_rules": [
+    31
+   ],
+   "ref_rules": [
+    31
+   ],
+   "ember": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].index.e 0 is below the minimum 1",
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].index.h 0 is below the minimum 1",
+    "IR_SPEC 6.10: (rule 31): index 'e' has size 0, not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].index.e 0 is below the minimum 1",
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].index.h 0 is below the minimum 1",
+    "IR_SPEC 6.10 (rule 31): block[3] recurrence: index e: size 0 is not a positive integer"
+   ]
+  },
+  {
+   "case": "rec_inputs_empty",
+   "agree": true,
+   "ember_rules": [
+    31
+   ],
+   "ref_rules": [
+    31
+   ],
+   "ember": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].inputs needs at least 1 item(s)",
+    "IR_SPEC 6.10: (rule 31): 'inputs' is empty"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].inputs needs at least 1 item(s)",
+    "IR_SPEC 6.10 (rule 31): block[3] recurrence: inputs must declare each of the 3 values of in (at least one)"
+   ]
+  },
+  {
+   "case": "rec_update_empty",
+   "agree": true,
+   "ember_rules": [
+    31
+   ],
+   "ref_rules": [
+    31
+   ],
+   "ember": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].update needs at least 1 item(s)",
+    "IR_SPEC 6.10: (rule 31): 'update' is empty"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].update needs at least 1 item(s)",
+    "IR_SPEC 6.10 (rule 31): block[3] recurrence: update must be a list of assignments (at least one)"
+   ]
+  },
+  {
+   "case": "rec_readout_int",
+   "agree": true,
+   "ember_rules": [
+    31
+   ],
+   "ref_rules": [
+    31
+   ],
+   "ember": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].readout must be of type \"string\", not 5",
+    "IR_SPEC 6.10: (rule 31): 'readout' is not one assignment"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].readout must be of type string, not 5",
+    "IR_SPEC 6.10 (rule 31): block[3] recurrence: readout must be one assignment string"
+   ]
+  },
+  {
+   "case": "rec_weights_int",
+   "agree": true,
+   "ember_rules": [
+    31
+   ],
+   "ref_rules": [
+    31
+   ],
+   "ember": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].weights.W[c] must be of type \"string\", not 3",
+    "IR_SPEC 6.10: (rule 31): weight 'W[c]' does not name a tensor"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].weights.W[c] must be of type string, not 3",
+    "IR_SPEC 6.10 (rule 31): block[3] recurrence: weight W: the tensor name must be a string"
+   ]
+  },
+  {
+   "case": "rec_index_missing",
+   "agree": true,
+   "ember_rules": [
+    8,
+    31
+   ],
+   "ref_rules": [
+    8,
+    31
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 8): doc.block.nodes[3] lacks the required key 'index'",
+    "IR_SPEC 6.10: (rule 31): 'index' is not a map of names to positive integers"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 8): doc.block.nodes[3] lacks the required key 'index'",
+    "IR_SPEC 6.10 (rule 31): block[3] recurrence: index must map index names to sizes"
+   ]
+  },
+  {
+   "case": "rec_slot_dtype",
+   "agree": true,
+   "ember_rules": [
+    13
+   ],
+   "ref_rules": [
+    13
+   ],
+   "ember": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0].dtype \"f16\" is not one of [\"f32\"]",
+    "IR_SPEC 6.3: recurrent state rec: op (a recurrent op), dtype f32 and tensors required"
+   ],
+   "ref": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0].dtype \"f16\" is not one of ['f32']",
+    "IR_SPEC 6.3 (rule 13): recurrent state rec: op (a recurrent op), dtype f32 and tensors required"
+   ]
+  },
+  {
+   "case": "rec_slot_op_missing",
+   "agree": true,
+   "ember_rules": [
+    13
+   ],
+   "ref_rules": [
+    11,
+    13
+   ],
+   "ember": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0] lacks the required key 'op'",
+    "IR_SPEC 6.3: recurrent state rec: op (a recurrent op), dtype f32 and tensors required",
+    "IR_SPEC 6.1: block: recurrence reads state 'rec', not a declared recurrent slot of op recurrence"
+   ],
+   "ref": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0] lacks the required key 'op'",
+    "IR_SPEC 6.3 (rule 13): recurrent state rec: op (a recurrent op), dtype f32 and tensors required",
+    "IR_SPEC 6.3 (rule 13): block: recurrence reads the recurrent state 'rec' of op None"
+   ]
+  },
+  {
+   "case": "rec_slot_tensors_empty",
+   "agree": true,
+   "ember_rules": [
+    13,
+    33
+   ],
+   "ref_rules": [
+    13,
+    33
+   ],
+   "ember": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0].tensors needs at least 1 item(s)",
+    "IR_SPEC 6.3: recurrent state rec: op (a recurrent op), dtype f32 and tensors required",
+    "IR_SPEC 6.10: (rule 33) the slot \"rec\" has no tensor 'num' (the update assigns it)"
+   ],
+   "ref": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0].tensors needs at least 1 item(s)",
+    "IR_SPEC 6.3 (rule 13): recurrent state rec: op (a recurrent op), dtype f32 and tensors required",
+    "IR_SPEC 6.10 (rule 33): recurrent state rec: tensors [] are not the update's state tensors ['den', 'num']"
+   ]
+  },
+  {
+   "case": "rec_slot_shape_zero",
+   "agree": true,
+   "ember_rules": [
+    13,
+    33
+   ],
+   "ref_rules": [
+    13,
+    33
+   ],
+   "ember": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0].tensors[0].shape[0] 0 is below the minimum 1",
+    "IR_SPEC 6.3: recurrent state rec: tensor {\"init\":0,\"name\":\"num\",\"shape\":[0]} needs name, shape and init 0",
+    "IR_SPEC 6.10: (rule 33) the slot \"rec\"'s tensor 'num' has shape [0], the update's is [2,8]"
+   ],
+   "ref": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0].tensors[0].shape[0] 0 is below the minimum 1",
+    "IR_SPEC 6.3 (rule 13): recurrent state rec: tensor {'name': 'num', 'shape': [0], 'init': 0} needs name, shape and init 0 (or 'body', for a recurrence)",
+    "IR_SPEC 6.10 (rule 33): recurrent state rec: num has shape [0], the update gives [2, 8]"
+   ]
+  },
+  {
+   "case": "rec_slot_init_one",
+   "agree": true,
+   "ember_rules": [
+    13
+   ],
+   "ref_rules": [
+    13
+   ],
+   "ember": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0].tensors[0].init 1 is not one of [0,\"body\"]",
+    "IR_SPEC 6.3: recurrent state rec: tensor {\"init\":1,\"name\":\"num\",\"shape\":[2,8]} needs name, shape and init 0"
+   ],
+   "ref": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0].tensors[0].init 1 is not one of [0, 'body']",
+    "IR_SPEC 6.3 (rule 13): recurrent state rec: tensor {'name': 'num', 'shape': [2, 8], 'init': 1} needs name, shape and init 0 (or 'body', for a recurrence)"
+   ]
+  },
+  {
+   "case": "rec_slot_unknown",
+   "agree": true,
+   "ember_rules": [
+    13
+   ],
+   "ref_rules": [
+    13
+   ],
+   "ember": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0] (recurrence) has the key 'pages', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0] has the key 'pages', which its specification does not define"
+   ]
+  },
+  {
+   "case": "mor_route_bad",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[0].route \"expert_choice\" is not one of [\"token_choice\"]",
+    "IR_SPEC 7.7: depth_route: route 'expert_choice' (only token_choice, causal, is defined)"
+   ],
+   "ref": [
+    "IR_SPEC 7.7 (rule 5): doc.block.nodes[0].route \"expert_choice\" is not one of ['token_choice']",
+    "IR_SPEC 7.7 (rule 5): depth_route: route 'expert_choice' (only token_choice, causal, is defined)"
+   ]
+  },
+  {
+   "case": "mor_gate_bad",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[0].gate \"soft\" is not one of [\"score\",\"none\"]",
+    "IR_SPEC 7.4: depth_route: gate 'soft' is not score or none"
+   ],
+   "ref": [
+    "IR_SPEC 7.4 (rule 5): doc.block.nodes[0].gate \"soft\" is not one of ['score', 'none']",
+    "IR_SPEC 7.4 (rule 5): depth_route: gate 'soft' is not score or none"
+   ]
+  },
+  {
+   "case": "mor_n_rec_zero",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1,
+    20
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 1): doc.block.nodes[0].n_rec 0 is below the minimum 1",
+    "IR_SPEC 7.4: depth_route: n_rec must be an integer >= 1"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc.block.nodes[0].n_rec 0 is below the minimum 1",
+    "IR_SPEC 7.4 (rule 20): depth_route: n_rec must be an integer >= 1"
+   ]
+  },
+  {
+   "case": "mor_step_gap",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    20
+   ],
+   "ember": [
+    "IR_SPEC 7.4: depth_route: steps [-1,0,-1,1,1] are not -1 or the consecutive steps 0 .. 2 in order"
+   ],
+   "ref": [
+    "IR_SPEC 7.4 (rule 20): depth_route: steps [-1, 0, -1, 1, 1] are not -1 or the consecutive steps 0 .. 2 in order"
+   ]
+  },
+  {
+   "case": "mor_out_missing",
+   "agree": true,
+   "ember_rules": [
+    7
+   ],
+   "ref_rules": [
+    7,
+    20
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 7): doc.block.nodes[0] lacks the required key 'out'",
+    "IR_SPEC 10.1 rule 7: block[0] depth_route writes one value",
+    "IR_SPEC 7.4: depth_route: out must name the depth trace"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 7): doc.block.nodes[0] lacks the required key 'out'",
+    "IR_SPEC 3.5 (rule 7): block[0] depth_route writes one value",
+    "IR_SPEC 7.4 (rule 20): depth_route: out must name the depth trace"
+   ]
+  },
+  {
+   "case": "mor_reads_embed_value",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [],
+   "ember": [],
+   "ref": []
+  },
+  {
+   "case": "gelu_approx_bad",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[9].approx \"fast\" is not one of [\"tanh\",\"none\"]"
+   ],
+   "ref": [
+    "IR_SPEC 5.8 (rule 5): doc.block.nodes[9].approx \"fast\" is not one of ['tanh', 'none']"
+   ]
+  },
+  {
+   "case": "moe_gate_norm_bad",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[9].gate_norm \"x\" is not one of [\"renorm\",\"raw\"]"
+   ],
+   "ref": [
+    "IR_SPEC 5.16 (rule 5): doc.block.nodes[9].gate_norm \"x\" is not one of ['renorm', 'raw']"
+   ]
+  },
+  {
+   "case": "moe_activation_bad",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[9].activation \"x\" is not one of [\"silu\"]"
+   ],
+   "ref": [
+    "IR_SPEC 5.16 (rule 5): doc.block.nodes[9].activation \"x\" is not one of ['silu']"
+   ]
+  },
+  {
+   "case": "moe_top_k_big",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    10
+   ],
+   "ember": [
+    "IR_SPEC 5.16: block[9] moe_ffn: top_k 99 is not in 1 .. n_experts 4"
+   ],
+   "ref": [
+    "IR_SPEC 5.16 (rule 10): block[9] moe_ffn: top_k 99 is not in 1 .. n_experts 4"
+   ]
+  },
+  {
+   "case": "linear_attention_causal_false",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    14
+   ],
+   "ember": [
+    "IR_SPEC 6.4: block[3] linear_attention: causal must be true"
+   ],
+   "ref": [
+    "IR_SPEC 6.4 (rule 14): block[3] linear_attention: causal must be true"
+   ]
+  },
+  {
+   "case": "linear_attention_feature_map_bad",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[3].feature_map \"x\" is not one of [\"elu_plus_one\"]"
+   ],
+   "ref": [
+    "IR_SPEC 6.4 (rule 5): doc.block.nodes[3].feature_map \"x\" is not one of ['elu_plus_one']"
+   ]
+  },
+  {
+   "case": "refuse/add_one_input",
+   "agree": true,
+   "ember_rules": [
+    7
+   ],
+   "ref_rules": [
+    7
+   ],
+   "ember": [
+    "IR_SPEC 10.1 rule 7: block[7] add reads 1 value(s), not 2"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 7): block[7] add reads 1 value(s), not 2"
+   ]
+  },
+  {
+   "case": "refuse/attention_heads_not_multiple",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    10
+   ],
+   "ember": [
+    "IR_SPEC 5.15: block[5] attention: heads 3 is not a multiple of kv_heads 2"
+   ],
+   "ref": [
+    "IR_SPEC 5.15 (rule 10): block[5] attention: heads 3 is not a multiple of kv_heads 2"
+   ]
+  },
+  {
+   "case": "refuse/attention_no_slot",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    11
+   ],
+   "ember": [
+    "IR_SPEC 6.1: block: attention reads state 'nowhere', not a declared kv slot",
+    "IR_SPEC 6.1: state slot kv is read by no node"
+   ],
+   "ref": [
+    "IR_SPEC 6.1 (rule 11): block: attention reads state 'nowhere', not a declared kv slot",
+    "IR_SPEC 6.1 (rule 11): state slot kv is read by no node"
+   ]
+  },
+  {
+   "case": "refuse/attention_not_causal",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    14
+   ],
+   "ember": [
+    "IR_SPEC 5.15: block[5] attention: causal must be true (Q6)"
+   ],
+   "ref": [
+    "IR_SPEC 5.15 (rule 14): block[5] attention: causal must be true (Q6)"
+   ]
+  },
+  {
+   "case": "refuse/attention_window_differs",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    12
+   ],
+   "ember": [
+    "IR_SPEC 5.15: attention window 4 (application 0) differs from its kv state kv's 0"
+   ],
+   "ref": [
+    "IR_SPEC 5.15 (rule 12): attention window 4 (application 0) differs from its kv state kv's 0"
+   ]
+  },
+  {
+   "case": "refuse/conv_kernel_one",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    10,
+    13
+   ],
+   "ember": [
+    "IR_SPEC 6.6: block[3] conv1d_causal: channels must be >= 1 and kernel >= 2",
+    "IR_SPEC 6.3: recurrent state conv: tensors {\"x\":[3,32]} do not fit conv1d_causal (want {\"x\":[0,32]})"
+   ],
+   "ref": [
+    "IR_SPEC 6.6 (rule 10): block[3] conv1d_causal: channels must be >= 1 and kernel >= 2",
+    "IR_SPEC 6.3 (rule 13): recurrent state conv: tensors {'x': [3, 32]} do not fit conv1d_causal (want {'x': [0, 32]})"
+   ]
+  },
+  {
+   "case": "refuse/embed_writes_no_x",
+   "agree": true,
+   "ember_rules": [
+    36
+   ],
+   "ref_rules": [
+    36
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 36): the embed section writes no 'x'",
+    "IR_SPEC 3.5 (rule 36): block[0] rmsnorm reads 'x', which no node before it writes (application 0)",
+    "IR_SPEC 3.5 (rule 36): block[7] add reads 'x', which no node before it writes (application 0)"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 36): the embed section writes no x",
+    "IR_SPEC 3.5 (rule 36): block[0] rmsnorm reads 'x' (its input 0), which no earlier node writes",
+    "IR_SPEC 3.5 (rule 36): block[7] add reads 'x' (its input 0), which no earlier node writes"
+   ]
+  },
+  {
+   "case": "refuse/evict_on_causal",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    16
+   ],
+   "ember": [
+    "IR_SPEC 6.8.3: kv state kv: evict turn_state needs every attention node reading it to mask turn_state"
+   ],
+   "ref": [
+    "IR_SPEC 6.8.3 (rule 16): kv state kv: evict turn_state needs every attention node reading it to mask turn_state"
+   ]
+  },
+  {
+   "case": "refuse/evict_unknown",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 6.2 (rule 5): doc.block.state[0].evict \"oldest\" is not one of [\"turn_state\"]",
+    "IR_SPEC 6.8.3: kv state kv: evict 'oldest' (only turn_state is defined)"
+   ],
+   "ref": [
+    "IR_SPEC 6.8.3 (rule 5): doc.block.state[0].evict \"oldest\" is not one of ['turn_state']",
+    "IR_SPEC 6.8.3 (rule 5): kv state kv: evict 'oldest' (only turn_state is defined)"
+   ]
+  },
+  {
+   "case": "refuse/evict_without_mask",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    16
+   ],
+   "ember": [
+    "IR_SPEC 6.8.3: kv state kv: evict turn_state needs every attention node reading it to mask turn_state"
+   ],
+   "ref": [
+    "IR_SPEC 6.8.3 (rule 16): kv state kv: evict turn_state needs every attention node reading it to mask turn_state"
+   ]
+  },
+  {
+   "case": "refuse/expr_does_not_parse",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    9
+   ],
+   "ember": [
+    "IR_SPEC 5.19: block[0] expr: expr: expected an operand, got the end at column 7 in \"max(x,\""
+   ],
+   "ref": [
+    "IR_SPEC 5.19 (rule 9): block[0] expr: expr: expected an operand, got the end at column 7 in \"max(x,\""
+   ]
+  },
+  {
+   "case": "refuse/gelu_approx_unknown",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[8].approx \"sigmoid\" is not one of [\"tanh\",\"none\"]"
+   ],
+   "ref": [
+    "IR_SPEC 5.8 (rule 5): doc.block.nodes[8].approx \"sigmoid\" is not one of ['tanh', 'none']"
+   ]
+  },
+  {
+   "case": "refuse/head_writes_no_logits",
+   "agree": true,
+   "ember_rules": [
+    36
+   ],
+   "ref_rules": [
+    36
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 36): the head writes no 'logits'"
+   ],
+   "ref": [
+    "IR_SPEC 3.4 (rule 36): the head writes no logits"
+   ]
+  },
+  {
+   "case": "refuse/kv_slot_field_missing",
+   "agree": true,
+   "ember_rules": [
+    12
+   ],
+   "ref_rules": [
+    12
+   ],
+   "ember": [
+    "IR_SPEC 6.2 (rule 12): doc.block.state[0] lacks the required key 'max_len'",
+    "IR_SPEC 6.2: kv state kv: max_len missing"
+   ],
+   "ref": [
+    "IR_SPEC 6.2 (rule 12): doc.block.state[0] lacks the required key 'max_len'",
+    "IR_SPEC 6.2 (rule 12): kv state kv: max_len missing"
+   ]
+  },
+  {
+   "case": "refuse/linear_attention_not_causal",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    14
+   ],
+   "ember": [
+    "IR_SPEC 6.4: block[3] linear_attention: causal must be true"
+   ],
+   "ref": [
+    "IR_SPEC 6.4 (rule 14): block[3] linear_attention: causal must be true"
+   ]
+  },
+  {
+   "case": "refuse/mask_unknown",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5,
+    16
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[5].mask \"sliding\" is not one of [\"causal\",\"turn_state\"]",
+    "IR_SPEC 6.8.2: attention mask 'sliding' (causal or turn_state)",
+    "IR_SPEC 6.8.3: kv state kv: evict turn_state needs every attention node reading it to mask turn_state"
+   ],
+   "ref": [
+    "IR_SPEC 6.8.2 (rule 5): doc.block.nodes[5].mask \"sliding\" is not one of ['causal', 'turn_state']",
+    "IR_SPEC 6.8.2 (rule 5): attention mask 'sliding' (causal or turn_state)",
+    "IR_SPEC 6.8.3 (rule 16): kv state kv: evict turn_state needs every attention node reading it to mask turn_state"
+   ]
+  },
+  {
+   "case": "refuse/missing_tensor",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [],
+   "ember": [],
+   "ref": []
+  },
+  {
+   "case": "refuse/model_ctx_missing",
+   "agree": true,
+   "ember_rules": [
+    3
+   ],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'ctx'",
+    "IR_SPEC 3.3: model.ctx missing or not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'ctx'",
+    "IR_SPEC 3.3 (rule 3): model.ctx missing or not a positive integer"
+   ]
+  },
+  {
+   "case": "refuse/moe_gate_norm_unknown",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[9].gate_norm \"topk\" is not one of [\"renorm\",\"raw\"]"
+   ],
+   "ref": [
+    "IR_SPEC 5.16 (rule 5): doc.block.nodes[9].gate_norm \"topk\" is not one of ['renorm', 'raw']"
+   ]
+  },
+  {
+   "case": "refuse/moe_top_k_too_large",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    10
+   ],
+   "ember": [
+    "IR_SPEC 5.16: block[9] moe_ffn: top_k 5 is not in 1 .. n_experts 4"
+   ],
+   "ref": [
+    "IR_SPEC 5.16 (rule 10): block[9] moe_ffn: top_k 5 is not in 1 .. n_experts 4"
+   ]
+  },
+  {
+   "case": "refuse/mor_expert_choice",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[0].route \"expert_choice\" is not one of [\"token_choice\"]",
+    "IR_SPEC 7.7: depth_route: route 'expert_choice' (only token_choice, causal, is defined)"
+   ],
+   "ref": [
+    "IR_SPEC 7.7 (rule 5): doc.block.nodes[0].route \"expert_choice\" is not one of ['token_choice']",
+    "IR_SPEC 7.7 (rule 5): depth_route: route 'expert_choice' (only token_choice, causal, is defined)"
+   ]
+  },
+  {
+   "case": "refuse/mor_gate_unknown",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[0].gate \"sigmoid\" is not one of [\"score\",\"none\"]",
+    "IR_SPEC 7.4: depth_route: gate 'sigmoid' is not score or none"
+   ],
+   "ref": [
+    "IR_SPEC 7.4 (rule 5): doc.block.nodes[0].gate \"sigmoid\" is not one of ['score', 'none']",
+    "IR_SPEC 7.4 (rule 5): depth_route: gate 'sigmoid' is not score or none"
+   ]
+  },
+  {
+   "case": "refuse/mor_kv_from",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    22
+   ],
+   "ember": [
+    "IR_SPEC 7.6: kv state kv: kv_from is reserved and not implemented"
+   ],
+   "ref": [
+    "IR_SPEC 7.6 (rule 22): kv state kv: kv_from is reserved and not implemented"
+   ]
+  },
+  {
+   "case": "refuse/mor_kv_rows_shared",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5,
+    21
+   ],
+   "ember": [
+    "IR_SPEC 6.2 (rule 5): doc.block.state[0].kv_rows \"shared\" is not one of [\"active\"]",
+    "IR_SPEC 7.5: kv state kv: kv_rows 'shared' (only \"active\" is defined)",
+    "IR_SPEC 7.5: depth_route needs kv_rows \"active\" on every kv slot"
+   ],
+   "ref": [
+    "IR_SPEC 7.5 (rule 5): doc.block.state[0].kv_rows \"shared\" is not one of ['active']",
+    "IR_SPEC 7.5 (rule 5): kv state kv: kv_rows 'shared' (only \"active\" is defined)",
+    "IR_SPEC 7.5 (rule 21): depth_route needs kv_rows \"active\" on every kv slot"
+   ]
+  },
+  {
+   "case": "refuse/mor_no_kv_rows_active",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    21
+   ],
+   "ember": [
+    "IR_SPEC 7.5: depth_route needs kv_rows \"active\" on every kv slot"
+   ],
+   "ref": [
+    "IR_SPEC 7.5 (rule 21): depth_route needs kv_rows \"active\" on every kv slot"
+   ]
+  },
+  {
+   "case": "refuse/mor_reads_outside_value",
+   "agree": true,
+   "ember_rules": [
+    36
+   ],
+   "ref_rules": [
+    36
+   ],
+   "ember": [
+    "IR_SPEC 7.4 (rule 36): block[1] add reads 'e', outside what a depth_route step sees (x, pos and the values written before it in the application)"
+   ],
+   "ref": [
+    "IR_SPEC 7.4 (rule 36): block[0] add reads 'e' (its input 1), which no earlier node writes (under depth_route, the block's nodes read x, pos and the values written before them in the same application)"
+   ]
+  },
+  {
+   "case": "refuse/mor_route_in_head",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    6,
+    20
+   ],
+   "ember": [
+    "IR_SPEC 3.8: head[0] depth_route: per-layer 'step' outside the block",
+    "IR_SPEC 7.4: depth_route outside the block (head)"
+   ],
+   "ref": [
+    "IR_SPEC 3.8 (rule 6): head[0] depth_route: per-layer 'step' outside the block",
+    "IR_SPEC 7.4 (rule 20): depth_route outside the block (head)"
+   ]
+  },
+  {
+   "case": "refuse/mor_route_not_first",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    20
+   ],
+   "ember": [
+    "IR_SPEC 7.4: depth_route must be the block's first node, once"
+   ],
+   "ref": [
+    "IR_SPEC 7.4 (rule 20): depth_route must be the block's first node, once"
+   ]
+  },
+  {
+   "case": "refuse/mor_router_with_i",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    20
+   ],
+   "ember": [
+    "IR_SPEC 7.7: depth_route: weight must be the router's full tensor name (constraint 4: no substitution)"
+   ],
+   "ref": [
+    "IR_SPEC 7.7 (rule 20): depth_route: weight must be the router's full tensor name (constraint 4: no substitution)"
+   ]
+  },
+  {
+   "case": "refuse/mor_step_gap",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    20
+   ],
+   "ember": [
+    "IR_SPEC 7.4: depth_route: steps [-1,0,-1,1,2] are not -1 or the consecutive steps 0 .. 2 in order"
+   ],
+   "ref": [
+    "IR_SPEC 7.4 (rule 20): depth_route: steps [-1, 0, -1, 1, 2] are not -1 or the consecutive steps 0 .. 2 in order"
+   ]
+  },
+  {
+   "case": "refuse/mor_step_length_wrong",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    6
+   ],
+   "ember": [
+    "IR_SPEC 3.8: block[0] depth_route: per-layer 'step' has 4 entries for block.repeat 5",
+    "IR_SPEC 7.4: depth_route: step must be {per_layer: [block.repeat integers]}"
+   ],
+   "ref": [
+    "IR_SPEC 3.8 (rule 6): block[0] depth_route: per-layer 'step' has 4 entries for block.repeat 5"
+   ]
+  },
+  {
+   "case": "refuse/mor_steps_descending",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    20
+   ],
+   "ember": [
+    "IR_SPEC 7.4: depth_route: steps [-1,2,1,0,-1] are not -1 or the consecutive steps 0 .. 2 in order"
+   ],
+   "ref": [
+    "IR_SPEC 7.4 (rule 20): depth_route: steps [-1, 2, 1, 0, -1] are not -1 or the consecutive steps 0 .. 2 in order"
+   ]
+  },
+  {
+   "case": "refuse/mor_unequal_steps",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    20
+   ],
+   "ember": [
+    "IR_SPEC 7.4: depth_route: steps [-1,0,0,1,-1] are not -1 or the consecutive steps 0 .. 2 in order"
+   ],
+   "ref": [
+    "IR_SPEC 7.4 (rule 20): depth_route: steps [-1, 0, 0, 1, -1] are not -1 or the consecutive steps 0 .. 2 in order"
+   ]
+  },
+  {
+   "case": "refuse/name_with_i_outside_block",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    17
+   ],
+   "ember": [
+    "IR_SPEC 3.7: head[0] rmsnorm: weight 'blk.{i}.output_norm.weight' uses {i} outside the block"
+   ],
+   "ref": [
+    "IR_SPEC 3.7 (rule 17a): head[0] rmsnorm: weight 'blk.{i}.output_norm.weight' uses {i} outside the block"
+   ]
+  },
+  {
+   "case": "refuse/per_layer_in_head",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    6
+   ],
+   "ember": [
+    "IR_SPEC 3.8: head[0] rmsnorm: per-layer 'eps' outside the block"
+   ],
+   "ref": [
+    "IR_SPEC 3.8 (rule 6): head[0] rmsnorm: per-layer 'eps' outside the block"
+   ]
+  },
+  {
+   "case": "refuse/per_layer_wrong_length",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    6
+   ],
+   "ember": [
+    "IR_SPEC 3.8: block[4] rope: per-layer 'theta' has 1 entries for block.repeat 2"
+   ],
+   "ref": [
+    "IR_SPEC 3.8 (rule 6): block[4] rope: per-layer 'theta' has 1 entries for block.repeat 2"
+   ]
+  },
+  {
+   "case": "refuse/position_bias_bucket_negative",
+   "agree": true,
+   "ember_rules": [
+    39
+   ],
+   "ref_rules": [
+    39
+   ],
+   "ember": [
+    "IR_SPEC 5.15 (rule 39): doc.block.nodes[5].position_bias.buckets[1] -1 is below the minimum 0"
+   ],
+   "ref": [
+    "IR_SPEC 5.15 (rule 39): doc.block.nodes[5].position_bias.buckets[1] -1 is below the minimum 0"
+   ]
+  },
+  {
+   "case": "refuse/position_bias_buckets_empty",
+   "agree": true,
+   "ember_rules": [
+    39
+   ],
+   "ref_rules": [
+    39
+   ],
+   "ember": [
+    "IR_SPEC 5.15 (rule 39): doc.block.nodes[5].position_bias.buckets needs at least 1 item(s)"
+   ],
+   "ref": [
+    "IR_SPEC 5.15 (rule 39): doc.block.nodes[5].position_bias.buckets needs at least 1 item(s)"
+   ]
+  },
+  {
+   "case": "refuse/position_bias_per_layer",
+   "agree": true,
+   "ember_rules": [
+    6
+   ],
+   "ref_rules": [
+    6,
+    39
+   ],
+   "ember": [
+    "IR_SPEC 3.8 (rule 6): doc.block.nodes[5].position_bias lacks the required key 'weight'",
+    "IR_SPEC 3.8 (rule 6): doc.block.nodes[5].position_bias lacks the required key 'buckets'",
+    "IR_SPEC 3.8 (rule 6): doc.block.nodes[5].position_bias has the key 'per_layer', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 5.15 (rule 39): doc.block.nodes[5].position_bias lacks the required key 'weight'",
+    "IR_SPEC 5.15 (rule 39): doc.block.nodes[5].position_bias lacks the required key 'buckets'",
+    "IR_SPEC 5.15 (rule 39): doc.block.nodes[5].position_bias has the key 'per_layer', which its specification does not define"
+   ]
+  },
+  {
+   "case": "refuse/position_bias_table_shape",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [],
+   "ember": [],
+   "ref": []
+  },
+  {
+   "case": "refuse/reads_unwritten_value",
+   "agree": true,
+   "ember_rules": [
+    36
+   ],
+   "ref_rules": [
+    36
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 36): block[7] add reads 'nowhere', which no node before it writes (application 0)"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 36): block[7] add reads 'nowhere' (its input 1), which no earlier node writes"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_assignment_repeats_index",
+   "agree": true,
+   "ember_rules": [
+    32
+   ],
+   "ref_rules": [
+    32
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 32): readout[0]: the assignment repeats index 'h' at column 5"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 32): block[3] recurrence: readout: an assignment repeats an index in ['h', 'h']"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_bare_undeclared_name",
+   "agree": true,
+   "ember_rules": [
+    32
+   ],
+   "ref_rules": [
+    32
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 32): readout: 'foo' at column 21 is not declared"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 32): block[3] recurrence: readout: foo is not an index in scope"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_body_does_not_parse",
+   "agree": true,
+   "ember_rules": [
+    31
+   ],
+   "ref_rules": [
+    31
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 31): update[1] does not parse: expected an operand at column 22"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 31): block[3] recurrence: update[1]: expected an operand, got the end at column 22 in \"den[h,e] = den[h,e] +\""
+   ]
+  },
+  {
+   "case": "refuse/recurrence_index_out_of_scope",
+   "agree": true,
+   "ember_rules": [
+    32
+   ],
+   "ref_rules": [
+    32
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 32): readout: sum over index 'h' at column 14, which is already in scope"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 32): block[3] recurrence: readout: sum over h, which is already in scope"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_index_size_zero",
+   "agree": true,
+   "ember_rules": [
+    31
+   ],
+   "ref_rules": [
+    31
+   ],
+   "ember": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].index.e 0 is below the minimum 1",
+    "IR_SPEC 6.10: (rule 31): index 'e' has size 0, not a positive integer"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 31): doc.block.nodes[3].index.e 0 is below the minimum 1",
+    "IR_SPEC 6.10 (rule 31): block[3] recurrence: index e: size 0 is not a positive integer"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_index_undeclared",
+   "agree": true,
+   "ember_rules": [
+    32
+   ],
+   "ref_rules": [
+    32
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 32): readout: index 'f' at column 16 is not declared"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 32): block[3] recurrence: readout: index f is not in scope (in scope: h, e)"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_init_flag",
+   "agree": true,
+   "ember_rules": [
+    33
+   ],
+   "ref_rules": [
+    33
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 33) the slot \"lin\"'s tensor 'num' has init \"body\", not 0 (the node's init does not assign it)"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 33): recurrent state lin: num's init is 'body', but the node does not initialise it"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_init_reads_input",
+   "agree": true,
+   "ember_rules": [
+    32
+   ],
+   "ref_rules": [
+    32
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 32): init[0] reads 'q' at column 12, which its section cannot read"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 32): block[3] recurrence: init[0]: reads q, which this body cannot read (it reads nothing)"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_name_twice",
+   "agree": true,
+   "ember_rules": [
+    31
+   ],
+   "ref_rules": [
+    31
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 31): the name 'num' is declared twice"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 31): block[3] recurrence: num is declared twice (state and let)"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_rank_mismatch",
+   "agree": true,
+   "ember_rules": [
+    32
+   ],
+   "ref_rules": [
+    32
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 32): update[1] reads 'den' at column 12 with 1 index(es); it has 2 dimension(s)"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 32): block[3] recurrence: update[1]: den has rank 2, read with 1 indices"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_rowsum",
+   "agree": true,
+   "ember_rules": [
+    31
+   ],
+   "ref_rules": [
+    31
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 31): readout uses rowsum at column 10 (the row reductions are not part of a recurrence body; sum replaces them)"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 31): block[3] recurrence: readout: 'rowsum' is not defined in a recurrence body (write sum(index, ...)) at column 10 in \"y[h,e] = rowsum(num[h,e])\""
+   ]
+  },
+  {
+   "case": "refuse/recurrence_slot_missing_tensor",
+   "agree": true,
+   "ember_rules": [
+    33
+   ],
+   "ref_rules": [
+    33
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 33) the slot \"lin\" has no tensor 'den' (the update assigns it)"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 33): recurrent state lin: tensors ['num'] are not the update's state tensors ['den', 'num']"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_slot_shape",
+   "agree": true,
+   "ember_rules": [
+    33
+   ],
+   "ref_rules": [
+    33
+   ],
+   "ember": [
+    "IR_SPEC 6.10: (rule 33) the slot \"lin\"'s tensor 'num' has shape [16], the update's is [2,8]"
+   ],
+   "ref": [
+    "IR_SPEC 6.10 (rule 33): recurrent state lin: num has shape [16], the update gives [2, 8]"
+   ]
+  },
+  {
+   "case": "refuse/recurrence_weight_size",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [],
+   "ember": [],
+   "ref": []
+  },
+  {
+   "case": "refuse/recurrent_dtype_f16",
+   "agree": true,
+   "ember_rules": [
+    13
+   ],
+   "ref_rules": [
+    13
+   ],
+   "ember": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0].dtype \"f16\" is not one of [\"f32\"]",
+    "IR_SPEC 6.3: recurrent state lin: op (a recurrent op), dtype f32 and tensors required"
+   ],
+   "ref": [
+    "IR_SPEC 6.3 (rule 13): doc.block.state[0].dtype \"f16\" is not one of ['f32']",
+    "IR_SPEC 6.3 (rule 13): recurrent state lin: op (a recurrent op), dtype f32 and tensors required"
+   ]
+  },
+  {
+   "case": "refuse/recurrent_op_mismatch",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    11,
+    13
+   ],
+   "ember": [
+    "IR_SPEC 6.1: block: linear_attention reads state 'lin', not a declared recurrent slot of op linear_attention",
+    "IR_SPEC 6.1: state slot lin is read by no node"
+   ],
+   "ref": [
+    "IR_SPEC 6.3 (rule 13): block: linear_attention reads the recurrent state 'lin' of op 'ssm_scan'",
+    "IR_SPEC 6.1 (rule 11): state slot lin is read by no node"
+   ]
+  },
+  {
+   "case": "refuse/recurrent_shape_mismatch",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    13
+   ],
+   "ember": [
+    "IR_SPEC 6.3: recurrent state lin: tensors {\"den\":[2,8],\"num\":[3,8]} do not fit linear_attention (want {\"den\":[2,8],\"num\":[2,8]})"
+   ],
+   "ref": [
+    "IR_SPEC 6.3 (rule 13): recurrent state lin: tensors {'num': [3, 8], 'den': [2, 8]} do not fit linear_attention (want {'num': [2, 8], 'den': [2, 8]})"
+   ]
+  },
+  {
+   "case": "refuse/repeat_ne_n_layers",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    3
+   ],
+   "ember": [
+    "IR_SPEC 3.3: block.repeat 3 != model.n_layers 2"
+   ],
+   "ref": [
+    "IR_SPEC 3.3 (rule 3): block.repeat 3 != model.n_layers 2"
+   ]
+  },
+  {
+   "case": "refuse/rope_n_rot_odd",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    10
+   ],
+   "ember": [
+    "IR_SPEC 5.14: block[4] rope: n_rot 3 is not even and in 1 .. head_dim 8"
+   ],
+   "ref": [
+    "IR_SPEC 5.14 (rule 10): block[4] rope: n_rot 3 is not even and in 1 .. head_dim 8"
+   ]
+  },
+  {
+   "case": "refuse/rope_pairing_unknown",
+   "agree": true,
+   "ember_rules": [
+    5
+   ],
+   "ref_rules": [
+    5
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 5): doc.block.nodes[4].pairing \"halves\" is not one of [\"interleaved\",\"neox\"]"
+   ],
+   "ref": [
+    "IR_SPEC 5.14 (rule 5): doc.block.nodes[4].pairing \"halves\" is not one of ['interleaved', 'neox']"
+   ]
+  },
+  {
+   "case": "refuse/slot_declared_twice",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    11
+   ],
+   "ember": [
+    "IR_SPEC 6.1: state slot kv declared twice"
+   ],
+   "ref": [
+    "IR_SPEC 6.1 (rule 11): state slot kv declared twice"
+   ]
+  },
+  {
+   "case": "refuse/slot_unknown_kind",
+   "agree": true,
+   "ember_rules": [
+    11
+   ],
+   "ref_rules": [
+    11
+   ],
+   "ember": [
+    "IR_SPEC 6.1 (rule 11): doc.block.state[0].kind \"paged\" is not one of [\"kv\",\"recurrent\"]",
+    "IR_SPEC 6.1: state slot kv: unknown kind paged",
+    "IR_SPEC 6.1: block: attention reads state 'kv', not a declared kv slot"
+   ],
+   "ref": [
+    "IR_SPEC 6.1 (rule 11): doc.block.state[0].kind \"paged\" is not one of ['kv', 'recurrent']",
+    "IR_SPEC 6.1 (rule 11): state slot kv: unknown kind paged",
+    "IR_SPEC 6.1 (rule 11): block: attention reads state 'kv', not a declared kv slot"
+   ]
+  },
+  {
+   "case": "refuse/slot_unread",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    11
+   ],
+   "ember": [
+    "IR_SPEC 6.1: state slot kv2 is read by no node"
+   ],
+   "ref": [
+    "IR_SPEC 6.1 (rule 11): state slot kv2 is read by no node"
+   ]
+  },
+  {
+   "case": "refuse/split_count",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    10
+   ],
+   "ember": [
+    "IR_SPEC 5.5: block[2] split: 2 sizes for 3 outputs"
+   ],
+   "ref": [
+    "IR_SPEC 5.5 (rule 10): block[2] split: 2 sizes for 3 outputs"
+   ]
+  },
+  {
+   "case": "refuse/state_weight_with_i",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    17
+   ],
+   "ember": [
+    "IR_SPEC 3.7: embed[0] embedding: state_weight 'state_{i}.weight' uses {i} outside the block",
+    "IR_SPEC 6.8.1: state_weight names its tensor in full (Q8)"
+   ],
+   "ref": [
+    "IR_SPEC 3.7 (rule 17a): embed[0] embedding: state_weight 'state_{i}.weight' uses {i} outside the block",
+    "IR_SPEC 6.8.1 (rule 17): state_weight names its tensor in full (Q8)"
+   ]
+  },
+  {
+   "case": "refuse/state_weight_wrong_name",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [],
+   "ember": [],
+   "ref": []
+  },
+  {
+   "case": "refuse/tensor_index_without_weight_index",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    19
+   ],
+   "ember": [
+    "IR_SPEC 7.2: block[1] linear: tensor_index needs a block with weight_index"
+   ],
+   "ref": [
+    "IR_SPEC 7.2 (rule 19): block[1] linear: tensor_index needs a block with weight_index"
+   ]
+  },
+  {
+   "case": "refuse/turn_state_with_window",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    15
+   ],
+   "ember": [
+    "IR_SPEC 6.8.2: attention mask turn_state needs window 0, sinks 0 (every application, and its kv slot) and an embedding state_weight"
+   ],
+   "ref": [
+    "IR_SPEC 6.8.2 (rule 15): attention mask turn_state needs window 0, sinks 0 (every application, and its kv slot) and an embedding state_weight"
+   ]
+  },
+  {
+   "case": "refuse/turn_state_without_state_weight",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    15
+   ],
+   "ember": [
+    "IR_SPEC 6.8.2: attention mask turn_state needs window 0, sinks 0 (every application, and its kv slot) and an embedding state_weight"
+   ],
+   "ref": [
+    "IR_SPEC 6.8.2 (rule 15): attention mask turn_state needs window 0, sinks 0 (every application, and its kv slot) and an embedding state_weight"
+   ]
+  },
+  {
+   "case": "refuse/two_state_weights",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    17
+   ],
+   "ember": [
+    "IR_SPEC 6.8.1: more than one embedding with a state_weight (Q8)"
+   ],
+   "ref": [
+    "IR_SPEC 6.8.1 (rule 17): more than one embedding with a state_weight (Q8)"
+   ]
+  },
+  {
+   "case": "refuse/unknown_attribute",
+   "agree": true,
+   "ember_rules": [
+    4
+   ],
+   "ref_rules": [
+    4
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[5] (attention) has the key 'temperature', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[5] has the key 'temperature', which its specification does not define"
+   ]
+  },
+  {
+   "case": "refuse/unknown_op",
+   "agree": true,
+   "ember_rules": [
+    4
+   ],
+   "ref_rules": [
+    4
+   ],
+   "ember": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[15].op \"warp\" is not one of [\"embedding\",\"pos_embedding\",\"linear\",\"scale\",\"split\",\"rmsnorm\",\"layernorm\",\"gelu\",\"silu\",\"sigmoid\",\"relu\",\"add\",\"mul\",\"sub\",\"affine\",\"mul_col\",\"rms_row\",\"rope\",\"attention\",\"moe_ffn\",\"list\",\"append\",\"depth_attend\",\"expr\",\"linear_attention\",\"ssm_scan\",\"conv1d_causal\",\"selective_scan\",\"depth_route\",\"recurrence\"]"
+   ],
+   "ref": [
+    "IR_SPEC 3.5 (rule 4): doc.block.nodes[15].op \"warp\" is not one of ['embedding', 'pos_embedding', 'linear', 'scale', 'split', 'rmsnorm', 'layernorm', 'gelu', 'silu', 'sigmoid', 'relu', 'add', 'mul', 'sub', 'affine', 'mul_col', 'rms_row', 'rope', 'attention', 'moe_ffn', 'list', 'append', 'depth_attend', 'expr', 'linear_attention', 'ssm_scan', 'conv1d_causal', 'selective_scan', 'depth_route', 'recurrence']"
+   ]
+  },
+  {
+   "case": "refuse/unknown_top_key",
+   "agree": true,
+   "ember_rules": [
+    1
+   ],
+   "ref_rules": [
+    1
+   ],
+   "ember": [
+    "IR_SPEC 3.2 (rule 1): doc has the key 'profiles', which its specification does not define"
+   ],
+   "ref": [
+    "IR_SPEC 3.2 (rule 1): doc has the key 'profiles', which its specification does not define"
+   ]
+  },
+  {
+   "case": "refuse/version_2",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    2
+   ],
+   "ember": [
+    "IR_SPEC 2.3: ir_version 2 is not supported (ember reads 0, 1)"
+   ],
+   "ref": [
+    "IR_SPEC 2.3 (rule 2): ir_version 2 is not supported (this validator reads 0, 1)"
+   ]
+  },
+  {
+   "case": "refuse/weight_index_negative",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    18
+   ],
+   "ember": [
+    "IR_SPEC 7.1: block.weight_index must be {per_layer: [block.repeat integers >= 0]}"
+   ],
+   "ref": [
+    "IR_SPEC 7.1 (rule 18): block.weight_index must be {per_layer: [block.repeat integers >= 0]}"
+   ]
+  },
+  {
+   "case": "refuse/weight_index_unused_layer",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    18
+   ],
+   "ember": [
+    "IR_SPEC 7.1: block.weight_index uses stored layers [0, 2, 3], not every one of 0..3"
+   ],
+   "ref": [
+    "IR_SPEC 7.1 (rule 18): block.weight_index uses stored layers [0, 2, 3], not every one of 0..3"
+   ]
+  },
+  {
+   "case": "refuse/weight_index_wrong_length",
+   "agree": true,
+   "ember_rules": [],
+   "ref_rules": [
+    18
+   ],
+   "ember": [
+    "IR_SPEC 7.1: block.weight_index must be {per_layer: [block.repeat integers >= 0]}"
+   ],
+   "ref": [
+    "IR_SPEC 7.1 (rule 18): block.weight_index must be {per_layer: [block.repeat integers >= 0]}"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,42 @@
+189/189 checks pass, 3072 requests
+old checks 156: 143 identical, 12 differ, 1 missing; new checks 189 (34 added); requests old 2879 new 3072
+hello equal: False
+DIFF check/refuse/unknown_attribute
+   old: {"message": "IR_SPEC 10.1 rule 1: doc.block.nodes[5] (attention) has the key 'flavour', which its specification does not define", "pass": true}
+   new: {"message": "IR_SPEC 3.5 (rule 4): doc.block.nodes[5] (attention) has the key 'flavour', which its specification does not define", "pass": true}
+DIFF check/refuse/unknown_top_level_key
+   old: {"message": "IR_SPEC 10.1 rule 1: doc has the key 'extras', which its specification does not define", "pass": true}
+   new: {"message": "IR_SPEC 3.2 (rule 1): doc has the key 'extras', which its specification does not define", "pass": true}
+DIFF check/refuse/unknown_model_key
+   old: {"message": "IR_SPEC 10.1 rule 1: doc.model has the key 'hidden', which its specification does not define", "pass": true}
+   new: {"message": "IR_SPEC 3.3 (rule 1): doc.model has the key 'hidden', which its specification does not define", "pass": true}
+DIFF check/refuse/unknown_slot_key
+   old: {"message": "IR_SPEC 10.1 rule 1: doc.block.state[0] has the key 'pages', which its specification does not define", "pass": true}
+   new: {"message": "IR_SPEC 6.1 (rule 1): doc.block.state[0] has the key 'pages', which its specification does not define", "pass": true}
+DIFF check/refuse/unknown_block_key
+   old: {"message": "IR_SPEC 10.1 rule 1: doc.block has the key 'loop', which its specification does not define", "pass": true}
+   new: {"message": "IR_SPEC 3.2 (rule 1): doc.block has the key 'loop', which its specification does not define", "pass": true}
+DIFF check/refuse/attribute_of_another_op
+   old: {"message": "IR_SPEC 10.1 rule 1: doc.block.nodes[0] (rmsnorm) has the key 'theta', which its specification does not define", "pass": true}
+   new: {"message": "IR_SPEC 3.5 (rule 4): doc.block.nodes[0] (rmsnorm) has the key 'theta', which its specification does not define", "pass": true}
+DIFF check/refuse/required_attribute_missing
+   old: {"message": "IR_SPEC 10.1 rule 1: doc.block.nodes[4] lacks the required key 'theta'", "pass": true}
+   new: {"message": "IR_SPEC 3.5 (rule 8): doc.block.nodes[4] lacks the required key 'theta'", "pass": true}
+DIFF skip/run_node
+   old: {"reply": {"id": 2365, "skip": "run_node: ember's adapter runs recurrence nodes only (whole-model methods for the other ops)"}, "pass": true}
+   new: {"reply": {"id": 2365, "skip": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"}, "pass": true}
+DIFF rev11/digest_vectors
+   old: {"vectors": 74, "equal": 74, "pass": true}
+   new: {"vectors": 84, "equal": 84, "pass": true}
+DIFF rev11/run_node/width_rule34
+   old: {"reply": {"error": "IR_SPEC 6.10 (rule 34): recurrence input 'u' is 3 wide; its declaration is 4", "id": 2877}, "pass": true}
+   new: {"reply": {"error": "IR_SPEC 6.10 (rule 34): recurrence input 'u' is 3 wide; its declaration is 4", "id": 2887}, "pass": true}
+DIFF rev11/skip/run_node_grad
+   old: {"reply": {"id": 2878, "skip": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"}, "pass": true}
+   new: {"reply": {"id": 2888, "skip": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"}, "pass": true}
+DIFF rev11/skip/run_node_other_op
+   old: {"reply": {"id": 2879, "skip": "run_node: ember's adapter runs recurrence nodes only (whole-model methods for the other ops)"}, "pass": true}
+   new: {"reply": {"id": 2889, "skip": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"}, "pass": true}
+MISSING skip/depth_without_depth_route
+added: ['depth/without_depth_route_empty', 'rev12/rule35/top', 'rev12/rule35/node', 'rev12/rule35/prose', 'rev12/rule35/nested_prose', 'rev12/rule35/same_text_without_the_duplicate', 'rev12/rule35/embedded', 'rev12/rule35/document_alone', 'rev12/rule36/reads_unwritten_value', 'rev12/rule36/embed_writes_no_x', 'rev12/rule36/head_writes_no_logits', 'rev12/rule36/mor_reads_outside_value', 'rev12/rule20/mor_step_gap', 'rev12/rule36/reads_a_later_write', 'rev12/rule36/head_reads_block_value_under_mor', 'rev12/rule36/head_reads_block_value_without_mor', 'rev12/rule37/rmsnorm_group', 'rev12/rule37/add_shapes', 'rev12/depth_attend_eps_default', 'rev12/check_document_alone/accept', 'rev12/check_document_alone/refuse', 'rev12/edge_cases', 'rev12/edge_cases/no_kv_slot', 'rev12/render_chat', 'rev12/run_node/expr', 'rev13/rule38/kimi_old_label_and_twin', 'rev13/rule38/swa_old_label_and_twin', 'rev13/rule38/architecture_graphs_accepted', 'rev13/rule38/architecture_metadata_disagrees', 'rev13/rule38/architecture_without_graph', 'rev13/rewind_window/pk_gpt2_swa', 'rev13/rewind_window/tp_gemma3', 'rev13/position_bias/whole_model', 'rev13/run_node/attention']
+new failures: []

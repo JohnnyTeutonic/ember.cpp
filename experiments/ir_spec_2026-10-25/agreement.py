@@ -15,7 +15,8 @@ case by case: both accept or both refuse.
             on every stored document and every must-refuse document.
 
 Expected differences are labelled, not hidden: "capability" (a valid document ember does not run, section 10.3:
-the validator accepts, ember refuses). A missing S = 1 depth_attend pseudo-query (section 5.18) is accepted by
+the validator accepts, ember refuses; also a plain third-party llama or mistral file, which ember serves on its
+tuned llama path and builds no document for). A missing S = 1 depth_attend pseudo-query (section 5.18) is accepted by
 both: the validator (revision 1.1) reports it as an exporter-rule warning, not a refusal. Writes
 agreement_cpu.json beside this file; exits 1 on any unexpected disagreement.
 
@@ -457,7 +458,13 @@ def main():
         run("gguf:" + os.path.relpath(g, A), "valid", "-", g, None, "accept")
     for g in third_party_ggufs():
         tag = "suite:" if g.startswith(PK) else "thirdparty:"
-        run(tag + os.path.basename(g), "valid", "-", g, None, "accept")
+        # A plain llama or mistral file (no document, no window) is the tuned llama path's: ember builds no document
+        # for it unless EMBER_IR_BUILD=1, so its adapter has none to check (a capability difference, section 10.3).
+        meta, _ = hdr(g)
+        arch = meta.get("general.architecture", (None, ""))[1]
+        llama_path = ("paperkiln.ir" not in meta and arch in ("llama", "mistral")
+                      and f"{arch}.attention.sliding_window" not in meta)
+        run(tag + os.path.basename(g), "valid", "-", g, None, "capability" if llama_path else "accept")
     stored = [p for p in corpus() if p.endswith(".ir.json")]
     unpaired = []
     for p in stored:
