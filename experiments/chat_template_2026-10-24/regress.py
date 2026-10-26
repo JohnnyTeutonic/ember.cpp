@@ -10,7 +10,8 @@ receipt used one). Each record is rebuilt with ember's fields from the new run a
 recorded mtstudio side, paperkiln's prompt-token count) from the receipt, serialised as the harness did
 (json.dumps, one line per record), and the file is compared with the committed one byte for byte.
 bits: ../state_tokens_2026-10-24/bit_regression.py's model and IR list, run by ember main 69d7ca2's ir_logits
-(build_base.sh) and by this change's; equal JSON text means equal floats, prefill and decode.
+(build_base.sh) and by this change's; equal JSON text means equal floats, prefill and decode. swa_tiny and
+kimi_tiny are read as relabelled copies (rule 38; ../ir_rev13_2026-10-27/relabel_models.sh, run when missing).
 Writes regress_parity.json / regress_bits.json beside this file."""
 import json
 import os
@@ -112,13 +113,21 @@ def bits():
     def seqs(path, n=8):
         return [r["prompt_ids"] + r["continuation_ids"] for r in rows(path)][:n]
 
+    # swa_tiny and kimi_tiny carry general.architecture "gpt2", which rule 38 (keramos v1.3.0) refuses for these
+    # IR-only files in every build since 70ed063; both builds read their relabelled copies (architecture
+    # "paperkiln", the gpt2.* keys renamed, document and tensors unchanged) from the ext4 cache that
+    # ../ir_rev13_2026-10-27/relabel_models.sh makes, as the adapter self-test does. The originals are only read.
+    r13 = os.path.expanduser("~/ember_wt/adapter_models_r13")
+    if not all(os.path.exists(f"{r13}/{n}/{n}.gguf") for n in ("swa_tiny", "kimi_tiny")):
+        subprocess.run(["bash", EXP + "/ir_rev13_2026-10-27/relabel_models.sh"], check=True, stdout=subprocess.DEVNULL)
+
     cases = {
         "gpt2_tiny": (f"{A}/gpt2_tiny/gpt2_tiny.gguf", None, short_),
         "gpt2_tiny_scale_smoke_ir": (f"{A}/gpt2_tiny/gpt2_tiny.gguf", os.path.expanduser("~/ember_wt/scale_smoke.ir.json"), short_),
         "recursion_b2x4_0101": (f"{A}/recursion_gate/b2x4/r.gguf", rec_path, seqs(f"{A}/recursion_gate/b2x4/score_in.jsonl")),
         "chat_sftfinal_v3": (f"{A}/chat_base/sftfinal/chat_sftfinal_v3.gguf", None, chat),
-        "swa_tiny": (f"{A}/swa_tiny/swa_tiny.gguf", None, short_),
-        "kimi_tiny": (f"{A}/kimi_tiny/kimi_tiny.gguf", None, short_),
+        "swa_tiny": (f"{r13}/swa_tiny/swa_tiny.gguf", None, short_),
+        "kimi_tiny": (f"{r13}/kimi_tiny/kimi_tiny.gguf", None, short_),
         "mamba_tiny": (f"{A}/mamba_tiny/mamba_tiny.gguf", None, short_),
         "moe_tiny_v3": (f"{A}/moe_tiny/moe_tiny_v3.gguf", None, short_),
         "attnres_tiny": (f"{A}/attnres_tiny/attnres_tiny.gguf", None, short_),

@@ -45,6 +45,8 @@ models copied to ext4 (copy_models.sh: ~/ember_wt/adapter_models). Checks:
              moves the logits) and attention in run_node (the suite's six cases).
 IR_SUITE is the suite the rev11 checks read (revision 1.1's receipt: a keramos v1.1.0 archive; since revision 1.3 an
 archive of v1.3.0, whose relabelled pk_kimi and pk_recurrence load under rule 38). IR12_SUITE and IR13_SUITE likewise.
+All three default to ~/keramos_v1.3.0/conformance and the gate models to the relabelled cache
+~/ember_wt/adapter_models_r13; both are made when missing (../ir_rev13_2026-10-27/relabel_models.sh).
 Writes adapter_selftest_cpu.json beside this file (or to ADAPTER_SELFTEST_OUT); exits 1 on any failure.
 ADAPTER_SCRATCH moves the scratch directory (default ~/ember_wt/adapter_scratch)."""
 import copy
@@ -60,9 +62,20 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 # IR_ADAPTER_BIN tests another build (a pinned one); its report then goes to the scratch directory, not here.
 BIN = os.environ.get("IR_ADAPTER_BIN", os.path.expanduser("~/ember_wt/build_cpu/ir_adapter"))
-# IR_ADAPTER_MODELS: the gate models' directory (default copy_models.sh's); since keramos v1.3.0 (rule 38) kimi_tiny and
-# swa_tiny, which carry general.architecture "gpt2", load only relabelled (../ir_rev13_2026-10-27/relabel_models.sh).
-M = os.path.expanduser(os.environ.get("IR_ADAPTER_MODELS", "~/ember_wt/adapter_models"))
+# IR_ADAPTER_MODELS: the gate models' directory. Since keramos v1.3.0 (rule 38) kimi_tiny and swa_tiny, which carry
+# general.architecture "gpt2", load only relabelled, so the default is the relabelled cache on ext4,
+# ~/ember_wt/adapter_models_r13 (../ir_rev13_2026-10-27/relabel_models.sh: copy_models.sh's models, kimi_tiny and
+# swa_tiny relabelled by keramos v1.3.0's tools/gguf_relabel.py), made here when missing. The originals are only read.
+# The suites (IR_SUITE, IR12_SUITE, IR13_SUITE below) default to the same keramos v1.3.0 archive, ~/keramos_v1.3.0,
+# whose pk_kimi and pk_recurrence are relabelled at the tag.
+K130 = os.path.expanduser("~/keramos_v1.3.0")
+M = os.path.expanduser(os.environ.get("IR_ADAPTER_MODELS", "~/ember_wt/adapter_models_r13"))
+if ("IR_ADAPTER_MODELS" not in os.environ and
+        not all(os.path.exists(f"{M}/{n}/{n}.gguf") for n in ("kimi_tiny", "swa_tiny"))) or \
+        (not all(v in os.environ for v in ("IR_SUITE", "IR12_SUITE", "IR13_SUITE")) and
+         not os.path.isdir(K130 + "/conformance")):
+    subprocess.run(["bash", os.path.join(os.path.dirname(HERE), "ir_rev13_2026-10-27", "relabel_models.sh")],
+                   check=True, stdout=subprocess.DEVNULL)
 SCRATCH = os.environ.get("ADAPTER_SCRATCH", os.path.expanduser("~/ember_wt/adapter_scratch"))
 os.makedirs(SCRATCH, exist_ok=True)
 
@@ -544,7 +557,7 @@ for model in ("ar3", "state4"):
 from agreement import embedded  # noqa: E402
 # ---- spec revision 1.1 (paperkiln 7df7b10b): the recurrence op, the digest (rule 30), dequantisation, run_node.
 # Appended after every earlier check, so their requests, random draws and results are unchanged.
-SUITE = os.environ.get("IR_SUITE", "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch/spec/conformance")
+SUITE = os.environ.get("IR_SUITE", K130 + "/conformance")
 rng11 = random.Random(1101)
 REC11 = {  # model: (gguf, document run in place of the file's or None, the original document's gguf for comparison)
     "pk_recurrence": (f"{SUITE}/models/pk_recurrence/pk_recurrence.gguf", None),
@@ -705,7 +718,7 @@ record("rev11/skip/run_node_other_op", "skip" in r, reply=r)
 # ---- spec revision 1.2 (keramos v1.2.0, d4b880ae): rules 35-37 and 20, check of a document alone, render_chat,
 # the adapter's edge cases (section 11.3), expr in run_node, depth_attend's default eps. Appended after every
 # earlier check. IR12_SUITE is the suite at v1.2.0 (an archive of the tag).
-S12 = os.environ.get("IR12_SUITE", "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/keramos/conformance")
+S12 = os.environ.get("IR12_SUITE", K130 + "/conformance")
 
 
 def scratch_text(name, text):
@@ -888,7 +901,7 @@ record("rev12/run_node/expr", all(per.values()) and "rowsum_constant" in per and
 
 # ---- spec revision 1.3 (keramos v1.3.0, da9ead61): rule 38 (a file's architecture), the builder's MoE llama, T5's
 # position_bias (rule 39), the windowed rewind (6.9), attention in run_node. IR13_SUITE: the suite at the tag.
-S13 = os.environ.get("IR13_SUITE", "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/keramos/conformance")
+S13 = os.environ.get("IR13_SUITE", K130 + "/conformance")
 sys.path.insert(0, os.path.join(os.path.dirname(S13), "tools"))
 import ir_numpy  # noqa: E402  (the reference interpreter, a black-box oracle)
 from ir_conformance import load_model  # noqa: E402
