@@ -1,0 +1,45 @@
+{
+ "head": "/content/sass_head.txt",
+ "new": "/content/sass_new.txt",
+ "arches": [
+  "sm_89"
+ ],
+ "head_functions": 80,
+ "new_functions": 104,
+ "identical": 79,
+ "differ": 1,
+ "only_in_head": 0,
+ "only_in_new": 24,
+ "differing": [
+  "sm_89 _ZN8ember_ir49_GLOBAL__N__H_16_graph_ir_cuda_cu_H16embedding_kernelEPKfPKiPfi"
+ ],
+ "only_in_head_names": [],
+ "only_in_new_names": [
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi16EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi15EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi14EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi13EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi12EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi11EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi10EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi9EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi8EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi7EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi6EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi5EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi4EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi3EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi2EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20linear_smallm_kernelILi1EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H18select_rows_kernelEPKfiPNS_7RowPickE",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H22attn_merge_rows_kernelEPfiiiPKf",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H22attn_split_rows_kernelEPKfS2_S2_ifiiiPKiiPf",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H20kv_write_rows_kernelEPfS1_PKfS3_PKii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H16rope_rows_kernelEPfiiPKfPKib",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H23rmsnorm_rows_det_kernelEPKfS2_Pfif",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H19rmsnorm_rows_kernelEPKfS2_Pfif",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H17embed_rows_kernelEPKfPfPKiii"
+ ],
+ "head_instructions": 12120,
+ "every_head_kernel_identical": false
+}

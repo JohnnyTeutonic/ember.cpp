@@ -162,7 +162,9 @@ Operational logs go to `debugging.log` in the working directory.
 | `EMBER_PREFIX_REUSE=0` | disable KV/prefix reuse across turns |
 | `EMBER_SCORE_REUSE=0` | `/score`: no prefix reuse between a call's requests (the bits do not change) |
 | `EMBER_SCORE_FULL=1` | `/score`: every request a fresh prefill computing every row's logits (the reference the default path is checked against) |
-| `EMBER_SPEC=k` | speculative decoding with prompt-lookup drafts of up to k tokens (greedy only) |
+| `EMBER_SPEC=k` | speculative decoding with prompt-lookup drafts of up to k tokens (greedy only); on CUDA a verification pass is one captured graph costing about one decode step (`experiments/verify_2026-10-27`) |
+| `EMBER_VERIFY_LINEAR=rows` | with `EMBER_SPEC`: the verification rows through the decode step's own GEMV, bit-identical to decode under `EMBER_DETERMINISTIC=1` (slower; default `smallm`) |
+| `EMBER_VERIFY=legacy` | with `EMBER_SPEC`: the per-launch verification pass of 20 Oct 2026 |
 | `EMBER_DECODE_GRAPH=0` | disable the CUDA-graph decode on the llama path |
 | `EMBER_DECODE_ATTN=legacy` | the one-block-per-head decode attention kernel instead of split-K |
 | `EMBER_GEMM_TF32=0` | FP32 instead of TF32 GEMMs in the CUDA prefill |

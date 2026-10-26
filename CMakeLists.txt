@@ -257,9 +257,9 @@ if(HAS_CUDA)
         # Set CUDA sources based on compilation method
         if(WIN32)
             message(STATUS "Windows detected: Using standard CUDA compilation")
-            set(CUDA_SOURCES cuda_kernels.cu graph_ir_cuda.cu) # Include CUDA source for standard compilation
+            set(CUDA_SOURCES cuda_kernels.cu graph_ir_cuda.cu verify_kernels.cu) # Include CUDA source for standard compilation
         else()
-            set(CUDA_SOURCES cuda_kernels.cu graph_ir_cuda.cu) # Include CUDA source for standard compilation
+            set(CUDA_SOURCES cuda_kernels.cu graph_ir_cuda.cu verify_kernels.cu) # Include CUDA source for standard compilation
         endif()
     else()
         message(WARNING "HAS_CUDA option is ON, but CUDA Toolkit or cuBLAS not found. Disabling CUDA support.")
@@ -272,6 +272,7 @@ endif()
 # --- Core Library Definition ---
 add_library(tinyllama_core STATIC
     model.cpp 
+    speculative_verify.cpp
     model_config.cpp
     kv_cache.cpp
     weight_management.cpp

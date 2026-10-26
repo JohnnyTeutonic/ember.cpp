@@ -1,0 +1,26 @@
+== pick
+  k2           chat40      39.6 tok/s  x1.014 vs off  acc 0.49 tok/pass 1.98  ids 40/40 replies 40  warm 40
+  k2           copy20      45.9 tok/s  x1.243 vs off  acc 0.71 tok/pass 2.42  ids 20/20 replies 20  warm 20
+  k2           all         42.8 tok/s  x1.130 vs off  acc 0.67 tok/pass 2.33  ids 60/60 replies 60  warm 60
+  k4           chat40      39.6 tok/s  x1.014 vs off  acc 0.37 tok/pass 2.47  ids 40/40 replies 40  warm 40
+  k4           copy20      44.3 tok/s  x1.200 vs off  acc 0.59 tok/pass 3.25  ids 20/20 replies 20  warm 20
+  k4           all         42.0 tok/s  x1.110 vs off  acc 0.54 tok/pass 3.07  ids 60/60 replies 60  warm 60
+  k8           chat40      34.9 tok/s  x0.892 vs off  acc 0.22 tok/pass 2.58  ids 40/40 replies 40  warm 40
+  k8           copy20      35.1 tok/s  x0.950 vs off  acc 0.44 tok/pass 4.09  ids 20/20 replies 20  warm 20
+  k8           all         35.0 tok/s  x0.924 vs off  acc 0.38 tok/pass 3.70  ids 60/60 replies 60  warm 60
+  off          chat40      39.1 tok/s  x1.000 vs off  acc - tok/pass -  ids 40/40 replies 40  warm 40
+  off          copy20      36.9 tok/s  x1.000 vs off  acc - tok/pass -  ids 20/20 replies 20  warm 20
+  off          all         37.9 tok/s  x1.000 vs off  acc - tok/pass -  ids 60/60 replies 60  warm 60
+== pk
+  k2           chat40      10.5 tok/s  x0.716 vs off  acc 0.63 tok/pass 2.26  ids 40/40 replies 40  warm 40
+  k2           copy20      14.6 tok/s  x1.013 vs off  acc 0.92 tok/pass 2.85  ids 20/20 replies 20  warm 20
+  k2           all         12.3 tok/s  x0.847 vs off  acc 0.87 tok/pass 2.75  ids 60/60 replies 60  warm 60
+  k4           chat40      14.8 tok/s  x1.002 vs off  acc 0.49 tok/pass 2.88  ids 40/40 replies 40  warm 40
+  k4           copy20      20.2 tok/s  x1.405 vs off  acc 0.89 tok/pass 4.50  ids 20/20 replies 20  warm 20
+  k4           all         17.2 tok/s  x1.180 vs off  acc 0.81 tok/pass 4.18  ids 60/60 replies 60  warm 60
+  k8           chat40      14.6 tok/s  x0.994 vs off  acc 0.36 tok/pass 3.66  ids 40/40 replies 40  warm 40
+  k8           copy20      19.7 tok/s  x1.368 vs off  acc 0.80 tok/pass 7.28  ids 20/20 replies 20  warm 20
+  k8           all         16.9 tok/s  x1.161 vs off  acc 0.70 tok/pass 6.41  ids 60/60 replies 60  warm 60
+  off          chat40      14.7 tok/s  x1.000 vs off  acc - tok/pass -  ids 40/40 replies 40  warm 40
+  off          copy20      14.4 tok/s  x1.000 vs off  acc - tok/pass -  ids 20/20 replies 20  warm 20
+  off          all         14.6 tok/s  x1.000 vs off  acc - tok/pass -  ids 60/60 replies 60  warm 60

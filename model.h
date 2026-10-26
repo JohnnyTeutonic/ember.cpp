@@ -23,6 +23,7 @@
 #endif
 
 #include "cuda_kernels.h"
+#include "verify_kernels.h"
 #endif
 #include <memory>
 
@@ -409,10 +410,32 @@ class TinyLlamaModel {
   // uses forward_device().
   std::vector<float> forward_device_graph(int token_id, int pos, KVCache* kv_cache);
   // Speculative verification: n tokens at positions pos..pos+n-1 (all layers
-  // on the GPU, n <= 33), logits for every row ([n][vocab]). Built like the
-  // graph decode (FP32 projections, the same decode-attention kernel per
-  // row), so one pass costs about one decode step. Empty if unavailable.
+  // on the GPU, n <= 33), logits for every row ([n][vocab]): FP32 GEMMs and
+  // the decode-attention kernel launched once per row, per launch (1.2-5.1
+  // decode steps on an L4, experiments/verify_2026-10-27; the fallback of
+  // forward_device_verify_graph). Empty if unavailable.
   std::vector<float> forward_device_verify(const std::vector<int>& tokens, int pos, KVCache* kv_cache);
+  // Speculative verification as one CUDA graph per row count (speculative_verify.cpp, EMBER_SPEC on CUDA): the
+  // same n rows at positions pos..pos+n-1 (n <= ember_verify::kMaxRows), every layer replayed from a captured
+  // graph, each row through the graph decode's kernels (verify_kernels.h), and a greedy pick per row computed on
+  // the device. Fills picks[0..n-1]; the rows' logits stay on the device (verify_row_logits). False when the path
+  // does not apply (CPU layers, a quantised KV cache, MoE, the decode graph off, a shape the decode attention
+  // kernel refuses); the caller then uses forward_device_verify.
+  bool forward_device_verify_graph(const std::vector<int>& tokens, int pos, KVCache* kv_cache,
+                                   std::vector<ember_verify::RowPick>* picks);
+  // Logits of row r of the last forward_device_verify_graph pass (one device-to-host copy).
+  std::vector<float> verify_row_logits(int r);
+  // Measurement knobs of forward_device_verify_graph, read from the environment on first use
+  // (EMBER_VERIFY_LINEAR = smallm | gemm | gemvb | rows, EMBER_VERIFY_GRAPH=0, EMBER_VERIFY_ATTN=perrow,
+  // EMBER_VERIFY_TIMING=1: per-stage synchronised timing, graph off). Changing them drops the captured graphs.
+  struct VerifyOptions {
+    int linear = 0;  // ember_verify::VerifyLinear
+    bool graph = true;
+    bool batched_attention = true;
+    bool timing = false;
+  };
+  VerifyOptions& verify_options();
+  std::map<std::string, double>& verify_stage_ms() { return verify_stage_ms_; }
   // Per-op GPU time of the last batched prefill, filled only when
   // EMBER_OP_TIMING=1 (docs/TTFT.md); empty otherwise.
   const std::map<std::string, double>& last_prefill_op_ms() const { return last_prefill_op_ms_; }
@@ -588,6 +611,25 @@ class TinyLlamaModel {
   size_t moe_scratch_batch_floats_ = 0;
   float* moe_scratch(int T);  // T == 1: the decode scratch
   float* verify_buf_dev_ = nullptr;  // forward_device_verify's rows (allocated once)
+  // forward_device_verify_graph state (speculative_verify.cpp; allocated on first use, kept for the session).
+  VerifyOptions verify_opts_;
+  bool verify_opts_read_ = false;
+  bool verify_graph_disabled_ = false;
+  std::map<int, cudaGraphExec_t> verify_graphs_;  // per row count
+  const void* verify_graph_key_ = nullptr;        // KV cache base the graphs were captured for
+  int verify_graph_opts_key_ = -1;
+  int* verify_step_dev_ = nullptr;                // [pos, ids...]
+  int* verify_step_host_ = nullptr;               // pinned
+  float* verify_rows_dev_ = nullptr;              // the rows' activations and logits
+  float* verify_logits_dev_ = nullptr;            // inside verify_rows_dev_: [kMaxRows][vocab]
+  float* verify_attn_scratch_dev_ = nullptr;
+  size_t verify_attn_scratch_floats_ = 0;
+  ember_verify::RowPick* verify_picks_dev_ = nullptr;
+  ember_verify::RowPick* verify_picks_host_ = nullptr;  // pinned
+  int verify_last_n_ = 0;
+  std::map<std::string, double> verify_stage_ms_;
+  bool verify_ensure_decode_buffers();
+  void verify_run_ops(int n, KVCache* kv_cache, cudaStream_t st);
   void moe_ffn_layer_cuda(int l_gpu_idx, const float* x, int T, float* out, cudaStream_t stream);
   float* lm_head_f32_dev_ = nullptr;
   cublasHandle_t cublas_handle_ = nullptr;
