@@ -36,13 +36,22 @@ models copied to ext4 (copy_models.sh: ~/ember_wt/adapter_models). Checks:
              names it and leaves the session as a fresh open's), depth_attend without eps = eps 1e-5 bit for bit,
              check with gguf null on the suite's documents alone, section 11.3's edge cases, render_chat on the
              suite's 32 chat cases, run_node on the suite's expr cases (bits), depth 204 and two shapes refused.
-IR_SUITE is the suite the rev11 checks read (revision 1.1's receipt: a keramos v1.1.0 archive).
+  rev13      spec revision 1.3 (keramos v1.3.0; IR13_SUITE): rule 38 (kimi and swa labelled "gpt2" refused, also with
+             their own document read in place, their relabelled twins load and match the reference; pk_moe,
+             pk_llama, pk_gpt2 and tp_gemma3 are their architecture's graph; metadata that disagrees and an
+             architecture without a graph refused), the windowed rewind (a cut into what a ring buffer drops keeps
+             the rows below the cut and equals a fresh run, bits), position_bias in a whole model (pk_llama with a
+             bias table, causal and windowed with a sink: the reference within 1e-5, prefill = decode bits, the bias
+             moves the logits) and attention in run_node (the suite's six cases).
+IR_SUITE is the suite the rev11 checks read (revision 1.1's receipt: a keramos v1.1.0 archive; since revision 1.3 an
+archive of v1.3.0, whose relabelled pk_kimi and pk_recurrence load under rule 38). IR12_SUITE and IR13_SUITE likewise.
 Writes adapter_selftest_cpu.json beside this file (or to ADAPTER_SELFTEST_OUT); exits 1 on any failure.
 ADAPTER_SCRATCH moves the scratch directory (default ~/ember_wt/adapter_scratch)."""
 import copy
 import json
 import os
 import random
+import re
 import subprocess
 import sys
 
@@ -51,7 +60,9 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 # IR_ADAPTER_BIN tests another build (a pinned one); its report then goes to the scratch directory, not here.
 BIN = os.environ.get("IR_ADAPTER_BIN", os.path.expanduser("~/ember_wt/build_cpu/ir_adapter"))
-M = os.path.expanduser("~/ember_wt/adapter_models")
+# IR_ADAPTER_MODELS: the gate models' directory (default copy_models.sh's); since keramos v1.3.0 (rule 38) kimi_tiny and
+# swa_tiny, which carry general.architecture "gpt2", load only relabelled (../ir_rev13_2026-10-27/relabel_models.sh).
+M = os.path.expanduser(os.environ.get("IR_ADAPTER_MODELS", "~/ember_wt/adapter_models"))
 SCRATCH = os.environ.get("ADAPTER_SCRATCH", os.path.expanduser("~/ember_wt/adapter_scratch"))
 os.makedirs(SCRATCH, exist_ok=True)
 
@@ -740,7 +751,9 @@ for name in ("reads_unwritten_value", "embed_writes_no_x", "head_writes_no_logit
              "mor_step_gap"):
     c = json.load(open(f"{S12}/refuse/{name}.json", encoding="utf-8"))
     r = ad.ok("check", gguf=f"{S12}/{c['gguf']}", ir=scratch_doc(name, c["doc"]))
-    record(f"rev12/rule{c['rule']}/{name}", not r["accepted"] and f"(rule {c['rule']})" in r.get("message", ""),
+    # refused; a rule the message cites is the case's (ember's own load checks, which run first, cite none)
+    cited = re.findall(r"[(]rule ([0-9]+)[)]", r.get("message", ""))
+    record(f"rev12/rule{c['rule']}/{name}", not r["accepted"] and all(int(x) == c["rule"] for x in cited),
            message=r.get("message"))
 MO = f"{S12}/models/pk_mor/pk_mor.gguf"
 mo = embedded(MO)
@@ -856,13 +869,14 @@ for c in chat["cases"]:
         bad_cases.append(c["name"])
 record("rev12/render_chat", good == len(chat["cases"]), cases=len(chat["cases"]), equal=good, failed=bad_cases)
 
-# run_node on expr: the suite's expr cases bit for bit (rowsum of a constant is w additions; depth 200 parses);
+# run_node on expr: the suite's expr cases, EXACT ones bit for bit, ROUNDING within the case's tolerance (rowsum of a constant is w additions; depth 200 parses);
 # depth 204 (40 parentheses around x) refused; inputs of two shapes refused naming rule 37
 ex = json.load(open(f"{S12}/ops/expr.json", encoding="utf-8"))["cases"]
 per = {}
 for c in ex:
     r = ad.ok("run_node", node=c["node"], inputs=c["inputs"], weights=c.get("weights", {}), state=None)
-    per[c["name"]] = all(bits_equal(f32(r["outputs"][k]), f32(v)) for k, v in c["expect"].items())
+    per[c["name"]] = all(bits_equal(f32(r["outputs"][k]), f32(v)) if c["class"] == "EXACT" else
+                         rel(f32(r["outputs"][k]), f32(v)) <= c["tol"] for k, v in c["expect"].items())
 x0 = ex[0]["inputs"][ex[0]["node"]["in"][0]]
 deep = ad.call("run_node", node={"op": "expr", "in": ["x"], "out": "y", "expr": "(" * 40 + "x" + ")" * 40},
                inputs={"x": x0}, weights={}, state=None)
@@ -870,7 +884,129 @@ two = ad.call("run_node", node={"op": "expr", "in": ["x", "y"], "out": "z", "exp
               inputs={"x": x0, "y": {"shape": [x0["shape"][0], x0["shape"][1] - 1],
                                      "f32": x0["f32"][:8 * x0["shape"][0] * (x0["shape"][1] - 1)]}}, weights={}, state=None)
 record("rev12/run_node/expr", all(per.values()) and "rowsum_constant" in per and "depth_200" in per and "error" in deep and
-       "error" in two and "(rule 37)" in two["error"], bits_equal=per, depth_204=deep.get("error"), two_shapes=two.get("error"))
+       "error" in two and "(rule 37)" in two["error"], equal_at_class=per, depth_204=deep.get("error"), two_shapes=two.get("error"))
+
+# ---- spec revision 1.3 (keramos v1.3.0, da9ead61): rule 38 (a file's architecture), the builder's MoE llama, T5's
+# position_bias (rule 39), the windowed rewind (6.9), attention in run_node. IR13_SUITE: the suite at the tag.
+S13 = os.environ.get("IR13_SUITE", "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/keramos/conformance")
+sys.path.insert(0, os.path.join(os.path.dirname(S13), "tools"))
+import ir_numpy  # noqa: E402  (the reference interpreter, a black-box oracle)
+from ir_conformance import load_model  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+# rule 38: an IR-only model labelled "gpt2" is refused at load (never served as plain GPT-2), its relabelled twin
+# (the same document, digest and tensors) loads and runs its document; so does the twin under the file's own
+# document read in place (the rule concerns the embedded document, which stays the old label's).
+twins = {"kimi": ("refuse/architecture_kimi_as_gpt2.gguf", "models/pk_kimi/pk_kimi.gguf"),
+         "swa": ("refuse/architecture_swa_as_gpt2.gguf", "models/pk_gpt2_swa/pk_gpt2_swa.gguf")}
+for name, (old, new) in twins.items():
+    go, gn = f"{S13}/{old}", f"{S13}/{new}"
+    eo, en = embedded(go), embedded(gn)
+    r_old = ad.ok("check", gguf=go, ir=None)
+    r_old_ir = ad.ok("check", gguf=go, ir=scratch_doc(f"rule38_{name}_own", eo))
+    o = ad.ok("open", gguf=gn, ir=None, evict=None)
+    ids = [1, 4, 2, 7, 3, 9, 5]
+    lg = f32(ad.ok("forward", session=o["session"], ids=ids, report=["logits"])["logits"])
+    ad.ok("close", session=o["session"])
+    doc_n, W_n, _, _ = load_model(Path(gn).parent)
+    ref = ir_numpy.forward(doc_n, W_n, ids)
+    same_doc = ad.ok("digest", text=json.dumps(eo), prose=False) == ad.ok("digest", text=json.dumps(en), prose=False)
+    record(f"rev13/rule38/{name}_old_label_and_twin", not r_old["accepted"] and "(rule 38)" in r_old.get("message", "") and
+           not r_old_ir["accepted"] and "(rule 38)" in r_old_ir.get("message", "") and same_doc and
+           rel(lg, ref) <= 1e-5, old_label=r_old.get("message"), old_label_with_its_document_in_place=r_old_ir.get("message"),
+           same_document=same_doc, twin_vs_reference_rel=rel(lg, ref))
+# the third-party graphs a llama label names: pk_moe (Mixtral's layout) and pk_llama are their builder's graph
+res = {m: ad.ok("check", gguf=f"{S13}/models/{m}/{m}.gguf", ir=None) for m in ("pk_moe", "pk_llama", "pk_gpt2", "tp_gemma3")}
+record("rev13/rule38/architecture_graphs_accepted", all(r["accepted"] for r in res.values()), replies=res)
+for name in ("architecture_metadata_disagrees", "architecture_without_graph"):
+    r = ad.ok("check", gguf=f"{S13}/refuse/{name}.gguf", ir=None)
+    record(f"rev13/rule38/{name}", not r["accepted"] and "(rule 38)" in r.get("message", ""), message=r.get("message"))
+
+# 6.9's windowed rewind: ember keeps every row of a windowed slot (its cache holds every position up to max_len), so
+# a cut into the region a ring-buffer cache would have dropped (llama.cpp's finding 4) keeps the rows of positions
+# < n, and the next tokens' logits equal a fresh run's, bit for bit.
+for name, model, n_ids, cut, more in (("pk_gpt2_swa", "pk_gpt2_swa", 14, 7, 3), ("tp_gemma3", "tp_gemma3", 48, 10, 4)):
+    g = f"{S13}/models/{model}/{model}.gguf"
+    o = ad.ok("open", gguf=g, ir=None, evict=None)
+    V13 = o["vocab"]
+    rng13 = random.Random(1300 + n_ids)
+    seq = [rng13.randrange(1, V13) for _ in range(n_ids)]
+    cont = [rng13.randrange(1, V13) for _ in range(more)]
+    ad.ok("forward", session=o["session"], ids=seq, report=[])
+    tr = ad.ok("truncate", session=o["session"], n=cut, report=["kv_positions"])
+    after = f32(ad.ok("forward", session=o["session"], ids=cont, report=["logits"])["logits"])
+    f = ad.ok("open", gguf=g, ir=None, evict=None)
+    ad.ok("forward", session=f["session"], ids=seq[:cut], report=[])
+    fresh = f32(ad.ok("forward", session=f["session"], ids=cont, report=["logits"])["logits"])
+    for x in (o, f):
+        ad.ok("close", session=x["session"])
+    held = all(p == list(range(cut)) for p in tr["kv_positions"].get("kv", []))
+    record(f"rev13/rewind_window/{name}", held and bits_equal(after, fresh), positions=n_ids, cut=cut,
+           rows_kept_are_positions_below_the_cut=held, logits_bits_vs_fresh=bits_equal(after, fresh))
+
+# position_bias in a whole model: pk_llama with a bias table [B 5, heads 2] added (ne {2, 5}) and its document's
+# attention given position_bias, with and without a window (sinks 1): against the reference, and prefill = decode
+LLP = os.path.join(SCRATCH, "adapter_rev13_pb")
+os.makedirs(LLP, exist_ok=True)
+import gguf as _g13  # noqa: E402
+_r = _g13.GGUFReader(LL)
+_w = _g13.GGUFWriter(os.path.join(LLP, "adapter_rev13_pb.gguf"), "llama")
+for fname, fld in _r.fields.items():
+    if fname.startswith("GGUF.") or fname in ("general.architecture", "general.alignment"):
+        continue
+    vt = fld.types[0]
+    if vt == _g13.GGUFValueType.ARRAY:
+        sub = fld.types[-1]
+        val = [bytes(fld.parts[i]) for i in fld.data] if sub == _g13.GGUFValueType.STRING else \
+            [fld.parts[i].tolist()[0] for i in fld.data]
+        _w.add_key_value(fname, val, vt, sub_type=sub)
+    elif vt == _g13.GGUFValueType.STRING:
+        _w.add_key_value(fname, bytes(fld.parts[-1]), vt)
+    else:
+        _w.add_key_value(fname, fld.parts[-1].tolist()[0], vt)
+for t in _r.tensors:
+    _w.add_tensor(t.name, np.asarray(t.data).reshape([int(x) for x in reversed(t.shape.tolist())]).astype(np.float32))
+_w.add_tensor("rel_bias.weight", np.random.default_rng(13).normal(0, 0.5, (5, 2)).astype(np.float32))
+_w.write_header_to_file()
+_w.write_kv_data_to_file()
+_w.write_tensors_to_file()
+_w.close()
+PBG = os.path.join(LLP, "adapter_rev13_pb.gguf")
+doc_pb, W_pb, _, _ = load_model(Path(LLP))
+pb_ok = {}
+for variant_name, window, sinks in (("causal", 0, 0), ("window_sinks", 3, 1)):
+    d = copy.deepcopy(ll)
+    for n in d["block"]["nodes"]:
+        if n["op"] == "attention":
+            n["position_bias"] = {"weight": "rel_bias.weight", "buckets": [0, 1, 2, 3, 3, 4]}
+            n["window"], n["sinks"] = window, sinks
+    d["block"]["state"][0]["window"], d["block"]["state"][0]["sinks"] = window, sinks
+    p = scratch_doc(f"pb_{variant_name}", d)
+    ids = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3]
+    o = ad.ok("open", gguf=PBG, ir=p, evict=None)
+    pre = f32(ad.ok("forward", session=o["session"], ids=ids, report=["logits"])["logits"])
+    ad.ok("close", session=o["session"])
+    o = ad.ok("open", gguf=PBG, ir=p, evict=None)
+    dec = np.concatenate([f32(ad.ok("forward", session=o["session"], ids=[t], report=["logits"])["logits"]) for t in ids])
+    ad.ok("close", session=o["session"])
+    ref = ir_numpy.forward(d, W_pb, ids)
+    nob = copy.deepcopy(d)
+    for n in nob["block"]["nodes"]:
+        n.pop("position_bias", None)
+    o = ad.ok("open", gguf=PBG, ir=scratch_doc(f"pb_{variant_name}_without", nob), evict=None)
+    without = f32(ad.ok("forward", session=o["session"], ids=ids, report=["logits"])["logits"])
+    ad.ok("close", session=o["session"])
+    pb_ok[variant_name] = {"vs_reference_rel": rel(pre, ref), "decode_bits": bits_equal(pre, dec),
+                           "bias_changes_logits": not bits_equal(pre, without)}
+record("rev13/position_bias/whole_model", all(v["vs_reference_rel"] <= 1e-5 and v["decode_bits"] and v["bias_changes_logits"]
+                                              for v in pb_ok.values()), variants=pb_ok)
+# attention in run_node: the suite's six attention cases (three with position_bias) within the case tolerance
+at_cases = json.load(open(f"{S13}/ops/attention.json", encoding="utf-8"))["cases"]
+worst = {}
+for c in at_cases:
+    r = ad.ok("run_node", node=c["node"], inputs=c["inputs"], weights=c.get("weights", {}), state=None)
+    worst[c["name"]] = rel(f32(r["outputs"]["a"]), f32(c["expect"]["a"]))
+record("rev13/run_node/attention", all(v <= 1e-5 for v in worst.values()) and len(worst) == 6, worst_rel=worst)
 
 ad.close()
 
