@@ -74,6 +74,17 @@ it at load, as ember does since e358153 (rule 3: `block.repeat` 4 against `model
 engines. The receipt is ember f4fc5e0's CPU build (`~/wi/build_cpu`) against 69d7ca2's (`build_base.sh`'s
 tree): all 16 cases bit-equal, the 15 others as they were against the chat-template change.
 
+**swa_tiny and kimi_tiny are read relabelled.** Both stored files carry `general.architecture` "gpt2" over an
+IR-only model, which keramos v1.3.0's rule 38 refuses; every ember build since 70ed063 aborts on them, so the
+bit check could not compare those two cases. `regress.py bits` now reads relabelled copies (architecture
+"paperkiln", the `gpt2.*` keys renamed `paperkiln.*`; document, digest and tensors unchanged) from the ext4 cache
+`~/ember_wt/adapter_models_r13`, which `../ir_rev13_2026-10-27/relabel_models.sh` makes with keramos v1.3.0's
+`tools/gguf_relabel.py` (the script runs it when the cache is missing). The originals in `/mnt/c/ml_artifacts`
+are only read: their bytes are hashed by receipts. Rerun on 27 Oct 2026, ember 4ddd218's sources (CPU,
+`~/vf/build_cpu`) against 70ed063's CPU build (the old side's
+`~/ember_69d7ca2/build/ir_logits`): 16/16 bit-equal, swa_tiny and kimi_tiny included, every case's entry
+identical to the committed `regress_bits.json` (which predates rule 38; only the `new` path differs).
+
 The one by-design path difference: *two system messages* on the OpenAI path are joined with "\n\n" (the
 agreed amendment); the header refuses a conversation with two. (Under the first, lenient `/chat` pairing,
 *the assistant first* and *two user messages in a row* also rendered on `/chat`; both are refused since
