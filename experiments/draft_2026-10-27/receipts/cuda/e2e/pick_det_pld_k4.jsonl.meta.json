@@ -1,0 +1,45 @@
+{
+ "bin": "/content/b_new/tinyllama_server",
+ "gguf": "/content/big/pick_L16.gguf",
+ "gpu_layers": "-1",
+ "env": [
+  "EMBER_DETERMINISTIC=1",
+  "EMBER_SPEC=4"
+ ],
+ "once": false,
+ "health": {
+  "chat_template": {
+   "name": "paperkiln",
+   "version": 1
+  },
+  "chat_template_why": "paperkiln specials at ids 0-3",
+  "context": 512,
+  "deterministic": true,
+  "hidden_size": 320,
+  "layers": 16,
+  "model": "/content/big/pick_L16.gguf",
+  "status": "ok",
+  "tokenizer": "bpe",
+  "vocab_size": 16384
+ },
+ "prompts": "/content/small/eval100.jsonl",
+ "summary": {
+  "requests": 260,
+  "tokens": 3587,
+  "wall_ms": 5527.902079001251,
+  "decode_tokens": 3327,
+  "decode_ms": 4497.729367001251,
+  "decode_tok_per_s": 739.7065782591081,
+  "drafted": 2286,
+  "accepted": 1022,
+  "passes": 585,
+  "acceptance": 0.44706911636045493,
+  "tokens_from_passes": 1607,
+  "draft_ms": 2.319841,
+  "draft_calls": 2547,
+  "draft_us_per_call": 0.9108131134668237,
+  "warm_pass_same": 260
+ },
+ "dump_rows": null,
+ "vocab": null
+}

@@ -63,6 +63,10 @@ struct TtftBreakdown {
   int spec_drafted = 0;
   int spec_accepted = 0;
   int spec_passes = 0;
+  // The drafter's own time (building the history, prompt lookup, the EMBER_DRAFT=table walk) and its calls,
+  // one per decode position it was asked at; 0 when speculation is off.
+  double spec_draft_ms = 0.0;
+  int spec_draft_calls = 0;
 
   // Per-op GPU time of the batched prefill (EMBER_OP_TIMING=1 only; empty
   // otherwise): op name -> ms over all layers, plus gpu_busy_in_ops,

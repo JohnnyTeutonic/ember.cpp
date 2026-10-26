@@ -1,0 +1,46 @@
+{
+ "h_c2_p10.bin": {
+  "bytes": 69019688,
+  "sha256": "49fe47a1597c73ebcd4e2fecd7a659f9455eba22ac3e2d514412e7fd733742b3"
+ },
+ "h_c4_p05.bin": {
+  "bytes": 24158960,
+  "sha256": "a9ce66011c696a7764b841ecdd01305cb3499bbdfc9257e1369bd7def0bcdae3"
+ },
+ "h_c4_p10.bin": {
+  "bytes": 24153296,
+  "sha256": "5453527e0fe8bded43fabbd9cf0795b10f24fdc02ae51c6358b192d6b95422f4"
+ },
+ "h_c4_p25.bin": {
+  "bytes": 20969968,
+  "sha256": "af81311187d75a1916e0e7a7f295b80432e09d2189da628e2a995d96c7a4a36a"
+ },
+ "h_c8_p10.bin": {
+  "bytes": 10294632,
+  "sha256": "5a58236ab58b6129ec326c2abca8981261bf1055639de04b214492d8be8770be"
+ },
+ "h_c8_p25.bin": {
+  "bytes": 7874064,
+  "sha256": "4a43b7c4e61d59bd1c187bf5f1bf2d95ea57fc697e635012e82639b692fabab4"
+ },
+ "h_o3_c4_p10.bin": {
+  "bytes": 12088376,
+  "sha256": "294c345a086d1c933529aae99d5ce78a81fac10afbcf36b95ff56b120732d7d8"
+ },
+ "s_c4_p10.bin": {
+  "bytes": 17170592,
+  "sha256": "06e57c9a7ef8591b72b891bd0fe3b451bdc9a2ac83cb6733a74da49f7a4d48c1"
+ },
+ "s_c8_p10.bin": {
+  "bytes": 8372504,
+  "sha256": "ade26f5a7018ab24103c06afea3096a8c97bab7ac0405292833d06f82fc5c7f4"
+ },
+ "human.u16": {
+  "tokens": 40123699,
+  "sha256": "58c41de4be668d5e82d3a357483a0999d5d69536156239bc48651e139d3d5a80"
+ },
+ "soda.u16": {
+  "tokens": 36161921,
+  "sha256": "312b91804f4e3f7c8825786b1277d3fe721c22387fef99196c79c192762ae978"
+ }
+}

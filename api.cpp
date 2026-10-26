@@ -1,5 +1,6 @@
 #include "api.h"
 #include "chat_gguf.h"
+#include "draft_table.h"
 #include "gguf_parser.h"
 #include "model_macros.h"
 
@@ -13,6 +14,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <nlohmann/json.hpp>
 
 #include "graph_ir.h"
@@ -99,6 +101,27 @@ static std::vector<int> prompt_lookup_draft(const std::vector<int>& h, int k) {
     }
   }
   return {};
+}
+
+// EMBER_DRAFT=table: the corpus draft table EMBER_DRAFT_TABLE (draft_table.h), read once per process, or nullptr
+// (with one warning) when the variable is unset, the file is unreadable or it was built for another vocabulary.
+static const ember_draft::DraftTable* corpus_draft_table(int vocab_size) {
+  static ember_draft::DraftTable table;
+  static bool ok = false;
+  static int vocab_read = 0;
+  static std::once_flag once;
+  std::call_once(once, [&] {
+    const char* path = std::getenv("EMBER_DRAFT_TABLE");
+    std::string why = "EMBER_DRAFT_TABLE is not set";
+    ok = path && table.load(path, vocab_size, &why);
+    vocab_read = vocab_size;
+    if (ok)
+      Logger::info("EMBER_DRAFT=table: " + std::string(path) + ", " + std::to_string(table.entries()) +
+                   " entries over orders 1-" + std::to_string(table.orders()));
+    else
+      Logger::warning("EMBER_DRAFT=table: no corpus table (" + why + "); prompt-lookup drafts only.");
+  });
+  return ok && vocab_size == vocab_read ? &table : nullptr;
 }
 
 #ifdef HAS_CUDA
@@ -1057,6 +1080,23 @@ if (prefill_enabled) {
   const bool spec_on = spec_k > 0 && top_k == 1 && !repeat_on &&
                        (config_.num_cpu_offload_layers == 0 ||
                         config_.num_cpu_offload_layers == config_.num_hidden_layers);
+  // EMBER_DRAFT selects the drafter (experiments/draft_2026-10-27). Unset or "pld": prompt lookup alone, as
+  // before. "table": prompt lookup first; where it finds nothing, the corpus table EMBER_DRAFT_TABLE
+  // (draft_table.h), its draft cut where the product of the entries' shares falls below EMBER_DRAFT_THETA.
+  // Verification decides every token either way, so the replies are plain decode's.
+  static const bool draft_table_mode = [] {
+    const char* e = std::getenv("EMBER_DRAFT");
+    const std::string v = e ? e : "";
+    if (!v.empty() && v != "pld" && v != "table")
+      Logger::warning("EMBER_DRAFT=" + v + " is not a drafter (pld, table); prompt-lookup drafts only.");
+    return v == "table";
+  }();
+  static const double draft_theta = [] {
+    const char* e = std::getenv("EMBER_DRAFT_THETA");
+    return e && *e ? std::atof(e) : 0.02;
+  }();
+  const ember_draft::DraftTable* draft_table =
+      spec_on && draft_table_mode ? corpus_draft_table(config_.vocab_size) : nullptr;
 
   for (int pos = start_pos_for_loop; pos < total_steps; ++pos) {
     t_phase = ttft_clock::now();
@@ -1101,9 +1141,13 @@ if (prefill_enabled) {
     if (spec_on && pos >= num_prompt_tokens) {
       const int room = std::min({spec_k, steps - generated_count, total_steps - pos - 1,
                                  config_.max_position_embeddings - pos - 1});
+      const auto t_draft = ttft_clock::now();
       std::vector<int> hist(tokens.begin(), tokens.begin() + num_prompt_tokens);
       hist.insert(hist.end(), generated_token_ids.begin(), generated_token_ids.end());
       std::vector<int> draft = room > 0 ? prompt_lookup_draft(hist, room) : std::vector<int>{};
+      if (draft.empty() && draft_table && room > 0) draft = draft_table->draft(hist, room, draft_theta);
+      last_ttft_.spec_draft_ms += ms_between(t_draft, ttft_clock::now());
+      last_ttft_.spec_draft_calls += 1;
       // A draft never proposes a state id (the head has no logits for them).
       for (size_t i = 0; i < draft.size(); ++i)
         if (state_k_ > 0 && draft[i] >= state_vocab_) {
