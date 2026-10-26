@@ -264,13 +264,22 @@ node for node, the graph that path implements, with the numbers the file's llama
 (`ember_ir::tuned_llama_match`; `family_hint` is only a pre-filter, as paperkiln's IR_SPEC 9.1
 requires); `tools/ir_path_check` says which path serves a file.
 
-Every document is checked at load against the IR specification, keramos (paperkiln vendors it at
-`spec/`; `IR_SPEC.md` section 10.1, the rules its `tools/ir_validate.py` checks), with its JSON Schema vendored in
-`graph_ir_schema.h` (`tools/ir_schema_header.py --check` compares it with paperkiln's): an attribute
-an op does not define, a missing required attribute, a slot nobody reads or a container key that
-disagrees is refused, naming the rule. `tools/ir_doc_check` checks documents without a GGUF, and
-`tools/ir_adapter` runs keramos's conformance suite (`experiments/ir_spec_2026-10-25`,
+Every document is checked at load against the IR specification, keramos at v1.3.0 (spec revision 1.3;
+paperkiln vendors it at `spec/`; `IR_SPEC.md` section 10.1, the rules its `tools/ir_validate.py` checks), with
+its JSON Schema vendored in `graph_ir_schema.h` (`tools/ir_schema_header.py --check` compares it with keramos's):
+an attribute an op does not define, a missing required attribute, a member name written twice, a value read
+before any node writes it, a slot nobody reads or a container key that disagrees is refused, citing the rule.
+A file whose `general.architecture` is a llama.cpp architecture must hold that architecture's graph (rule 38:
+the embedded document is compared with the one ember builds from the file's metadata), so an IR-only model
+labelled "gpt2" is refused at load rather than served as GPT-2; such files are relabelled "paperkiln"
+(keramos `tools/gguf_relabel.py`). `tools/ir_doc_check` checks documents without a GGUF, and
+`tools/ir_adapter` runs keramos's conformance suite, 355 pass, 0 fail, 49 skip at v1.3.0
+(`experiments/ir_rev13_2026-10-27`; earlier `experiments/ir_spec_2026-10-25`,
 `experiments/ir_rev11_2026-10-25`).
+
+T5's relative position bias travels as an attention attribute (`position_bias`: a bucket table read by
+distance, IR_SPEC 5.15): the CPU interpreter adds it after the scaled product, with windows, sinks and
+grouped-query attention; a CUDA build serves such a document on its CPU path.
 
 A third-party GGUF with no `paperkiln.ir` gets its IR built from the llama.cpp metadata at load
 when its `general.architecture` is `qwen2`, `qwen3`, `gemma3`, `gptneox`, `gpt2` or `mamba`, or

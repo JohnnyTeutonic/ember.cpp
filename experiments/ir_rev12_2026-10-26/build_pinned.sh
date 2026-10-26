@@ -20,7 +20,7 @@ cd "$D/build"
   -DFETCHCONTENT_SOURCE_DIR_NLOHMANN_JSON="$DEPS/nlohmann_json-src" \
   -DFETCHCONTENT_SOURCE_DIR_CPP-HTTPLIB="$DEPS/cpp-httplib-src" \
   -DFETCHCONTENT_SOURCE_DIR_PYBIND11="$DEPS/pybind11-src" > cmake.log 2>&1
-make -j2 ${*:-ir_adapter ir_doc_check} > build.log 2>&1
+make -j${NJ:-2} ${*:-ir_adapter ir_doc_check} > build.log 2>&1
 tail -2 build.log
 grep -c "HAS_CUDA:BOOL=OFF" CMakeCache.txt
 sha256sum "$D/build/ir_adapter"

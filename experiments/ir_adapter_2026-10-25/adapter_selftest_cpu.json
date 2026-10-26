@@ -1,5 +1,5 @@
 {
- "bin": "/home/jonat/ember_adapter_39dcce9/build/ir_adapter",
+ "bin": "/home/jonat/ember_adapter_1ab6a25/build/ir_adapter",
  "hello": {
   "backend": "cpu",
   "engine": "ember.cpp",
@@ -15,16 +15,18 @@
    "close",
    "digest",
    "dequantize",
-   "run_node"
+   "run_node",
+   "render_chat"
   ],
   "profiles": [
    "core",
    "state",
    "recursion",
    "thirdparty",
-   "recurrence"
+   "recurrence",
+   "chat"
   ],
-  "version": "ir_adapter 2 (IR versions 0 and 1; spec revision 1.1)"
+  "version": "ir_adapter 4 (IR versions 0 and 1; spec revision 1.3)"
  },
  "checks": {
   "prefill/state4/0": {
@@ -1254,31 +1256,31 @@
    "pass": true
   },
   "check/refuse/unknown_attribute": {
-   "message": "IR_SPEC 10.1 rule 1: doc.block.nodes[5] (attention) has the key 'flavour', which its specification does not define",
+   "message": "IR_SPEC 3.5 (rule 4): doc.block.nodes[5] (attention) has the key 'flavour', which its specification does not define",
    "pass": true
   },
   "check/refuse/unknown_top_level_key": {
-   "message": "IR_SPEC 10.1 rule 1: doc has the key 'extras', which its specification does not define",
+   "message": "IR_SPEC 3.2 (rule 1): doc has the key 'extras', which its specification does not define",
    "pass": true
   },
   "check/refuse/unknown_model_key": {
-   "message": "IR_SPEC 10.1 rule 1: doc.model has the key 'hidden', which its specification does not define",
+   "message": "IR_SPEC 3.3 (rule 1): doc.model has the key 'hidden', which its specification does not define",
    "pass": true
   },
   "check/refuse/unknown_slot_key": {
-   "message": "IR_SPEC 10.1 rule 1: doc.block.state[0] has the key 'pages', which its specification does not define",
+   "message": "IR_SPEC 6.1 (rule 1): doc.block.state[0] has the key 'pages', which its specification does not define",
    "pass": true
   },
   "check/refuse/unknown_block_key": {
-   "message": "IR_SPEC 10.1 rule 1: doc.block has the key 'loop', which its specification does not define",
+   "message": "IR_SPEC 3.2 (rule 1): doc.block has the key 'loop', which its specification does not define",
    "pass": true
   },
   "check/refuse/attribute_of_another_op": {
-   "message": "IR_SPEC 10.1 rule 1: doc.block.nodes[0] (rmsnorm) has the key 'theta', which its specification does not define",
+   "message": "IR_SPEC 3.5 (rule 4): doc.block.nodes[0] (rmsnorm) has the key 'theta', which its specification does not define",
    "pass": true
   },
   "check/refuse/required_attribute_missing": {
-   "message": "IR_SPEC 10.1 rule 1: doc.block.nodes[4] lacks the required key 'theta'",
+   "message": "IR_SPEC 3.5 (rule 8): doc.block.nodes[4] lacks the required key 'theta'",
    "pass": true
   },
   "check/refuse/tensor_index_without_weight_index": {
@@ -1365,10 +1367,13 @@
    },
    "pass": true
   },
-  "skip/depth_without_depth_route": {
+  "depth/without_depth_route_empty": {
    "reply": {
     "id": 2362,
-    "skip": "depth: the document has no depth_route"
+    "result": {
+     "depth": [],
+     "len": 2
+    }
    },
    "pass": true
   },
@@ -1382,7 +1387,7 @@
   "skip/run_node": {
    "reply": {
     "id": 2365,
-    "skip": "run_node: ember's adapter runs recurrence nodes only (whole-model methods for the other ops)"
+    "skip": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
    },
    "pass": true
   },
@@ -1603,8 +1608,8 @@
    "pass": true
   },
   "rev11/digest_vectors": {
-   "vectors": 74,
-   "equal": 74,
+   "vectors": 84,
+   "equal": 84,
    "pass": true
   },
   "rev11/dequantize_blocks": {
@@ -1628,26 +1633,237 @@
   "rev11/run_node/width_rule34": {
    "reply": {
     "error": "IR_SPEC 6.10 (rule 34): recurrence input 'u' is 3 wide; its declaration is 4",
-    "id": 2877
+    "id": 2887
    },
    "pass": true
   },
   "rev11/skip/run_node_grad": {
    "reply": {
-    "id": 2878,
+    "id": 2888,
     "skip": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
    },
    "pass": true
   },
   "rev11/skip/run_node_other_op": {
    "reply": {
-    "id": 2879,
-    "skip": "run_node: ember's adapter runs recurrence nodes only (whole-model methods for the other ops)"
+    "id": 2889,
+    "skip": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+   },
+   "pass": true
+  },
+  "rev12/rule35/top": {
+   "message": "IR_SPEC 3.2 (rule 35): an object holds the member name \"family_hint\" twice (nesting depth 1): a document names each member of an object once",
+   "pass": true
+  },
+  "rev12/rule35/node": {
+   "message": "IR_SPEC 3.2 (rule 35): an object holds the member name \"eps\" twice (nesting depth 4): a document names each member of an object once",
+   "pass": true
+  },
+  "rev12/rule35/prose": {
+   "message": "IR_SPEC 3.2 (rule 35): an object holds the member name \"_a\" twice (nesting depth 1): a document names each member of an object once",
+   "pass": true
+  },
+  "rev12/rule35/nested_prose": {
+   "message": "IR_SPEC 3.2 (rule 35): an object holds the member name \"k\" twice (nesting depth 4): a document names each member of an object once",
+   "pass": true
+  },
+  "rev12/rule35/same_text_without_the_duplicate": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "rev12/rule35/embedded": {
+   "message": "IR_SPEC 3.2 (rule 35): an object holds the member name \"ctx\" twice (nesting depth 2): a document names each member of an object once",
+   "with_ir_in_place": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "rev12/rule35/document_alone": {
+   "message": "IR_SPEC 3.2 (rule 35): an object holds the member name \"eps\" twice (nesting depth 4): a document names each member of an object once",
+   "pass": true
+  },
+  "rev12/rule36/reads_unwritten_value": {
+   "message": "IR_SPEC 3.5 (rule 36): block[7] add reads 'nowhere', which no node before it writes (application 0)",
+   "pass": true
+  },
+  "rev12/rule36/embed_writes_no_x": {
+   "message": "IR_SPEC 3.5 (rule 36): the embed section writes no 'x'; IR_SPEC 3.5 (rule 36): block[0] rmsnorm reads 'x', which no node before it writes (application 0); IR_SPEC 3.5 (rule 36): block[7] add reads 'x', which no node before it writes (application 0)",
+   "pass": true
+  },
+  "rev12/rule36/head_writes_no_logits": {
+   "message": "IR_SPEC 3.5 (rule 36): the head writes no 'logits'",
+   "pass": true
+  },
+  "rev12/rule36/mor_reads_outside_value": {
+   "message": "IR_SPEC 7.4 (rule 36): block[1] add reads 'e', outside what a depth_route step sees (x, pos and the values written before it in the application)",
+   "pass": true
+  },
+  "rev12/rule20/mor_step_gap": {
+   "message": "IR depth_route step: the recursion is not R equal steps",
+   "pass": true
+  },
+  "rev12/rule36/reads_a_later_write": {
+   "message": "IR_SPEC 3.5 (rule 36): block[1] linear reads 'gu', which no node before it writes (application 0)",
+   "pass": true
+  },
+  "rev12/rule36/head_reads_block_value_under_mor": {
+   "message": "IR_SPEC 7.4 (rule 36): head[1] linear reads 'h2', a block value other than x (under depth_route the head reads x and the embed section's values)",
+   "pass": true
+  },
+  "rev12/rule36/head_reads_block_value_without_mor": {
+   "reply": {
+    "accepted": true
+   },
+   "pass": true
+  },
+  "rev12/rule37/rmsnorm_group": {
+   "error": "IR_SPEC 5.6 (rule 37): rmsnorm 'blk.0.ffn_norm.weight': group 3 does not divide the input width 16",
+   "session_unchanged": true,
+   "pass": true
+  },
+  "rev12/rule37/add_shapes": {
+   "error": "IR_SPEC 5.10 (rule 37): add operands of two shapes, [T, 16] and [T, 64]",
+   "session_unchanged": true,
+   "pass": true
+  },
+  "rev12/depth_attend_eps_default": {
+   "nodes": 3,
+   "logits_bits": true,
+   "pass": true
+  },
+  "rev12/check_document_alone/accept": {
+   "documents": 9,
+   "refused": {},
+   "pass": true
+  },
+  "rev12/check_document_alone/refuse": {
+   "message": "IR_SPEC 3.5 (rule 4): doc.block.nodes[0].op \"warp\" is not one of [\"embedding\",\"pos_embedding\",\"linear\",\"scale\",\"split\",\"rmsnorm\",\"layernorm\",\"gelu\",\"silu\",\"sigmoid\",\"relu\",\"add\",\"mul\",\"sub\",\"affine\",\"mul_col\",\"rms_row\",\"rope\",\"attention\",\"moe_ffn\",\"list\",\"append\",\"depth_attend\",\"expr\",\"linear_attention\",\"ssm_scan\",\"conv1d_causal\",\"selective_scan\",\"depth_route\",\"recurrence\"]",
+   "pass": true
+  },
+  "rev12/edge_cases": {
+   "empty_forward": "forward: ids is empty (IR_SPEC 11.3: at least one id)",
+   "depth": [],
+   "recurrent": {},
+   "truncate_past": "truncate to 6 of 5",
+   "truncate_negative": "truncate to -1 of 5",
+   "truncate_to_len": 5,
+   "snapshot_tag_reused_len": 6,
+   "restore_unknown": "no snapshot \"never\"",
+   "bad_id": "IR embedding: token id 18 out of range",
+   "after_error_equals_fresh": true,
+   "pass": true
+  },
+  "rev12/edge_cases/no_kv_slot": {
+   "reply": {
+    "depth": [],
+    "kv_positions": {},
+    "kv_rows": {},
+    "len": 3
+   },
+   "pass": true
+  },
+  "rev12/render_chat": {
+   "cases": 32,
+   "equal": 32,
+   "failed": [],
+   "pass": true
+  },
+  "rev12/run_node/expr": {
+   "equal_at_class": {
+    "gelu_sigmoid": true,
+    "relu_squared": true,
+    "where_rowmean": true,
+    "layer_norm": true,
+    "rowsum_constant": true,
+    "depth_200": true
+   },
+   "depth_204": "expr: nesting deeper than 200 at column 41 in \"((((((((((((((((((((((((((((((((((((((((x))))))))))))))))))))))))))))))))))))))))\"",
+   "two_shapes": "IR_SPEC 5.19 (rule 37): expr inputs must share one shape [T, w]",
+   "pass": true
+  },
+  "rev13/rule38/kimi_old_label_and_twin": {
+   "old_label": "IR_SPEC 3.1 (rule 38): general.architecture 'gpt2': the embedded document is not the gpt2 graph its metadata describes (section 9.3; first difference, document against graph: document.block.nodes[3].den_floor: 9.99999993922529e-09 against absent); a file whose model is not that architecture's graph has general.architecture \"paperkiln\", which no llama.cpp release builds a graph for",
+   "old_label_with_its_document_in_place": "IR_SPEC 3.1 (rule 38): general.architecture 'gpt2': the embedded document is not the gpt2 graph its metadata describes (section 9.3; first difference, document against graph: document.block.nodes[3].den_floor: 9.99999993922529e-09 against absent); a file whose model is not that architecture's graph has general.architecture \"paperkiln\", which no llama.cpp release builds a graph for",
+   "same_document": true,
+   "twin_vs_reference_rel": 1.4781065809443682e-07,
+   "pass": true
+  },
+  "rev13/rule38/swa_old_label_and_twin": {
+   "old_label": "IR_SPEC 3.1 (rule 38): general.architecture 'gpt2': the embedded document is not the gpt2 graph its metadata describes (section 9.3; first difference, document against graph: document.block.nodes[3].sinks: 2.0 against 0.0); a file whose model is not that architecture's graph has general.architecture \"paperkiln\", which no llama.cpp release builds a graph for",
+   "old_label_with_its_document_in_place": "IR_SPEC 3.1 (rule 38): general.architecture 'gpt2': the embedded document is not the gpt2 graph its metadata describes (section 9.3; first difference, document against graph: document.block.nodes[3].sinks: 2.0 against 0.0); a file whose model is not that architecture's graph has general.architecture \"paperkiln\", which no llama.cpp release builds a graph for",
+   "same_document": true,
+   "twin_vs_reference_rel": 7.457668780468306e-08,
+   "pass": true
+  },
+  "rev13/rule38/architecture_graphs_accepted": {
+   "replies": {
+    "pk_moe": {
+     "accepted": true
+    },
+    "pk_llama": {
+     "accepted": true
+    },
+    "pk_gpt2": {
+     "accepted": true
+    },
+    "tp_gemma3": {
+     "accepted": true
+    }
+   },
+   "pass": true
+  },
+  "rev13/rule38/architecture_metadata_disagrees": {
+   "message": "IR_SPEC 3.1 (rule 38): general.architecture 'llama': the embedded document is not the llama graph its metadata describes (section 9.3; first difference, document against graph: document.block.nodes[4].theta: 10000.0 against 500000.0); a file whose model is not that architecture's graph has general.architecture \"paperkiln\", which no llama.cpp release builds a graph for",
+   "pass": true
+  },
+  "rev13/rule38/architecture_without_graph": {
+   "message": "IR_SPEC 3.1 (rule 38): general.architecture 'phi3' is neither \"paperkiln\" nor an architecture of section 9.3; a file whose model is not that architecture's graph has general.architecture \"paperkiln\", which no llama.cpp release builds a graph for",
+   "pass": true
+  },
+  "rev13/rewind_window/pk_gpt2_swa": {
+   "positions": 14,
+   "cut": 7,
+   "rows_kept_are_positions_below_the_cut": true,
+   "logits_bits_vs_fresh": true,
+   "pass": true
+  },
+  "rev13/rewind_window/tp_gemma3": {
+   "positions": 48,
+   "cut": 10,
+   "rows_kept_are_positions_below_the_cut": true,
+   "logits_bits_vs_fresh": true,
+   "pass": true
+  },
+  "rev13/position_bias/whole_model": {
+   "variants": {
+    "causal": {
+     "vs_reference_rel": 1.6428316437631292e-07,
+     "decode_bits": true,
+     "bias_changes_logits": true
+    },
+    "window_sinks": {
+     "vs_reference_rel": 8.24986055673194e-08,
+     "decode_bits": true,
+     "bias_changes_logits": true
+    }
+   },
+   "pass": true
+  },
+  "rev13/run_node/attention": {
+   "worst_rel": {
+    "causal": 7.041514162139735e-08,
+    "window_sinks": 7.041514162139735e-08,
+    "grouped_query": 9.890227377316427e-08,
+    "position_bias": 1.6017321772457608e-07,
+    "position_bias_window_sinks": 1.5869993017203072e-07,
+    "position_bias_grouped_query": 1.1021028894602925e-07
    },
    "pass": true
   }
  },
- "requests": 2879,
+ "requests": 3072,
  "failures": [],
  "pass": true
 }

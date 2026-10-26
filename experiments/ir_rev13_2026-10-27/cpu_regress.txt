@@ -1,0 +1,14 @@
+CPU regression of ember 1ab6a25 (pinned ~/ember_adapter_1ab6a25/build, git archive, CPU only) on WSL, 27 Oct 2026:
+../cuda_state_2026-10-25/cpu_regress.sh against the committed receipts as git show HEAD (f4c26a2) gives them, the build path put back first.
+
+recursion_gate rc=0: recursion_gate_cpu.json byte-identical
+mor_gate rc=0: mor_gate_cpu.json byte-identical
+mor_refusals rc=0: mor_refusals.json byte-identical
+attnres_gate rc=0: attnres_gate_cpu.json byte-identical
+state_tokens_gate rc=0: state_tokens_gate_cpu.json DIFFERS or missing
+state4_gate rc=0: state4_gate_cpu.json byte-identical
+cpu regression done
+
+state_tokens_gate: every ember value identical; only the distances to paperkiln's numpy reference moved (causal_vs_numpy_rel and vs_numpy_rel of b_prefill_eq_decode_and_mask, 9 fields, within 8.5e-7), as at d49c3e1, 39dcce9 and fe01b35.
+
+CUDA compile check (../ir_rev11_2026-10-25/build_cuda_check.sh, SRC = the pinned archive, sm_75, HAS_CUDA on, no GPU used): graph_ir, graph_ir_cuda, graph_ir_recurrence, graph_ir_validate, ir_digest, api, weight_management, quantization: rc=0.
