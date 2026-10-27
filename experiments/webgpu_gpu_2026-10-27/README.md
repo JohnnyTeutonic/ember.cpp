@@ -152,8 +152,30 @@ What the numbers show on this VM:
 
 ## Recurrence on the GPU
 
-ember d65d546 compiles `recurrence` nodes to WGSL (`../webgpu_recurrence_2026-10-27/`, gated on SwiftShader).
-Its documents on the L4: pending (session `ember-e6-rec`).
+ember d65d546 compiles `recurrence` nodes to WGSL (`../webgpu_recurrence_2026-10-27/`, gated there on
+SwiftShader). Its documents, gate 1 as above on a second L4 session at ember 5c2e68a (which holds d65d546), the
+same adapter, driver and Chrome (`colab_l4_recurrence/`): the staged models of the recurrence receipt
+(`staged_SHA256SUMS`, checked before staging), keramos's tp_mamba1 recurrence rewrite on its model and
+Mamba-130m's rewrite on the converted checkpoint, both supplied as documents (EMBER_IR for the reference, the
+same text as the page's document).
+
+| Document (model) | Greedy | Top-1 | Worst \|dlogit\| / range | Median | Dispatches per token | ms per forward |
+|---|---:|---:|---:|---:|---:|---:|
+| pk_recurrence | 40/40 | 320/320 | 2.1e-07 | 1.1e-07 | 52 | 2.6 |
+| pk_kimi as recurrence | 40/40 | 320/320 | 1.8e-07 | 1.1e-07 | 52 | 2.6 |
+| pk_srd as recurrence | 40/40 | 320/320 | 1.7e-07 | 1.1e-07 | 82 | 2.7 |
+| pk_mamba as recurrence | 40/40 | 320/320 | 1.7e-07 | 1.0e-07 | 40 | 2.5 |
+| kimi_tiny rewritten | 40/40 | 960/960 | 5.9e-07 | 3.5e-07 | 52 | 2.6 |
+| srd_tiny rewritten | 40/40 | 960/960 | 3.9e-07 | 3.3e-07 | 82 | 2.7 |
+| mamba_tiny rewritten | 40/40 | 960/960 | 6.2e-07 | 4.4e-07 | 40 | 2.6 |
+| kimi_tiny, custom recurrence | 40/40 | 960/960 | 6.2e-07 | 3.7e-07 | 56 | 2.6 |
+| tp_mamba1 (keramos) rewritten | 40/40 | 960/960 | 4.1e-06 | 7.3e-07 | 61 | 2.6 |
+| Mamba-130m rewritten | 40/40 | 960/960 | 9.7e-04 | 8.4e-05 | 699 | 39.6 |
+
+Every greedy continuation is identical and every argmax agrees. Mamba-130m's rewrite is past the flat 1e-4
+bound as its hand-written kernels are (1.4e-3 on the same file in gate 1); greedy 40/40 and top-1 960/960 are
+the official-checkpoint gate. With this leg every IR document ember's interpreter runs has a WGSL path that is
+gated on a hardware adapter.
 
 ## Runs and spend
 
@@ -161,7 +183,11 @@ Its documents on the L4: pending (session `ember-e6-rec`).
 |---|---|---:|---|
 | RunPod `e6-webgpu-l4` (vp8qf47duqyqt0) | L4, EUR-IS-1 | 15.5 | the first probe (`runpod_probe/`); terminated by hand, $0.15, before E6 moved to Colab |
 | Colab `ember-e6-gpu` | L4 | 12 | probe and builds passed; the stage check failed on its own list (SHA256SUMS hashed itself), so the session stopped (`colab_l4/session1_failed/`) |
-| Colab `ember-e6-gpu2` | L4 | 95 | everything above |
+| Colab `ember-e6-gpu2` | L4 | 95 | gates, page tests, throughput |
+| Colab `ember-e6-rec` | L4 | 18 | recurrence (queued about 5 min for a slot) |
+
+About 2.1 L4-hours of Colab in all (the driver records session minutes; Colab's unit counter is not read
+here).
 
 ## Fixes found by the run
 
@@ -180,5 +206,5 @@ Its documents on the L4: pending (session `ember-e6-rec`).
   `vm_setup.sh` (ember CPU and the three WebAssembly builds, emsdk 6.0.6; the official checkpoints from Hugging
   Face), `vm_run.sh` (references, gates, page tests, benches), `vm_fixture.py`, `tables.py` (the tables from
   the receipts).
-- Receipts: `colab_l4/` (probe, setup with the builds' sha256, docs, gates, fixtures, pages, bench,
+- Receipts: `colab_l4_recurrence/` (the recurrence leg), `colab_l4/` (probe, setup with the builds' sha256, docs, gates, fixtures, pages, bench,
   `e6_vm.log`), `runpod_probe/`.
