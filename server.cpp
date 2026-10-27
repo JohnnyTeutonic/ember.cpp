@@ -65,19 +65,9 @@
 
 using json = nlohmann::json;
 
-// Length of the longest prefix of s that ends on a whole UTF-8 character, so
-// a streamed piece never splits a multi-byte character (a BPE token can end
-// inside one).
-static size_t utf8_complete_prefix(const std::string& s) {
-  size_t n = s.size();
-  for (size_t back = 1; back <= 3 && back <= n; ++back) {
-    const unsigned char c = static_cast<unsigned char>(s[n - back]);
-    if ((c & 0xC0) == 0x80) continue;  // continuation byte: keep looking for the lead
-    const size_t need = (c & 0x80) == 0 ? 1 : (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3 : 4;
-    return need > back ? n - back : n;
-  }
-  return n;
-}
+// Every JSON body and server-sent event below is written by ember::dump_valid (utf8_text.h): the same
+// bytes as dump() for valid text, and never an HTTP 500 for text that is not (an error message, a path).
+static std::string json_out(const json& j) { return ember::dump_valid(j); }
 
 // ---- BPE chat core, shared by /chat and /v1/chat/completions ------------
 // Chat-mode models: the prompt is the conversation rendered by the model's
@@ -147,32 +137,31 @@ static BpePrompt bpe_build_prompt(tinyllama::TinyLlamaSession& sess, const BpeCh
 }
 
 // Generate (the caller holds the session lock) and return the /chat reply
-// object. on_piece, if set, receives the reply text as it is produced:
-// leading whitespace skipped, never a split UTF-8 character.
+// object. on_piece, if set, receives the reply text as it is produced
+// (ember::ReplyStream, utf8_text.h): valid UTF-8, a character a token cut held
+// until the next token completes it, and the pieces joined equal to "reply"
+// byte for byte (its leading and trailing whitespace stripped).
 static json bpe_run(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r, const BpePrompt& p,
                     std::chrono::steady_clock::time_point t_request, double waited_ms,
                     const std::function<void(const std::string&)>& on_piece) {
   if (r.has_seed) sess.set_seed(r.seed);
   std::vector<int> ids;
-  size_t sent = 0;
+  ember::ReplyStream stream;
   if (on_piece) {
     sess.set_token_callback([&](int id) {
       ids.push_back(id);
-      const std::string full = sess.bpe_decode(ids);
-      const size_t end = utf8_complete_prefix(full);
-      const size_t start = full.find_first_not_of(" \t\n\v\f\r");
-      if (start == std::string::npos || start >= end) return;
-      if (sent < start) sent = start;
-      if (end > sent) {
-        on_piece(ember::utf8_valid(full.substr(sent, end - sent)));
-        sent = end;
-      }
+      const std::string piece = stream.next(sess.bpe_decode(ids), false);
+      if (!piece.empty()) on_piece(piece);
     });
   }
   sess.set_repeat_penalty(r.repeat_penalty, r.repeat_last_n);
   const std::string reply = sess.generate(p.prompt, r.max_new_tokens, r.temperature, r.top_k, r.top_p, "", false);
   sess.set_repeat_penalty(1.0f, 64);
   sess.set_token_callback(nullptr);
+  if (on_piece) {  // the end: a character still cut, and the text before it
+    const std::string piece = stream.next(sess.bpe_decode(ids), true);
+    if (!piece.empty()) on_piece(piece);
+  }
   const tinyllama::TtftBreakdown& tb = sess.last_ttft();
   auto ms = [](auto a, auto b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
   json res_json;
@@ -294,7 +283,7 @@ int main(int argc, char** argv) {
           res.status = 503;
           res.set_header("Access-Control-Allow-Origin", "*");
           res.set_header("Retry-After", "2");
-          res.set_content(json{{"error", "busy: too many people chatting at once, try again in a moment"}}.dump(),
+          res.set_content(json_out(json{{"error", "busy: too many people chatting at once, try again in a moment"}}),
                           "application/json");
           return;
         }
@@ -335,7 +324,7 @@ int main(int argc, char** argv) {
             if (user_input_from_client.size() > kMaxText) {
               res.status = 400;
               res.set_header("Access-Control-Allow-Origin", "*");
-              res.set_content(json{{"error", "message too long (600 characters at most)"}}.dump(), "application/json");
+              res.set_content(json_out(json{{"error", "message too long (600 characters at most)"}}), "application/json");
               return;
             }
             max_new_tokens = std::min(std::max(max_new_tokens, 1), 64);
@@ -371,7 +360,7 @@ int main(int argc, char** argv) {
               r.conv = ember::chat_conversation(req_json);
             } catch (const ember::RequestError& e) {
               res.status = 400;
-              res.set_content(json{{"error", e.what()}}.dump(), "application/json");
+              res.set_content(json_out(json{{"error", e.what()}}), "application/json");
               return;
             }
             r.max_new_tokens = max_new_tokens;
@@ -385,7 +374,7 @@ int main(int argc, char** argv) {
                 req_json, r, session->get_config().max_position_embeddings, public_mode);
             if (!rp_error.empty()) {
               res.status = 400;
-              res.set_content(json{{"error", rp_error}}.dump(), "application/json");
+              res.set_content(json_out(json{{"error", rp_error}}), "application/json");
               return;
             }
             tinyllama::TinyLlamaSession* sess = session.get();
@@ -394,16 +383,16 @@ int main(int argc, char** argv) {
               bp = bpe_build_prompt(*sess, r);
             } catch (const microtorch::chat::Error& e) {
               res.status = 400;  // the template refuses the conversation (section 3, point 3)
-              res.set_content(json{{"error", e.what()}}.dump(), "application/json");
+              res.set_content(json_out(json{{"error", e.what()}}), "application/json");
               return;
             }
             if (!bp.error.empty()) {
               res.status = 400;
-              res.set_content(json{{"error", bp.error}}.dump(), "application/json");
+              res.set_content(json_out(json{{"error", bp.error}}), "application/json");
               return;
             }
             if (!req_json.value("stream", false)) {
-              res.set_content(bpe_run(*sess, r, bp, t_request, queue_ms, nullptr).dump(), "application/json");
+              res.set_content(json_out(bpe_run(*sess, r, bp, t_request, queue_ms, nullptr)), "application/json");
               return;
             }
             // "stream": true -> server-sent events: {"token": text} as the
@@ -418,7 +407,7 @@ int main(int argc, char** argv) {
                   const double waited = std::chrono::duration<double, std::milli>(
                                             std::chrono::steady_clock::now() - t_request).count();
                   auto send = [&sink](const json& j) {
-                    const std::string ev = "data: " + j.dump() + "\n\n";
+                    const std::string ev = "data: " + json_out(j) + "\n\n";
                     sink.write(ev.data(), ev.size());
                   };
                   json final_json = bpe_run(*sess, r, bp, t_request, waited,
@@ -432,7 +421,7 @@ int main(int argc, char** argv) {
           }
 
           Logger::info("Processing user input: " +
-                       user_input_from_client.substr(0, 100) + "...");
+                       ember::utf8_valid(user_input_from_client.substr(0, 100)) + "...");
 
           const ModelConfig& config = session->get_config();
           std::string prompt_for_session_generate;
@@ -498,7 +487,7 @@ int main(int argc, char** argv) {
           Logger::info(
               "Safetensors model detected. Applied chat template via "
               "tokenizer. Prompt: " +
-              prompt_for_session_generate.substr(0, 200) + "...");
+              ember::utf8_valid(prompt_for_session_generate.substr(0, 200)) + "...");
             } else {
           Logger::error(
               "CRITICAL: Tokenizer not available for Safetensors model in "
@@ -520,7 +509,7 @@ int main(int argc, char** argv) {
                   reply = reply.substr(0, cut);
               }
           }
-          Logger::info("Generated reply: " + reply.substr(0, 50) + "...");
+          Logger::info("Generated reply: " + ember::utf8_valid(reply.substr(0, 50)) + "...");
 
           json res_json;
           res_json["reply"] = ember::utf8_valid(reply);
@@ -558,7 +547,7 @@ int main(int argc, char** argv) {
             res_json["ttft"]["spec_draft_calls"] = tb.spec_draft_calls;
           }
 
-          res.set_content(res_json.dump(), "application/json");
+          res.set_content(json_out(res_json), "application/json");
           Logger::info("Response sent successfully.");
 
         } catch (const json::parse_error& e) {
@@ -566,13 +555,13 @@ int main(int argc, char** argv) {
           res.status = 400;  
           json err_json;
           err_json["error"] = "Invalid JSON format: " + std::string(e.what());
-          res.set_content(err_json.dump(), "application/json");
+          res.set_content(json_out(err_json), "application/json");
         } catch (const std::exception& e) {
           Logger::error("Generation error: " + std::string(e.what()));
           res.status = 500;  
           json err_json;
           err_json["error"] = "Internal server error: " + std::string(e.what());
-          res.set_content(err_json.dump(), "application/json");
+          res.set_content(json_out(err_json), "application/json");
         }
       });
   
@@ -597,7 +586,7 @@ int main(int argc, char** argv) {
     // EMBER_DETERMINISTIC=1 (determinism.h): reported only when on, so the default /health is unchanged.
     if (ember::deterministic()) h["deterministic"] = true;
     res.set_header("Access-Control-Allow-Origin", "*");
-    res.set_content(h.dump(), "application/json");
+    res.set_content(json_out(h), "application/json");
   });
 
   // ---- OpenAI-compatible API (chat-mode models) -------------------------
@@ -613,17 +602,16 @@ int main(int argc, char** argv) {
   auto openai_error = [](httplib::Response& res, int status, const std::string& msg) {
     res.status = status;
     res.set_header("Access-Control-Allow-Origin", "*");
-    res.set_content(json{{"error", {{"message", msg}, {"type", "invalid_request_error"}}}}.dump(),
+    res.set_content(json_out(json{{"error", {{"message", msg}, {"type", "invalid_request_error"}}}}),
                     "application/json");
   };
   svr.Get("/v1/models", [model_id](const httplib::Request&, httplib::Response& res) {
     res.set_header("Access-Control-Allow-Origin", "*");
-    res.set_content(json{{"object", "list"},
-                         {"data", json::array({json{{"id", model_id},
-                                                    {"object", "model"},
-                                                    {"created", 0},
-                                                    {"owned_by", "ember.cpp"}}})}}
-                        .dump(),
+    res.set_content(json_out(json{{"object", "list"},
+                                  {"data", json::array({json{{"id", model_id},
+                                                             {"object", "model"},
+                                                             {"created", 0},
+                                                             {"owned_by", "ember.cpp"}}})}}),
                     "application/json");
   });
   svr.Options("/v1/chat/completions", [](const httplib::Request&, httplib::Response& res) {
@@ -759,7 +747,7 @@ int main(int argc, char** argv) {
                                                 {"logprobs", nullptr},
                                                 {"finish_reason", finish_of(result)}}})},
                   {"usage", usage_of(result)}};
-      res.set_content(out.dump(), "application/json");
+      res.set_content(json_out(out), "application/json");
       return;
     }
     res.set_header("Cache-Control", "no-cache");
@@ -777,7 +765,7 @@ int main(int argc, char** argv) {
                       {"created", created},
                       {"model", model_id},
                       {"choices", json::array({json{{"index", 0}, {"delta", delta}, {"finish_reason", finish}}})}};
-            const std::string ev = "data: " + c.dump() + "\n\n";
+            const std::string ev = "data: " + json_out(c) + "\n\n";
             sink.write(ev.data(), ev.size());
           };
           chunk(json{{"role", "assistant"}, {"content", ""}}, nullptr);
@@ -791,7 +779,7 @@ int main(int argc, char** argv) {
                       {"model", model_id},
                       {"choices", json::array()},
                       {"usage", usage_of(result)}};
-            const std::string ev = "data: " + u.dump() + "\n\n";
+            const std::string ev = "data: " + json_out(u) + "\n\n";
             sink.write(ev.data(), ev.size());
           }
           const std::string done = "data: [DONE]\n\n";
@@ -813,7 +801,7 @@ int main(int argc, char** argv) {
     res.set_header("Access-Control-Allow-Origin", "*");
     auto refuse = [&res](int status, const std::string& msg) {
       res.status = status;
-      res.set_content(json{{"error", msg}}.dump(), "application/json");
+      res.set_content(json_out(json{{"error", msg}}), "application/json");
     };
     if (public_mode) {
       refuse(403, "/score is off on a public server (EMBER_PUBLIC=1)");
@@ -883,7 +871,7 @@ int main(int argc, char** argv) {
                            {"reused_positions", reused_total},
                            {"queue_ms", ms(t_request, t_start)},
                            {"score_ms", ms(t_start, t_end)}}}};
-    res.set_content(out.dump(), "application/json");
+    res.set_content(json_out(out), "application/json");
   });
   svr.Options("/score", [](const httplib::Request&, httplib::Response& res) {
     res.set_header("Access-Control-Allow-Origin", "*");

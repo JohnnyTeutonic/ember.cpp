@@ -5,6 +5,7 @@
 #include "model_constants.h"
 #include "model.h"
 #include "api.h"
+#include "utf8_text.h"
 
 namespace py = pybind11;
 
@@ -160,7 +161,14 @@ PYBIND11_MODULE(tinyllama_bindings, m) {
                     )
              )pbdoc"
         )
-        .def("generate", &tinyllama::TinyLlamaSession::generate,
+        // pybind11 decodes a returned std::string strictly (UnicodeDecodeError on a reply cut inside a
+        // character): the text is valid UTF-8 first, as Python's decode(errors="replace") (utf8_text.h).
+        .def("generate",
+             [](tinyllama::TinyLlamaSession& s, const std::string& prompt, int steps, float temperature, int top_k,
+                float top_p, const std::string& system_prompt, bool apply_q_a_format) {
+               return ember::utf8_valid(
+                   s.generate(prompt, steps, temperature, top_k, top_p, system_prompt, apply_q_a_format));
+             },
              py::arg("prompt"),
              py::arg("steps") = 128,
              py::arg("temperature") = 0.1f,
@@ -214,7 +222,14 @@ PYBIND11_MODULE(tinyllama_bindings, m) {
                     )
              )pbdoc"
         )
-        .def("generate_batch", &tinyllama::TinyLlamaSession::generate_batch,
+        .def("generate_batch",
+             [](tinyllama::TinyLlamaSession& s, const std::vector<std::string>& prompts, int steps, float temperature,
+                int top_k, float top_p, const std::string& system_prompt, bool apply_q_a_format) {
+               std::vector<std::string> out =
+                   s.generate_batch(prompts, steps, temperature, top_k, top_p, system_prompt, apply_q_a_format);
+               for (std::string& t : out) t = ember::utf8_valid(t);
+               return out;
+             },
              py::arg("prompts"),
              py::arg("steps") = 128,
              py::arg("temperature") = 0.1f,

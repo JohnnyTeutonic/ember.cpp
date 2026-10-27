@@ -1,0 +1,42 @@
+{
+ "chat@12": {
+  "status": 500,
+  "server_alive_after": true,
+  "tail": "{\"error\":\"Internal server error: [json.exception.type_error.316] incomplete UTF-8 string; last byte: 0xD7\"}"
+ },
+ "chat_stream@12": {
+  "status": 0,
+  "server_alive_after": false,
+  "tail": "IncompleteRead: IncompleteRead(265 bytes read)"
+ },
+ "v1@12": {
+  "status": 500,
+  "server_alive_after": true,
+  "tail": ""
+ },
+ "v1_stream@12": {
+  "status": 200,
+  "server_alive_after": true,
+  "tail": "finish_reason\":\"length\",\"index\":0}],\"created\":1793063580,\"id\":\"chatcmpl-7ee16552e8399526\",\"model\":\"model.gguf\",\"object\":\"chat.completion.chunk\"}\n\ndata: [DONE]\n\n"
+ },
+ "chat@64": {
+  "status": 500,
+  "server_alive_after": true,
+  "tail": "{\"error\":\"Internal server error: [json.exception.type_error.316] incomplete UTF-8 string; last byte: 0xD7\"}"
+ },
+ "chat_stream@64": {
+  "status": 0,
+  "server_alive_after": false,
+  "tail": "IncompleteRead: IncompleteRead(1031 bytes read)"
+ },
+ "v1@64": {
+  "status": 500,
+  "server_alive_after": true,
+  "tail": ""
+ },
+ "v1_stream@64": {
+  "status": 200,
+  "server_alive_after": true,
+  "tail": "finish_reason\":\"length\",\"index\":0}],\"created\":1793063691,\"id\":\"chatcmpl-335c252eee3010de\",\"model\":\"model.gguf\",\"object\":\"chat.completion.chunk\"}\n\ndata: [DONE]\n\n"
+ }
+}

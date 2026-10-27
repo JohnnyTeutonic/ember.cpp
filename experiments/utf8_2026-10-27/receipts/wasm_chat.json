@@ -1,0 +1,349 @@
+{
+ "n": 37,
+ "ctx": 512,
+ "heap_bytes": 1424031744,
+ "load_ms": 37598,
+ "ms_per_reply": 2224.054054054054,
+ "reply_identical": "37/37",
+ "tokens_identical": "37/37",
+ "stop_identical": "37/37",
+ "prompt_tokens_and_turns_identical": "37/37",
+ "prepare_prompt_ids_identical": "37/37",
+ "prepare_counts_identical": "37/37",
+ "pass": true,
+ "replies": [
+  {
+   "i": 12,
+   "reply": "The word \"the\" is derived from the Greek \"�",
+   "tokens": 12,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 13,
+   "reply": "The word \"the\" is derived from the Greek \"ש",
+   "tokens": 13,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 14,
+   "reply": "The word \"the\" is derived from the Greek \"ש�",
+   "tokens": 14,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 15,
+   "reply": "The word \"the\" is derived from the Greek \"שי",
+   "tokens": 15,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 16,
+   "reply": "The word \"the\" is derived from the Greek \"שי�",
+   "tokens": 16,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 17,
+   "reply": "The word \"the\" is derived from the Greek \"שיי",
+   "tokens": 17,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 18,
+   "reply": "The word \"the\" is derived from the Greek \"שיי�",
+   "tokens": 18,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 19,
+   "reply": "The word \"the\" is derived from the Greek \"שייי",
+   "tokens": 19,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 22,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (�",
+   "tokens": 22,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 23,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (ש",
+   "tokens": 23,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 24,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (ש�",
+   "tokens": 24,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 25,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שי",
+   "tokens": 25,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 26,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שי�",
+   "tokens": 26,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 27,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיי",
+   "tokens": 27,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 28,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיי�",
+   "tokens": 28,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 29,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שייי",
+   "tokens": 29,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 30,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שייי�",
+   "tokens": 30,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 31,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי",
+   "tokens": 31,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 37,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"�",
+   "tokens": 37,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 38,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"ש",
+   "tokens": 38,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 39,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"ש�",
+   "tokens": 39,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 40,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי",
+   "tokens": 40,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 43,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (�",
+   "tokens": 43,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 44,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (ש",
+   "tokens": 44,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 45,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (ש�",
+   "tokens": 45,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 46,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שי",
+   "tokens": 46,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 47,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שי�",
+   "tokens": 47,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 48,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שיי",
+   "tokens": 48,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 49,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שיי�",
+   "tokens": 49,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 50,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שייי",
+   "tokens": 50,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 56,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שייי) from the Greek \"�",
+   "tokens": 56,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 57,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שייי) from the Greek \"ש",
+   "tokens": 57,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 58,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שייי) from the Greek \"ש�",
+   "tokens": 58,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 59,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שייי) from the Greek \"שי",
+   "tokens": 59,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 62,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שייי) from the Greek \"שי\" (�",
+   "tokens": 62,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 63,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שייי) from the Greek \"שי\" (ש",
+   "tokens": 63,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  },
+  {
+   "i": 64,
+   "reply": "The word \"the\" is derived from the Greek \"שייי\" (שיייי) from the Greek \"שי\" (שייי) from the Greek \"שי\" (ש�",
+   "tokens": 64,
+   "stop_reason": "length",
+   "prompt_tokens": 19,
+   "history_turns_used": 0,
+   "prompt_ids_equal": true
+  }
+ ]
+}
