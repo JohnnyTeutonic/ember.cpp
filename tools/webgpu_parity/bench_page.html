@@ -82,7 +82,7 @@ guard(async () => {
     let logits = await gpu.forward(prep.prompt_ids, 0);
     const prefillFwdMs = performance.now() - tp, firstMs = performance.now() - t;
     for (let s = 0; s < prep.max_new_tokens; s++) {
-      ember.HEAPF32.set(logits, logitsPtr >> 2);
+      ember.HEAPF32.set(logits, logitsPtr >>> 2);   // unsigned: a 4gb heap puts pointers past 2^31
       const tok = ember._ember_sample(logitsPtr, V);
       if (prep.stop_ids.includes(tok)) { stop = tok; break; }
       if (s === prep.max_new_tokens - 1 || p >= prep.ctx) break;

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # E6 on the GPU VM, after vm_probe.sh (Chrome has a hardware adapter) and vm_setup.sh (builds, checkpoints):
 #   E6_W=work E6_OUT=out E6_STAGE=uploaded stage bash vm_run.sh [PART ...]
-# PART (default all, in this order): refs gates_official pages_main bench gates_ir pages_ir bench_mt
+# PART (default all, in this order): refs gates_official pages_main bench bench_official gates_ir pages_ir bench_mt
 # - refs: per gated family the document ember's CPU runs (ir_logits with EMBER_IR_PRINT: find_ir's document)
 #   and tools/ir_wasm_gate's CPU reference (40 seeded prompts of 24 ids and 32 greedy tokens, 8 + 8 for the
 #   families whose IR declares fewer than 64 positions; EMBER_IR_CTX 1024), as ../webgpu_ir_2026-10-26/ref.sh.
@@ -9,9 +9,10 @@
 #   (ir_gate.mjs's measures), ir_webgpu.js on the printed document.
 # - pages_*: ember CPU's /chat replies (vm_fixture.py, tinyllama_server of the same tree), then the page's
 #   own worker on WebGPU and ?backend=wasm (page_test.html) in Chrome, against them.
-# - bench / bench_mt: bench_page.html, WebGPU against the single-threaded SIMD build (the Space's ember.js;
-#   ember_4gb.js for the official checkpoints), and the 8-thread build (ember-mt.js, cross-origin isolated)
+# - bench / bench_official / bench_mt: bench_page.html, WebGPU against the single-threaded SIMD build (the
+#   Space's ember.js; ember_4gb.js for the official checkpoints), and the 8-thread build (ember-mt.js, cross-origin isolated)
 #   on WebAssembly alone.
+# E6_EXTRA_FAMILIES adds families to the IR gates; with E6_ONLY_EXTRA=1 refs and gates_ir take only those.
 # Every result goes to $E6_OUT at once (the driver copies it home every poll); a part reruns from its rows.
 set -uo pipefail
 W=${E6_W:?}; SRC=$W/ember; OUT=${E6_OUT:?}; ST=${E6_STAGE:?}
@@ -37,8 +38,13 @@ IRFAM="kimi_tiny srd_tiny attnres_tiny flex_highway_tiny mamba_tiny gpt2_tiny sw
        gpt2_tiny_exprnorm pythia-160m mamba-130m ${E6_EXTRA_FAMILIES:-}"
 CHATS_MAIN="chat_sftfinal_v3 state4 tc_e1_mor_MoR3_r1 mamba_tiny"
 CHATS_IR="srd_tiny attnres_tiny flex_highway_tiny gpt2_tiny kimi_tiny swa_tiny"
-model_of() { case $1 in gpt2_tiny_expr*) echo "$W/models/gpt2_tiny.gguf" ;; *) echo "$W/models/$1.gguf" ;; esac; }
-irenv_of() { case $1 in gpt2_tiny_expr*) echo "EMBER_IR=$ST/in/$1.ir.json" ;; *) echo "E6_NONE=1" ;; esac; }
+if [ "${E6_ONLY_EXTRA:-0}" = 1 ]; then OFFICIAL=""; IRFAM="${E6_EXTRA_FAMILIES:-}"; fi
+# A supplied document (EMBER_IR for the reference; the printed document, the same text, is gate_page.html's doc=):
+# the expr rewrites of gpt2_tiny, keramos's tp_mamba1 recurrence rewrite on its model, Mamba-130m's recurrence
+# rewrite (../webgpu_recurrence_2026-10-27/docs) on the converted checkpoint.
+model_of() { case $1 in gpt2_tiny_expr*) echo "$W/models/gpt2_tiny.gguf" ;; tp_mamba1_rec) echo "$W/models/tp_mamba1.gguf" ;;
+                        mamba-130m_rec) echo "$W/models/mamba-130m.gguf" ;; *) echo "$W/models/$1.gguf" ;; esac; }
+irenv_of() { case $1 in gpt2_tiny_expr*|tp_mamba1_rec|mamba-130m_rec) echo "EMBER_IR=$ST/in/$1.ir.json" ;; *) echo "E6_NONE=1" ;; esac; }
 
 refs() {
   for fam in $OFFICIAL $IRFAM; do
@@ -83,7 +89,7 @@ import json,sys; r=json.load(open(sys.argv[1])); s=r.get('result') or {}
 print({k: s.get(k) for k in ('backends','n','webgpu_vs_wasm','webgpu_vs_ember_cpu','wasm_vs_ember_cpu','tokens','ms_per_reply','errors','pass')}, r.get('error') or s.get('error','')[:300])" "$OUT/pages/$m.json")"
 }
 
-bench() {   # bench NAME MODEL PROMPTS QUERY [ISOLATE]
+bench() {   # bench NAME MODEL PROMPTS QUERY [REMOTE_CHROME FLAGS]
   local name=$1 m=$2 p=$3 qs=$4 iso=${5:-}
   python3 "$RC" --root "$WWW" --out "$OUT/bench/$name.json" --timeout 7200 $iso \
     --page "bench_page.html?model=m/$m.gguf&prompts=$p&$qs" > /dev/null
@@ -92,7 +98,7 @@ import json,sys; r=json.load(open(sys.argv[1])); s=r.get('result') or {}
 print(s.get('gpu_path'), s.get('webgpu_vs_wasm_same'), json.dumps(s.get('median')), r.get('error') or s.get('error','')[:300])" "$OUT/bench/$name.json")"
 }
 
-PARTS=${*:-refs gates_official pages_main bench gates_ir pages_ir bench_mt}
+PARTS=${*:-refs gates_official pages_main bench bench_official gates_ir pages_ir bench_mt}
 for part in $PARTS; do
   log "=== $part"
   case $part in
@@ -103,11 +109,12 @@ for part in $PARTS; do
     pages_ir) for m in $CHATS_IR; do page $m; done ;;
     bench)
       for m in chat_sftfinal_v3 tc_e1_mor_MoR3_r1 mamba_tiny; do bench $m $m fx/$m.requests.jsonl "n=40&runs=3&warm=2"; done
-      bench state4 state4 fx/state4.requests.jsonl "n=40&runs=3&warm=2"
+      bench state4 state4 fx/state4.requests.jsonl "n=40&runs=3&warm=2" ;;
+    bench_official)
       for m in $OFFICIAL; do bench $m $m fx/chat_sftfinal_v3.prompts.json "ember=ember_4gb.js&n=6&runs=2&warm=1&max_new=32"; done ;;
     bench_mt)
-      bench chat_sftfinal_v3_mt8 chat_sftfinal_v3 fx/chat_sftfinal_v3.requests.jsonl "ember=ember-mt.js&backends=wasm&n=40&runs=3&warm=2" --isolate
-      bench qwen3-0.6b_mt8 qwen3-0.6b fx/chat_sftfinal_v3.prompts.json "ember=ember-mt.js&backends=wasm&n=6&runs=2&warm=1&max_new=32" --isolate ;;
+      bench chat_sftfinal_v3_mt8 chat_sftfinal_v3 fx/chat_sftfinal_v3.requests.jsonl "ember=ember-mt.js&backends=wasm&n=40&runs=3&warm=2" "--isolate --wasm-only"
+      bench qwen3-0.6b_mt8 qwen3-0.6b fx/chat_sftfinal_v3.prompts.json "ember=ember-mt.js&backends=wasm&n=6&runs=2&warm=1&max_new=32" "--isolate --wasm-only" ;;
     *) log "unknown part $part" ;;
   esac
 done

@@ -1,0 +1,7 @@
+--- ICD files
+ls: cannot access '/usr/share/vulkan/icd.d': No such file or directory
+/etc/vulkan/icd.d:
+total 8
+drwxr-xr-x 2 root root 4096 Apr  8  2024 .
+drwxr-xr-x 5 root root 4096 Oct 21 13:13 ..
+--- NVIDIA graphics libraries
