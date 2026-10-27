@@ -120,29 +120,53 @@ WebAssembly build of the same sources (`deploy/wasm/build.sh`, EMBER_WASM_MAX_ME
 - `gate_dryrun_ember_vs_ember.json`: `gate_v2.py`'s mechanics on the toy, ember against a second ember server
   in mtstudio's place, 4/4 on every count. Not the gate.
 
-## The gate (waiting for the gate model)
+## The gate on paperkiln's gate_v2 (no tool calls)
 
-paperkiln's tiny v2 gate GGUF, `mtstudio chat`'s v2 /chat and the v2 parity prompt set make the final gate:
+Inputs: `/mnt/c/ml_artifacts/chat_v2/gate_v2/run/gate_v2.gguf` (sha256 fd0355db; gate_llama3 with the 8 v2 rows,
+declared paperkiln/2, no v2 training, so no tool calls), `microtorch/corpus/eval/chat_v2_prompts_v1.jsonl` (40
+rows: 10 each system, history, tool_user, after_tool; sha256 254e8ee4), `mtstudio chat` at paperkiln 1a8db67d
+(`~/d3_build/mtstudio`, CPU, FP32, OMP_NUM_THREADS=1) on the run's spec, and paperkiln's reference replies
+`mtstudio_greedy_v2.jsonl` (sha256 1a5f5a8b). Each request is the row's request plus temperature 1, top_k 1,
+top_p 1, seed 7, max_new_tokens 60, return_ids. paperkiln's mtstudio makes the same choices as ember: the content
+before a call stripped of " \t\r\n" at both ends, names and arguments verbatim; `/chat` `stop_reason` "eos",
+"turn" or "length" with calls; `history_turns_used` the past exchanges kept; a leading tool message refused.
 
-    python3 gate_v2.py --ember ~/cv2/ember/build_cpu/tinyllama_server --gguf GATE.gguf --prompts SET.jsonl \
-        --mts "MTSTUDIO chat SPEC --port {port}" --out receipts/gate_v2.json --n 40 --max-new 60
+    python3 gate_v2.py --ember ~/cv2/ember/build_cpu/tinyllama_server --check ~/cv2/ember/build_cpu/chat_template_check \
+        --gguf GATE.gguf --prompts chat_v2_prompts_v1.jsonl --mts "OMP_NUM_THREADS=1 MTSTUDIO chat SPEC --port {port}" \
+        --ref mtstudio_greedy_v2.jsonl --out receipts/gate_v2.json --n 40 --max-new 60 --seed 7
 
-greedy 40/40 against `mtstudio chat` (reply, tool_calls, stop_reason, tokens, history_turns_used, and
-prompt_tokens where mtstudio reports it), then stream = plain on `/chat` and on the OpenAI endpoint for the same
-40 conversations, under the CPU budget. A read-only load check of paperkiln's
-`/mnt/c/ml_artifacts/chat_v2/gate_v2/run/gate_v2.gguf` as it stood at 18:44 (before its hand-off): it resolves to
-paperkiln/2 (declared), passes the control-token checks (vocab 16,392) and serves `/chat`.
+Result (`gate_v2.json`, `gate_v2_ref.json`, `gate_v2_prompts.json`): **31/40, not passed**, from one cause outside
+the v2 code: the two engines serve different contexts. The GGUF declares 256 (`llama.context_length`, and the IR
+document's `model.ctx`), which ember serves; `mtstudio chat` serves the spec's T 512.
+- The 31 rows whose prompt + reply fit in 256 positions are equal on every field: reply, tool_calls, stop_reason,
+  tokens, history_turns_used, prompt_ids, ids, stop_id. The other 9 are the long tool_user and after_tool rows:
+  ember refuses 8 (system turn + newest exchange >= 256 tokens: 266 to 485), which mtstudio serves at 512, and
+  after_tool/3 (231 prompt tokens) reaches ember's limit after 26 tokens where mtstudio generates 60.
+  after_tool/5 is HTTP 400 in both (mtstudio: 588 tokens against 512).
+- The rendering: ember's request path renders every row's "prompt" exactly, 40/40 (without the context limit),
+  and its ids equal mtstudio's prompt_ids on the 38 of 39 rows where mtstudio kept the whole conversation. At
+  after_tool/9 (534 tokens rendered) mtstudio at 512 drops the oldest exchange (485 tokens, history_turns_used 0);
+  ember's refusal at 256 names the same 485 for the system turn and the newest exchange.
+- stream = plain on both endpoints, 40/40 (and the refused rows refused on both endpoints, streamed or not).
+- The two mtstudio sources (the live server, paperkiln's file) agree on all 40 rows; ember equals the file on the
+  same 31.
 
-Points for mtstudio's v2 /chat to match (ember's choices, stated above): the content before a call is stripped
-of leading and trailing whitespace as every reply is, while names and arguments are verbatim; `/chat`'s
-`stop_reason` stays "eos" or "turn" with calls; `history_turns_used` counts past exchanges; an empty system
-message is none.
+Matched-context diagnostic (`gate_v2_ctx256.json`): the same gate with mtstudio at T 256 (a copy of the run folder
+on ext4 with the spec's T 256; paperkiln's files untouched). 40/40 on status (the 8 refusals refused by both),
+reply, tool_calls, stop_reason, tokens, history_turns_used, prompt_ids and ids; stop_id 39/40. The one difference is
+a convention: at a length stop mtstudio reports `stop_id` null and ember -1 (ember's since v1, `api.h`), seen
+only where a reply reaches the limit (after_tool/3 here; the reference file's 6 length rows all carry null).
+
+What the gate needs: the GGUF to declare the context it is served at (512 in `llama.context_length` and the IR's
+`model.ctx`), or mtstudio to serve at the file's 256; and one `stop_id` convention at a length stop (null or -1).
+Then `gate_v2.py` as above.
 
 ## Files
 
 - `make_toy_v2.py`: the toy v2 GGUFs (gate_llama3 relabelled with the record and the control tokens, the two
   refusal fixtures), checked against paperkiln's `chat_v2_vocab.py` vocabulary.
 - `gate_v2.py`: the final gate (ember against `mtstudio chat` on the v2 gate GGUF and prompt set, greedy, then
-  stream = plain on both endpoints).
+  stream = plain on both endpoints). `ref_compare.py`: ember and live mtstudio against paperkiln's reference file.
+  `prompt_check.py`: every row's "prompt" against ember's rendering, and its ids against mtstudio's.
 - The checks: `tools/chat_template_check.cpp` (cases), `tools/chat_v2_test.cpp` (unit),
   `tools/chat_v2_server_check.py` (HTTP), `tools/wasm_v2_check.mjs` (WebAssembly).
