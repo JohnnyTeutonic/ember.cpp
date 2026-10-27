@@ -11,8 +11,9 @@ paperkiln's v2 gate GGUF and v2 parity prompt set, greedy, then stream = plain o
 request plus temperature 1, top_k 1, top_p 1, seed, max_new_tokens and return_ids. Per row:
   - mtstudio: HTTP status, and on 200 reply, tool_calls, stop_reason, tokens, history_turns_used, prompt_ids, ids
     and stop_id equal (prompt_tokens too when mtstudio reports it); a 400 must meet a 400;
-  - the rendering: `chat_template_check render` (the server's request path, with ember's context and max_new) gives
-    the row's "prompt" text, and its ids are ember's prompt_ids;
+  - the rendering: `chat_template_check render` (the server's request path) of the whole conversation gives
+    the row's "prompt" text, and the served prompt's (the context rule applied, at ember's context and max_new)
+    ids are ember's prompt_ids;
   - --ref (paperkiln's own mtstudio replies, {"id", ...} or {"id", "error"}): the same fields against ember;
   - stream = plain on ember: /chat streamed (joined pieces, the final object) equals /chat plain, and the conversation
     as an OpenAI messages list gives the same content and tool_calls plain and streamed (one whole delta per call),
@@ -142,9 +143,16 @@ argv = [os.path.expanduser(w) for w in words if w.split("=", 1)[0] not in env]
 pm, hm = start(argv, a.mts_port, "gate_mtstudio", env)
 ctx = he.get("context")
 # The rendering: chat_template_check render on every request, with ember's context and max_new.
-inp = "".join(json.dumps({"chat": b, "ctx": ctx, "max_new_tokens": a.max_new}, ensure_ascii=False) + "\n" for b in bodies)
-rr = subprocess.run([a.check, "render", a.gguf], input=inp.encode(), capture_output=True)
-rendered = [json.loads(x) for x in rr.stdout.decode().splitlines() if x.strip()][1:]
+def render(c):
+    """chat_template_check render of every request at context c (None: no limit)."""
+    inp = "".join(json.dumps({"chat": b, "max_new_tokens": a.max_new, **({"ctx": c} if c else {})}, ensure_ascii=False) + "\n"
+                  for b in bodies)
+    rr = subprocess.run([a.check, "render", a.gguf], input=inp.encode(), capture_output=True)
+    return [json.loads(x) for x in rr.stdout.decode().splitlines() if x.strip()][1:]
+
+
+rendered = render(ctx)  # the served prompt (the context rule applied): its ids are ember's prompt_ids
+full = render(None)     # the whole conversation: its text is the row's "prompt" (paperkiln's rendering)
 recs = []
 counts = {k: 0 for k in ("mtstudio_status", *("mtstudio_" + f for f in FIELDS), "mtstudio_all", "prompt_text", "prompt_ids_render",
                          "ref_all", "chat_stream", "openai_plain", "openai_stream", "finish_reason")}
@@ -163,13 +171,10 @@ try:
             pt_reported += 1
             pt_same += e["prompt_tokens"] == m["prompt_tokens"]
         rd = rendered[i] if i < len(rendered) else {"error": "no render row"}
+        fr = full[i] if i < len(full) else {"error": "no render row"}
         want_prompt = row.get("prompt")
-        if "error" in rd:
-            ok_text = se == 400 and want_prompt is None or se == 400
-            ok_ids = se == 400
-        else:
-            ok_text = want_prompt is None or rd["prompt"] == want_prompt
-            ok_ids = se == 200 and rd["ids"] == e.get("prompt_ids")
+        ok_text = want_prompt is None or fr.get("prompt") == want_prompt
+        ok_ids = se == 400 if "error" in rd else se == 200 and rd["ids"] == e.get("prompt_ids")
         counts["prompt_text"] += ok_text
         counts["prompt_ids_render"] += ok_ids
         rec = {"i": i, "id": row.get("id"), "status": [se, sm], "equal": eq, "ember": e, "mtstudio": m,

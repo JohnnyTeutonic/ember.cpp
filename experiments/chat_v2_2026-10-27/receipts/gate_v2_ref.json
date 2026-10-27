@@ -1,22 +1,12 @@
 {
  "summary": {
   "file": "/mnt/c/ml_artifacts/chat_v2/gate_v2/mtstudio_greedy_v2.jsonl",
-  "file_sha256": "1a5f5a8b8cc77c57843ef0083a0f55770cde5774b1b3241157440a8898502060",
+  "file_sha256": "b74e84d29b2f90339913db7ea605abb671d92f258dbad991c577680892ae6bc4",
   "file_rows": 40,
-  "ember_equal_file": 31,
+  "ember_equal_file": 40,
   "live_mtstudio_equal_file": 40,
   "mtstudio_sources_disagree": [],
-  "ember_differs": [
-   "v2/tool_user/4",
-   "v2/tool_user/7",
-   "v2/after_tool/0",
-   "v2/after_tool/1",
-   "v2/after_tool/2",
-   "v2/after_tool/3",
-   "v2/after_tool/7",
-   "v2/after_tool/8",
-   "v2/after_tool/9"
-  ]
+  "ember_differs": []
  },
  "rows": [
   {
@@ -261,10 +251,10 @@
   },
   {
    "id": "v2/tool_user/4",
-   "ember_equal_file": false,
+   "ember_equal_file": true,
    "live_mtstudio_equal_file": true,
    "status": [
-    400,
+    200,
     200
    ],
    "file": "turn"
@@ -291,10 +281,10 @@
   },
   {
    "id": "v2/tool_user/7",
-   "ember_equal_file": false,
+   "ember_equal_file": true,
    "live_mtstudio_equal_file": true,
    "status": [
-    400,
+    200,
     200
    ],
    "file": "length"
@@ -321,37 +311,37 @@
   },
   {
    "id": "v2/after_tool/0",
-   "ember_equal_file": false,
+   "ember_equal_file": true,
    "live_mtstudio_equal_file": true,
    "status": [
-    400,
+    200,
     200
    ],
    "file": "length"
   },
   {
    "id": "v2/after_tool/1",
-   "ember_equal_file": false,
+   "ember_equal_file": true,
    "live_mtstudio_equal_file": true,
    "status": [
-    400,
+    200,
     200
    ],
    "file": "length"
   },
   {
    "id": "v2/after_tool/2",
-   "ember_equal_file": false,
+   "ember_equal_file": true,
    "live_mtstudio_equal_file": true,
    "status": [
-    400,
+    200,
     200
    ],
    "file": "eos"
   },
   {
    "id": "v2/after_tool/3",
-   "ember_equal_file": false,
+   "ember_equal_file": true,
    "live_mtstudio_equal_file": true,
    "status": [
     200,
@@ -391,30 +381,30 @@
   },
   {
    "id": "v2/after_tool/7",
-   "ember_equal_file": false,
+   "ember_equal_file": true,
    "live_mtstudio_equal_file": true,
    "status": [
-    400,
+    200,
     200
    ],
    "file": "eos"
   },
   {
    "id": "v2/after_tool/8",
-   "ember_equal_file": false,
+   "ember_equal_file": true,
    "live_mtstudio_equal_file": true,
    "status": [
-    400,
+    200,
     200
    ],
    "file": "length"
   },
   {
    "id": "v2/after_tool/9",
-   "ember_equal_file": false,
+   "ember_equal_file": true,
    "live_mtstudio_equal_file": true,
    "status": [
-    400,
+    200,
     200
    ],
    "file": "length"

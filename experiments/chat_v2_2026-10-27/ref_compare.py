@@ -4,8 +4,8 @@
     python3 ref_compare.py GATE.json MTSTUDIO_GREEDY.jsonl OUT.json
 
 Per row (by id): ember vs the file and live mtstudio vs the file on reply, tool_calls, stop_reason, tokens,
-prompt_ids, ids and stop_id (a row the file records as {"id", "error"} must be HTTP 400); history_turns_used,
-absent from the file, against live mtstudio only (in gate_v2.json)."""
+prompt_ids, ids and stop_id, and history_turns_used where the file has it (a row the file records as
+{"id", "error"} must be HTTP 400)."""
 import hashlib
 import json
 import sys
@@ -19,7 +19,8 @@ ref = {r["id"]: r for r in (json.loads(x) for x in open(refp, encoding="utf-8") 
 def same(status, resp, r):
     if "error" in r:
         return status == 400
-    return status == 200 and all(resp.get(k) == r.get(k) for k in FIELDS)
+    keys = FIELDS + (("history_turns_used",) if "history_turns_used" in r else ())
+    return status == 200 and all(resp.get(k) == r.get(k) for k in keys)
 
 
 rows, ember_ok, mts_ok, mts_vs_file = [], 0, 0, []
