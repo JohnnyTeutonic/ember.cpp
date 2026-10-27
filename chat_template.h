@@ -1,10 +1,8 @@
 // Vendored verbatim from paperkiln (microtorch) include/microtorch/chat_template.hpp
-// at paperkiln 22f8fe6d, whose tests/chat_template_cases.json ember's
+// at paperkiln 877fb0d0, whose tests/chat_template_cases.json ember's
 // tools/chat_template_check.cpp runs. ember.cpp renders every chat prompt through it
 // (chat_tokenizer.h). Do not edit here: change it in paperkiln (its tests check C++/Python
-// parity) and re-vendor. One local change, keramos IR_SPEC 8.1.6 at v1.4.2: a tool_call_id of
-// null is accepted on a tool message that answers a call without an id (and refused against a
-// call with one); 22f8fe6d refuses every null tool_call_id.
+// parity) and re-vendor.
 #pragma once
 // Conversations and chat templates (LOCAL_LLM_STACK.md section 3, points 3-5): the C++ twin of
 // tools/chat_template.py, header-only, for mtstudio and for ember.cpp to vendor (as it vendors
@@ -48,8 +46,9 @@
 // the system message is its own turn behind <|system|> (no fold); an assistant message may carry
 // tool_calls [{id?, type?: "function", function: {name, arguments}}], each rendered after its
 // content as <|tool_call|> + name + "\n" + arguments (the arguments string verbatim); exactly as
-// many tool messages follow, in call order (tool_call_id, when given, equals the call's id; ids are
-// never rendered), each <|tool|> + content, then an assistant message; tool definitions (JSON
+// many tool messages follow, in call order (tool_call_id, when given, equals the call's id, a call
+// without an id counting as id null, keramos IR_SPEC 8.1.6; ids are never rendered), each
+// <|tool|> + content, then an assistant message; tool definitions (JSON
 // objects) render inside the system turn as Python's json.dumps(d, ensure_ascii=False) text
 // (detail::dump_py; HF's tojson), joined by "\n", after the system text and "\n\n". A prompt
 // conversation ends on a user message or on the last tool message of a call. parse_reply splits a
