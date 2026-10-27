@@ -151,13 +151,13 @@ Result (`gate_v2.json`; ember b49eb5c's CPU build): **40/40 on every count.**
   plain, and the same conversations as OpenAI messages give the same content and tool_calls plain and streamed
   with finish_reason as the rule says; the refused row is refused on both endpoints, streamed or not.
 
-## The tool-calling gate on pk_sft_v2: ember's side recorded, the comparison pending
+## The tool-calling gate on pk_sft_v2: passed
 
 Inputs: `/mnt/c/ml_artifacts/chat_v2/run/sft/pk_sft_v2.gguf` (sha256 2363aa42; F32, llama d768 L12 H12, 97.5M
 parameters, paperkiln/2, 16,392 tokens, context 512) and its Q8_0 file (e88a77ce); the same 40 prompts and request
-fields. paperkiln's mtstudio 7673859f writes the reference to
-`/mnt/c/ml_artifacts/chat_v2/run/mtstudio_greedy_v2_pksft2.jsonl`; to save CPU there is no second live mtstudio,
-and rows that differ from the file get one (`gate_v2.py --rows`).
+fields. The reference is paperkiln's `/mnt/c/ml_artifacts/chat_v2/run/mtstudio_greedy_v2_pksft2.jsonl` (sha256
+79105a05; mtstudio 7673859f, CPU, full recompute, FP32), against which ember's replies are compared field by field
+(no second live mtstudio: no row differed, so none was rerun with `gate_v2.py --rows`).
 
     python3 gate_v2.py ... --gguf pk_sft_v2.gguf --mts none --out receipts/gate_pksft2.json --seed 7
     python3 ref_compare.py receipts/gate_pksft2.json mtstudio_greedy_v2_pksft2.jsonl receipts/gate_pksft2_ref.json
@@ -171,8 +171,9 @@ ember (`gate_pksft2.json`, ember b49eb5c's CPU build):
   `delta.tool_calls` chunk (one call, its index, full name and arguments), finish_reason "tool_calls" on the 10
   calling rows, "length" or "stop" elsewhere as the rule says.
 - Every row's "prompt" rendered exactly, and the served prompt ids equal the render, 40/40.
-- Against the reference rows written by 22:10 (35 of 40), every field equal 35/35, 8 of the 10 calling rows among
-  them; tool_user/4, tool_user/8, after_tool/2, after_tool/6 and after_tool/8 wait for the file.
+- Against the reference (`gate_pksft2_ref.json`): **every field equal on all 40 rows**: reply, tool_calls,
+  stop_reason, tokens, history_turns_used, prompt_ids, ids and stop_id on the 39 served rows, and after_tool/5 HTTP
+  400 in both. The file's tool calls are on tool_user/0-9 only, as ember's.
 
 Q8_0 against F32, report only (`gate_pksft2_q8_0.json`, `q8_0_vs_f32.json`): the same ids on 35 of 40 rows, the
 same first token on 39, the same tool_calls on 38 (the same 10 rows call; tool_user/0 and tool_user/4 differ late
