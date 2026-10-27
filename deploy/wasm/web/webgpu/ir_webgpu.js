@@ -1375,6 +1375,13 @@ export function irSupport(doc) {
       // Shaw's relative vectors (revision 1.4) on positions: not under depth_route (compact rows), as the CPU refuses.
       if (n.op === 'attention' && n.relative_kv !== undefined && doc.block.nodes.some((b) => b.op === 'depth_route'))
         return { ok: false, reason: 'attention relative_kv under depth_route' };
+      // A window under depth_route counts positions over each application's rows (IR_SPEC 5.15, revision 1.4.2);
+      // mode 3 masks by row count only, so WebAssembly runs such a document.
+      if (n.op === 'attention' && doc.block.nodes.some((b) => b.op === 'depth_route')) {
+        const slot = (doc.block.state || []).find((s) => s.name === n.state) || {};
+        const any = (v) => (Array.isArray(v) ? v.some((x) => x > 0) : v > 0);
+        if (any(n.window) || any(slot.window)) return { ok: false, reason: 'attention window under depth_route' };
+      }
       if (n.op === 'expr') {
         if (n.in.length > 9) return { ok: false, reason: 'expr with more than 9 inputs' };
         compileExpr(n.expr, n.in.length);
