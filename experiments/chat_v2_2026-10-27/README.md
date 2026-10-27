@@ -151,8 +151,32 @@ Result (`gate_v2.json`; ember b49eb5c's CPU build): **40/40 on every count.**
   plain, and the same conversations as OpenAI messages give the same content and tool_calls plain and streamed
   with finish_reason as the rule says; the refused row is refused on both endpoints, streamed or not.
 
-What remains is the tool-calling gate: pk_sft_v2 (`C:/ml_artifacts/chat_v2/run/sft/pk_sft_v2.gguf`) makes tool
-calls, and the same `gate_v2.py` run checks them against mtstudio, streamed calls included.
+## The tool-calling gate on pk_sft_v2: ember's side recorded, the comparison pending
+
+Inputs: `/mnt/c/ml_artifacts/chat_v2/run/sft/pk_sft_v2.gguf` (sha256 2363aa42; F32, llama d768 L12 H12, 97.5M
+parameters, paperkiln/2, 16,392 tokens, context 512) and its Q8_0 file (e88a77ce); the same 40 prompts and request
+fields. paperkiln's mtstudio 7673859f writes the reference to
+`/mnt/c/ml_artifacts/chat_v2/run/mtstudio_greedy_v2_pksft2.jsonl`; to save CPU there is no second live mtstudio,
+and rows that differ from the file get one (`gate_v2.py --rows`).
+
+    python3 gate_v2.py ... --gguf pk_sft_v2.gguf --mts none --out receipts/gate_pksft2.json --seed 7
+    python3 ref_compare.py receipts/gate_pksft2.json mtstudio_greedy_v2_pksft2.jsonl receipts/gate_pksft2_ref.json
+
+ember (`gate_pksft2.json`, ember b49eb5c's CPU build):
+- Tool calls on all 10 tool_user rows (one call each, content "", stop "eos"; search_hotel, generate_random_name,
+  calculate_tip, get_movie_details, search_recipes, calculate_profit_margin, convert_currency, calculate_tax,
+  calculate_bmi, calculate_fibonacci), none elsewhere; 33 eos and 6 length stops; after_tool/5 HTTP 400.
+- stream = plain 40/40 on both endpoints: `/chat` streamed equals plain (pieces and the final object's
+  tool_calls), the OpenAI endpoint gives the same content and tool_calls plain and streamed, each call one whole
+  `delta.tool_calls` chunk (one call, its index, full name and arguments), finish_reason "tool_calls" on the 10
+  calling rows, "length" or "stop" elsewhere as the rule says.
+- Every row's "prompt" rendered exactly, and the served prompt ids equal the render, 40/40.
+- Against the reference rows written by 22:10 (35 of 40), every field equal 35/35, 8 of the 10 calling rows among
+  them; tool_user/4, tool_user/8, after_tool/2, after_tool/6 and after_tool/8 wait for the file.
+
+Q8_0 against F32, report only (`gate_pksft2_q8_0.json`, `q8_0_vs_f32.json`): the same ids on 35 of 40 rows, the
+same first token on 39, the same tool_calls on 38 (the same 10 rows call; tool_user/0 and tool_user/4 differ late
+in the arguments, from token 45 and 36 of 48), the same stop reason on 40; stream = plain 40/40 on both endpoints.
 
 ## Files
 
@@ -161,5 +185,6 @@ calls, and the same `gate_v2.py` run checks them against mtstudio, streamed call
 - `gate_v2.py`: the final gate (ember against `mtstudio chat` on the v2 gate GGUF and prompt set, greedy, then
   stream = plain on both endpoints). `ref_compare.py`: ember and live mtstudio against paperkiln's reference file.
   `prompt_check.py`: every row's "prompt" against ember's rendering, and its ids against mtstudio's.
+  `q8_agreement.py`: a Q8_0 file's greedy replies against the F32 file's (report only).
 - The checks: `tools/chat_template_check.cpp` (cases), `tools/chat_v2_test.cpp` (unit),
   `tools/chat_v2_server_check.py` (HTTP), `tools/wasm_v2_check.mjs` (WebAssembly).
