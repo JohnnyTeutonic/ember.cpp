@@ -1,0 +1,7 @@
+ar3 attnres_gate rc=0
+adapter_selftest rc=0
+ar3 receipt equal to the committed one (all fields but bin): True
+adapter self-test committed: 189 / 189 requests 3072
+adapter self-test this build: 189 / 189 requests 3072 failures 0 pass True
+same check names: True
+checks with identical records: 189 of 189

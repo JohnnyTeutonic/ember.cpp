@@ -1,0 +1,140 @@
+{
+ "dir": "/mnt/c/ml_artifacts/attnres_gate_rec/ar_rec",
+ "bin": "/home/jonat/tig/ember/build_cpu/ir_logits",
+ "keramos_tools": "/home/jonat/tig/keramos135/tools",
+ "manifest_sha256": "43d2e54274fd8dac58d8de5de20d9f79dfb785932842a8a34e1830b106258c5c",
+ "sha256": {
+  "ar_rec.gguf": {
+   "sha256": "62c43b66b91b2f20996fadbf099fa1c95a764332b80d3e7a676d586e6ec5cab3",
+   "match": true
+  },
+  "ar_rec.ir.json": {
+   "sha256": "22c3e187a9e567d89c4d59123e063039636f14e5ed4cda58db781d1be0bc659d",
+   "match": true
+  },
+  "ar_rec_q8_0.gguf": {
+   "sha256": "868bd9b9700f387f37dd73f816498131ebbae5142d43d6e0cb95331279943994",
+   "match": true
+  },
+  "v.gguf": {
+   "sha256": "879b0dcb5995b7d79c9b0b72779416d9fe54fb9a4bb223424feee827605ea48a",
+   "match": true
+  },
+  "score_in.jsonl": {
+   "sha256": "7c53d154e550772d5b4fcc8d34fed9f6230abd81bd3b058a2fff086a259ccec0",
+   "match": true
+  },
+  "score_out.jsonl": {
+   "sha256": "8af0e9c6b0cb04fce236b60200b13c1b9704353194a4aaa4dec0e02a66650549",
+   "match": true
+  },
+  "spec.json": {
+   "sha256": "f6d095e06a62d175972de964caa2f44ddd8bcdaf3cd6b61147b5242d30b7e549",
+   "match": true
+  }
+ },
+ "sha256_all_match": true,
+ "tagged_nodes": [
+  "block.0:depth_attend:rec_app.{i}.attnres_attn_q.weight",
+  "block.10:depth_attend:rec_app.{i}.attnres_ffn_q.weight"
+ ],
+ "weight_index": [
+  0,
+  1,
+  2,
+  1,
+  2,
+  3
+ ],
+ "untagged_doc_sha256": "78014c14601dd8802488341748a5b5cb1c6d21d7bcae884789502420a900f16f",
+ "f32": {
+  "gguf": "ar_rec.gguf",
+  "embedded_doc_equals_ir_json": true,
+  "pseudo_queries": 13,
+  "pseudo_query_types": [
+   "F32"
+  ],
+  "matrix_types": [
+   "F32"
+  ],
+  "tagged": {
+   "logprob_worst_rel_vs_mtstudio": 2.2136548167625524e-07,
+   "greedy": "40/40",
+   "decode_eq_prefill": true,
+   "logits_worst_rel_vs_ir_numpy": 2.667015337465273e-07
+  },
+  "untagged": {
+   "logprob_worst_rel_vs_mtstudio": 0.002587213625135933,
+   "greedy": "40/40",
+   "decode_eq_prefill": true,
+   "logits_worst_rel_vs_ir_numpy_untagged": 2.0224555896675156e-07
+  },
+  "untagged_gap": {
+   "ember_first8_prompts": 0.021036532034536634,
+   "ember_all40_sequences": 0.021209885255583736,
+   "paperkiln_numpy_first8": 0.021036529913544655,
+   "ember_vs_paperkiln_rel": 1.0082423232289933e-07
+  },
+  "nan_rec_app_4_5": {
+   "tensors": [
+    "rec_app.4.attnres_attn_q.weight",
+    "rec_app.4.attnres_ffn_q.weight",
+    "rec_app.5.attnres_attn_q.weight",
+    "rec_app.5.attnres_ffn_q.weight"
+   ],
+   "tagged_all_nan": true,
+   "untagged_bit_equal": true
+  },
+  "rec_app0_attn_q_all_zero": true,
+  "rec_app0_attn_q_not_read": {
+   "nan_copy_tagged_bit_equal": true
+  },
+  "pass": true
+ },
+ "q8_0": {
+  "gguf": "ar_rec_q8_0.gguf",
+  "embedded_doc_equals_ir_json": true,
+  "pseudo_queries": 13,
+  "pseudo_query_types": [
+   "F32"
+  ],
+  "matrix_types": [
+   "F32",
+   "Q8_0"
+  ],
+  "tagged": {
+   "logprob_worst_rel_vs_mtstudio": 0.00016270303687022488,
+   "greedy": "40/40",
+   "decode_eq_prefill": true,
+   "logits_worst_rel_vs_ir_numpy": 2.4457708036607073e-07
+  },
+  "untagged": {
+   "logprob_worst_rel_vs_mtstudio": 0.0027260890963200406,
+   "greedy": "40/40",
+   "decode_eq_prefill": true,
+   "logits_worst_rel_vs_ir_numpy_untagged": 2.427615584110754e-07
+  },
+  "untagged_gap": {
+   "ember_first8_prompts": 0.021068763016651212,
+   "ember_all40_sequences": 0.021219932988955078,
+   "paperkiln_numpy_first8": 0.021036529913544655,
+   "ember_vs_paperkiln_rel": 0.0015322443026025818
+  },
+  "nan_rec_app_4_5": {
+   "tensors": [
+    "rec_app.4.attnres_attn_q.weight",
+    "rec_app.4.attnres_ffn_q.weight",
+    "rec_app.5.attnres_attn_q.weight",
+    "rec_app.5.attnres_ffn_q.weight"
+   ],
+   "tagged_all_nan": true,
+   "untagged_bit_equal": true
+  },
+  "rec_app0_attn_q_all_zero": true,
+  "rec_app0_attn_q_not_read": {
+   "nan_copy_tagged_bit_equal": true
+  },
+  "pass": true
+ },
+ "pass": true
+}

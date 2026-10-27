@@ -1,0 +1,1 @@
+{"kind": "wasm", "src": "/home/jonat/tig/wasm/ar_rec_q8_0/wasm", "cpu": "/home/jonat/tig/work/cpu_q8_0_tagged.json", "engine": "wasm", "logprob_worst_rel_vs_mtstudio": 0.00016270303687022488, "greedy": "40/40", "logits_worst_rel_vs_cpu": 0.0, "top1_vs_cpu": "473/473"}

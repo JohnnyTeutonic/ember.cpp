@@ -1,0 +1,16 @@
+{
+ "gen": 8,
+ "gguf": "/mnt/c/ml_artifacts/attnres_gate_rec/ar_rec/ar_rec.gguf",
+ "greedy_identical": "40/40",
+ "len": 8,
+ "load_ms": 161.886003,
+ "ms_per_prompt": 30.505423175000004,
+ "of": 40,
+ "pass": true,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "320/320",
+ "vocab": 15,
+ "worst_decode_rel": 0.0,
+ "worst_prefill_rel": 0.0
+}
