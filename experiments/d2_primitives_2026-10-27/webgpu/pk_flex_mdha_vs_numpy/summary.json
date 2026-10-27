@@ -1,0 +1,22 @@
+{
+ "gguf": "pk_flex_mdha.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "flex",
+ "prompts": 40,
+ "of": 40,
+ "len": 8,
+ "gen": 8,
+ "vocab": 15,
+ "ctx": 16,
+ "dispatches_per_token": 45,
+ "worst_rel": 2.3025912599305905e-7,
+ "median_rel": 1.2754970667872268e-7,
+ "worst_spec_rel": 2.9587906298355424e-7,
+ "top1_agree": "320/320",
+ "greedy_identical": "40/40",
+ "tol": 0.00001,
+ "gpu_errors": 0,
+ "pass": true,
+ "load_ms": 491.05409999999995,
+ "ms_per_prompt": 152.04196000000007
+}

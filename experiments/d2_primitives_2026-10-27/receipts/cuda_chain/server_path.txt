@@ -1,0 +1,4 @@
+2026-10-27 07:52:40 [INFO] GGUF served by the paperkiln IR interpreter only (family_hint 'flex'): llama weights are not loaded.
+2026-10-27 07:52:40 [INFO] TinyLlamaModel: IR-only GGUF, weights left to the interpreter.
+2026-10-27 07:52:40 [INFO] [IR] interpreter ready: family_hint=flex, 2 blocks of 11 ops, 32 weights bound (0 kept quantised, 0 MiB; f32 4 MiB; dequantised at load), device cpu
+2026-10-27 07:52:40 [WARNING] Running the model through the paperkiln IR interpreter (CPU; family_hint 'flex'). The llama path's weights stay loaded but unused.

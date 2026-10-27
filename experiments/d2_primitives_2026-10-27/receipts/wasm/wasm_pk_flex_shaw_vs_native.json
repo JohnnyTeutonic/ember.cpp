@@ -1,0 +1,16 @@
+{
+ "gen": 8,
+ "gguf": "/home/jonat/d2e/keramos_v1.4.0/conformance/models/pk_flex_shaw/pk_flex_shaw.gguf",
+ "greedy_identical": "40/40",
+ "len": 8,
+ "load_ms": 81.159115,
+ "ms_per_prompt": 3.4991003,
+ "of": 40,
+ "pass": true,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "320/320",
+ "vocab": 15,
+ "worst_decode_rel": 0.0,
+ "worst_prefill_rel": 0.0
+}

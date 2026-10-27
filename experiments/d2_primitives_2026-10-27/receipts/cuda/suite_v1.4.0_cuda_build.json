@@ -1,0 +1,2879 @@
+{
+ "adapter": {
+  "engine": "ember.cpp",
+  "backend": "cpu",
+  "exact": true,
+  "profiles": [
+   "chat",
+   "core",
+   "recurrence",
+   "recursion",
+   "state",
+   "thirdparty"
+  ]
+ },
+ "counts": {
+  "PASS": 413,
+  "FAIL": 0,
+  "SKIP": 52,
+  "XFAIL": 0,
+  "XPASS": 0
+ },
+ "by_kind": {
+  "model": {
+   "PASS": 27,
+   "FAIL": 0,
+   "SKIP": 0,
+   "XFAIL": 0,
+   "XPASS": 0
+  },
+  "trace": {
+   "PASS": 80,
+   "FAIL": 0,
+   "SKIP": 0,
+   "XFAIL": 0,
+   "XPASS": 0
+  },
+  "op": {
+   "PASS": 27,
+   "FAIL": 0,
+   "SKIP": 41,
+   "XFAIL": 0,
+   "XPASS": 0
+  },
+  "refuse": {
+   "PASS": 105,
+   "FAIL": 0,
+   "SKIP": 0,
+   "XFAIL": 0,
+   "XPASS": 0
+  },
+  "digest": {
+   "PASS": 90,
+   "FAIL": 0,
+   "SKIP": 0,
+   "XFAIL": 0,
+   "XPASS": 0
+  },
+  "dequant": {
+   "PASS": 10,
+   "FAIL": 0,
+   "SKIP": 0,
+   "XFAIL": 0,
+   "XPASS": 0
+  },
+  "grad": {
+   "PASS": 0,
+   "FAIL": 0,
+   "SKIP": 11,
+   "XFAIL": 0,
+   "XPASS": 0
+  },
+  "accept": {
+   "PASS": 42,
+   "FAIL": 0,
+   "SKIP": 0,
+   "XFAIL": 0,
+   "XPASS": 0
+  },
+  "chat": {
+   "PASS": 32,
+   "FAIL": 0,
+   "SKIP": 0,
+   "XFAIL": 0,
+   "XPASS": 0
+  }
+ },
+ "results": [
+  {
+   "id": "model/pk_attnres",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 8.99e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_attnres_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/pk_flex_expr",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 1.09e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_flex_expr_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/pk_flex_highway",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 6.34e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_flex_highway_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/pk_flex_mdha",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 1.09e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_flex_mdha_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/pk_flex_mdha_snapshot",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "5 steps"
+  },
+  {
+   "id": "model/pk_flex_shaw",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 9.36e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_flex_shaw_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/pk_flex_t5",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 1.06e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_flex_t5_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/pk_gpt2",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 8.98e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_gpt2_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/pk_gpt2_swa",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 6.06e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_gpt2_swa_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/pk_kimi",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 5.62e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_kimi_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/pk_kimi_snapshot",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "5 steps"
+  },
+  {
+   "id": "model/pk_llama",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 5.71e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_llama_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/pk_llama_truncate",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "model/pk_llama_attnres",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 8.98e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_llama_attnres_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/pk_llama_attnres_rec",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 8.42e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_llama_attnres_rec_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/pk_mamba",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 9.41e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_mamba_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/pk_mamba_snapshot",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "5 steps"
+  },
+  {
+   "id": "model/pk_moe",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 5.84e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_moe_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/pk_mor",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 1.59e-07; greedy 4/4; depth traces 4/4"
+  },
+  {
+   "id": "trace/pk_mor_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/pk_mor_truncate",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "model/pk_recurrence",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 9.10e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_recurrence_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/pk_recurrence_snapshot",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "5 steps"
+  },
+  {
+   "id": "model/pk_recursive",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 1.09e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_recursive_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/pk_srd",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 1.14e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_srd_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/pk_srd_snapshot",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "5 steps"
+  },
+  {
+   "id": "model/pk_state",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 9.74e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_state_evict_on",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "9 steps"
+  },
+  {
+   "id": "trace/pk_state_evict_off",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "9 steps"
+  },
+  {
+   "id": "trace/pk_state_rewind_evicted",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "trace/pk_state_rewind_current",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "trace/pk_state_rewind_at_block",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "model/tp_gemma3",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 6.07e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/tp_gemma3_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/tp_gptneox",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 2.43e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/tp_gptneox_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/tp_llama_hd16",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 3.61e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/tp_llama_hd16_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/tp_llama_hd16_truncate",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "model/tp_mamba1",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 4.53e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/tp_mamba1_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/tp_mamba1_snapshot",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "5 steps"
+  },
+  {
+   "id": "model/tp_mistral",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 2.63e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/tp_mistral_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/tp_mistral_hd16",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 4.76e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/tp_mistral_hd16_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "model/tp_qwen3",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 3.37e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/tp_qwen3_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/tp_qwen3_truncate",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "model/tp_qwen3_hd16",
+   "kind": "model",
+   "verdict": "PASS",
+   "detail": "log-probs worst 4.06e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/tp_qwen3_hd16_decode",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/tp_qwen3_hd16_truncate",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "op/embedding/rows",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/embedding/state_weight",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/pos_embedding/rows",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/linear/bias",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/linear/no_bias",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/linear/tied_to",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/scale/bias",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/scale/no_bias",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/split/three",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/rmsnorm/row",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/rmsnorm/group",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/rmsnorm/weight_offset",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/layernorm/row",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/gelu/tanh",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/gelu/none",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/silu/x",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/sigmoid/x",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/relu/x",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/add/ab",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/mul/ab",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/sub/ab",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/affine/scale_shift",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/mul_col/x_c",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/rms_row/eps",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/rope/interleaved",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/rope/neox",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/rope/neox_partial",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/rope/freq_scale",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/rope/grouped_query",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/rope/first_head",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/attention/causal",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 7.04e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/window_sinks",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 7.04e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/grouped_query",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 9.89e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/position_bias",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 1.60e-07 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/position_bias_window_sinks",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 1.59e-07 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/position_bias_grouped_query",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 1.10e-07 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/relative_kv",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 7.38e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/relative_kv_per_head",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 4.19e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/relative_kv_keys_only",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 1.27e-07 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/relative_kv_window_sinks",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 7.38e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/relative_kv_grouped_query",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 1.14e-07 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/relative_kv_distance_zero",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "a worst 1.19e-07 of max(1, |ref|)"
+  },
+  {
+   "id": "op/moe_ffn/renorm",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/moe_ffn/raw",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/list/two",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/append/one",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/depth_attend/one_source",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/depth_attend/three_sources",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/depth_attend/eps_default",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/expr/gelu_sigmoid",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y worst 1.61e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/expr/relu_squared",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y worst 0.00e+00 of max(1, |ref|)"
+  },
+  {
+   "id": "op/expr/where_rowmean",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y worst 0.00e+00 of max(1, |ref|)"
+  },
+  {
+   "id": "op/expr/layer_norm",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y worst 0.00e+00 of max(1, |ref|)"
+  },
+  {
+   "id": "op/expr/rowsum_constant",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y worst 0.00e+00 of max(1, |ref|)"
+  },
+  {
+   "id": "op/expr/depth_200",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y worst 0.00e+00 of max(1, |ref|)"
+  },
+  {
+   "id": "op/linear_attention/two_heads",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/ssm_scan/n4",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/conv1d_causal/k4",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/selective_scan/d3n2",
+   "kind": "op",
+   "verdict": "SKIP",
+   "detail": "run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other ops)"
+  },
+  {
+   "id": "op/recurrence/linear_attention_body",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y worst 4.89e-08 of max(1, |ref|); state lin.num worst 2.90e-08 of max(1, |ref|); state lin.den worst 5.87e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/recurrence/ssm_scan_body",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y 0 values differ in their bits; state ssm.s 0 values differ in their bits"
+  },
+  {
+   "id": "op/recurrence/conv1d_causal_body",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y 0 values differ in their bits; state conv.x 0 values differ in their bits"
+  },
+  {
+   "id": "op/recurrence/selective_scan_body",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y worst 1.81e-07 of max(1, |ref|); state ssm.s worst 2.47e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/recurrence/rnn_init_offset",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y worst 8.28e-08 of max(1, |ref|); state rnn.h worst 5.96e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/recurrence/ema_bias_corrected",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y worst 0.00e+00 of max(1, |ref|); state avg.m worst 0.00e+00 of max(1, |ref|); state avg.n worst 0.00e+00 of max(1, |ref|)"
+  },
+  {
+   "id": "op/recurrence/ema_exact",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y 0 values differ in their bits; state avg.m 0 values differ in their bits; state avg.n 0 values differ in their bits"
+  },
+  {
+   "id": "op/recurrence/square_weight_declaration",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y 0 values differ in their bits; state sq.h 0 values differ in their bits"
+  },
+  {
+   "id": "op/recurrence/read_beyond_declaration",
+   "kind": "op",
+   "verdict": "PASS",
+   "detail": "y 0 values differ in their bits; state pad.h 0 values differ in their bits"
+  },
+  {
+   "id": "refuse/unknown_op",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR op 'warp' (block) has no CPU kernel in ember's interpreter"
+  },
+  {
+   "id": "refuse/unknown_attribute",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.5 (rule 4): doc.block.nodes[5] (attention) has the key 'temperature', which its specification does not define"
+  },
+  {
+   "id": "refuse/unknown_top_key",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.2 (rule 1): doc has the key 'profiles', which its specification does not define"
+  },
+  {
+   "id": "refuse/version_2",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR version 2 is not supported (ember reads 0 and 1)"
+  },
+  {
+   "id": "refuse/repeat_ne_n_layers",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR weight 'blk.2.attn_norm.weight' is not in the GGUF"
+  },
+  {
+   "id": "refuse/model_ctx_missing",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'ctx'; IR_SPEC 3.3: model.ctx missing or not a positive integer"
+  },
+  {
+   "id": "refuse/per_layer_wrong_length",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR rope: per-layer 'theta' has 1 entries for 2 blocks"
+  },
+  {
+   "id": "refuse/per_layer_in_head",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR rmsnorm: a per-layer 'eps' is not implemented in ember"
+  },
+  {
+   "id": "refuse/add_one_input",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 10.1 rule 7: block[7] add reads 1 value(s), not 2"
+  },
+  {
+   "id": "refuse/rope_pairing_unknown",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR rope pairing 'halves' is not implemented in ember"
+  },
+  {
+   "id": "refuse/rope_n_rot_odd",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR rope: n_rot 3 / head_dim 8 (kv state head_dim 8) is not usable"
+  },
+  {
+   "id": "refuse/attention_not_causal",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR attention with causal=false is not implemented in ember"
+  },
+  {
+   "id": "refuse/attention_heads_not_multiple",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR attention: heads 3 is not a multiple of kv_heads 2"
+  },
+  {
+   "id": "refuse/attention_window_differs",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15: attention window 4 (application 0) differs from its kv state kv's 0"
+  },
+  {
+   "id": "refuse/slot_declared_twice",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.1: state slot kv declared twice"
+  },
+  {
+   "id": "refuse/slot_unread",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.1: state slot kv2 is read by no node"
+  },
+  {
+   "id": "refuse/slot_unknown_kind",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR state kind 'paged' has no CPU implementation in ember"
+  },
+  {
+   "id": "refuse/attention_no_slot",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.1: block: attention reads state 'nowhere', not a declared kv slot; IR_SPEC 6.1: state slot kv is read by no no"
+  },
+  {
+   "id": "refuse/kv_slot_field_missing",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.2 (rule 12): doc.block.state[0] lacks the required key 'max_len'; IR_SPEC 6.2: kv state kv: max_len missing"
+  },
+  {
+   "id": "refuse/tensor_index_without_weight_index",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 7.2: block[1] linear: tensor_index needs a block with weight_index"
+  },
+  {
+   "id": "refuse/name_with_i_outside_block",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR weight 'blk.{i}.output_norm.weight' uses {i} outside the block"
+  },
+  {
+   "id": "refuse/evict_on_causal",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR kv state evict turn_state needs every attention node to have mask turn_state"
+  },
+  {
+   "id": "refuse/missing_tensor",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR weight 'blk.0.nope.weight' is not in the GGUF"
+  },
+  {
+   "id": "refuse/gelu_approx_unknown",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR gelu approx 'sigmoid' is not implemented in ember"
+  },
+  {
+   "id": "refuse/split_count",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.5: block[2] split: 2 sizes for 3 outputs"
+  },
+  {
+   "id": "refuse/expr_does_not_parse",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR expr: expected an operand, got the end at column 7 in \"max(x,\""
+  },
+  {
+   "id": "refuse/moe_top_k_too_large",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.16: block[9] moe_ffn: top_k 5 is not in 1 .. n_experts 4"
+  },
+  {
+   "id": "refuse/moe_gate_norm_unknown",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR moe_ffn gate_norm 'topk' is not implemented"
+  },
+  {
+   "id": "refuse/recurrent_dtype_f16",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR recurrent state 'lin': dtype must be f32"
+  },
+  {
+   "id": "refuse/recurrent_shape_mismatch",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR recurrent state 'lin': num is not [heads, head_dim]"
+  },
+  {
+   "id": "refuse/recurrent_op_mismatch",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR recurrent state 'lin' belongs to op 'ssm_scan', not linear_attention"
+  },
+  {
+   "id": "refuse/linear_attention_not_causal",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR linear_attention with causal=false is not implemented in ember"
+  },
+  {
+   "id": "refuse/conv_kernel_one",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR conv1d_causal needs channels >= 1 and kernel >= 2"
+  },
+  {
+   "id": "refuse/weight_index_wrong_length",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR block weight_index has 3 entries for 4 block applications"
+  },
+  {
+   "id": "refuse/weight_index_unused_layer",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR block weight_index never uses stored layer 1"
+  },
+  {
+   "id": "refuse/weight_index_negative",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR block weight_index entries must be integers >= 0"
+  },
+  {
+   "id": "refuse/mor_route_not_first",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR depth_route must be the block's first node"
+  },
+  {
+   "id": "refuse/mor_expert_choice",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR depth_route route 'expert_choice' is not implemented in ember (causal token choice only)"
+  },
+  {
+   "id": "refuse/mor_unequal_steps",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR depth_route step: application 2 has step 0, expected 1 (consecutive, ascending, equal-length steps)"
+  },
+  {
+   "id": "refuse/mor_steps_descending",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR depth_route step: application 1 has step 2, expected 0 (consecutive, ascending, equal-length steps)"
+  },
+  {
+   "id": "refuse/mor_step_length_wrong",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR depth_route: per-layer 'step' has 4 entries for 5 blocks"
+  },
+  {
+   "id": "refuse/mor_no_kv_rows_active",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR depth_route needs a kv state with kv_rows \"active\""
+  },
+  {
+   "id": "refuse/mor_kv_from",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR kv state: kv_from (recursive KV sharing) is not implemented in ember"
+  },
+  {
+   "id": "refuse/mor_gate_unknown",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR depth_route gate 'sigmoid' is not score or none"
+  },
+  {
+   "id": "refuse/mor_router_with_i",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR depth_route weight names its tensor in full (no {i})"
+  },
+  {
+   "id": "refuse/mor_kv_rows_shared",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR kv state: kv_rows '\"shared\"' is not implemented in ember"
+  },
+  {
+   "id": "refuse/mor_route_in_head",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR head op 'depth_route' is not row-wise"
+  },
+  {
+   "id": "refuse/turn_state_with_window",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR attention mask turn_state needs window 0 and sinks 0 (block 0 has window 4, sinks 0)"
+  },
+  {
+   "id": "refuse/turn_state_without_state_weight",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: paperkiln.state_tokens.k is 2 but the IR's embedding has no state_weight"
+  },
+  {
+   "id": "refuse/evict_without_mask",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR kv state evict turn_state needs every attention node to have mask turn_state"
+  },
+  {
+   "id": "refuse/evict_unknown",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR kv state: evict \"oldest\" is not implemented in ember (turn_state only)"
+  },
+  {
+   "id": "refuse/mask_unknown",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR attention mask \"sliding\" is not implemented in ember (causal or turn_state)"
+  },
+  {
+   "id": "refuse/state_weight_with_i",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR embedding state_weight names its tensor in full (no {i})"
+  },
+  {
+   "id": "refuse/two_state_weights",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR: more than one embedding with a state_weight"
+  },
+  {
+   "id": "refuse/state_weight_wrong_name",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR weight 'nope.weight' is not in the GGUF"
+  },
+  {
+   "id": "refuse/recurrence_body_does_not_parse",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 31): update[1] does not parse: expected an operand at column 22"
+  },
+  {
+   "id": "refuse/recurrence_name_twice",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 31): the name 'num' is declared twice"
+  },
+  {
+   "id": "refuse/recurrence_rowsum",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 31): readout uses rowsum at column 10 (the row reductions are not part of a recurrence body; sum repl"
+  },
+  {
+   "id": "refuse/recurrence_index_size_zero",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 31): index 'e' has size 0, not a positive integer"
+  },
+  {
+   "id": "refuse/recurrence_index_out_of_scope",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 32): readout: sum over index 'h' at column 14, which is already in scope"
+  },
+  {
+   "id": "refuse/recurrence_init_reads_input",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 32): init[0] reads 'q' at column 12, which its section cannot read"
+  },
+  {
+   "id": "refuse/recurrence_rank_mismatch",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 32): update[1] reads 'den' at column 12 with 1 index(es); it has 2 dimension(s)"
+  },
+  {
+   "id": "refuse/recurrence_index_undeclared",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 32): readout: index 'f' at column 16 is not declared"
+  },
+  {
+   "id": "refuse/recurrence_slot_shape",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 33): the slot \"lin\"'s tensor 'num' has shape [16], the update's is [2,8]"
+  },
+  {
+   "id": "refuse/recurrence_slot_missing_tensor",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 33): the slot \"lin\" has no tensor 'den' (the update assigns it)"
+  },
+  {
+   "id": "refuse/recurrence_init_flag",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 33): the slot \"lin\"'s tensor 'num' has init \"body\", not 0 (the node's init does not assign it)"
+  },
+  {
+   "id": "refuse/recurrence_weight_size",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 34): recurrence weight A reads 'blk.0.ssm_b.weight', which has 8 elements; its declaration has 64"
+  },
+  {
+   "id": "refuse/recurrence_assignment_repeats_index",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 32): readout[0]: the assignment repeats index 'h' at column 5"
+  },
+  {
+   "id": "refuse/recurrence_bare_undeclared_name",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 6.10 (rule 32): readout: 'foo' at column 21 is not declared"
+  },
+  {
+   "id": "refuse/reads_unwritten_value",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.5 (rule 36): block[7] add reads 'nowhere', which no node before it writes (application 0)"
+  },
+  {
+   "id": "refuse/embed_writes_no_x",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.5 (rule 36): the embed section writes no 'x'; IR_SPEC 3.5 (rule 36): block[0] rmsnorm reads 'x', which no node"
+  },
+  {
+   "id": "refuse/head_writes_no_logits",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.5 (rule 36): the head writes no 'logits'"
+  },
+  {
+   "id": "refuse/mor_reads_outside_value",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 7.4 (rule 36): block[1] add reads 'e', outside what a depth_route step sees (x, pos and the values written befor"
+  },
+  {
+   "id": "refuse/mor_step_gap",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR depth_route step: the recursion is not R equal steps"
+  },
+  {
+   "id": "refuse/mor_reads_tokens",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.5: block[1] add reads the graph input 'tokens' as its input 1; IR_SPEC 7.4 (rule 36): block[1] add reads 'toke"
+  },
+  {
+   "id": "refuse/mor_reads_route_out",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 7.4: block[1] add reads depth_route's out 'rec_depth' (the depth report)"
+  },
+  {
+   "id": "refuse/position_bias_bucket_negative",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 39): doc.block.nodes[5].position_bias.buckets[1] -1 is below the minimum 0; IR_SPEC 5.15 (rule 39): b"
+  },
+  {
+   "id": "refuse/position_bias_buckets_empty",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 39): doc.block.nodes[5].position_bias.buckets needs at least 1 item(s); IR_SPEC 5.15 (rule 39): block"
+  },
+  {
+   "id": "refuse/position_bias_table_shape",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 39): block[5] attention position_bias 'token_embd.weight' (application 0) has ne [16, 15], not {heads"
+  },
+  {
+   "id": "refuse/position_bias_per_layer",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR attention: a per-layer 'position_bias' is not implemented in ember"
+  },
+  {
+   "id": "refuse/tensor_index_in_head",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 7.2: head[0] depth_attend: tensor_index needs a block with weight_index"
+  },
+  {
+   "id": "refuse/tensor_index_value_unknown",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.5 (rule 5): doc.block.nodes[0].tensor_index \"stored\" is not one of [\"application\"]"
+  },
+  {
+   "id": "refuse/tensor_index_on_affine",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.5 (rule 4): doc.block.nodes[1] (affine) has the key 'tensor_index', which its specification does not define"
+  },
+  {
+   "id": "refuse/tensor_index_absent_application_tensor",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR weight 'blk.3.attn_norm.weight' is not in the GGUF"
+  },
+  {
+   "id": "refuse/relative_kv_distance_negative",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv.max_distance -1 is below the minimum 0"
+  },
+  {
+   "id": "refuse/relative_kv_without_key",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv lacks the required key 'key'; IR_SPEC 5.15 (rule 40): block[5] at"
+  },
+  {
+   "id": "refuse/relative_kv_unknown_field",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv has the key 'buckets', which its specification does not define; I"
+  },
+  {
+   "id": "refuse/relative_kv_key_shape",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): block[5] attention relative_kv key 'token_embd.weight' (application 0) has ne [16, 15], not {hea"
+  },
+  {
+   "id": "refuse/relative_kv_value_shape",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): block[5] attention relative_kv value 'output_norm.weight' (application 0) has ne [16], not {head"
+  },
+  {
+   "id": "refuse/relative_kv_with_position_bias",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): block[5] attention: relative_kv and position_bias on one node (revision 1.4 defines each alone);"
+  },
+  {
+   "id": "refuse/relative_kv_per_layer",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR attention: a per-layer 'relative_kv' is not implemented in ember"
+  },
+  {
+   "id": "refuse/duplicate_member_top",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.2 (rule 35): an object holds the member name \"family_hint\" twice (nesting depth 1): a document names each memb"
+  },
+  {
+   "id": "refuse/duplicate_member_node",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.2 (rule 35): an object holds the member name \"causal\" twice (nesting depth 4): a document names each member of"
+  },
+  {
+   "id": "refuse/duplicate_member_prose",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.2 (rule 35): an object holds the member name \"a\" twice (nesting depth 2): a document names each member of an o"
+  },
+  {
+   "id": "refuse/version_key_mismatch",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.1: paperkiln.ir_version 7 does not match the document's ir_version 1"
+  },
+  {
+   "id": "refuse/state_tokens_k_mismatch",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: paperkiln.state_tokens.k is 3, the IR's state_weight 'state_embd.weight' has 2 rows"
+  },
+  {
+   "id": "refuse/state_template_not_v1",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 8.2: state tokens are defined over paperkiln/1 only, not paperkiln/2"
+  },
+  {
+   "id": "refuse/weight_index_block_count",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR block weight_index uses 3 stored layers, the file's paperkiln.block_count is 9"
+  },
+  {
+   "id": "refuse/state_tokens_arch_llama",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 8.2: state tokens need architecture paperkiln, not llama; IR_SPEC 3.1 (rule 38): general.architecture 'llama': i"
+  },
+  {
+   "id": "refuse/duplicate_member_embedded",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.2 (rule 35): an object holds the member name \"ctx\" twice (nesting depth 2): a document names each member of an"
+  },
+  {
+   "id": "refuse/architecture_kimi_as_gpt2",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.1 (rule 38): general.architecture 'gpt2': the embedded document is not the gpt2 graph its metadata describes ("
+  },
+  {
+   "id": "refuse/architecture_swa_as_gpt2",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.1 (rule 38): general.architecture 'gpt2': the embedded document is not the gpt2 graph its metadata describes ("
+  },
+  {
+   "id": "refuse/architecture_metadata_disagrees",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.1 (rule 38): general.architecture 'llama': the embedded document is not the llama graph its metadata describes"
+  },
+  {
+   "id": "refuse/architecture_without_graph",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.1 (rule 38): general.architecture 'phi3' is neither \"paperkiln\" nor an architecture of section 9.3; a file who"
+  },
+  {
+   "id": "refuse/architecture_substituted_document",
+   "kind": "refuse",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 3.1 (rule 38): general.architecture 'gpt2': the embedded document is not the gpt2 graph its metadata describes ("
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_0000000000000000",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_0000000000000001",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_8000000000000001",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_7fefffffffffffff",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_ffefffffffffffff",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_4340000000000000",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_c340000000000000",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_4430000000000000",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_44b52d02c7e14af5",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_44b52d02c7e14af6",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_44b52d02c7e14af7",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_444b1ae4d6e2ef4e",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_444b1ae4d6e2ef4f",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_444b1ae4d6e2ef50",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_3eb0c6f7a0b5ed8c",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_3eb0c6f7a0b5ed8d",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_41b3de4355555553",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_41b3de4355555554",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_41b3de4355555555",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_41b3de4355555556",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_41b3de4355555557",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_becbf647612f3696",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/rfc8785_number_43143ff3c1cb0959",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/f32_eps",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/f32_rope_theta",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/f32_scale",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/f32_den_floor",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/integer_2p53",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/negative_integer",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/minus_zero_integer_form",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/exponent_form",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_controls",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_controls_escaped",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_escapes",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_escapes_escaped",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_line_separators",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_line_separators_escaped",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_astral",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_astral_escaped",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_accents",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_accents_escaped",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_names",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/string_names_escaped",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/key_order_utf16",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/nesting",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/prose_removed",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/prose_kept_in_serialiser_test",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_attnres",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_flex_expr",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_flex_highway",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_flex_mdha",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_flex_shaw",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_flex_t5",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_gpt2",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_gpt2_swa",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_kimi",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_llama",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_llama_attnres",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_llama_attnres_rec",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_mamba",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_moe",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_mor",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_recurrence",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_recursive",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_srd",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_state",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_tp_gemma3",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_tp_gptneox",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_tp_llama_hd16",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_tp_mamba1",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_tp_mistral",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_tp_mistral_hd16",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_tp_qwen3",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_tp_qwen3_hd16",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/negative_zero",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/integer_beyond_2p53",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/overflow",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/duplicate_key",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/lone_surrogate",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/nan_literal",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/prose_overflow",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/prose_negative_zero",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/prose_integer_beyond_2p53",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/prose_lone_surrogate",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/prose_key_lone_surrogate",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/prose_duplicate_key",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "digest/vectors/fraction_form_beyond_2p53",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/exponent_form_1e300",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/negative_integer_2p53",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/negative_integer_beyond_2p53",
+   "kind": "digest",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "dequant/blocks/f32",
+   "kind": "dequant",
+   "verdict": "PASS",
+   "detail": "0 values differ in their bits"
+  },
+  {
+   "id": "dequant/blocks/f16",
+   "kind": "dequant",
+   "verdict": "PASS",
+   "detail": "0 values differ in their bits"
+  },
+  {
+   "id": "dequant/blocks/q4_0",
+   "kind": "dequant",
+   "verdict": "PASS",
+   "detail": "0 values differ in their bits"
+  },
+  {
+   "id": "dequant/blocks/q5_0",
+   "kind": "dequant",
+   "verdict": "PASS",
+   "detail": "0 values differ in their bits"
+  },
+  {
+   "id": "dequant/blocks/q5_1",
+   "kind": "dequant",
+   "verdict": "PASS",
+   "detail": "0 values differ in their bits"
+  },
+  {
+   "id": "dequant/blocks/q8_0",
+   "kind": "dequant",
+   "verdict": "PASS",
+   "detail": "0 values differ in their bits"
+  },
+  {
+   "id": "dequant/blocks/q4_k",
+   "kind": "dequant",
+   "verdict": "PASS",
+   "detail": "0 values differ in their bits"
+  },
+  {
+   "id": "dequant/blocks/q5_k",
+   "kind": "dequant",
+   "verdict": "PASS",
+   "detail": "0 values differ in their bits"
+  },
+  {
+   "id": "dequant/blocks/q6_k",
+   "kind": "dequant",
+   "verdict": "PASS",
+   "detail": "0 values differ in their bits"
+  },
+  {
+   "id": "dequant/blocks/bf16",
+   "kind": "dequant",
+   "verdict": "PASS",
+   "detail": "0 values differ in their bits"
+  },
+  {
+   "id": "grad/recurrence/linear_attention_body",
+   "kind": "grad",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/recurrence/ssm_scan_body",
+   "kind": "grad",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/recurrence/conv1d_causal_body",
+   "kind": "grad",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/recurrence/selective_scan_body",
+   "kind": "grad",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/recurrence/rnn_init_offset",
+   "kind": "grad",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/recurrence/ema_bias_corrected",
+   "kind": "grad",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/recurrence/ema_exact",
+   "kind": "grad",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/recurrence/square_weight_declaration",
+   "kind": "grad",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/attention/relative_kv",
+   "kind": "grad",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/attention/relative_kv_per_head_grouped_query",
+   "kind": "grad",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/attention/relative_kv_keys_only",
+   "kind": "grad",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "trace/pk_kimi_recurrence",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "9 steps"
+  },
+  {
+   "id": "trace/pk_srd_recurrence",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "9 steps"
+  },
+  {
+   "id": "trace/pk_mamba_recurrence",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "9 steps"
+  },
+  {
+   "id": "trace/tp_mamba1_recurrence",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "9 steps"
+  },
+  {
+   "id": "trace/pk_srd_truncate",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "trace/tp_mamba1_truncate",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "trace/pk_flex_mdha_truncate",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "trace/pk_gpt2_swa_rewind_window",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "trace/tp_gemma3_rewind_window",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "trace/tp_mistral_hd16_rewind_window",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "trace/pk_attnres_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_flex_expr_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_flex_highway_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_flex_mdha_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_flex_shaw_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_flex_t5_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_gpt2_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_gpt2_swa_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_kimi_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_llama_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_llama_attnres_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_llama_attnres_rec_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_mamba_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_moe_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_mor_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_recurrence_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_recursive_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_srd_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_state_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/tp_gemma3_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/tp_gptneox_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/tp_llama_hd16_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/tp_mamba1_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/tp_mistral_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/tp_mistral_hd16_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/tp_qwen3_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/tp_qwen3_hd16_chunks",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_llama_attnres_rec_untagged",
+   "kind": "trace",
+   "verdict": "PASS",
+   "detail": "5 steps"
+  },
+  {
+   "id": "accept/documents/model_pk_attnres",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_flex_expr",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_flex_highway",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_flex_mdha",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_flex_shaw",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_flex_t5",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_gpt2",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_gpt2_swa",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_kimi",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_llama",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_llama_attnres",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_llama_attnres_rec",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_mamba",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_moe",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_mor",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_recurrence",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_recursive",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_srd",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_state",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_tp_gemma3",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_tp_gptneox",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_tp_llama_hd16",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_tp_mamba1",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_tp_mistral",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_tp_mistral_hd16",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_tp_qwen3",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_tp_qwen3_hd16",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/rewritten_pk_kimi",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/rewritten_pk_srd",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/rewritten_pk_mamba",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/rewritten_tp_mamba1",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/example_attnres_tiny",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/example_chat_sftfinal",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/example_flex_highway_tiny",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/example_gpt2_tiny",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/example_kimi_tiny",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/example_mamba_tiny",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/example_moe_tiny",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/example_srd_tiny",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/example_swa_tiny",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/substituted_over_duplicate_embedded",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/untagged_application_queries",
+   "kind": "accept",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "chat/render/one user prompt",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/system folds into the first user turn",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/a lone system message",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/a system message with no user message",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/two system messages",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/a system message mid-conversation",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/the assistant first",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/two user messages in a row",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/a training conversation ending on a user message",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/a prompt ending on an assistant message",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/user content holding a role marker",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/system content holding end-of-text",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/assistant content holding a marker",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/<unk> text is ordinary content",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/newline-only user content",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/newline-only and empty replies in the history",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/the tool role is reserved",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/an unknown role",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/three exchanges with a system message",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/a training conversation with a system message",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/loss on a user message",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/unicode content",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/system mode none refuses a system message",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "refused"
+  },
+  {
+   "id": "chat/render/system mode none without one",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/legacy word-level prompt",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/gemma3 trims and folds",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/gemma3 trims unicode edge whitespace",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/gemma3 trims unicode whitespace in system and history",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/gemma3 keeps inner unicode whitespace and zero-width space",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/qwen3 strips past reasoning",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/qwen2.5 writes its default system turn",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  },
+  {
+   "id": "chat/render/qwen3 thinking off",
+   "kind": "chat",
+   "verdict": "PASS",
+   "detail": "text equal"
+  }
+ ]
+}

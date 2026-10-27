@@ -1,0 +1,117 @@
+{
+ "op": [
+  {
+   "case": "relative_kv",
+   "out": "a",
+   "elements": 72,
+   "bit_equal": 30,
+   "worst_ulp": 32,
+   "worst_of_max1": 7.383753144002089e-08
+  },
+  {
+   "case": "relative_kv_per_head",
+   "out": "a",
+   "elements": 72,
+   "bit_equal": 37,
+   "worst_ulp": 16,
+   "worst_of_max1": 4.188138905825257e-08
+  },
+  {
+   "case": "relative_kv_keys_only",
+   "out": "a",
+   "elements": 72,
+   "bit_equal": 27,
+   "worst_ulp": 82,
+   "worst_of_max1": 1.274555425508417e-07
+  },
+  {
+   "case": "relative_kv_window_sinks",
+   "out": "a",
+   "elements": 72,
+   "bit_equal": 21,
+   "worst_ulp": 24,
+   "worst_of_max1": 7.383753144002089e-08
+  },
+  {
+   "case": "relative_kv_grouped_query",
+   "out": "a",
+   "elements": 72,
+   "bit_equal": 32,
+   "worst_ulp": 16,
+   "worst_of_max1": 1.1448495736351218e-07
+  },
+  {
+   "case": "relative_kv_distance_zero",
+   "out": "a",
+   "elements": 72,
+   "bit_equal": 40,
+   "worst_ulp": 32,
+   "worst_of_max1": 1.1908362766836639e-07
+  }
+ ],
+ "refuse": [
+  {
+   "case": "relative_kv_distance_negative",
+   "cited": "IR_SPEC 5.15 (rule 40)",
+   "accepted": false,
+   "message": "IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv.max_distance -1 is below the minimum 0",
+   "doc_only_accepted": false,
+   "doc_only_message": "IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv.max_distance -1 is below the minimum 0",
+   "cites_rule": true
+  },
+  {
+   "case": "relative_kv_key_shape",
+   "cited": "IR_SPEC 5.15 (rule 40)",
+   "accepted": false,
+   "message": "IR_SPEC 5.15 (rule 40): block[5] attention relative_kv key 'token_embd.weight' (application 0) has ne [16, 15], not {head_dim or heads * head_dim, max_distance + 1} = {8 or 16, 4}",
+   "doc_only_accepted": true,
+   "doc_only_message": null,
+   "cites_rule": true
+  },
+  {
+   "case": "relative_kv_per_layer",
+   "cited": "IR_SPEC 3.8 (rule 6)",
+   "accepted": false,
+   "message": "IR attention: a per-layer 'relative_kv' is not implemented in ember",
+   "doc_only_accepted": false,
+   "doc_only_message": "IR_SPEC 3.8 (rule 6): doc.block.nodes[5].relative_kv lacks the required key 'key'; IR_SPEC 3.8 (rule 6): doc.block.nodes[5].relative_kv lacks the required key 'max_distance'; IR_SPEC 3.8 (rule 6): doc.block.nodes[5].relative_kv has the key 'per_layer', which its specification does not define; IR_SPEC 3.8: block[5] attention: 'relative_kv' is structural and cannot be per-layer",
+   "cites_rule": true
+  },
+  {
+   "case": "relative_kv_unknown_field",
+   "cited": "IR_SPEC 5.15 (rule 40)",
+   "accepted": false,
+   "message": "IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv has the key 'buckets', which its specification does not define; IR_SPEC 5.15 (rule 40): block[5] attention relative_kv key 'token_embd.weight' (application 0) has ne [16, 15], not {head_dim or heads * head_dim, max_distance + 1} = {8 or 16, 3}",
+   "doc_only_accepted": false,
+   "doc_only_message": "IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv has the key 'buckets', which its specification does not define",
+   "cites_rule": true
+  },
+  {
+   "case": "relative_kv_value_shape",
+   "cited": "IR_SPEC 5.15 (rule 40)",
+   "accepted": false,
+   "message": "IR_SPEC 5.15 (rule 40): block[5] attention relative_kv value 'output_norm.weight' (application 0) has ne [16], not {head_dim or heads * head_dim, max_distance + 1} = {8 or 16, 15}",
+   "doc_only_accepted": true,
+   "doc_only_message": null,
+   "cites_rule": true
+  },
+  {
+   "case": "relative_kv_with_position_bias",
+   "cited": "IR_SPEC 5.15 (rule 40)",
+   "accepted": false,
+   "message": "IR_SPEC 5.15 (rule 40): block[5] attention: relative_kv and position_bias on one node (revision 1.4 defines each alone); IR_SPEC 5.15 (rule 39): block[5] attention position_bias 'token_embd.weight' (application 0) has ne [16, 15], not {heads, B} = {2, B} with B greater than every bucket (0)",
+   "doc_only_accepted": false,
+   "doc_only_message": "IR_SPEC 5.15 (rule 40): block[5] attention: relative_kv and position_bias on one node (revision 1.4 defines each alone)",
+   "cites_rule": true
+  },
+  {
+   "case": "relative_kv_without_key",
+   "cited": "IR_SPEC 5.15 (rule 40)",
+   "accepted": false,
+   "message": "IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv lacks the required key 'key'; IR_SPEC 5.15 (rule 40): block[5] attention relative_kv value 'token_embd.weight' (application 0) has ne [16, 15], not {head_dim or heads * head_dim, max_distance + 1} = {8 or 16, 3}",
+   "doc_only_accepted": false,
+   "doc_only_message": "IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv lacks the required key 'key'",
+   "cites_rule": true
+  }
+ ]
+}

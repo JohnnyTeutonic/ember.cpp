@@ -1,0 +1,13 @@
+18:48:47 new T4 session ember-d2c-1027
+18:48:53 uploaded d2_vm_chain.sh
+18:48:56 uploaded COMMITS
+18:49:02 uploaded small.tgz
+18:49:08 uploaded ember.tgz
+18:49:43 launched
+18:50:47 state=RUNNING HAS_CUDA:BOOL=ON
+18:51:53 state=RUNNING HAS_CUDA:BOOL=ON
+18:52:57 state=DONE === done Tue Oct 27 07:52:41 AM UTC 2026 ===
+18:53:00 results (DONE) in /mnt/c/ml_artifacts/ember_d2_gate/ember-d2c-1027
+18:53:01 stopping ember-d2c-1027 (attempt 1)
+
+[exited with code 0]

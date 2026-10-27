@@ -1,0 +1,2 @@
+n=42 reply identical 42, token count 42, stop reason 42, prompt tokens == bpe.py 42
+mtstudio here = the chain's recorded mtstudio_greedy.jsonl: 42/42; ember = recorded: 42/42

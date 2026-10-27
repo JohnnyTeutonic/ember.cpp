@@ -1,0 +1,101 @@
+{
+ "runs": {
+  "pk_flex_mdha_vs_native": {
+   "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+   "prompts": 40,
+   "len": 8,
+   "gen": 8,
+   "dispatches_per_token": 45,
+   "greedy_identical": "40/40",
+   "top1_agree": "320/320",
+   "worst_rel": 2.2356688387586728e-07,
+   "median_rel": 1.2829673289483007e-07,
+   "worst_spec_rel": 2.930146837715942e-07,
+   "tol": 0.0001,
+   "pass": true,
+   "ms_per_prompt": 140.9346625,
+   "rc": 0,
+   "monitor": "# rc 0; GPU-counter checks 1, hardware GPU contexts 0; wall 6.7 s",
+   "log_tail": [
+    " \"load_ms\": 460.94100000000003,",
+    " \"ms_per_prompt\": 140.9346625",
+    "}",
+    "# rc 0; GPU-counter checks 1, hardware GPU contexts 0; wall 6.7 s"
+   ],
+   "as_expected": true
+  },
+  "pk_flex_mdha_vs_numpy": {
+   "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+   "prompts": 40,
+   "len": 8,
+   "gen": 8,
+   "dispatches_per_token": 45,
+   "greedy_identical": "40/40",
+   "top1_agree": "320/320",
+   "worst_rel": 2.3025912599305905e-07,
+   "median_rel": 1.2754970667872268e-07,
+   "worst_spec_rel": 2.9587906298355424e-07,
+   "tol": 1e-05,
+   "pass": true,
+   "ms_per_prompt": 152.04196000000007,
+   "rc": 0,
+   "monitor": "# rc 0; GPU-counter checks 1, hardware GPU contexts 0; wall 7.2 s",
+   "log_tail": [
+    " \"load_ms\": 491.05409999999995,",
+    " \"ms_per_prompt\": 152.04196000000007",
+    "}",
+    "# rc 0; GPU-counter checks 1, hardware GPU contexts 0; wall 7.2 s"
+   ],
+   "as_expected": true
+  },
+  "pk_flex_shaw_vs_native": {
+   "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+   "prompts": 40,
+   "len": 8,
+   "gen": 8,
+   "dispatches_per_token": 39,
+   "greedy_identical": "40/40",
+   "top1_agree": "320/320",
+   "worst_rel": 2.215330615848804e-07,
+   "median_rel": 1.1296107144028105e-07,
+   "worst_spec_rel": 3.131826729807077e-07,
+   "tol": 0.0001,
+   "pass": true,
+   "ms_per_prompt": 128.5227,
+   "rc": 0,
+   "monitor": "# rc 0; GPU-counter checks 1, hardware GPU contexts 0; wall 6.1 s",
+   "log_tail": [
+    " \"load_ms\": 381.6535,",
+    " \"ms_per_prompt\": 128.5227",
+    "}",
+    "# rc 0; GPU-counter checks 1, hardware GPU contexts 0; wall 6.1 s"
+   ],
+   "as_expected": true
+  },
+  "pk_flex_shaw_vs_numpy": {
+   "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+   "prompts": 40,
+   "len": 8,
+   "gen": 8,
+   "dispatches_per_token": 39,
+   "greedy_identical": "40/40",
+   "top1_agree": "320/320",
+   "worst_rel": 2.215330615848804e-07,
+   "median_rel": 1.1670445751508435e-07,
+   "worst_spec_rel": 2.961373327009156e-07,
+   "tol": 1e-05,
+   "pass": true,
+   "ms_per_prompt": 132.47391750000003,
+   "rc": 0,
+   "monitor": "# rc 0; GPU-counter checks 1, hardware GPU contexts 0; wall 6.5 s",
+   "log_tail": [
+    " \"load_ms\": 543.8932,",
+    " \"ms_per_prompt\": 132.47391750000003",
+    "}",
+    "# rc 0; GPU-counter checks 1, hardware GPU contexts 0; wall 6.5 s"
+   ],
+   "as_expected": true
+  }
+ },
+ "pass": true
+}

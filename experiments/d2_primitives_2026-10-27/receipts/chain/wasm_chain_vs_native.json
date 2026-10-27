@@ -1,0 +1,16 @@
+{
+ "gen": 16,
+ "gguf": "/home/jonat/d2e/chain/arxiv_1803_02155/arxiv_1803_02155.gguf",
+ "greedy_identical": "40/40",
+ "len": 16,
+ "load_ms": 1081.037812,
+ "ms_per_prompt": 26.67285645,
+ "of": 40,
+ "pass": true,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "640/640",
+ "vocab": 8192,
+ "worst_decode_rel": 0.0,
+ "worst_prefill_rel": 0.0
+}

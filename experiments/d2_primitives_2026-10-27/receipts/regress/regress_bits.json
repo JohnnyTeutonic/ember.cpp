@@ -1,0 +1,151 @@
+{
+ "old": "/home/jonat/ember_69d7ca2/build/ir_logits (ember 69d7ca2)",
+ "new": "/home/jonat/d2e/pin/build/ir_logits",
+ "cases": {
+  "gpt2_tiny": {
+   "sequences": 2,
+   "positions": 13,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "gpt2_tiny_scale_smoke_ir": {
+   "sequences": 2,
+   "positions": 13,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "recursion_b2x4_0101": {
+   "sequences": 8,
+   "positions": 101,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "chat_sftfinal_v3": {
+   "sequences": 2,
+   "positions": 19,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "swa_tiny": {
+   "sequences": 2,
+   "positions": 13,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "kimi_tiny": {
+   "sequences": 2,
+   "positions": 13,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "mamba_tiny": {
+   "sequences": 2,
+   "positions": 13,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "moe_tiny_v3": {
+   "sequences": 2,
+   "positions": 13,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "attnres_tiny": {
+   "sequences": 2,
+   "positions": 13,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "attnres_gate_ar3": {
+   "sequences": 8,
+   "positions": 101,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "state_gate_state4": {
+   "sequences": 8,
+   "positions": 705,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "recursion_gate_p1_b2x3_c1": {
+   "sequences": 8,
+   "positions": 101,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "recursion_gate_p1_b2x3_c1_inject": {
+   "sequences": 8,
+   "positions": 101,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "recursion_gate_b2x4": {
+   "sequences": 8,
+   "positions": 101,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "mor_gate_mor3": {
+   "sequences": 8,
+   "positions": 101,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  },
+  "mor_gate_mor2p0": {
+   "sequences": 8,
+   "positions": 101,
+   "rc": [
+    0,
+    0
+   ],
+   "bit_equal": true
+  }
+ },
+ "pass": true
+}

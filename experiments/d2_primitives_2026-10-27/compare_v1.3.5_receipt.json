@@ -1,0 +1,155 @@
+{
+ "receipt_cases": 437,
+ "run_cases": 465,
+ "run_counts": {
+  "PASS": 413,
+  "FAIL": 0,
+  "SKIP": 52,
+  "XFAIL": 0,
+  "XPASS": 0
+ },
+ "earlier_cases_changed": [],
+ "earlier_cases_missing": [],
+ "added": [
+  {
+   "id": "model/pk_flex_mdha",
+   "verdict": "PASS",
+   "detail": "log-probs worst 1.09e-07; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_flex_mdha_decode",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "trace/pk_flex_mdha_snapshot",
+   "verdict": "PASS",
+   "detail": "5 steps"
+  },
+  {
+   "id": "model/pk_flex_shaw",
+   "verdict": "PASS",
+   "detail": "log-probs worst 9.36e-08; greedy 4/4"
+  },
+  {
+   "id": "trace/pk_flex_shaw_decode",
+   "verdict": "PASS",
+   "detail": "6 steps"
+  },
+  {
+   "id": "op/attention/relative_kv",
+   "verdict": "PASS",
+   "detail": "a worst 7.38e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/relative_kv_per_head",
+   "verdict": "PASS",
+   "detail": "a worst 4.19e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/relative_kv_keys_only",
+   "verdict": "PASS",
+   "detail": "a worst 1.27e-07 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/relative_kv_window_sinks",
+   "verdict": "PASS",
+   "detail": "a worst 7.38e-08 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/relative_kv_grouped_query",
+   "verdict": "PASS",
+   "detail": "a worst 1.14e-07 of max(1, |ref|)"
+  },
+  {
+   "id": "op/attention/relative_kv_distance_zero",
+   "verdict": "PASS",
+   "detail": "a worst 1.19e-07 of max(1, |ref|)"
+  },
+  {
+   "id": "refuse/relative_kv_distance_negative",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv.max_distance -1 is below the minimum 0"
+  },
+  {
+   "id": "refuse/relative_kv_without_key",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv lacks the required key 'key'; IR_SPEC 5.15 (rule 40): block[5] at"
+  },
+  {
+   "id": "refuse/relative_kv_unknown_field",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv has the key 'buckets', which its specification does not define; I"
+  },
+  {
+   "id": "refuse/relative_kv_key_shape",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): block[5] attention relative_kv key 'token_embd.weight' (application 0) has ne [16, 15], not {hea"
+  },
+  {
+   "id": "refuse/relative_kv_value_shape",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): block[5] attention relative_kv value 'output_norm.weight' (application 0) has ne [16], not {head"
+  },
+  {
+   "id": "refuse/relative_kv_with_position_bias",
+   "verdict": "PASS",
+   "detail": "refused: IR_SPEC 5.15 (rule 40): block[5] attention: relative_kv and position_bias on one node (revision 1.4 defines each alone);"
+  },
+  {
+   "id": "refuse/relative_kv_per_layer",
+   "verdict": "PASS",
+   "detail": "refused: IR attention: a per-layer 'relative_kv' is not implemented in ember"
+  },
+  {
+   "id": "digest/vectors/document_pk_flex_mdha",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "digest/vectors/document_pk_flex_shaw",
+   "verdict": "PASS",
+   "detail": "sha256 equal; canonical equal"
+  },
+  {
+   "id": "grad/attention/relative_kv",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/attention/relative_kv_per_head_grouped_query",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "grad/attention/relative_kv_keys_only",
+   "verdict": "SKIP",
+   "detail": "ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"
+  },
+  {
+   "id": "trace/pk_flex_mdha_truncate",
+   "verdict": "PASS",
+   "detail": "3 steps"
+  },
+  {
+   "id": "trace/pk_flex_mdha_chunks",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "trace/pk_flex_shaw_chunks",
+   "verdict": "PASS",
+   "detail": "4 steps"
+  },
+  {
+   "id": "accept/documents/model_pk_flex_mdha",
+   "verdict": "PASS",
+   "detail": "accepted"
+  },
+  {
+   "id": "accept/documents/model_pk_flex_shaw",
+   "verdict": "PASS",
+   "detail": "accepted"
+  }
+ ]
+}
