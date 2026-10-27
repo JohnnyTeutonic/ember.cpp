@@ -1,0 +1,46 @@
+{
+ "device_supported": true,
+ "family_hint": "llama_attnres",
+ "gen": 64,
+ "gguf": "/content/small/models/ar3.gguf",
+ "greedy_identical": "4/4",
+ "ids_file": null,
+ "len": 600,
+ "on_gpu": true,
+ "pass": true,
+ "prompts": 4,
+ "rows": [
+  {
+   "decode_rel": 2.013171870387879e-07,
+   "greedy_first_diff": -1,
+   "i": 0,
+   "prefill_rel": 1.912444768595083e-07,
+   "top1": 600
+  },
+  {
+   "decode_rel": 1.8499951761375782e-07,
+   "greedy_first_diff": -1,
+   "i": 1,
+   "prefill_rel": 2.566397615954977e-07,
+   "top1": 600
+  },
+  {
+   "decode_rel": 1.8456106119657212e-07,
+   "greedy_first_diff": -1,
+   "i": 2,
+   "prefill_rel": 1.5882115857221775e-07,
+   "top1": 600
+  },
+  {
+   "decode_rel": 2.66225017111613e-07,
+   "greedy_first_diff": -1,
+   "i": 3,
+   "prefill_rel": 1.8480993545605408e-07,
+   "top1": 600
+  }
+ ],
+ "tol": 0.0001,
+ "top1_agree": "2400/2400",
+ "worst_decode_rel": 2.66225017111613e-07,
+ "worst_prefill_rel": 2.566397615954977e-07
+}

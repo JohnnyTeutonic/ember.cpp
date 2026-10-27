@@ -1,0 +1,28 @@
+20:07:03 new T4 session ember-c12g-1027
+20:07:11 uploaded c12_vm.sh
+20:07:12 uploaded COMMITS
+20:07:14 uploaded BIG_SHA256SUMS
+20:08:04 uploaded small.tgz
+20:09:29 uploaded x5.part00
+20:10:50 uploaded x5.part01
+20:10:59 uploaded x5.part02
+20:11:08 uploaded ember_pin.tgz
+20:11:17 uploaded ember_head.tgz
+20:11:46 launched
+20:12:51 state=RUNNING --- build pin 09:11:34
+20:14:01 state=RUNNING --- build pin 09:11:34
+20:15:07 state=RUNNING --- pin state4_q8_0 09:15:05
+20:16:17 state=RUNNING ar_x5_def_tiled a vs b: equal
+20:17:28 state=RUNNING ar_x5_det_tiled a vs b: equal
+20:18:38 state=RUNNING state_device_gate ar_x5_det_split: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8635082686191265e-07 1.8432146843752902e-07
+20:19:44 state=RUNNING ar_x5_q8_0_def_split a vs b: equal
+20:20:49 state=RUNNING state_device_gate ar_x5_q8_0_det_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8396231274476186e-07 2.1241443415556128e-07
+20:21:53 state=RUNNING long x5_device_logits ar_x5_def_tiled a rc=134
+20:23:02 state=RUNNING nsys ar_x5_det_tiled rc=0 attention kernels: decode_attn_tiled_kernel decode_attn_tiled_merge_kernel 
+20:24:11 state=RUNNING --- build head 09:23:22
+20:25:18 state=RUNNING --- build head 09:23:22
+20:26:33 state=RUNNING head vs pin ar3_det_tiled: equal
+20:27:41 state=RUNNING --- pack 09:27:29
+20:28:45 state=DONE === done Tue Oct 27 09:28:41 AM UTC 2026 ===
+20:33:55 results (DONE) in /mnt/c/ml_artifacts/ember_c12_gates/ember-c12g-1027
+[pk-tc-e1-rec] gpu-l4-s-ass1b0-3q0dcxfhwaid0 | Hardware: L4 | Variant: GPU

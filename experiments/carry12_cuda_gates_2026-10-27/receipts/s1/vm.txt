@@ -1,0 +1,173 @@
+=== vm Tue Oct 27 09:11:23 AM UTC 2026 pin=ec3201b04e6f2fcb6dffd3496b0c72b3bec0c54a head=39badc69553e70f70619bbd7bfe385dcd2584344 ===
+gpu Tesla T4, compute capability 75, nproc 2
+nsys: /usr/local/bin/nsys
+--- deps 09:11:24
+--- build pin 09:11:34
+built pin (sm_75) in 182 s
+--- pin state4 09:14:37
+state4_def_tiled a vs b: equal
+state_device_gate state4_def_tiled: pass True 9264/9264 {'cpu': '40/40', 'device': '40/40'} 6.166824103402018e-07 4.4413269619043697e-07
+ir_device_gate state4_def_tiled: pass True 40/40 960/960 7.6021285148948e-07 9.732434970881945e-07
+state4_def_split a vs b: equal
+state_device_gate state4_def_split: pass True 9264/9264 {'cpu': '40/40', 'device': '40/40'} 6.166824103402018e-07 4.4413269619043697e-07
+ir_device_gate state4_def_split: pass True 40/40 960/960 7.6021285148948e-07 9.732434970881945e-07
+state4_det_tiled a vs b: equal
+state_device_gate state4_det_tiled: pass True 9264/9264 {'cpu': '40/40', 'device': '40/40'} 6.166824103402018e-07 4.4413269619043697e-07
+ir_device_gate state4_det_tiled: pass True 40/40 960/960 7.6021285148948e-07 9.732434970881945e-07
+state4_det_split a vs b: equal
+state_device_gate state4_det_split: pass True 9264/9264 {'cpu': '40/40', 'device': '40/40'} 6.166824103402018e-07 4.4413269619043697e-07
+ir_device_gate state4_det_split: pass True 40/40 960/960 7.6021285148948e-07 9.732434970881945e-07
+state4 mode tiled vs mode split: equal
+--- pin state4_q8_0 09:15:05
+state4_q8_0_def_tiled a vs b: equal
+state_device_gate state4_q8_0_def_tiled: pass True 9264/9264 {'cpu': '40/40', 'device': '40/40'} 5.938300464345405e-07 4.396848397693179e-07
+ir_device_gate state4_q8_0_def_tiled: pass True 40/40 960/960 9.882367218290522e-07 1.3621150050044105e-06
+state4_q8_0_def_split a vs b: equal
+state_device_gate state4_q8_0_def_split: pass True 9264/9264 {'cpu': '40/40', 'device': '40/40'} 5.938300464345405e-07 4.396848397693179e-07
+ir_device_gate state4_q8_0_def_split: pass True 40/40 960/960 9.882367218290522e-07 1.3621150050044105e-06
+state4_q8_0_det_tiled a vs b: equal
+state_device_gate state4_q8_0_det_tiled: pass True 9264/9264 {'cpu': '40/40', 'device': '40/40'} 5.938300464345405e-07 4.396848397693179e-07
+ir_device_gate state4_q8_0_det_tiled: pass True 40/40 960/960 9.882367218290522e-07 1.3621150050044105e-06
+state4_q8_0_det_split a vs b: equal
+state_device_gate state4_q8_0_det_split: pass True 9264/9264 {'cpu': '40/40', 'device': '40/40'} 5.938300464345405e-07 4.396848397693179e-07
+ir_device_gate state4_q8_0_det_split: pass True 40/40 960/960 9.882367218290522e-07 1.3621150050044105e-06
+state4_q8_0 mode tiled vs mode split: equal
+--- pin ar3 09:15:30
+ar3_def_tiled a vs b: equal
+state_device_gate ar3_def_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.9655250831466248e-07 1.8430995183428028e-07
+ir_device_gate ar3_def_tiled: pass True 40/40 320/320 1.842008024523758e-07 2.0771939270327473e-07
+ar3_def_split a vs b: equal
+state_device_gate ar3_def_split: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.9655250831466248e-07 1.9655250831466248e-07
+ir_device_gate ar3_def_split: pass True 40/40 320/320 1.842008024523758e-07 1.889465749780318e-07
+ar3_det_tiled a vs b: equal
+state_device_gate ar3_det_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.9655250831466248e-07 1.8430995183428028e-07
+ir_device_gate ar3_det_tiled: pass True 40/40 320/320 1.842008024523758e-07 2.0771939270327473e-07
+ar3_det_split a vs b: equal
+state_device_gate ar3_det_split: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.9655250831466248e-07 1.9655250831466248e-07
+ir_device_gate ar3_det_split: pass True 40/40 320/320 1.842008024523758e-07 1.889465749780318e-07
+ar3 mode tiled vs mode split: DIFFER
+ar3 EMBER_IR unchanged document vs embedded (mode): equal
+--- pin ar3_q8_0 09:15:40
+ar3_q8_0_def_tiled a vs b: equal
+state_device_gate ar3_q8_0_def_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.966525411146384e-07 1.9992388897546705e-07
+ir_device_gate ar3_q8_0_def_tiled: pass True 40/40 320/320 1.8585774931097887e-07 1.8585774931097887e-07
+ar3_q8_0_def_split a vs b: equal
+state_device_gate ar3_q8_0_def_split: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.966525411146384e-07 1.9992388897546705e-07
+ir_device_gate ar3_q8_0_def_split: pass True 40/40 320/320 1.8585774931097887e-07 1.8820675164117857e-07
+ar3_q8_0_det_tiled a vs b: equal
+state_device_gate ar3_q8_0_det_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.966525411146384e-07 1.9992388897546705e-07
+ir_device_gate ar3_q8_0_det_tiled: pass True 40/40 320/320 1.8585774931097887e-07 1.8585774931097887e-07
+ar3_q8_0_det_split a vs b: equal
+state_device_gate ar3_q8_0_det_split: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.966525411146384e-07 1.9992388897546705e-07
+ir_device_gate ar3_q8_0_det_split: pass True 40/40 320/320 1.8585774931097887e-07 1.8820675164117857e-07
+ar3_q8_0 mode tiled vs mode split: DIFFER
+ar3_q8_0 EMBER_IR unchanged document vs embedded (mode): equal
+--- pin ar_x5 09:15:50
+ar_x5_def_tiled a vs b: equal
+state_device_gate ar_x5_def_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8635082686191265e-07 1.8432146843752902e-07
+ir_device_gate ar_x5_def_tiled: pass True 40/40 320/320 2.1774656259832618e-07 2.1774656259832618e-07
+ar_x5_def_split a vs b: equal
+state_device_gate ar_x5_def_split: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8635082686191265e-07 1.8432146843752902e-07
+ir_device_gate ar_x5_def_split: pass True 40/40 320/320 2.1774656259832618e-07 1.858246456440148e-07
+ar_x5_det_tiled a vs b: equal
+state_device_gate ar_x5_det_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8635082686191265e-07 1.8432146843752902e-07
+ir_device_gate ar_x5_det_tiled: pass True 40/40 320/320 2.1774656259832618e-07 2.1774656259832618e-07
+ar_x5_det_split a vs b: equal
+state_device_gate ar_x5_det_split: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8635082686191265e-07 1.8432146843752902e-07
+ir_device_gate ar_x5_det_split: pass True 40/40 320/320 2.1774656259832618e-07 1.858246456440148e-07
+ar_x5 mode tiled vs mode split: DIFFER
+ar_x5 EMBER_IR unchanged document vs embedded (mode): equal
+--- pin ar_x5_q8_0 09:18:48
+ar_x5_q8_0_def_tiled a vs b: equal
+state_device_gate ar_x5_q8_0_def_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8396231274476186e-07 2.1241443415556128e-07
+ir_device_gate ar_x5_q8_0_def_tiled: pass True 40/40 320/320 2.102111760453434e-07 2.1773331131323778e-07
+ar_x5_q8_0_def_split a vs b: equal
+state_device_gate ar_x5_q8_0_def_split: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8396231274476186e-07 1.6328188756474535e-07
+ir_device_gate ar_x5_q8_0_def_split: pass True 40/40 320/320 2.102111760453434e-07 2.021908036764176e-07
+ar_x5_q8_0_det_tiled a vs b: equal
+state_device_gate ar_x5_q8_0_det_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8396231274476186e-07 2.1241443415556128e-07
+ir_device_gate ar_x5_q8_0_det_tiled: pass True 40/40 320/320 2.102111760453434e-07 2.1773331131323778e-07
+ar_x5_q8_0_det_split a vs b: equal
+state_device_gate ar_x5_q8_0_det_split: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8396231274476186e-07 1.6328188756474535e-07
+ir_device_gate ar_x5_q8_0_det_split: pass True 40/40 320/320 2.102111760453434e-07 2.021908036764176e-07
+ar_x5_q8_0 mode tiled vs mode split: DIFFER
+ar_x5_q8_0 EMBER_IR unchanged document vs embedded (mode): equal
+--- pin long ar3 09:21:45
+long x5_device_logits ar3_def_tiled a rc=134
+long x5_device_logits ar3_def_split a rc=134
+long x5_device_logits ar3_det_tiled a rc=134
+long x5_device_logits ar3_det_tiled b rc=134
+long ar3_det_tiled a vs b: equal
+long x5_device_logits ar3_det_split a rc=134
+long x5_device_logits ar3_det_split b rc=134
+long ar3_det_split a vs b: equal
+long ir_device_gate ar3_det_tiled: no report
+long ir_device_gate ar3_def_tiled: no report
+long ir_device_gate ar3_det_split: no report
+--- pin long ar3_q8_0 09:21:48
+long x5_device_logits ar3_q8_0_def_tiled a rc=134
+long x5_device_logits ar3_q8_0_def_split a rc=134
+long x5_device_logits ar3_q8_0_det_tiled a rc=134
+long x5_device_logits ar3_q8_0_det_tiled b rc=134
+long ar3_q8_0_det_tiled a vs b: equal
+long x5_device_logits ar3_q8_0_det_split a rc=134
+long x5_device_logits ar3_q8_0_det_split b rc=134
+long ar3_q8_0_det_split a vs b: equal
+long ir_device_gate ar3_q8_0_det_tiled: no report
+long ir_device_gate ar3_q8_0_def_tiled: no report
+long ir_device_gate ar3_q8_0_det_split: no report
+--- pin long ar_x5 09:21:52
+long x5_device_logits ar_x5_def_tiled a rc=134
+long x5_device_logits ar_x5_def_split a rc=134
+long x5_device_logits ar_x5_det_tiled a rc=134
+long x5_device_logits ar_x5_det_tiled b rc=134
+long ar_x5_det_tiled a vs b: equal
+long x5_device_logits ar_x5_det_split a rc=134
+long x5_device_logits ar_x5_det_split b rc=134
+long ar_x5_det_split a vs b: equal
+long ir_device_gate ar_x5_det_tiled: no report
+long ir_device_gate ar_x5_def_tiled: no report
+long ir_device_gate ar_x5_det_split: no report
+--- pin long ar_x5_q8_0 09:21:56
+long x5_device_logits ar_x5_q8_0_def_tiled a rc=134
+long x5_device_logits ar_x5_q8_0_def_split a rc=134
+long x5_device_logits ar_x5_q8_0_det_tiled a rc=134
+long x5_device_logits ar_x5_q8_0_det_tiled b rc=134
+long ar_x5_q8_0_det_tiled a vs b: equal
+long x5_device_logits ar_x5_q8_0_det_split a rc=134
+long x5_device_logits ar_x5_q8_0_det_split b rc=134
+long ar_x5_q8_0_det_split a vs b: equal
+long ir_device_gate ar_x5_q8_0_det_tiled: no report
+long ir_device_gate ar_x5_q8_0_def_tiled: no report
+long ir_device_gate ar_x5_q8_0_det_split: no report
+nsys state4_det_tiled rc=0 attention kernels: turn_state_attention_kernel 
+nsys state4_det_split rc=0 attention kernels: turn_state_attention_kernel 
+nsys state4_def_tiled rc=0 attention kernels: turn_state_attention_kernel 
+nsys ar3_det_tiled rc=0 attention kernels: attention_batch_prefill_cuda_kernel decode_attn_tiled_kernel decode_attn_tiled_merge_kernel 
+nsys ar3_det_split rc=0 attention kernels: attention_batch_prefill_cuda_kernel decode_attn_merge_kernel decode_attn_split_kernel 
+nsys ar3_def_tiled rc=0 attention kernels: attention_batch_prefill_cuda_kernel decode_attn_tiled_kernel decode_attn_tiled_merge_kernel 
+nsys ar_x5_det_tiled rc=0 attention kernels: decode_attn_tiled_kernel decode_attn_tiled_merge_kernel 
+nsys ar_x5_det_split rc=0 attention kernels: decode_attn_merge_kernel decode_attn_split_kernel 
+nsys ar_x5_def_tiled rc=0 attention kernels: decode_attn_tiled_kernel decode_attn_tiled_merge_kernel 
+nsys long_ar_x5_det_tiled rc=0 attention kernels: 
+--- build head 09:23:22
+built head (sm_75) in 181 s
+head vs pin state4_det_tiled: equal
+head state_device_gate state4_det_tiled: pass True 9264/9264 {'cpu': '40/40', 'device': '40/40'} 6.166824103402018e-07 4.4413269619043697e-07
+head vs pin state4_q8_0_det_tiled: equal
+head state_device_gate state4_q8_0_det_tiled: pass True 9264/9264 {'cpu': '40/40', 'device': '40/40'} 5.938300464345405e-07 4.396848397693179e-07
+head vs pin ar3_det_tiled: equal
+head state_device_gate ar3_det_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.9655250831466248e-07 1.8430995183428028e-07
+head vs pin ar3_q8_0_det_tiled: equal
+head state_device_gate ar3_q8_0_det_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.966525411146384e-07 1.9992388897546705e-07
+head vs pin ar_x5_det_tiled: equal
+head state_device_gate ar_x5_det_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8635082686191265e-07 1.8432146843752902e-07
+head vs pin ar_x5_q8_0_det_tiled: equal
+head state_device_gate ar_x5_q8_0_det_tiled: pass True 1419/1419 {'cpu': '40/40', 'device': '40/40'} 1.8396231274476186e-07 2.1241443415556128e-07
+c12_vm.sh: line 146:  9201 Aborted                 EMBER_DETERMINISTIC=1 EMBER_IR=$I/${v}_ctx1024.ir.json timeout 1200 $B/x5_device_logits $M/$v.gguf < $I/long_in.json > $Hd/long_${k}_a.json 2> $Hd/long_${k}_a.log
+head vs pin long ar3_det_tiled: equal
+c12_vm.sh: line 146:  9211 Aborted                 EMBER_DETERMINISTIC=1 EMBER_IR=$I/${v}_ctx1024.ir.json timeout 1200 $B/x5_device_logits $M/$v.gguf < $I/long_in.json > $Hd/long_${k}_a.json 2> $Hd/long_${k}_a.log
+head vs pin long ar_x5_det_tiled: equal
+--- pack 09:27:29
+packed 369M
+=== done Tue Oct 27 09:28:41 AM UTC 2026 ===
