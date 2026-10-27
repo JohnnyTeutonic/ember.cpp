@@ -1,0 +1,33 @@
+20:35:31 new T4 session ember-c12g2-1027
+20:35:37 uploaded c12_vm.sh
+20:35:39 uploaded LEGS
+20:35:40 uploaded COMMITS
+20:35:41 uploaded BIG_SHA256SUMS
+20:36:09 uploaded small.tgz
+20:36:53 uploaded x5.part00
+20:37:37 uploaded x5.part01
+20:37:44 uploaded x5.part02
+20:37:49 uploaded ember_pin.tgz
+20:37:55 uploaded ember_head.tgz
+20:38:19 launched
+20:39:23 state=RUNNING --- build pin 09:38:10
+20:40:29 state=RUNNING --- build pin 09:38:10
+20:41:36 state=RUNNING --- pin long ar3_q8_0 09:41:31
+20:42:42 state=RUNNING --- pin long ar_x5 09:41:47
+20:43:48 state=RUNNING long ar_x5_det_split a vs b: equal
+20:44:54 state=RUNNING long ir_device_gate ar_x5_det_tiled: pass True 4/4 2400/2400 2.633170491048379e-07 2.443833377485256e-07
+20:46:01 state=RUNNING long ir_device_gate ar_x5_def_tiled: pass True 4/4 2400/2400 2.633170491048379e-07 2.443833377485256e-07
+20:47:07 state=RUNNING long ir_device_gate ar_x5_def_tiled: pass True 4/4 2400/2400 2.633170491048379e-07 2.443833377485256e-07
+20:48:13 state=RUNNING --- pin long ar_x5_q8_0 09:47:11
+20:49:19 state=RUNNING long ar_x5_q8_0_det_split a vs b: equal
+20:50:25 state=RUNNING long ir_device_gate ar_x5_q8_0_det_tiled: pass True 4/4 2400/2400 2.7773827722279496e-07 2.731820463302181e-07
+20:51:34 state=RUNNING long ir_device_gate ar_x5_q8_0_def_tiled: pass True 4/4 2400/2400 2.7773827722279496e-07 2.731820463302181e-07
+20:52:41 state=RUNNING long ir_device_gate ar_x5_q8_0_det_split: pass True 4/4 2400/2400 2.7773827722279496e-07 2.731820463302181e-07
+20:53:47 state=RUNNING --- build head 09:53:38
+20:54:54 state=RUNNING --- build head 09:53:38
+20:55:59 state=RUNNING --- build head 09:53:38
+20:57:05 state=RUNNING --- pack 09:56:59
+20:58:10 state=DONE === done Tue Oct 27 09:57:05 AM UTC 2026 ===
+20:58:38 results (DONE) in /mnt/c/ml_artifacts/ember_c12_gates/ember-c12g2-1027
+20:58:40 stopping ember-c12g2-1027 (attempt 1)
+[pk-tc-e1-rec] gpu-l4-s-ass1b0-3q0dcxfhwaid0 | Hardware: L4 | Variant: GPU

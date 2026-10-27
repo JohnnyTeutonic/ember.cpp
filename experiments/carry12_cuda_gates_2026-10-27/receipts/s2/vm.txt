@@ -1,0 +1,39 @@
+=== vm Tue Oct 27 09:37:58 AM UTC 2026 pin=ec3201b04e6f2fcb6dffd3496b0c72b3bec0c54a head=39badc69553e70f70619bbd7bfe385dcd2584344 ===
+gpu Tesla T4, compute capability 75, nproc 2
+nsys: /usr/local/bin/nsys
+--- deps 09:37:59
+legs: long
+--- build pin 09:38:10
+built pin (sm_75) in 182 s
+--- pin long ar3 09:41:14
+long ar3_det_tiled a vs b: equal
+long ar3_det_split a vs b: equal
+long ir_device_gate ar3_det_tiled: pass True 4/4 2400/2400 2.566397615954977e-07 2.66225017111613e-07
+long ir_device_gate ar3_def_tiled: pass True 4/4 2400/2400 2.566397615954977e-07 2.66225017111613e-07
+long ir_device_gate ar3_det_split: pass True 4/4 2400/2400 2.566397615954977e-07 2.2185418092634415e-07
+--- pin long ar3_q8_0 09:41:31
+long ar3_q8_0_det_tiled a vs b: equal
+long ar3_q8_0_det_split a vs b: equal
+long ir_device_gate ar3_q8_0_det_tiled: pass True 4/4 2400/2400 2.447487596132863e-07 2.463883499703707e-07
+long ir_device_gate ar3_q8_0_def_tiled: pass True 4/4 2400/2400 2.447487596132863e-07 2.463883499703707e-07
+long ir_device_gate ar3_q8_0_det_split: pass True 4/4 2400/2400 2.447487596132863e-07 2.087149338039716e-07
+--- pin long ar_x5 09:41:47
+long ar_x5_det_tiled a vs b: equal
+long ar_x5_det_split a vs b: equal
+long ir_device_gate ar_x5_det_tiled: pass True 4/4 2400/2400 2.633170491048379e-07 2.443833377485256e-07
+long ir_device_gate ar_x5_def_tiled: pass True 4/4 2400/2400 2.633170491048379e-07 2.443833377485256e-07
+long ir_device_gate ar_x5_det_split: pass True 4/4 2400/2400 2.633170491048379e-07 2.741147919651472e-07
+--- pin long ar_x5_q8_0 09:47:11
+long ar_x5_q8_0_det_tiled a vs b: equal
+long ar_x5_q8_0_det_split a vs b: equal
+long ir_device_gate ar_x5_q8_0_det_tiled: pass True 4/4 2400/2400 2.7773827722279496e-07 2.731820463302181e-07
+long ir_device_gate ar_x5_q8_0_def_tiled: pass True 4/4 2400/2400 2.7773827722279496e-07 2.731820463302181e-07
+long ir_device_gate ar_x5_q8_0_det_split: pass True 4/4 2400/2400 2.7773827722279496e-07 2.731820463302181e-07
+nsys long_ar_x5_det_tiled rc=0 attention kernels: decode_attn_tiled_kernel decode_attn_tiled_merge_kernel 
+--- build head 09:53:38
+built head (sm_75) in 184 s
+head vs pin long ar3_det_tiled: equal
+head vs pin long ar_x5_det_tiled: equal
+--- pack 09:56:59
+packed 32M
+=== done Tue Oct 27 09:57:05 AM UTC 2026 ===
