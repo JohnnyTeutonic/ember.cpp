@@ -35,6 +35,7 @@
 #include "model.h"
 #include "safetensors_loader.h"
 #include "tokenizer.h"
+#include "utf8_text.h"
 
 namespace tinyllama {
 
@@ -1400,7 +1401,7 @@ if (prefill_enabled) {
     last_generated_tokens_ = static_cast<int>(generated_token_ids.size()) - (stopped ? 1 : 0);
     result = tokenizer_->decode(generated_token_ids, true);
   }
-  Logger::info("Generated response: " + result);
+  Logger::info("Generated response: " + ember::utf8_valid(result));
 
   // What the KV cache now holds: the prompt plus every generated token that
   // was fed back through the model (all but the last one sampled).

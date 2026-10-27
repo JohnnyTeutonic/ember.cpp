@@ -1,0 +1,5 @@
+ok: 27 of 27 cases
+utf8_text_test rc=0
+ok: 20000 of 20000 random byte strings as Python's decode(errors='replace')
+ok: 20000 of 20000 random streamed replies as the reference after every token, joined equal to the plain reply
+utf8_text_check rc=0

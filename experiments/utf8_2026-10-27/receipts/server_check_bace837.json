@@ -1,0 +1,103 @@
+{
+ "summary": {
+  "server": "/home/jonat/u8/build_head/tinyllama_server",
+  "model": "/mnt/c/ml_artifacts/tiny_chat/e1_60m/pick_e1_60m_L32/model.gguf",
+  "health": {
+   "chat_template": {
+    "name": "paperkiln",
+    "version": 1
+   },
+   "chat_template_why": "declared",
+   "context": 512,
+   "hidden_size": 384,
+   "layers": 32,
+   "model": "/mnt/c/ml_artifacts/tiny_chat/e1_60m/pick_e1_60m_L32/model.gguf",
+   "status": "ok",
+   "tokenizer": "bpe",
+   "vocab_size": 16384
+  },
+  "request": {
+   "temperature": 1.0,
+   "top_k": 1,
+   "top_p": 1.0,
+   "seed": 7,
+   "user_input": "Do not use the word \"the\" in your reply. Which animal barks?"
+  },
+  "k": "12,13,64",
+  "requests": 12,
+  "seconds": 6.9,
+  "all_http_200": false,
+  "ks_with_errors": [
+   12,
+   13,
+   64
+  ],
+  "ids_prefix_consistent": false,
+  "cut_ks": [],
+  "split_ks": [],
+  "replies_at_cuts": {},
+  "ok": false
+ },
+ "records": [
+  {
+   "k": 12,
+   "status": {
+    "chat": 500,
+    "chat_stream": 0,
+    "v1": 0,
+    "v1_stream": 0
+   },
+   "errors": [
+    "/chat HTTP 500: {\"error\":\"Internal server error: [json.exception.type_error.316] incomplete UTF-8 string; last byte: 0xD7\"}",
+    "chat: HTTP 500",
+    "chat_stream: HTTP 0",
+    "v1: HTTP 0",
+    "v1_stream: HTTP 0"
+   ],
+   "chat_pieces": [],
+   "chat_stream_final": null,
+   "v1_deltas": [],
+   "v1_stream_finish": null
+  },
+  {
+   "k": 13,
+   "status": {
+    "chat": 0,
+    "chat_stream": 0,
+    "v1": 0,
+    "v1_stream": 0
+   },
+   "errors": [
+    "/chat HTTP 0: URLError: <urlopen error [Errno 111] Connection refused>",
+    "chat: HTTP 0",
+    "chat_stream: HTTP 0",
+    "v1: HTTP 0",
+    "v1_stream: HTTP 0"
+   ],
+   "chat_pieces": [],
+   "chat_stream_final": null,
+   "v1_deltas": [],
+   "v1_stream_finish": null
+  },
+  {
+   "k": 64,
+   "status": {
+    "chat": 0,
+    "chat_stream": 0,
+    "v1": 0,
+    "v1_stream": 0
+   },
+   "errors": [
+    "/chat HTTP 0: URLError: <urlopen error [Errno 111] Connection refused>",
+    "chat: HTTP 0",
+    "chat_stream: HTTP 0",
+    "v1: HTTP 0",
+    "v1_stream: HTTP 0"
+   ],
+   "chat_pieces": [],
+   "chat_stream_final": null,
+   "v1_deltas": [],
+   "v1_stream_finish": null
+  }
+ ]
+}

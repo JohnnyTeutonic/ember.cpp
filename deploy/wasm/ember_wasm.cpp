@@ -50,6 +50,7 @@
 
 #include "api.h"
 #include "chat_request.h"
+#include "utf8_text.h"
 
 using json = nlohmann::json;
 
@@ -153,7 +154,7 @@ EMSCRIPTEN_KEEPALIVE const char* ember_chat(const char* request) {
         const Request q = parse_request(json::parse(request));
         if (q.has_seed) g_session->set_seed(q.seed);
         g_session->set_repeat_penalty(q.repeat_penalty, q.repeat_last_n);
-        out["reply"] = g_session->generate(q.prompt, q.max_new, q.temperature, q.top_k, q.top_p, "", false);
+        out["reply"] = ember::utf8_valid(g_session->generate(q.prompt, q.max_new, q.temperature, q.top_k, q.top_p, "", false));
         g_session->set_repeat_penalty(1.0f, 64);
         out["stop_reason"] = g_session->last_stop_reason();
         out["tokens"] = g_session->last_generated_tokens();
@@ -162,7 +163,7 @@ EMSCRIPTEN_KEEPALIVE const char* ember_chat(const char* request) {
     } catch (const std::exception& e) {
         out = json{{"error", e.what()}};
     }
-    g_out = out.dump();
+    g_out = ember::dump_valid(out);
     return g_out.c_str();
 }
 
@@ -184,7 +185,7 @@ EMSCRIPTEN_KEEPALIVE const char* ember_prepare(const char* request) {
     } catch (const std::exception& e) {
         out = json{{"error", e.what()}};
     }
-    g_out = out.dump();
+    g_out = ember::dump_valid(out);
     return g_out.c_str();
 }
 
@@ -201,7 +202,7 @@ EMSCRIPTEN_KEEPALIVE const char* ember_finish(int stop_id) {
     try {
         if (!g_session) throw std::runtime_error("no model loaded");
         const std::vector<int> reply(g_context.begin() + static_cast<long>(g_prompt_len), g_context.end());
-        out["reply"] = strip(g_session->bpe_decode(reply));
+        out["reply"] = ember::utf8_valid(strip(g_session->bpe_decode(reply)));
         out["stop_reason"] = g_session->is_chat_eos(stop_id)    ? "eos"
                              : g_session->is_chat_stop(stop_id) ? "turn"
                                                                 : "length";
@@ -212,7 +213,7 @@ EMSCRIPTEN_KEEPALIVE const char* ember_finish(int stop_id) {
     } catch (const std::exception& e) {
         out = json{{"error", e.what()}};
     }
-    g_out = out.dump();
+    g_out = ember::dump_valid(out);
     return g_out.c_str();
 }
 

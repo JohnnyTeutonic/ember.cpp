@@ -459,9 +459,11 @@ if(NOT SKBUILD)
     # Chat templates: paperkiln's conformance file and ember's rendering paths (tools/chat_template_check.cpp).
     add_executable(chat_template_check tools/chat_template_check.cpp)
     target_link_libraries(chat_template_check PRIVATE tinyllama_core)
-    # Valid UTF-8 for JSON replies, as Python's decode(errors="replace") (tools/utf8_text_test.cpp, utf8_text_check.py).
+    # Valid UTF-8 for JSON replies, as Python's decode(errors="replace"), and streamed replies
+    # (tools/utf8_text_test.cpp, utf8_text_check.py).
     add_executable(utf8_text_test tools/utf8_text_test.cpp)
     target_include_directories(utf8_text_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(utf8_text_test PRIVATE nlohmann_json::nlohmann_json)
     if(HAS_CUDA)
         # The interpreter on the CUDA device against the CPU (tools/ir_device_gate.cpp).
         add_executable(ir_device_gate tools/ir_device_gate.cpp)

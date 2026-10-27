@@ -1,0 +1,13 @@
+regress_bits old side: /home/jonat/u8/build_head/ir_logits
+recursion_gate rc=0: recursion_gate_cpu.json byte-identical
+mor_gate rc=0: mor_gate_cpu.json byte-identical
+mor_refusals rc=0: mor_refusals.json byte-identical
+attnres_gate rc=0: attnres_gate_cpu.json byte-identical
+state_tokens_gate rc=0: state_tokens_gate_cpu.json DIFFERS or missing
+state4_gate rc=0: state4_gate_cpu.json byte-identical
+regress_bits rc=0: regress_bits.json DIFFERS or missing
+regress_parity rc=0: regress_parity.json byte-identical
+g5_thirdparty rc=0: g5_thirdparty.json byte-identical
+adapter self-test rc=0: 189/189 checks pass, 3072 requests 
+cpu regression done
+regress_bits old side restored: /home/jonat/dr/build_cpu/ir_logits
