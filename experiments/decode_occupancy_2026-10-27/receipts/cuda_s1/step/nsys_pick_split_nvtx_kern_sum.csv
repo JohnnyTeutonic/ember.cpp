@@ -1,0 +1,13 @@
+NVTX Range,Style,PID,TID,NVTX Inst,Kern Inst,Total Time (ns),Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Kernel Name
+,,6341,6341,0,80,4389158,54864.5,54720.0,11808,98879,31032.1,"void attention_prefill_flash2_kernel<(int)64>(float *, const float *, const float *, const float *, int, int, int, int, float)"
+,,6341,6341,0,336,2121018,6312.6,6144.0,4000,13280,1925.9,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(T1::Params)
+,,6341,6341,0,160,1295195,8095.0,7680.0,6464,14528,2131.0,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_32x6_tn_align4>(T1::Params)
+,,6341,6341,0,165,1104793,6695.7,5984.0,3200,11584,2781.5,"rmsnorm_batch_kernel_final_optimized(float *, const float *, const float *, int, int, float)"
+,,6341,6341,0,64,657274,10269.9,10127.5,9600,11456,453.9,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x64_16x6_tn_align4>(T1::Params)
+,,6341,6341,0,5,473053,94610.6,94495.0,87520,102079,5755.2,"void gemv2T_kernel_val<long, long, float, float, float, float, (int)128, (int)16, (int)2, (int)2, (bool)0, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13, T6, T6)"
+,,6341,6341,0,8,443006,55375.8,35999.0,1440,99712,38291.5,"convert_fp32_to_bf16_kernel(const float *, unsigned short *, unsigned long)"
+,,6341,6341,0,160,332542,2078.4,2080.0,1248,3104,582.6,"rope_batch_kernel_cuda(float *, int, int, int, const float *, int, bool)"
+,,6341,6341,0,160,325279,2033.0,1984.0,1248,3040,557.0,"update_kv_cache_batch_kernel(float *, const float *, int, int, int, int, int)"
+,,6341,6341,0,176,322077,1830.0,1792.0,1663,2656,238.0,"void cublasLt::splitKreduce_kernel<(int)32, (int)16, int, float, float, float, float, (bool)0, float, float, float, (bool)1, (bool)0, (bool)0, (bool)0>(cublasLt::cublasSplitKParams<T6>, const T4 *, const T10 *, T9 *, T5 *, const T6 *, const T6 *, const T11 *, const T4 *, T11 *, void *, long, T6 *, int *, T6 *, T6 *, const T6 *, const T6 *, const T6 *, const T6 *, const T6 *)"
+,,6341,6341,0,160,296637,1854.0,1664.0,1312,2848,445.3,"add_residual_batch_cuda_kernel(float *, const float *, const float *, int, int)"
+,,6341,6341,0,80,267391,3342.4,2848.0,2400,4608,896.4,"swiglu_batch_cuda_kernel(float *, const float *, const float *, int, int)"

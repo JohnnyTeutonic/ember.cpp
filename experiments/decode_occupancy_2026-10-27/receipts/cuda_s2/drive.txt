@@ -1,0 +1,31 @@
+15:24:13 new L4 session ember-occ2-1027
+15:24:47 uploaded vm.sh
+15:24:48 uploaded COMMITS
+15:24:49 uploaded BIG_SHA256SUMS
+15:25:35 uploaded small.tgz
+15:25:37 uploaded ember_new.tgz
+15:25:42 uploaded ember_head.tgz
+15:26:06 launched; uploading the models
+15:26:50 uploaded m60.part00
+15:27:34 uploaded m60.part01
+15:28:53 uploaded m60.part02
+15:29:37 uploaded m60.part03
+15:30:21 uploaded m60.part04
+15:31:05 uploaded m60.part05
+15:32:08 uploaded m60.part06
+15:32:58 uploaded m60.part07
+15:33:41 uploaded pick.part00
+15:34:25 uploaded pick.part01
+15:35:09 uploaded pick.part02
+15:35:50 uploaded pick.part03
+15:35:53 models up
+15:37:06 state=RUNNING e2e pick det_tiled rc=0 {"requests": 140, "tokens": 1874, "wall_ms": 2939.5155670008535, "decode_tokens": 1734, "decode_ms": 2348.9758920008535, "decode_tok_per_s": 738.1940384764791, "drafted": 0, "accepted": 0, "passes
+15:37:10 pack out1 home
+15:38:19 state=RUNNING e2e m60 det_split rc=0 {"requests": 140, "tokens": 1802, "wall_ms": 7335.311050996552, "decode_tokens": 1662, "decode_ms": 6302.833427996552, "decode_tok_per_s": 263.6909286889232, "drafted": 0, "accepted": 0, "passes": 
+15:39:30 state=RUNNING insitu pick split 500 rc=0 42.7,72352620,1680,43067.0,44032.0,35200,70528,6811.1,"<unnamed>::decode_attn_split_kernel(const float *, const float *, const float *, int, int, float, int, in 26.5,44863066,10080,4450.7,3520.
+15:39:36 pack out2 home
+15:39:55 pack out3 home
+15:41:00 state=DONE === done Tue Oct 27 04:40:36 AM UTC 2026 ===
+15:41:08 results (DONE) in /mnt/c/ml_artifacts/ember_occupancy/ember-occ2-1027
+15:41:10 stopping ember-occ2-1027 (attempt 1)
+[pk-tc-e1-rec] gpu-l4-s-ass1a1-20mhwnk8kx7ly | Hardware: L4 | Variant: GPU

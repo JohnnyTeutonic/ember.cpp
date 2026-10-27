@@ -1,0 +1,22 @@
+{
+ "bin": "/content/b_new/tinyllama_server",
+ "gguf": "/content/big/pick_60m_L32.gguf",
+ "gpu_layers": "-1",
+ "health": {
+  "chat_template": {
+   "name": "paperkiln",
+   "version": 1
+  },
+  "chat_template_why": "declared",
+  "context": 512,
+  "hidden_size": 384,
+  "layers": 32,
+  "model": "/content/big/pick_60m_L32.gguf",
+  "status": "ok",
+  "tokenizer": "bpe",
+  "vocab_size": 16384
+ },
+ "requests": 360,
+ "vocab": 16384,
+ "seconds": 61.7
+}

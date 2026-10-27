@@ -1,0 +1,43 @@
+14:48:07 new L4 session ember-occ-1027
+14:48:13 uploaded vm.sh
+14:48:15 uploaded COMMITS
+14:48:16 uploaded BIG_SHA256SUMS
+14:48:58 uploaded small.tgz
+14:49:00 uploaded ember_new.tgz
+14:49:05 uploaded ember_head.tgz
+14:49:31 launched; uploading the models
+14:50:55 uploaded m60.part00
+14:51:43 uploaded m60.part01
+14:52:27 uploaded m60.part02
+14:53:14 uploaded m60.part03
+14:53:59 uploaded m60.part04
+14:54:48 uploaded m60.part05
+14:55:35 uploaded m60.part06
+14:56:12 uploaded m60.part07
+14:56:57 uploaded pick.part00
+14:57:47 uploaded pick.part01
+14:58:34 uploaded pick.part02
+14:59:34 uploaded pick.part03
+14:59:53 models up
+15:00:57 state=RUNNING step m60 split2 rc=0 P 32 decode p50 2.339703 ms, argmax 79 P 128 decode p50 3.001604 ms, argmax 79 P 256 decode p50 4.302357 ms, argmax 13075 P 384 decode p50 4.431406 ms, argmax 79 P 500 decode p50 4.435756 ms, argmax 
+15:01:00 pack out1 home
+15:02:15 state=RUNNING collect pick head_off rc=0 {"requests": 360, "seconds": 49.6}
+15:02:20 pack out2 home
+15:03:39 state=RUNNING collect pick new_off rc=0 {"requests": 360, "seconds": 49.1}
+15:05:00 state=RUNNING collect pick new_det rc=0 {"requests": 360, "seconds": 49.1}
+15:06:33 state=RUNNING collect pick new_det_split rc=0 {"requests": 360, "seconds": 49.5}
+15:08:49 state=RUNNING collect m60 head_off rc=0 {"requests": 360, "seconds": 63.1}
+15:09:58 state=RUNNING collect m60 new_off rc=0 {"requests": 360, "seconds": 61.7}
+15:11:45 state=RUNNING collect m60 new_det rc=0 {"requests": 360, "seconds": 61.7}
+15:13:20 state=RUNNING collect m60 new_det2 rc=0 {"requests": 360, "seconds": 61.8}
+15:14:44 state=RUNNING vd pick det_k2 rc=0 {"requests": 60, "rows": 1409, "vocab": 16384, "drafted": 537, "accepted": 358, "passes": 269, "warm_pass_same": 60, "seconds": 24.6}
+15:14:51 pack out3 home
+15:15:58 state=RUNNING vd pick det_k4_rows rc=0 {"requests": 60, "rows": 1409, "vocab": 16384, "drafted": 781, "accepted": 423, "passes": 204, "warm_pass_same": 60, "seconds": 24.7}
+15:17:39 state=RUNNING vd m60 det_k2 rc=0 {"requests": 60, "rows": 1283, "vocab": 16384, "drafted": 379, "accepted": 254, "passes": 190, "warm_pass_same": 59, "seconds": 27.2}
+15:18:48 state=RUNNING vd m60 det_k8 rc=0 {"requests": 60, "rows": 1283, "vocab": 16384, "drafted": 870, "accepted": 331, "passes": 117, "warm_pass_same": 59, "seconds": 28.1}
+15:20:03 state=RUNNING --- (g) end to end 04:19:56
+15:20:11 pack out4 home
+15:21:16 state=RUNNING e2e m60 tiled rc=0 {"requests": 140, "tokens": 1802, "wall_ms": 5725.719959003527, "decode_tokens": 1662, "decode_ms": 4708.1160550035265, "decode_tok_per_s": 353.0074408921415, "drafted": 0, "accepted": 0, "passes": 0, 
+15:22:22 session ember-occ-1027 left the listing
+15:22:23 no final results downloaded (LOST); packs home: /mnt/c/ml_artifacts/ember_occupancy/ember-occ-1027/out1.done /mnt/c/ml_artifacts/ember_occupancy/ember-occ-1027/out2.done /mnt/c/ml_artifacts/ember_occupancy/ember-occ-1027/out3.done /mnt/c/ml_artifacts/ember_occupancy/ember-occ-1027/out4.done 
+[pk-tc-e1-rec] gpu-l4-s-ass1a1-20mhwnk8kx7ly | Hardware: L4 | Variant: GPU

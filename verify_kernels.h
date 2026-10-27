@@ -45,9 +45,10 @@ void rope_rows(float* x, int n, int heads, int head_dim, const float* freqs, con
 // kv_write_devpos_cuda per row at position pos + r; k, v are [n][row].
 void kv_write_rows(float* k_cache, float* v_cache, const float* k, const float* v, const int* pos_dev, int n, int row,
                    cudaStream_t st);
-// The graph decode's split-K attention per row (row r attends to pos + r + 1 keys), chunked for max_len positions
-// exactly as attention_devpos_cuda. scratch: attention_rows_scratch_floats(...). False when the decode itself would
-// not use the split kernel for this shape (EMBER_DECODE_ATTN=legacy, or past its limits): the caller then takes
+// The graph decode's split-K attention per row (row r attends to pos + r + 1 keys), the kernel and chunking
+// attention_devpos_cuda uses (the tiled kernel's block bodies, decode_attn_tiled.cuh, by default; EMBER_DECODE_ATTN=split
+// the 256-key kernel for max_len positions). scratch: attention_rows_scratch_floats(...). False when the decode itself
+// would not use a split-K kernel for this shape (EMBER_DECODE_ATTN=legacy, or past its limits): the caller then takes
 // another path.
 size_t attention_rows_scratch_floats(int n, int heads, int head_dim, int max_len);
 // q, out: rows row0 .. row0 + n - 1 of the pass (row0 = 0 for all rows at once; the per-row form launches it with

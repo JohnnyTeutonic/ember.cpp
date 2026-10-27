@@ -654,6 +654,12 @@ void attention_devpos_cuda(const float* Q_current_dev, const float* K_layer_cach
                            const float* V_layer_cache_base, float* out_dev, int num_heads, int head_dim,
                            float scale, int cache_max_seq_len, int cache_num_kv_heads, const int* step_dev,
                            cudaStream_t stream);
+// The decode attention kernel EMBER_DECODE_ATTN selects (read once): 0 tiled split-K (the default;
+// decode_attn_tiled.cuh), 1 "split" (256-key chunks for the cache's capacity), 2 "legacy" (one block per head).
+int decode_attention_kind();
+// The tiled kernel's chunking: min_chunk keys per chunk, at most max_chunks chunks per head
+// (decode_attn_tiled.cuh's defaults, or EMBER_DECODE_ATTN_TILE="min_chunk,max_chunks", max_chunks <= 64).
+void decode_attention_tiles(int* min_chunk, int* max_chunks);
 
 // Mixture-of-experts FFN for T tokens, the IR op moe_ffn (paperkiln ir.hpp;
 // CPU reference: utils.cpp moe_ffn_f32_cpu). x [T][d]; router [E][d]; per

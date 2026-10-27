@@ -1,0 +1,22 @@
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+43.3,117915570,20160,5849.0,4224.0,4000,12928,2373.1,"std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)"
+11.3,30686587,3360,9132.9,9120.0,8960,9920,67.9,"std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)9, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)"
+10.6,28847838,3360,8585.7,8576.0,8256,9600,158.1,"<unnamed>::decode_attn_tiled_kernel(const float *, const float *, const float *, int, int, float, int, int, int, int, const int *)"
+10.3,28038301,20160,1390.8,1344.0,1280,2112,105.4,"void cublasLt::splitKreduce_kernel<(int)32, (int)16, int, float, float, float, float, (bool)0, float, float, float, (bool)1, (bool)0, (bool)0, (bool)0>(cublasLt::cublasSplitKParams<T6>, const T4 *, const T10 *, T9 *, T5 *, const T6 *, const T6 *, const T11 *, const T4 *, T11 *, void *, long, T6 *, int *, T6 *, T6 *, const T6 *, const T6 *, const T6 *, const T6 *, const T6 *)"
+5.8,15831104,6825,2319.6,2304.0,2208,2944,59.3,"rmsnorm_optimized_kernel(const float *, const float *, float *, int, float)"
+4.0,10954463,106,103344.0,103168.0,102848,120704,1714.6,"void gemv2T_kernel_val<long, long, float, float, float, float, (int)128, (int)16, (int)2, (int)2, (bool)0, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13, T6, T6)"
+2.9,7959679,6720,1184.5,1184.0,1152,1696,55.5,"rope_devpos_kernel(float *, int, int, const float *, const int *, bool)"
+2.9,7946432,3360,2365.0,2368.0,2304,3072,73.8,"<unnamed>::decode_attn_tiled_merge_kernel(float *, int, int, int, int, int, const int *)"
+2.6,6948832,6720,1034.1,1024.0,992,1312,16.4,"add_residual_kernel(const float *, const float *, float *, int)"
+1.5,4104320,3360,1221.5,1216.0,1184,1248,14.5,"swiglu_kernel(const float *, const float *, float *, int)"
+1.4,3742752,3360,1113.9,1120.0,1056,1504,58.7,"kv_write_devpos_kernel(float *, float *, const float *, const float *, const int *, int)"
+1.2,3177888,32,99309.0,99216.0,98528,100352,443.2,"void attention_prefill_flash2_kernel<(int)64>(float *, const float *, const float *, const float *, int, int, int, int, float)"
+0.6,1574208,160,9838.8,7904.0,7680,18688,3917.4,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_32x6_tn_align4>(T1::Params)
+0.5,1440256,8,180032.0,113104.0,6976,334944,132002.5,"convert_fp32_to_bf16_kernel(const float *, unsigned short *, unsigned long)"
+0.5,1252448,64,19569.5,19568.0,18624,21088,568.2,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_256x64_16x4_tn_align4>(T1::Params)
+0.3,707008,65,10877.0,10944.0,10144,12064,336.8,"rmsnorm_batch_kernel_final_optimized(float *, const float *, const float *, int, int, float)"
+0.1,209344,64,3271.0,3264.0,3200,4448,151.1,"rope_batch_kernel_cuda(float *, int, int, int, const float *, int, bool)"
+0.1,202784,64,3168.5,3168.0,2976,3360,73.3,"update_kv_cache_batch_kernel(float *, const float *, int, int, int, int, int)"
+0.1,179520,105,1709.7,1696.0,1664,2272,69.9,"decode_embed_kernel(const float *, float *, const int *, int, int)"
+0.1,175487,32,5484.0,5471.5,5312,6112,135.9,"swiglu_batch_cuda_kernel(float *, const float *, const float *, int, int)"
+0.1,156352,64,2443.0,2368.0,2304,7264,612.7,"add_residual_batch_cuda_kernel(float *, const float *, const float *, int, int)"

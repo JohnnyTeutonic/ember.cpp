@@ -1,0 +1,290 @@
+decode attention kind 2 (0 tiled, 1 split, 2 legacy); tiles min_chunk 32 max_chunks 64
+H 32 KV  4 D  64 MAX  8192 len     1 per-launch max |err| 0.00e+00 ok
+H 32 KV  4 D  64 MAX  8192 len     1 devpos     max |err| 0.00e+00 ok
+H 32 KV  4 D  64 MAX  8192 len     1 devpos(2)  max |err| 0.00e+00 ok
+H 32 KV  4 D  64 MAX  8192 len     1 basic      max |err| 0.00e+00 ok
+H 32 KV  4 D  64 MAX  8192 len     1 decode_at  max |err| 0.00e+00 ok
+H 32 KV  4 D  64 MAX  8192 len     1 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H 32 KV  4 D  64 MAX  8192 len     2 per-launch max |err| 3.68e-07 ok
+H 32 KV  4 D  64 MAX  8192 len     2 devpos     max |err| 3.68e-07 ok
+H 32 KV  4 D  64 MAX  8192 len     2 devpos(2)  max |err| 3.68e-07 ok
+H 32 KV  4 D  64 MAX  8192 len     2 basic      max |err| 7.52e-07 ok
+H 32 KV  4 D  64 MAX  8192 len     2 decode_at  max |err| 3.68e-07 ok
+H 32 KV  4 D  64 MAX  8192 len     2 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H 32 KV  4 D  64 MAX  8192 len    31 per-launch max |err| 1.10e-06 ok
+H 32 KV  4 D  64 MAX  8192 len    31 devpos     max |err| 1.10e-06 ok
+H 32 KV  4 D  64 MAX  8192 len    31 devpos(2)  max |err| 1.10e-06 ok
+H 32 KV  4 D  64 MAX  8192 len    31 basic      max |err| 9.35e-07 ok
+H 32 KV  4 D  64 MAX  8192 len    31 decode_at  max |err| 1.10e-06 ok
+H 32 KV  4 D  64 MAX  8192 len    31 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H 32 KV  4 D  64 MAX  8192 len    32 per-launch max |err| 1.12e-06 ok
+H 32 KV  4 D  64 MAX  8192 len    32 devpos     max |err| 1.12e-06 ok
+H 32 KV  4 D  64 MAX  8192 len    32 devpos(2)  max |err| 1.12e-06 ok
+H 32 KV  4 D  64 MAX  8192 len    32 basic      max |err| 8.36e-07 ok
+H 32 KV  4 D  64 MAX  8192 len    32 decode_at  max |err| 1.12e-06 ok
+H 32 KV  4 D  64 MAX  8192 len    32 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H 32 KV  4 D  64 MAX  8192 len    33 per-launch max |err| 8.35e-07 ok
+H 32 KV  4 D  64 MAX  8192 len    33 devpos     max |err| 8.35e-07 ok
+H 32 KV  4 D  64 MAX  8192 len    33 devpos(2)  max |err| 8.35e-07 ok
+H 32 KV  4 D  64 MAX  8192 len    33 basic      max |err| 8.35e-07 ok
+H 32 KV  4 D  64 MAX  8192 len    33 decode_at  max |err| 8.35e-07 ok
+H 32 KV  4 D  64 MAX  8192 len    33 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H 32 KV  4 D  64 MAX  8192 len   255 per-launch max |err| 1.21e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   255 devpos     max |err| 1.21e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   255 devpos(2)  max |err| 1.21e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   255 basic      max |err| 7.91e-07 ok
+H 32 KV  4 D  64 MAX  8192 len   255 decode_at  max |err| 1.21e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   255 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H 32 KV  4 D  64 MAX  8192 len   256 per-launch max |err| 1.09e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   256 devpos     max |err| 1.15e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   256 devpos(2)  max |err| 1.15e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   256 basic      max |err| 8.07e-07 ok
+H 32 KV  4 D  64 MAX  8192 len   256 decode_at  max |err| 1.15e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   256 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H 32 KV  4 D  64 MAX  8192 len   257 per-launch max |err| 1.12e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   257 devpos     max |err| 1.12e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   257 devpos(2)  max |err| 1.15e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   257 basic      max |err| 8.01e-07 ok
+H 32 KV  4 D  64 MAX  8192 len   257 decode_at  max |err| 1.12e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   257 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H 32 KV  4 D  64 MAX  8192 len   300 per-launch max |err| 1.17e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   300 devpos     max |err| 1.17e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   300 devpos(2)  max |err| 1.17e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   300 basic      max |err| 7.53e-07 ok
+H 32 KV  4 D  64 MAX  8192 len   300 decode_at  max |err| 1.17e-06 ok
+H 32 KV  4 D  64 MAX  8192 len   300 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H 32 KV  4 D  64 MAX  8192 len  1000 per-launch max |err| 2.43e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  1000 devpos     max |err| 2.43e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  1000 devpos(2)  max |err| 2.43e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  1000 basic      max |err| 1.57e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  1000 decode_at  max |err| 2.31e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  1000 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H 32 KV  4 D  64 MAX  8192 len  2048 per-launch max |err| 1.38e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  2048 devpos     max |err| 1.38e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  2048 devpos(2)  max |err| 1.38e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  2048 basic      max |err| 1.29e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  2048 decode_at  max |err| 1.38e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  2048 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H 32 KV  4 D  64 MAX  8192 len  2049 per-launch max |err| 1.44e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  2049 devpos     max |err| 1.44e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  2049 devpos(2)  max |err| 1.32e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  2049 basic      max |err| 1.27e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  2049 decode_at  max |err| 1.32e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  2049 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H 32 KV  4 D  64 MAX  8192 len  4096 per-launch max |err| 2.56e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  4096 devpos     max |err| 2.56e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  4096 devpos(2)  max |err| 2.56e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  4096 basic      max |err| 1.32e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  4096 decode_at  max |err| 2.56e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  4096 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H 32 KV  4 D  64 MAX  8192 len  4097 per-launch max |err| 2.40e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  4097 devpos     max |err| 2.40e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  4097 devpos(2)  max |err| 2.40e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  4097 basic      max |err| 1.32e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  4097 decode_at  max |err| 2.40e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  4097 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H 32 KV  4 D  64 MAX  8192 len  8000 per-launch max |err| 1.69e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  8000 devpos     max |err| 1.69e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  8000 devpos(2)  max |err| 1.69e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  8000 basic      max |err| 6.02e-07 ok
+H 32 KV  4 D  64 MAX  8192 len  8000 decode_at  max |err| 1.69e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  8000 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H 32 KV  4 D  64 MAX  8192 len  8192 per-launch max |err| 2.03e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  8192 devpos     max |err| 2.00e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  8192 devpos(2)  max |err| 2.03e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  8192 basic      max |err| 6.31e-07 ok
+H 32 KV  4 D  64 MAX  8192 len  8192 decode_at  max |err| 2.00e-06 ok
+H 32 KV  4 D  64 MAX  8192 len  8192 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H  5 KV  5 D  64 MAX   512 len     1 per-launch max |err| 0.00e+00 ok
+H  5 KV  5 D  64 MAX   512 len     1 devpos     max |err| 0.00e+00 ok
+H  5 KV  5 D  64 MAX   512 len     1 devpos(2)  max |err| 0.00e+00 ok
+H  5 KV  5 D  64 MAX   512 len     1 basic      max |err| 0.00e+00 ok
+H  5 KV  5 D  64 MAX   512 len     1 decode_at  max |err| 0.00e+00 ok
+H  5 KV  5 D  64 MAX   512 len     1 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  5 KV  5 D  64 MAX   512 len     5 per-launch max |err| 3.63e-07 ok
+H  5 KV  5 D  64 MAX   512 len     5 devpos     max |err| 3.63e-07 ok
+H  5 KV  5 D  64 MAX   512 len     5 devpos(2)  max |err| 3.63e-07 ok
+H  5 KV  5 D  64 MAX   512 len     5 basic      max |err| 2.73e-07 ok
+H  5 KV  5 D  64 MAX   512 len     5 decode_at  max |err| 3.63e-07 ok
+H  5 KV  5 D  64 MAX   512 len     5 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  5 KV  5 D  64 MAX   512 len    31 per-launch max |err| 6.78e-07 ok
+H  5 KV  5 D  64 MAX   512 len    31 devpos     max |err| 6.78e-07 ok
+H  5 KV  5 D  64 MAX   512 len    31 devpos(2)  max |err| 6.78e-07 ok
+H  5 KV  5 D  64 MAX   512 len    31 basic      max |err| 6.78e-07 ok
+H  5 KV  5 D  64 MAX   512 len    31 decode_at  max |err| 6.78e-07 ok
+H  5 KV  5 D  64 MAX   512 len    31 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  5 KV  5 D  64 MAX   512 len    32 per-launch max |err| 6.93e-07 ok
+H  5 KV  5 D  64 MAX   512 len    32 devpos     max |err| 6.93e-07 ok
+H  5 KV  5 D  64 MAX   512 len    32 devpos(2)  max |err| 6.93e-07 ok
+H  5 KV  5 D  64 MAX   512 len    32 basic      max |err| 9.32e-07 ok
+H  5 KV  5 D  64 MAX   512 len    32 decode_at  max |err| 6.93e-07 ok
+H  5 KV  5 D  64 MAX   512 len    32 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  5 KV  5 D  64 MAX   512 len    33 per-launch max |err| 5.71e-07 ok
+H  5 KV  5 D  64 MAX   512 len    33 devpos     max |err| 5.71e-07 ok
+H  5 KV  5 D  64 MAX   512 len    33 devpos(2)  max |err| 5.71e-07 ok
+H  5 KV  5 D  64 MAX   512 len    33 basic      max |err| 9.25e-07 ok
+H  5 KV  5 D  64 MAX   512 len    33 decode_at  max |err| 5.71e-07 ok
+H  5 KV  5 D  64 MAX   512 len    33 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  5 KV  5 D  64 MAX   512 len    64 per-launch max |err| 7.45e-07 ok
+H  5 KV  5 D  64 MAX   512 len    64 devpos     max |err| 7.45e-07 ok
+H  5 KV  5 D  64 MAX   512 len    64 devpos(2)  max |err| 7.45e-07 ok
+H  5 KV  5 D  64 MAX   512 len    64 basic      max |err| 8.66e-07 ok
+H  5 KV  5 D  64 MAX   512 len    64 decode_at  max |err| 7.45e-07 ok
+H  5 KV  5 D  64 MAX   512 len    64 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  5 KV  5 D  64 MAX   512 len   127 per-launch max |err| 9.06e-07 ok
+H  5 KV  5 D  64 MAX   512 len   127 devpos     max |err| 9.06e-07 ok
+H  5 KV  5 D  64 MAX   512 len   127 devpos(2)  max |err| 9.06e-07 ok
+H  5 KV  5 D  64 MAX   512 len   127 basic      max |err| 1.27e-06 ok
+H  5 KV  5 D  64 MAX   512 len   127 decode_at  max |err| 9.06e-07 ok
+H  5 KV  5 D  64 MAX   512 len   127 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  5 KV  5 D  64 MAX   512 len   128 per-launch max |err| 1.03e-06 ok
+H  5 KV  5 D  64 MAX   512 len   128 devpos     max |err| 1.03e-06 ok
+H  5 KV  5 D  64 MAX   512 len   128 devpos(2)  max |err| 1.03e-06 ok
+H  5 KV  5 D  64 MAX   512 len   128 basic      max |err| 1.35e-06 ok
+H  5 KV  5 D  64 MAX   512 len   128 decode_at  max |err| 1.03e-06 ok
+H  5 KV  5 D  64 MAX   512 len   128 devpos run to run DIFFERENT; per-launch = devpos = decode_at bit-identical
+H  5 KV  5 D  64 MAX   512 len   129 per-launch max |err| 7.58e-07 ok
+H  5 KV  5 D  64 MAX   512 len   129 devpos     max |err| 7.58e-07 ok
+H  5 KV  5 D  64 MAX   512 len   129 devpos(2)  max |err| 7.58e-07 ok
+H  5 KV  5 D  64 MAX   512 len   129 basic      max |err| 1.35e-06 ok
+H  5 KV  5 D  64 MAX   512 len   129 decode_at  max |err| 7.58e-07 ok
+H  5 KV  5 D  64 MAX   512 len   129 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  5 KV  5 D  64 MAX   512 len   383 per-launch max |err| 6.58e-07 ok
+H  5 KV  5 D  64 MAX   512 len   383 devpos     max |err| 6.58e-07 ok
+H  5 KV  5 D  64 MAX   512 len   383 devpos(2)  max |err| 6.58e-07 ok
+H  5 KV  5 D  64 MAX   512 len   383 basic      max |err| 7.66e-07 ok
+H  5 KV  5 D  64 MAX   512 len   383 decode_at  max |err| 6.58e-07 ok
+H  5 KV  5 D  64 MAX   512 len   383 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  5 KV  5 D  64 MAX   512 len   384 per-launch max |err| 1.25e-06 ok
+H  5 KV  5 D  64 MAX   512 len   384 devpos     max |err| 1.25e-06 ok
+H  5 KV  5 D  64 MAX   512 len   384 devpos(2)  max |err| 1.25e-06 ok
+H  5 KV  5 D  64 MAX   512 len   384 basic      max |err| 8.90e-07 ok
+H  5 KV  5 D  64 MAX   512 len   384 decode_at  max |err| 1.25e-06 ok
+H  5 KV  5 D  64 MAX   512 len   384 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H  5 KV  5 D  64 MAX   512 len   385 per-launch max |err| 4.67e-07 ok
+H  5 KV  5 D  64 MAX   512 len   385 devpos     max |err| 4.67e-07 ok
+H  5 KV  5 D  64 MAX   512 len   385 devpos(2)  max |err| 4.67e-07 ok
+H  5 KV  5 D  64 MAX   512 len   385 basic      max |err| 8.56e-07 ok
+H  5 KV  5 D  64 MAX   512 len   385 decode_at  max |err| 6.37e-07 ok
+H  5 KV  5 D  64 MAX   512 len   385 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H  5 KV  5 D  64 MAX   512 len   511 per-launch max |err| 7.59e-07 ok
+H  5 KV  5 D  64 MAX   512 len   511 devpos     max |err| 7.59e-07 ok
+H  5 KV  5 D  64 MAX   512 len   511 devpos(2)  max |err| 7.59e-07 ok
+H  5 KV  5 D  64 MAX   512 len   511 basic      max |err| 9.18e-07 ok
+H  5 KV  5 D  64 MAX   512 len   511 decode_at  max |err| 7.59e-07 ok
+H  5 KV  5 D  64 MAX   512 len   511 devpos run to run bit-identical; per-launch = devpos = decode_at different
+H  5 KV  5 D  64 MAX   512 len   512 per-launch max |err| 1.09e-06 ok
+H  5 KV  5 D  64 MAX   512 len   512 devpos     max |err| 1.09e-06 ok
+H  5 KV  5 D  64 MAX   512 len   512 devpos(2)  max |err| 1.09e-06 ok
+H  5 KV  5 D  64 MAX   512 len   512 basic      max |err| 8.48e-07 ok
+H  5 KV  5 D  64 MAX   512 len   512 decode_at  max |err| 1.09e-06 ok
+H  5 KV  5 D  64 MAX   512 len   512 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H  8 KV  2 D 128 MAX  4096 len     1 per-launch max |err| 0.00e+00 ok
+H  8 KV  2 D 128 MAX  4096 len     1 devpos     max |err| 0.00e+00 ok
+H  8 KV  2 D 128 MAX  4096 len     1 devpos(2)  max |err| 0.00e+00 ok
+H  8 KV  2 D 128 MAX  4096 len     1 basic      max |err| 0.00e+00 ok
+H  8 KV  2 D 128 MAX  4096 len     1 decode_at  max |err| 0.00e+00 ok
+H  8 KV  2 D 128 MAX  4096 len     1 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  8 KV  2 D 128 MAX  4096 len   100 per-launch max |err| 9.69e-07 ok
+H  8 KV  2 D 128 MAX  4096 len   100 devpos     max |err| 9.69e-07 ok
+H  8 KV  2 D 128 MAX  4096 len   100 devpos(2)  max |err| 9.69e-07 ok
+H  8 KV  2 D 128 MAX  4096 len   100 basic      max |err| 6.63e-07 ok
+H  8 KV  2 D 128 MAX  4096 len   100 decode_at  max |err| 9.69e-07 ok
+H  8 KV  2 D 128 MAX  4096 len   100 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  8 KV  2 D 128 MAX  4096 len  1024 per-launch max |err| 8.55e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  1024 devpos     max |err| 8.55e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  1024 devpos(2)  max |err| 8.55e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  1024 basic      max |err| 6.84e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  1024 decode_at  max |err| 8.55e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  1024 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H  8 KV  2 D 128 MAX  4096 len  2047 per-launch max |err| 9.34e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  2047 devpos     max |err| 9.34e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  2047 devpos(2)  max |err| 9.34e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  2047 basic      max |err| 6.37e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  2047 decode_at  max |err| 9.34e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  2047 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H  8 KV  2 D 128 MAX  4096 len  2048 per-launch max |err| 1.08e-06 ok
+H  8 KV  2 D 128 MAX  4096 len  2048 devpos     max |err| 1.08e-06 ok
+H  8 KV  2 D 128 MAX  4096 len  2048 devpos(2)  max |err| 1.08e-06 ok
+H  8 KV  2 D 128 MAX  4096 len  2048 basic      max |err| 6.02e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  2048 decode_at  max |err| 1.08e-06 ok
+H  8 KV  2 D 128 MAX  4096 len  2048 devpos run to run bit-identical; per-launch = devpos = decode_at different
+H  8 KV  2 D 128 MAX  4096 len  2049 per-launch max |err| 8.06e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  2049 devpos     max |err| 8.06e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  2049 devpos(2)  max |err| 8.06e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  2049 basic      max |err| 6.41e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  2049 decode_at  max |err| 8.06e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  2049 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H  8 KV  2 D 128 MAX  4096 len  4096 per-launch max |err| 1.60e-06 ok
+H  8 KV  2 D 128 MAX  4096 len  4096 devpos     max |err| 1.66e-06 ok
+H  8 KV  2 D 128 MAX  4096 len  4096 devpos(2)  max |err| 1.66e-06 ok
+H  8 KV  2 D 128 MAX  4096 len  4096 basic      max |err| 4.20e-07 ok
+H  8 KV  2 D 128 MAX  4096 len  4096 decode_at  max |err| 1.60e-06 ok
+H  8 KV  2 D 128 MAX  4096 len  4096 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H  4 KV  4 D  16 MAX  1024 len     1 per-launch max |err| 0.00e+00 ok
+H  4 KV  4 D  16 MAX  1024 len     1 devpos     max |err| 0.00e+00 ok
+H  4 KV  4 D  16 MAX  1024 len     1 devpos(2)  max |err| 0.00e+00 ok
+H  4 KV  4 D  16 MAX  1024 len     1 basic      max |err| 0.00e+00 ok
+H  4 KV  4 D  16 MAX  1024 len     1 decode_at  max |err| 0.00e+00 ok
+H  4 KV  4 D  16 MAX  1024 len     1 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  4 KV  4 D  16 MAX  1024 len    17 per-launch max |err| 3.09e-07 ok
+H  4 KV  4 D  16 MAX  1024 len    17 devpos     max |err| 3.09e-07 ok
+H  4 KV  4 D  16 MAX  1024 len    17 devpos(2)  max |err| 3.09e-07 ok
+H  4 KV  4 D  16 MAX  1024 len    17 basic      max |err| 3.87e-07 ok
+H  4 KV  4 D  16 MAX  1024 len    17 decode_at  max |err| 3.09e-07 ok
+H  4 KV  4 D  16 MAX  1024 len    17 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  4 KV  4 D  16 MAX  1024 len   100 per-launch max |err| 2.93e-07 ok
+H  4 KV  4 D  16 MAX  1024 len   100 devpos     max |err| 2.93e-07 ok
+H  4 KV  4 D  16 MAX  1024 len   100 devpos(2)  max |err| 2.93e-07 ok
+H  4 KV  4 D  16 MAX  1024 len   100 basic      max |err| 1.60e-07 ok
+H  4 KV  4 D  16 MAX  1024 len   100 decode_at  max |err| 2.93e-07 ok
+H  4 KV  4 D  16 MAX  1024 len   100 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  4 KV  4 D  16 MAX  1024 len  1024 per-launch max |err| 6.12e-07 ok
+H  4 KV  4 D  16 MAX  1024 len  1024 devpos     max |err| 6.12e-07 ok
+H  4 KV  4 D  16 MAX  1024 len  1024 devpos(2)  max |err| 6.12e-07 ok
+H  4 KV  4 D  16 MAX  1024 len  1024 basic      max |err| 4.33e-07 ok
+H  4 KV  4 D  16 MAX  1024 len  1024 decode_at  max |err| 6.12e-07 ok
+H  4 KV  4 D  16 MAX  1024 len  1024 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H  6 KV  3 D  80 MAX   512 len     1 per-launch max |err| 0.00e+00 ok
+H  6 KV  3 D  80 MAX   512 len     1 devpos     max |err| 0.00e+00 ok
+H  6 KV  3 D  80 MAX   512 len     1 devpos(2)  max |err| 0.00e+00 ok
+H  6 KV  3 D  80 MAX   512 len     1 basic      max |err| 0.00e+00 ok
+H  6 KV  3 D  80 MAX   512 len     1 decode_at  max |err| 0.00e+00 ok
+H  6 KV  3 D  80 MAX   512 len     1 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  6 KV  3 D  80 MAX   512 len    40 per-launch max |err| 4.29e-07 ok
+H  6 KV  3 D  80 MAX   512 len    40 devpos     max |err| 4.29e-07 ok
+H  6 KV  3 D  80 MAX   512 len    40 devpos(2)  max |err| 4.29e-07 ok
+H  6 KV  3 D  80 MAX   512 len    40 basic      max |err| 6.58e-07 ok
+H  6 KV  3 D  80 MAX   512 len    40 decode_at  max |err| 4.29e-07 ok
+H  6 KV  3 D  80 MAX   512 len    40 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  6 KV  3 D  80 MAX   512 len   384 per-launch max |err| 7.64e-07 ok
+H  6 KV  3 D  80 MAX   512 len   384 devpos     max |err| 7.64e-07 ok
+H  6 KV  3 D  80 MAX   512 len   384 devpos(2)  max |err| 7.64e-07 ok
+H  6 KV  3 D  80 MAX   512 len   384 basic      max |err| 3.58e-07 ok
+H  6 KV  3 D  80 MAX   512 len   384 decode_at  max |err| 7.64e-07 ok
+H  6 KV  3 D  80 MAX   512 len   384 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H  6 KV  3 D  80 MAX   512 len   512 per-launch max |err| 6.68e-07 ok
+H  6 KV  3 D  80 MAX   512 len   512 devpos     max |err| 6.68e-07 ok
+H  6 KV  3 D  80 MAX   512 len   512 devpos(2)  max |err| 6.91e-07 ok
+H  6 KV  3 D  80 MAX   512 len   512 basic      max |err| 3.40e-07 ok
+H  6 KV  3 D  80 MAX   512 len   512 decode_at  max |err| 6.68e-07 ok
+H  6 KV  3 D  80 MAX   512 len   512 devpos run to run DIFFERENT; per-launch = devpos = decode_at different
+H  2 KV  2 D   6 MAX   256 len     1 per-launch max |err| 0.00e+00 ok
+H  2 KV  2 D   6 MAX   256 len     1 devpos     max |err| 0.00e+00 ok
+H  2 KV  2 D   6 MAX   256 len     1 devpos(2)  max |err| 0.00e+00 ok
+H  2 KV  2 D   6 MAX   256 len     1 basic      max |err| 0.00e+00 ok
+H  2 KV  2 D   6 MAX   256 len     1 decode_at  max |err| 0.00e+00 ok
+H  2 KV  2 D   6 MAX   256 len     1 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  2 KV  2 D   6 MAX   256 len     9 per-launch max |err| 4.33e-08 ok
+H  2 KV  2 D   6 MAX   256 len     9 devpos     max |err| 4.33e-08 ok
+H  2 KV  2 D   6 MAX   256 len     9 devpos(2)  max |err| 4.33e-08 ok
+H  2 KV  2 D   6 MAX   256 len     9 basic      max |err| 1.15e-07 ok
+H  2 KV  2 D   6 MAX   256 len     9 decode_at  max |err| 4.33e-08 ok
+H  2 KV  2 D   6 MAX   256 len     9 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+H  2 KV  2 D   6 MAX   256 len   256 per-launch max |err| 1.96e-07 ok
+H  2 KV  2 D   6 MAX   256 len   256 devpos     max |err| 1.96e-07 ok
+H  2 KV  2 D   6 MAX   256 len   256 devpos(2)  max |err| 1.96e-07 ok
+H  2 KV  2 D   6 MAX   256 len   256 basic      max |err| 1.02e-07 ok
+H  2 KV  2 D   6 MAX   256 len   256 decode_at  max |err| 1.96e-07 ok
+H  2 KV  2 D   6 MAX   256 len   256 devpos run to run bit-identical; per-launch = devpos = decode_at bit-identical
+all ok

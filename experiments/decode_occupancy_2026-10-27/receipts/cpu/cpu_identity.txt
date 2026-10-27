@@ -1,0 +1,20 @@
+HEAD tree, then this work's tree, built in /home/jonat/occ/cpu/build (HAS_CUDA=OFF, Release)
+tinyllama_server head 7fe6f4f53171c7bdf2fef21c89c775d84f7e585fc4a37e77b8895598a4e7302e new 7fe6f4f53171c7bdf2fef21c89c775d84f7e585fc4a37e77b8895598a4e7302e identical
+ir_logits head 4402739f1e25f9a35b53db399e05b5b6bf2d15d65d346d79e674c7689a0d0405 new 4402739f1e25f9a35b53db399e05b5b6bf2d15d65d346d79e674c7689a0d0405 identical
+ir_adapter head a73412f63c90df51eb03e4fd780cd4486ef69e8b0e08a8ddeb68c1d53446a321 new a73412f63c90df51eb03e4fd780cd4486ef69e8b0e08a8ddeb68c1d53446a321 identical
+objects rebuilt for the new tree: 15
+Building without distributed inference support.
+Building CPU-only version.
+Building CXX object CMakeFiles/tinyllama_core.dir/cpu_attention.cpp.o
+Building CXX object CMakeFiles/tinyllama_core.dir/model.cpp.o
+Building CXX object CMakeFiles/tinyllama_core.dir/utils.cpp.o
+Building CXX object CMakeFiles/tinyllama_core.dir/api.cpp.o
+Building CXX object CMakeFiles/tinyllama_core.dir/score.cpp.o
+Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir.cpp.o
+Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_ops.cpp.o
+Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_expr.cpp.o
+Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_mamba.cpp.o
+Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_validate.cpp.o
+Building CXX object CMakeFiles/tinyllama_server.dir/server.cpp.o
+Building CXX object CMakeFiles/ir_logits.dir/tools/ir_logits.cpp.o
+Building CXX object CMakeFiles/ir_adapter.dir/tools/ir_adapter.cpp.o

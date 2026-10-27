@@ -1,0 +1,7 @@
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+89.1,7761720384,14250,544682.1,548349.0,509886,565085,11374.3,"<unnamed>::flush_kernel(float4 *, unsigned long, float)"
+5.7,497535796,34200,14547.8,6624.0,2880,144576,24030.3,"<unnamed>::tiled_kernel(const float *, const float *, const float *, int, float, int, int, int, int, const int *, float *)"
+3.0,257343628,9120,28217.5,19040.0,6239,155680,26905.6,"<unnamed>::old_split_kernel(const float *, const float *, const float *, int, int, float, int, int, int, const int *, float *)"
+1.1,91851667,34200,2685.7,2400.0,1887,6272,766.7,"<unnamed>::tiled_merge_kernel(float *, int, int, int, int, const int *, const float *)"
+0.6,53285511,23,2316761.3,2309652.0,2296371,2418611,26523.7,"<unnamed>::copy_kernel(const float4 *, float4 *, unsigned long)"
+0.6,52146657,9120,5717.8,3584.0,1632,20192,4812.4,"<unnamed>::old_merge_kernel(float *, int, int, const float *)"

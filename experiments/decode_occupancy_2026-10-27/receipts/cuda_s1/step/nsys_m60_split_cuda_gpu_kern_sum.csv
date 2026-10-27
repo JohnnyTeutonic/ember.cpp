@@ -1,0 +1,15 @@
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+32.9,8795197,160,54970.0,54784.0,11744,100095,31164.9,"void attention_prefill_flash2_kernel<(int)64>(float *, const float *, const float *, const float *, int, int, int, int, float)"
+16.9,4512489,640,7050.8,6912.0,4864,14144,1988.2,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(T1::Params)
+10.4,2771733,256,10827.1,9104.0,7488,18176,3882.6,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_32x6_tn_align4>(T1::Params)
+8.4,2237239,325,6883.8,6144.0,3456,11264,2866.4,"rmsnorm_batch_kernel_final_optimized(float *, const float *, const float *, int, int, float)"
+5.7,1528476,128,11941.2,11904.0,11007,13728,509.7,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x64_16x6_tn_align4>(T1::Params)
+5.3,1421468,8,177683.5,111440.0,2400,333566,131265.2,"convert_fp32_to_bf16_kernel(const float *, unsigned short *, unsigned long)"
+4.6,1243259,64,19425.9,19392.0,18560,20352,504.0,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_256x64_16x4_tn_align4>(T1::Params)
+2.7,723166,320,2259.9,2304.0,1280,3456,699.0,"rope_batch_kernel_cuda(float *, int, int, int, const float *, int, bool)"
+2.7,709693,320,2217.8,2272.0,1280,3296,667.5,"update_kv_cache_batch_kernel(float *, const float *, int, int, int, int, int)"
+2.5,658046,352,1869.4,1824.0,1695,2880,288.8,"void cublasLt::splitKreduce_kernel<(int)32, (int)16, int, float, float, float, float, (bool)0, float, float, float, (bool)1, (bool)0, (bool)0, (bool)0>(cublasLt::cublasSplitKParams<T6>, const T4 *, const T10 *, T9 *, T5 *, const T6 *, const T6 *, const T11 *, const T4 *, T11 *, void *, long, T6 *, int *, T6 *, T6 *, const T6 *, const T6 *, const T6 *, const T6 *, const T6 *)"
+2.4,629727,160,3935.8,3296.0,2752,5632,1148.7,"swiglu_batch_cuda_kernel(float *, const float *, const float *, int, int)"
+2.2,586207,320,1831.9,1728.0,1312,2432,398.9,"add_residual_batch_cuda_kernel(float *, const float *, const float *, int, int)"
+2.1,562045,5,112409.0,113248.0,103904,119551,6466.1,"void gemv2T_kernel_val<long, long, float, float, float, float, (int)128, (int)16, (int)2, (int)2, (bool)0, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13, T6, T6)"
+1.4,383552,32,11986.0,11968.0,11200,13344,441.8,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x128_32x3_tn_align4>(T1::Params)

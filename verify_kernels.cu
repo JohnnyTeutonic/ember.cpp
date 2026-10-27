@@ -4,6 +4,7 @@
 #include "verify_kernels.h"
 
 #ifdef HAS_CUDA
+#include <algorithm>
 #include <cfloat>
 #include <climits>
 #include <cmath>
@@ -13,6 +14,7 @@
 #include <string>
 
 #include "cuda_kernels.h"
+#include "decode_attn_tiled.cuh"
 #include "determinism.h"
 
 namespace ember_verify {
@@ -243,13 +245,50 @@ __global__ void attn_merge_rows_kernel(float* __restrict__ out_all, int head_dim
   }
 }
 
+// ---- attention: decode_attn_tiled_kernel + decode_attn_tiled_merge_kernel per row ------------------------------
+// The same block bodies (decode_attn_tiled.cuh) at row r's length pos + row0 + r + 1, each row with its own scratch.
+__global__ void attn_tiled_rows_kernel(const float* __restrict__ Q_all, const float* __restrict__ K,
+                                       const float* __restrict__ V, int head_dim, float scale, int num_kv_heads,
+                                       int num_heads, int min_chunk, int max_chunks, const int* pos_dev, int row0,
+                                       float* __restrict__ scratch) {
+  const int r = blockIdx.z;
+  const int L = pos_dev[0] + row0 + r + 1;
+  const int h = blockIdx.x, c = blockIdx.y, nc = gridDim.y;
+  const float* Q = Q_all + (size_t)r * num_heads * head_dim;
+  ember_tiled::tiled_split_block(Q + (size_t)h * head_dim, K, V, L, c, h / (num_heads / num_kv_heads), num_kv_heads,
+                                 head_dim, scale, min_chunk, max_chunks,
+                                 scratch + (((size_t)r * num_heads + h) * nc + c) * (head_dim + 2));
+}
+
+__global__ void attn_tiled_merge_rows_kernel(float* __restrict__ out_all, int head_dim, int nc, int num_heads,
+                                             int min_chunk, int max_chunks, const int* pos_dev, int row0,
+                                             const float* __restrict__ scratch) {
+  const int h = blockIdx.x, r = blockIdx.y;
+  const int L = pos_dev[0] + row0 + r + 1;
+  ember_tiled::tiled_merge_block(scratch + ((size_t)r * num_heads + h) * nc * (head_dim + 2),
+                                 out_all + (size_t)r * num_heads * head_dim + (size_t)h * head_dim, L, head_dim,
+                                 min_chunk, max_chunks);
+}
+
+bool aligned16(const void* p) { return (reinterpret_cast<uintptr_t>(p) & 15u) == 0; }
+
+// decode_attn_tiled's grid for a cache of max_len positions (cuda_kernels.cu); false where it would refuse.
+bool tiled_shape(int heads, int head_dim, int max_len, int kv_heads, int* nc_out, int* mn_out, int* mx_out) {
+  if (decode_attention_kind() != 0) return false;
+  int mn = 0, mx = 0;
+  decode_attention_tiles(&mn, &mx);
+  if (!ember_tiled::tiled_shape_ok(heads, head_dim, max_len, kDecHeadsMax, mn, mx) || kv_heads <= 0 ||
+      heads % kv_heads != 0)
+    return false;
+  *nc_out = ember_tiled::tiled_grid_chunks(max_len, mn, mx);
+  *mn_out = mn;
+  *mx_out = mx;
+  return true;
+}
+
 // decode_attn_split's chunking for a cache of max_len positions; false where it would refuse.
 bool split_shape(int heads, int head_dim, int max_len, int* nc_out, int* chunk_out) {
-  static const bool legacy = [] {
-    const char* e = std::getenv("EMBER_DECODE_ATTN");
-    return e && std::string(e) == "legacy";
-  }();
-  if (legacy || heads > kDecHeadsMax || head_dim > kDecHeadDimMax || max_len <= 0) return false;
+  if (decode_attention_kind() == 2 || heads > kDecHeadsMax || head_dim > kDecHeadDimMax || max_len <= 0) return false;
   int nc = (max_len + 255) / 256;
   if (nc > kDecChunksMax) nc = kDecChunksMax;
   const int chunk = (max_len + nc - 1) / nc;
@@ -412,14 +451,29 @@ void kv_write_rows(float* k_cache, float* v_cache, const float* k, const float* 
 }
 
 size_t attention_rows_scratch_floats(int n, int heads, int head_dim, int max_len) {
-  int nc = 0, chunk = 0;
-  if (!split_shape(heads, head_dim, max_len, &nc, &chunk)) return 0;
-  return (size_t)n * heads * nc * (head_dim + 2);
+  // Room for either kernel (the tiled one falls back to split for a misaligned pointer).
+  int nc = 0, chunk = 0, tnc = 0, mn = 0, mx = 0;
+  const bool split = split_shape(heads, head_dim, max_len, &nc, &chunk);
+  const bool tiled = tiled_shape(heads, head_dim, max_len, heads, &tnc, &mn, &mx);
+  if (!split && !tiled) return 0;
+  const int chunks = std::max(split ? nc : 0, tiled ? tnc : 0);
+  return (size_t)n * heads * chunks * (head_dim + 2);
 }
 
 bool attention_rows(const float* q, const float* k_cache, const float* v_cache, float* out, int n, int row0,
                     int heads, int head_dim, float scale, int max_len, int kv_heads, const int* pos_dev,
                     float* scratch, cudaStream_t st) {
+  int tnc = 0, mn = 0, mx = 0;
+  if (tiled_shape(heads, head_dim, max_len, kv_heads, &tnc, &mn, &mx) && aligned16(q) && aligned16(k_cache) &&
+      aligned16(v_cache)) {
+    const size_t shm = ember_tiled::tiled_shm_bytes(head_dim, max_len, mn, mx);
+    attn_tiled_rows_kernel<<<dim3(heads, tnc, n), ember_tiled::kTiledThreads, shm, st>>>(
+        q, k_cache, v_cache, head_dim, scale, kv_heads, heads, mn, mx, pos_dev, row0, scratch);
+    attn_tiled_merge_rows_kernel<<<dim3(heads, n), ember_tiled::kTiledThreads, 0, st>>>(out, head_dim, tnc, heads, mn,
+                                                                                        mx, pos_dev, row0, scratch);
+    check_launch("attention_rows");
+    return true;
+  }
   int nc = 0, chunk = 0;
   if (!split_shape(heads, head_dim, max_len, &nc, &chunk)) return false;
   const size_t shm = (size_t)(head_dim + chunk) * sizeof(float);

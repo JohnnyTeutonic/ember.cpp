@@ -25,6 +25,8 @@
 #include <cuda_bf16.h>
 #include <cuda_runtime.h>
 
+#include "decode_attn_tiled.cuh"
+
 // Define CUDA_CHECK macro if not already defined
 #ifndef CUDA_CHECK
 #define CUDA_CHECK(call) gpuErrchk(call)
@@ -3118,7 +3120,13 @@ void softmax_vector_cuda_optimized(const float* x_dev, float* out_dev, int n,
 // graph can capture the grid for the cache's full length while the length
 // itself comes from device memory (step_dev[1] = pos). The scratch is a
 // static __device__ array (nothing allocated, graph-safe; one decode stream
-// at a time). EMBER_DECODE_ATTN=legacy selects the one-block-per-head kernel.
+// at a time).
+// Two split-K kernels share the scratch. The default is the tiled kernel
+// (decode_attn_tiled.cuh): chunks of 32 keys chosen by the current length,
+// so short contexts still fill the GPU (experiments/decode_occupancy_2026-10-27).
+// EMBER_DECODE_ATTN=split selects the kernel below with 256-key chunks for the
+// cache's capacity (the default before that work); EMBER_DECODE_ATTN=legacy
+// the one-block-per-head kernel.
 namespace {
 constexpr int kDecChunkMax = 2048;   // keys per chunk at most (shared memory)
 constexpr int kDecChunksMax = 64;    // chunks per head at most
@@ -3210,15 +3218,9 @@ __global__ void decode_attn_merge_kernel(float* __restrict__ out, int head_dim, 
     }
 }
 
-bool decode_attn_legacy() {
-    static const bool legacy = [] {
-        const char* e = std::getenv("EMBER_DECODE_ATTN");
-        return e && std::string(e) == "legacy";
-    }();
-    return legacy;
-}
+bool decode_attn_legacy() { return decode_attention_kind() == 2; }
 
-// Launches the split kernel for a cache of max_len positions; false if the
+// Launches the split kernel (256-key chunks for a cache of max_len positions); false if the
 // shape does not fit the scratch (the caller then uses the legacy kernel).
 bool decode_attn_split(const float* Q, const float* K, const float* V, float* out, int num_heads, int seq_len,
                        int head_dim, float scale, int max_len, int num_kv_heads, const int* step_dev,
@@ -3235,7 +3237,84 @@ bool decode_attn_split(const float* Q, const float* K, const float* V, float* ou
     gpuErrchk(cudaGetLastError());
     return true;
 }
+
+// The tiled split-K kernel (decode_attn_tiled.cuh): chunks chosen by the length L, a grid for max_len positions,
+// the same g_dec_partial scratch (heads * chunks * (head_dim + 2), chunks <= 64).
+__global__ void decode_attn_tiled_kernel(const float* __restrict__ Q, const float* __restrict__ K,
+                                         const float* __restrict__ V, int seq_len, int head_dim, float scale,
+                                         int num_kv_heads, int num_heads, int min_chunk, int max_chunks,
+                                         const int* step_dev) {
+    const int L = step_dev ? step_dev[1] + 1 : seq_len;
+    const int h = blockIdx.x, c = blockIdx.y, nc = gridDim.y;
+    ember_tiled::tiled_split_block(Q + (size_t)h * head_dim, K, V, L, c, h / (num_heads / num_kv_heads),
+                                   num_kv_heads, head_dim, scale, min_chunk, max_chunks,
+                                   g_dec_partial + ((size_t)h * nc + c) * (head_dim + 2));
+}
+
+__global__ void decode_attn_tiled_merge_kernel(float* __restrict__ out, int seq_len, int head_dim, int nc,
+                                               int min_chunk, int max_chunks, const int* step_dev) {
+    const int L = step_dev ? step_dev[1] + 1 : seq_len;
+    const int h = blockIdx.x;
+    ember_tiled::tiled_merge_block(g_dec_partial + (size_t)h * nc * (head_dim + 2), out + (size_t)h * head_dim, L,
+                                   head_dim, min_chunk, max_chunks);
+}
+
+bool aligned16(const void* p) { return (reinterpret_cast<uintptr_t>(p) & 15u) == 0; }
+
+// Launches the tiled kernel for a cache of max_len positions; false when it is not selected or the shape is not
+// its (head_dim % 4, 16-byte rows, the scratch): the caller then tries the split kernel.
+bool decode_attn_tiled(const float* Q, const float* K, const float* V, float* out, int num_heads, int seq_len,
+                       int head_dim, float scale, int max_len, int num_kv_heads, const int* step_dev,
+                       cudaStream_t stream) {
+    if (decode_attention_kind() != 0) return false;
+    int mn = 0, mx = 0;
+    decode_attention_tiles(&mn, &mx);
+    if (!ember_tiled::tiled_shape_ok(num_heads, head_dim, max_len, kDecHeadsMax, mn, mx) || num_kv_heads <= 0 ||
+        num_heads % num_kv_heads != 0 || !aligned16(Q) || !aligned16(K) || !aligned16(V))
+        return false;
+    const int nc = ember_tiled::tiled_grid_chunks(max_len, mn, mx);
+    const size_t shm = ember_tiled::tiled_shm_bytes(head_dim, max_len, mn, mx);
+    decode_attn_tiled_kernel<<<dim3(num_heads, nc), ember_tiled::kTiledThreads, shm, stream>>>(
+        Q, K, V, seq_len, head_dim, scale, num_kv_heads, num_heads, mn, mx, step_dev);
+    decode_attn_tiled_merge_kernel<<<num_heads, ember_tiled::kTiledThreads, 0, stream>>>(out, seq_len, head_dim, nc,
+                                                                                         mn, mx, step_dev);
+    gpuErrchk(cudaGetLastError());
+    return true;
+}
+
+// The decode attention's split-K paths in order: tiled (the default), then split; false: the caller takes the
+// one-block-per-head kernel.
+bool decode_attn_device(const float* Q, const float* K, const float* V, float* out, int num_heads, int seq_len,
+                        int head_dim, float scale, int max_len, int num_kv_heads, const int* step_dev,
+                        cudaStream_t stream) {
+    return decode_attn_tiled(Q, K, V, out, num_heads, seq_len, head_dim, scale, max_len, num_kv_heads, step_dev,
+                             stream) ||
+           decode_attn_split(Q, K, V, out, num_heads, seq_len, head_dim, scale, max_len, num_kv_heads, step_dev,
+                             stream);
+}
 }  // namespace
+
+int decode_attention_kind() {
+    static const int kind = [] {
+        const char* e = std::getenv("EMBER_DECODE_ATTN");
+        const std::string s = e ? e : "";
+        return s == "legacy" ? 2 : s == "split" ? 1 : 0;
+    }();
+    return kind;
+}
+
+void decode_attention_tiles(int* min_chunk, int* max_chunks) {
+    static const std::pair<int, int> t = [] {
+        std::pair<int, int> d{ember_tiled::kTiledMinChunk, ember_tiled::kTiledMaxChunks};
+        const char* e = std::getenv("EMBER_DECODE_ATTN_TILE");
+        int a = 0, b = 0;
+        if (e && std::sscanf(e, "%d,%d", &a, &b) == 2 && a >= 1 && b >= 1 && b <= ember_tiled::kTiledMaxChunks)
+            d = {a, b};
+        return d;
+    }();
+    *min_chunk = t.first;
+    *max_chunks = t.second;
+}
 
 void attention_cuda_optimized(const float* Q_current_dev, const float* K_layer_cache_base,
                              const float* V_layer_cache_base, float* out_dev,
@@ -3243,7 +3322,7 @@ void attention_cuda_optimized(const float* Q_current_dev, const float* K_layer_c
                              float scale, int cache_max_seq_len, int cache_num_kv_heads,
                              cudaStream_t stream) {
     if (current_seq_len == 0) return;
-    if (decode_attn_split(Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, num_heads,
+    if (decode_attn_device(Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, num_heads,
                           current_seq_len, head_dim, scale, current_seq_len, cache_num_kv_heads, nullptr, stream))
         return;
     const int threads_per_block = 256;
@@ -3522,7 +3601,7 @@ void attention_decode_at_cuda(const float* Q_current_dev, const float* K_layer_c
                               const float* V_layer_cache_base, float* out_dev, int num_heads, int seq_len,
                               int head_dim, float scale, int cache_max_seq_len, int cache_num_kv_heads,
                               cudaStream_t stream) {
-  if (!decode_attn_split(Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, num_heads, seq_len, head_dim,
+  if (!decode_attn_device(Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, num_heads, seq_len, head_dim,
                          scale, cache_max_seq_len, cache_num_kv_heads, nullptr, stream))
     attention_cuda_optimized(Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, num_heads, seq_len,
                              head_dim, scale, cache_max_seq_len, cache_num_kv_heads, stream);
@@ -3532,7 +3611,7 @@ void attention_devpos_cuda(const float* Q_current_dev, const float* K_layer_cach
                            const float* V_layer_cache_base, float* out_dev, int num_heads, int head_dim,
                            float scale, int cache_max_seq_len, int cache_num_kv_heads, const int* step_dev,
                            cudaStream_t stream) {
-  if (decode_attn_split(Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, num_heads,
+  if (decode_attn_device(Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, num_heads,
                         /*seq_len=*/0, head_dim, scale, cache_max_seq_len, cache_num_kv_heads, step_dev, stream))
     return;
   const size_t shared_mem_size = (cache_max_seq_len + 1) * sizeof(float);

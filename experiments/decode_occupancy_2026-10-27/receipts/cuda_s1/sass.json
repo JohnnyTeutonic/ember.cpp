@@ -1,0 +1,23 @@
+{
+ "head": "/content/sass_head.txt",
+ "new": "/content/sass_new.txt",
+ "arches": [
+  "sm_89"
+ ],
+ "head_functions": 104,
+ "new_functions": 108,
+ "identical": 104,
+ "differ": 0,
+ "only_in_head": 0,
+ "only_in_new": 4,
+ "differing": [],
+ "only_in_head_names": [],
+ "only_in_new_names": [
+  "sm_89 _ZN48_GLOBAL__N__H_15_cuda_kernels_cu_H30decode_attn_tiled_merge_kernelEPfiiiiiPKi",
+  "sm_89 _ZN48_GLOBAL__N__H_15_cuda_kernels_cu_H24decode_attn_tiled_kernelEPKfS1_S1_iifiiiiPKi",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H28attn_tiled_merge_rows_kernelEPfiiiiiPKiiPKf",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H22attn_tiled_rows_kernelEPKfS2_S2_ifiiiiPKiiPf"
+ ],
+ "head_instructions": 17520,
+ "every_head_kernel_identical": true
+}
