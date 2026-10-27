@@ -1,0 +1,290 @@
+{
+ "summary": {
+  "rows": 40,
+  "prompt_equal": 40,
+  "mtstudio_rows_with_ids": 39,
+  "ids_equal_mtstudio": 38
+ },
+ "rows": [
+  {
+   "id": "v2/system/0",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 24,
+   "error": null
+  },
+  {
+   "id": "v2/system/1",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 21,
+   "error": null
+  },
+  {
+   "id": "v2/system/2",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 21,
+   "error": null
+  },
+  {
+   "id": "v2/system/3",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 15,
+   "error": null
+  },
+  {
+   "id": "v2/system/4",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 20,
+   "error": null
+  },
+  {
+   "id": "v2/system/5",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 23,
+   "error": null
+  },
+  {
+   "id": "v2/system/6",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 14,
+   "error": null
+  },
+  {
+   "id": "v2/system/7",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 20,
+   "error": null
+  },
+  {
+   "id": "v2/system/8",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 11,
+   "error": null
+  },
+  {
+   "id": "v2/system/9",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 17,
+   "error": null
+  },
+  {
+   "id": "v2/history/0",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 29,
+   "error": null
+  },
+  {
+   "id": "v2/history/1",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 38,
+   "error": null
+  },
+  {
+   "id": "v2/history/2",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 28,
+   "error": null
+  },
+  {
+   "id": "v2/history/3",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 26,
+   "error": null
+  },
+  {
+   "id": "v2/history/4",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 27,
+   "error": null
+  },
+  {
+   "id": "v2/history/5",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 33,
+   "error": null
+  },
+  {
+   "id": "v2/history/6",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 30,
+   "error": null
+  },
+  {
+   "id": "v2/history/7",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 30,
+   "error": null
+  },
+  {
+   "id": "v2/history/8",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 29,
+   "error": null
+  },
+  {
+   "id": "v2/history/9",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 33,
+   "error": null
+  },
+  {
+   "id": "v2/tool_user/0",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 214,
+   "error": null
+  },
+  {
+   "id": "v2/tool_user/1",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 238,
+   "error": null
+  },
+  {
+   "id": "v2/tool_user/2",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 186,
+   "error": null
+  },
+  {
+   "id": "v2/tool_user/3",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 129,
+   "error": null
+  },
+  {
+   "id": "v2/tool_user/4",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 431,
+   "error": null
+  },
+  {
+   "id": "v2/tool_user/5",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 201,
+   "error": null
+  },
+  {
+   "id": "v2/tool_user/6",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 197,
+   "error": null
+  },
+  {
+   "id": "v2/tool_user/7",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 320,
+   "error": null
+  },
+  {
+   "id": "v2/tool_user/8",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 178,
+   "error": null
+  },
+  {
+   "id": "v2/tool_user/9",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 245,
+   "error": null
+  },
+  {
+   "id": "v2/after_tool/0",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 371,
+   "error": null
+  },
+  {
+   "id": "v2/after_tool/1",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 341,
+   "error": null
+  },
+  {
+   "id": "v2/after_tool/2",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 266,
+   "error": null
+  },
+  {
+   "id": "v2/after_tool/3",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 231,
+   "error": null
+  },
+  {
+   "id": "v2/after_tool/4",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 233,
+   "error": null
+  },
+  {
+   "id": "v2/after_tool/5",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": null,
+   "prompt_tokens": 588,
+   "error": null
+  },
+  {
+   "id": "v2/after_tool/6",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 249,
+   "error": null
+  },
+  {
+   "id": "v2/after_tool/7",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 267,
+   "error": null
+  },
+  {
+   "id": "v2/after_tool/8",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": true,
+   "prompt_tokens": 360,
+   "error": null
+  },
+  {
+   "id": "v2/after_tool/9",
+   "prompt_equal": true,
+   "ids_equal_mtstudio": false,
+   "prompt_tokens": 534,
+   "error": null
+  }
+ ]
+}
