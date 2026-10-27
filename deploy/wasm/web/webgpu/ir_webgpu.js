@@ -315,6 +315,79 @@ fn visible(t: u32, pos: u32) -> bool {
     o[qo + d] = acc;
   }
 }`,
+  // attn with Shaw's relative key and value vectors (IR_SPEC 5.15 relative_kv, revision 1.4). p: attn's eight, then
+  // max_distance K, the key table's width, the value table's (0: no values) and where the value table starts in
+  // rel (the key table then the value table, one buffer: nine storage buffers). Rows are positions (modes 0-2), so
+  // the distance of row t is min(pos - t, K); a table's row n holds head h's vector at column h * hd when the width
+  // is heads * hd, at column 0 when it is hd. s = ((q . k) + (q . rk[n])) * scale; o = (sum a v) + (sum a rv[n]).
+  attn_rel: `${P}
+@group(0) @binding(1) var<storage, read> st: array<u32>;
+@group(0) @binding(2) var<storage, read> cnt: array<u32>;
+@group(0) @binding(3) var<storage, read> codes: array<u32>;
+@group(0) @binding(4) var<storage, read> q: array<f32>;
+@group(0) @binding(5) var<storage, read> kc: array<f32>;
+@group(0) @binding(6) var<storage, read> vc: array<f32>;
+@group(0) @binding(7) var<storage, read_write> o: array<f32>;
+@group(0) @binding(8) var<storage, read> rel: array<f32>;
+var<workgroup> sc: array<f32, MAXK>;
+var<workgroup> part: array<f32, ${WG}>;
+fn visible(t: u32, pos: u32) -> bool {
+  let mode = p[6];
+  if (mode == 1u) { return t < p[5] || t + p[4] >= pos + 1u; }
+  if (mode == 2u) { return codes[2u * t + 1u] == codes[2u * pos + 1u] || codes[2u * t] == 1u; }
+  return true;
+}
+@compute @workgroup_size(${WG}) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_id) l: vec3u) {
+  let nh = p[0]; let hd = p[2]; let h = wg.x;
+  let kvh = h / (nh / p[1]);
+  let kvd = p[1] * hd;
+  let qo = h * hd; let ko = kvh * hd;
+  let K = p[8]; let rkw = p[9]; let rvw = p[10]; let rv0 = p[11];
+  let rkc = select(0u, h * hd, rkw != hd); let rvc = select(0u, h * hd, rvw != hd);
+  let pos = st[0];
+  var n = pos + 1u;
+  if (p[6] == 3u) { n = cnt[p[7]] + 1u; }   // never taken (relative_kv is refused under depth_route); keeps the binding
+  let scale = pf(3u);
+  var m = -3.40282e38;
+  for (var t = l.x; t < n; t += ${WG}u) {
+    if (visible(t, pos)) {
+      let dr = min(pos - t, K) * rkw + rkc;
+      var s = 0.0;
+      for (var d = 0u; d < hd; d++) { s += q[qo + d] * kc[t * kvd + ko + d]; }
+      var r = 0.0;
+      for (var d = 0u; d < hd; d++) { r += q[qo + d] * rel[dr + d]; }
+      s = (s + r) * scale; sc[t] = s; m = max(m, s);
+    }
+  }
+  part[l.x] = m;
+  workgroupBarrier();
+  for (var k = ${WG / 2}u; k > 0u; k >>= 1u) { if (l.x < k) { part[l.x] = max(part[l.x], part[l.x + k]); } workgroupBarrier(); }
+  let mx = part[0];
+  workgroupBarrier();
+  var z = 0.0;
+  for (var t = l.x; t < n; t += ${WG}u) {
+    var e = 0.0;
+    if (visible(t, pos)) { e = exp(sc[t] - mx); }
+    sc[t] = e; z += e;
+  }
+  part[l.x] = z;
+  workgroupBarrier();
+  for (var k = ${WG / 2}u; k > 0u; k >>= 1u) { if (l.x < k) { part[l.x] += part[l.x + k]; } workgroupBarrier(); }
+  let zz = part[0];
+  workgroupBarrier();
+  for (var t = l.x; t < n; t += ${WG}u) { sc[t] = sc[t] / zz; }
+  workgroupBarrier();
+  for (var d = l.x; d < hd; d += ${WG}u) {
+    var acc = 0.0;
+    for (var t = 0u; t < n; t++) { let a = sc[t]; if (a != 0.0) { acc += a * vc[t * kvd + ko + d]; } }
+    if (rvw != 0u) {
+      var racc = 0.0;
+      for (var t = 0u; t < n; t++) { let a = sc[t]; if (a != 0.0) { racc += a * rel[rv0 + min(pos - t, K) * rvw + rvc + d]; } }
+      acc = acc + racc;
+    }
+    o[qo + d] = acc;
+  }
+}`,
   // p: E, k, renorm ; top-k router logits (ties to the lower index), ascending expert order, gates
   moe_select: `${P}
 @group(0) @binding(1) var<storage, read> r: array<f32>;
@@ -656,6 +729,9 @@ export function irSupport(doc) {
       if (n.op === 'rope' && n.rope_heads === 'first') return { ok: false, reason: 'rope_heads "first"' };
       // T5's relative position bias (IR_SPEC 5.15, revision 1.3) has no WGSL kernel: the CPU interpreter runs it.
       if (n.op === 'attention' && n.position_bias !== undefined) return { ok: false, reason: 'attention position_bias' };
+      // Shaw's relative vectors (revision 1.4) on positions: not under depth_route (compact rows), as the CPU refuses.
+      if (n.op === 'attention' && n.relative_kv !== undefined && doc.block.nodes.some((b) => b.op === 'depth_route'))
+        return { ok: false, reason: 'attention relative_kv under depth_route' };
       if (n.op === 'expr') {
         if (n.in.length > 9) return { ok: false, reason: 'expr with more than 9 inputs' };
         compileExpr(n.expr, n.in.length);
@@ -937,8 +1013,26 @@ export async function createIr(device, ggufBuffer, docIn, opts = {}) {
       const scale = has(n, 'scale') ? n.scale : Math.fround(1 / Math.sqrt(hd));
       emit('kvstore', [words([nkv * hd, l, s >= 0 ? s : 0xffffffff]), st, morBuf, cnt, k.buf, v.buf, c.kc, c.vc], groups(nkv * hd));
       const y = put(out[0], nh * hd);
-      emit('attn', [words([nh, nkv, hd, { f: scale }, window, sinks, mode, l]), st, cnt, codes, q.buf, c.kc, c.vc, y.buf], [nh, 1],
-           undefined, IR_SHADERS.attn.replace('MAXK', String(keysArr)));
+      if (has(n, 'relative_kv')) {   // Shaw's vectors (revision 1.4): the tables [K + 1, w], w hd or heads * hd
+        const rel = n.relative_kv, K = rel.max_distance;
+        const table = (nm) => {
+          const t = tensor(tname(nm, l, n));
+          if (t.dims.length !== 2 || t.dims[1] !== K + 1 || (t.dims[0] !== hd && t.dims[0] !== nh * hd))
+            throw new Error(`IR attention relative_kv '${nm}': ne {${t.dims}} is not {head_dim or heads * head_dim, ${K + 1}}`);
+          return { v: vecF32(tname(nm, l, n)), w: t.dims[0] };
+        };
+        if (device.limits.maxStorageBuffersPerShaderStage < 9)
+          throw new Error('WebGPU IR path: attention relative_kv needs 9 storage buffers per shader stage');
+        const rk = table(rel.key), rv = has(rel, 'value') ? table(rel.value) : { v: new Float32Array(0), w: 0 };
+        const both = new Float32Array(rk.v.length + rv.v.length);
+        both.set(rk.v); both.set(rv.v, rk.v.length);
+        emit('attn_rel', [words([nh, nkv, hd, { f: scale }, window, sinks, mode, l, K, rk.w, rv.w, rk.v.length]), st, cnt, codes,
+                          q.buf, c.kc, c.vc, y.buf, storage(both)], [nh, 1], undefined,
+             IR_SHADERS.attn_rel.replace('MAXK', String(keysArr)));
+      } else {
+        emit('attn', [words([nh, nkv, hd, { f: scale }, window, sinks, mode, l]), st, cnt, codes, q.buf, c.kc, c.vc, y.buf], [nh, 1],
+             undefined, IR_SHADERS.attn.replace('MAXK', String(keysArr)));
+      }
     } else if (op === 'moe_ffn') {
       const x = tens(n, 0), E = n.n_experts, K = n.top_k, d = x.w;
       const R = mat(tname(n.router, l, n));
