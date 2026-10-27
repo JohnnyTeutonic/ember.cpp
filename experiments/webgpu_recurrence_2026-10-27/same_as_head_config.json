@@ -1,0 +1,163 @@
+[
+ {
+  "name": "kimi_tiny",
+  "gguf": "C:\\ml_artifacts\\kimi_tiny\\kimi_tiny.gguf",
+  "doc": null,
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "srd_tiny",
+  "gguf": "C:\\ml_artifacts\\srd_tiny\\srd_tiny.gguf",
+  "doc": null,
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "attnres_tiny",
+  "gguf": "C:\\ml_artifacts\\attnres_tiny\\attnres_tiny.gguf",
+  "doc": null,
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "flex_highway_tiny",
+  "gguf": "C:\\ml_artifacts\\flex_highway_tiny\\flex_highway_tiny.gguf",
+  "doc": null,
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "mamba_tiny",
+  "gguf": "C:\\ml_artifacts\\mamba_tiny\\mamba_tiny.gguf",
+  "doc": null,
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "gpt2_tiny",
+  "gguf": "C:\\ml_artifacts\\gpt2_tiny\\gpt2_tiny.gguf",
+  "doc": null,
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "swa_tiny",
+  "gguf": "C:\\ml_artifacts\\swa_tiny\\swa_tiny.gguf",
+  "doc": null,
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "gpt2_tiny_expr",
+  "gguf": "C:\\ml_artifacts\\gpt2_tiny\\gpt2_tiny.gguf",
+  "doc": "\\\\wsl.localhost\\Ubuntu\\home\\jonat\\wgate\\docs\\gpt2_tiny_expr.ir.json",
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "gpt2_tiny_exprnorm",
+  "gguf": "C:\\ml_artifacts\\gpt2_tiny\\gpt2_tiny.gguf",
+  "doc": "\\\\wsl.localhost\\Ubuntu\\home\\jonat\\wgate\\docs\\gpt2_tiny_exprnorm.ir.json",
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "moe_tiny_v3",
+  "gguf": "C:\\ml_artifacts\\moe_tiny\\moe_tiny_v3.gguf",
+  "doc": null,
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "rec_b2x4",
+  "gguf": "C:\\ml_artifacts\\recursion_gate\\b2x4\\r.gguf",
+  "doc": null,
+  "prompts": 3,
+  "len": 8
+ },
+ {
+  "name": "rec_p1_b2x3_c1",
+  "gguf": "C:\\ml_artifacts\\recursion_gate\\p1_b2x3_c1\\r.gguf",
+  "doc": null,
+  "prompts": 3,
+  "len": 8
+ },
+ {
+  "name": "rec_p1_b2x3_c1_inject",
+  "gguf": "C:\\ml_artifacts\\recursion_gate\\p1_b2x3_c1_inject\\r.gguf",
+  "doc": null,
+  "prompts": 3,
+  "len": 8
+ },
+ {
+  "name": "mor3",
+  "gguf": "C:\\ml_artifacts\\mor_gate\\mor3\\mor3.gguf",
+  "doc": null,
+  "prompts": 3,
+  "len": 8
+ },
+ {
+  "name": "mor2p0",
+  "gguf": "C:\\ml_artifacts\\mor_gate\\mor2p0\\mor2p0.gguf",
+  "doc": null,
+  "prompts": 3,
+  "len": 8
+ },
+ {
+  "name": "state4",
+  "gguf": "C:\\ml_artifacts\\state_gate\\state4\\state4.gguf",
+  "doc": null,
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "state4_q8_0",
+  "gguf": "C:\\ml_artifacts\\state_gate\\state4\\state4_q8_0.gguf",
+  "doc": null,
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "ar3",
+  "gguf": "C:\\ml_artifacts\\attnres_gate\\ar3\\ar3.gguf",
+  "doc": null,
+  "prompts": 3,
+  "len": 8
+ },
+ {
+  "name": "ar3_q8_0",
+  "gguf": "C:\\ml_artifacts\\attnres_gate\\ar3\\ar3_q8_0.gguf",
+  "doc": null,
+  "prompts": 3,
+  "len": 8
+ },
+ {
+  "name": "synthetic-gpt2",
+  "gguf": "\\\\wsl.localhost\\Ubuntu\\home\\jonat\\ember_wt\\bcheck_gpt2\\gpt2.gguf",
+  "doc": "\\\\wsl.localhost\\Ubuntu\\home\\jonat\\ember_wt\\bcheck_gpt2\\gpt2.ember_built.ir.json",
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "synthetic-mistral-swa",
+  "gguf": "\\\\wsl.localhost\\Ubuntu\\home\\jonat\\ember_wt\\bcheck_mistral_swa\\mistral_swa.gguf",
+  "doc": "\\\\wsl.localhost\\Ubuntu\\home\\jonat\\ember_wt\\bcheck_mistral_swa\\mistral_swa.ember_built.ir.json",
+  "prompts": 2,
+  "len": 24
+ },
+ {
+  "name": "pythia-160m",
+  "gguf": "C:\\ml_artifacts\\thirdparty\\pythia-160m\\pythia-160m-f32.gguf",
+  "doc": "\\\\wsl.localhost\\Ubuntu\\home\\jonat\\ember_wt\\bcheck_pythia-160m\\gptneox.ember_built.ir.json",
+  "prompts": 1,
+  "len": 8
+ },
+ {
+  "name": "mamba-130m",
+  "gguf": "C:\\ml_artifacts\\thirdparty\\mamba-130m\\mamba-130m-f32.gguf",
+  "doc": "\\\\wsl.localhost\\Ubuntu\\home\\jonat\\ember_wt\\bcheck_mamba-130m\\mamba.ember_built.ir.json",
+  "prompts": 1,
+  "len": 8
+ }
+]

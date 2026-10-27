@@ -1,0 +1,22 @@
+{
+ "gguf": "pk_recurrence.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "recurrence",
+ "prompts": 40,
+ "of": 40,
+ "len": 8,
+ "gen": 8,
+ "vocab": 15,
+ "ctx": 16,
+ "dispatches_per_token": 52,
+ "worst_rel": 1.6817907304067596e-7,
+ "median_rel": 1.1361637748268827e-7,
+ "worst_spec_rel": 2.456295542789733e-7,
+ "top1_agree": "320/320",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "gpu_errors": 0,
+ "pass": true,
+ "load_ms": 442.6032000000001,
+ "ms_per_prompt": 175.32267750000003
+}

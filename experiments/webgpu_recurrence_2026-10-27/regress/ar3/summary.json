@@ -1,0 +1,22 @@
+{
+ "gguf": "ar3.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "llama_attnres",
+ "prompts": 40,
+ "of": 40,
+ "len": 8,
+ "gen": 8,
+ "vocab": 15,
+ "ctx": 16,
+ "dispatches_per_token": 69,
+ "worst_rel": 2.49531442334157e-7,
+ "median_rel": 1.581705071212712e-7,
+ "worst_spec_rel": 3.5157479138430815e-7,
+ "top1_agree": "320/320",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "gpu_errors": 0,
+ "pass": true,
+ "load_ms": 1648.6598,
+ "ms_per_prompt": 873.4624750000005
+}

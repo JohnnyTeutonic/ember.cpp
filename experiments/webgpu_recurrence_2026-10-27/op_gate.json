@@ -1,0 +1,369 @@
+{
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "cases": 15,
+ "passed": 15,
+ "gpu_errors": 0,
+ "rows": [
+  {
+   "name": "linear_attention_body",
+   "file": "recurrence.json",
+   "class": "ROUNDING",
+   "exact_bodies": false,
+   "tol": 0.00001,
+   "T": 6,
+   "ms": 93.17489999999998,
+   "vs_numpy": {
+    "rel": 9.771569053089033e-8,
+    "same": 31,
+    "n": 64,
+    "nan_mismatch": 0,
+    "state_tensors": 2
+   },
+   "vs_ember_cpu": {
+    "rel": 9.771569053089033e-8,
+    "same": 30,
+    "n": 64,
+    "nan_mismatch": 0,
+    "state_tensors": 2
+   },
+   "pass": true
+  },
+  {
+   "name": "ssm_scan_body",
+   "file": "recurrence.json",
+   "class": "EXACT",
+   "exact_bodies": true,
+   "tol": 0.00001,
+   "T": 5,
+   "ms": 37.869200000000035,
+   "vs_numpy": {
+    "rel": 0,
+    "same": 24,
+    "n": 24,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "vs_ember_cpu": {
+    "rel": 0,
+    "same": 24,
+    "n": 24,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "pass": true
+  },
+  {
+   "name": "conv1d_causal_body",
+   "file": "recurrence.json",
+   "class": "EXACT",
+   "exact_bodies": true,
+   "tol": 0.00001,
+   "T": 5,
+   "ms": 45.914300000000026,
+   "vs_numpy": {
+    "rel": 0,
+    "same": 24,
+    "n": 24,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "vs_ember_cpu": {
+    "rel": 0,
+    "same": 24,
+    "n": 24,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "pass": true
+  },
+  {
+   "name": "selective_scan_body",
+   "file": "recurrence.json",
+   "class": "ROUNDING",
+   "exact_bodies": false,
+   "tol": 0.00001,
+   "T": 5,
+   "ms": 67.97609999999997,
+   "vs_numpy": {
+    "rel": 1.813320964066597e-7,
+    "same": 9,
+    "n": 21,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "vs_ember_cpu": {
+    "rel": 1.8133212928799487e-7,
+    "same": 10,
+    "n": 21,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "pass": true
+  },
+  {
+   "name": "rnn_init_offset",
+   "file": "recurrence.json",
+   "class": "ROUNDING",
+   "exact_bodies": false,
+   "tol": 0.00001,
+   "T": 6,
+   "ms": 40.45240000000001,
+   "vs_numpy": {
+    "rel": 1.655638870062895e-7,
+    "same": 4,
+    "n": 21,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "vs_ember_cpu": {
+    "rel": 1.1920928955078125e-7,
+    "same": 4,
+    "n": 21,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "pass": true
+  },
+  {
+   "name": "ema_bias_corrected",
+   "file": "recurrence.json",
+   "class": "ROUNDING",
+   "exact_bodies": false,
+   "tol": 0.00001,
+   "T": 5,
+   "ms": 46.8732,
+   "vs_numpy": {
+    "rel": 8.71399551333799e-8,
+    "same": 22,
+    "n": 28,
+    "nan_mismatch": 0,
+    "state_tensors": 2
+   },
+   "vs_ember_cpu": {
+    "rel": 8.71399551333799e-8,
+    "same": 22,
+    "n": 28,
+    "nan_mismatch": 0,
+    "state_tensors": 2
+   },
+   "pass": true
+  },
+  {
+   "name": "ema_exact",
+   "file": "recurrence.json",
+   "class": "EXACT",
+   "exact_bodies": true,
+   "tol": 0.00001,
+   "T": 5,
+   "ms": 9.825000000000045,
+   "vs_numpy": {
+    "rel": 0,
+    "same": 28,
+    "n": 28,
+    "nan_mismatch": 0,
+    "state_tensors": 2
+   },
+   "vs_ember_cpu": {
+    "rel": 0,
+    "same": 28,
+    "n": 28,
+    "nan_mismatch": 0,
+    "state_tensors": 2
+   },
+   "pass": true
+  },
+  {
+   "name": "square_weight_declaration",
+   "file": "recurrence.json",
+   "class": "EXACT",
+   "exact_bodies": true,
+   "tol": 0.00001,
+   "T": 5,
+   "ms": 17.291200000000003,
+   "vs_numpy": {
+    "rel": 0,
+    "same": 18,
+    "n": 18,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "vs_ember_cpu": {
+    "rel": 0,
+    "same": 18,
+    "n": 18,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "pass": true
+  },
+  {
+   "name": "read_beyond_declaration",
+   "file": "recurrence.json",
+   "class": "EXACT",
+   "exact_bodies": true,
+   "tol": 0.00001,
+   "T": 5,
+   "ms": 26.09770000000003,
+   "vs_numpy": {
+    "rel": 0,
+    "same": 18,
+    "n": 18,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "vs_ember_cpu": {
+    "rel": 0,
+    "same": 18,
+    "n": 18,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "pass": true
+  },
+  {
+   "name": "grammar_all",
+   "file": "synthetic_cases.json",
+   "class": "ROUNDING",
+   "exact_bodies": false,
+   "tol": 0.00001,
+   "T": 6,
+   "ms": 112.34310000000005,
+   "vs_numpy": {
+    "rel": 1.764022479291258e-7,
+    "same": 22,
+    "n": 36,
+    "nan_mismatch": 0,
+    "state_tensors": 3
+   },
+   "vs_ember_cpu": {
+    "rel": 1.764022479291258e-7,
+    "same": 22,
+    "n": 36,
+    "nan_mismatch": 0,
+    "state_tensors": 3
+   },
+   "pass": true
+  },
+  {
+   "name": "wide_2d",
+   "file": "synthetic_cases.json",
+   "class": "EXACT",
+   "exact_bodies": true,
+   "tol": 0.00001,
+   "T": 6,
+   "ms": 46.470500000000015,
+   "vs_numpy": {
+    "rel": 0,
+    "same": 1300,
+    "n": 1300,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "vs_ember_cpu": {
+    "rel": 0,
+    "same": 1300,
+    "n": 1300,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "pass": true
+  },
+  {
+   "name": "shift3d_init",
+   "file": "synthetic_cases.json",
+   "class": "EXACT",
+   "exact_bodies": true,
+   "tol": 0.00001,
+   "T": 6,
+   "ms": 51.745199999999954,
+   "vs_numpy": {
+    "rel": 0,
+    "same": 72,
+    "n": 72,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "vs_ember_cpu": {
+    "rel": 0,
+    "same": 72,
+    "n": 72,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "pass": true
+  },
+  {
+   "name": "overflow_constants",
+   "file": "synthetic_cases.json",
+   "class": "ROUNDING",
+   "exact_bodies": false,
+   "tol": 0.00001,
+   "T": 6,
+   "ms": 19.629099999999994,
+   "vs_numpy": {
+    "rel": 0,
+    "same": 21,
+    "n": 21,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "vs_ember_cpu": {
+    "rel": 0,
+    "same": 21,
+    "n": 21,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "pass": true
+  },
+  {
+   "name": "pow_forms",
+   "file": "synthetic_cases.json",
+   "class": "ROUNDING",
+   "exact_bodies": false,
+   "tol": 0.00001,
+   "T": 6,
+   "ms": 59.80269999999996,
+   "vs_numpy": {
+    "rel": 6.336637277131754e-8,
+    "same": 15,
+    "n": 35,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "vs_ember_cpu": {
+    "rel": 6.336637277131754e-8,
+    "same": 15,
+    "n": 35,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "pass": true
+  },
+  {
+   "name": "deep_sums",
+   "file": "synthetic_cases.json",
+   "class": "EXACT",
+   "exact_bodies": true,
+   "tol": 0.00001,
+   "T": 6,
+   "ms": 107.61709999999994,
+   "vs_numpy": {
+    "rel": 0,
+    "same": 14,
+    "n": 14,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "vs_ember_cpu": {
+    "rel": 0,
+    "same": 14,
+    "n": 14,
+    "nan_mismatch": 0,
+    "state_tensors": 1
+   },
+   "pass": true
+  }
+ ],
+ "pass": true
+}

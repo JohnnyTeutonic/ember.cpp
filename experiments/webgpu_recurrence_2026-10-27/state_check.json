@@ -1,0 +1,546 @@
+{
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "entries": 12,
+ "passed": 12,
+ "gpu_errors": 0,
+ "results": [
+  {
+   "name": "pk_recurrence",
+   "recurrent": true,
+   "dispatches_per_token": 52,
+   "seq": {
+    "whole_tokenwise": 5,
+    "chunks": 5,
+    "reset": 5,
+    "turns": 5,
+    "refusal": 5,
+    "n": 5,
+    "pass": true
+   },
+   "trace": {
+    "file": "pk_recurrence_decode.json",
+    "tol": 0.00001,
+    "forwards": 6,
+    "top1": "6/6",
+    "worst_rel": 1.2185074713191774e-7,
+    "state_tensors_checked": 24,
+    "worst_state_rel": 2.015711259843726e-7,
+    "steps": [
+     {
+      "method": "forward",
+      "rel": 9.806322194756893e-8,
+      "state_rel": 1.2279769999907902e-7,
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 1.2185074713191774e-7,
+      "state_rel": 2.015711259843726e-7,
+      "len": 5
+     },
+     {
+      "method": "forward",
+      "rel": 7.365869722121091e-8,
+      "state_rel": 1.6855839756251072e-7,
+      "len": 6
+     },
+     {
+      "method": "forward",
+      "rel": 5.960464477539063e-8,
+      "state_rel": 1.5604480108657115e-7,
+      "len": 7
+     },
+     {
+      "method": "forward",
+      "rel": 1.1920928955078125e-7,
+      "state_rel": 1.3991735921095565e-7,
+      "len": 8
+     },
+     {
+      "method": "forward",
+      "rel": 1.1920928955078125e-7,
+      "state_rel": 1.2937023990287917e-7,
+      "len": 9
+     }
+    ],
+    "pass": true
+   },
+   "pass": true
+  },
+  {
+   "name": "pk_recurrence_snapshot",
+   "recurrent": true,
+   "dispatches_per_token": 52,
+   "trace": {
+    "file": "pk_recurrence_snapshot.json",
+    "tol": 0.00001,
+    "forwards": 3,
+    "top1": "3/3",
+    "worst_rel": 1.937519829304503e-7,
+    "state_tensors_checked": 16,
+    "worst_state_rel": 2.2493077193166872e-7,
+    "steps": [
+     {
+      "method": "forward",
+      "rel": 9.806322194756893e-8,
+      "state_rel": 1.2279769999907902e-7,
+      "len": 4
+     },
+     {
+      "method": "snapshot",
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 5.960464477539063e-8,
+      "state_rel": 1.5604480108657115e-7,
+      "len": 7
+     },
+     {
+      "method": "restore",
+      "state_rel": 1.2279769999907902e-7,
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 1.937519829304503e-7,
+      "state_rel": 2.2493077193166872e-7,
+      "len": 7
+     }
+    ],
+    "pass": true
+   },
+   "pass": true
+  },
+  {
+   "name": "pk_recurrence_chunks",
+   "recurrent": true,
+   "dispatches_per_token": 52,
+   "trace": {
+    "file": "pk_recurrence_chunks.json",
+    "tol": 0.00001,
+    "forwards": 4,
+    "top1": "4/4",
+    "worst_rel": 1.1717373208647984e-7,
+    "state_tensors_checked": 16,
+    "worst_state_rel": 1.6749732311361445e-7,
+    "steps": [
+     {
+      "method": "forward",
+      "rel": 3.85789222515122e-8,
+      "state_rel": 1.1948300658912937e-7,
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 9.647423337232821e-8,
+      "state_rel": 1.4552141122007915e-7,
+      "len": 7
+     },
+     {
+      "method": "forward",
+      "rel": 1.1717373208647984e-7,
+      "state_rel": 1.3853561345405235e-7,
+      "len": 8
+     },
+     {
+      "method": "forward",
+      "rel": 9.755102064706372e-8,
+      "state_rel": 1.6749732311361445e-7,
+      "len": 10
+     }
+    ],
+    "pass": true
+   },
+   "pass": true
+  },
+  {
+   "name": "pk_kimi_rec",
+   "recurrent": true,
+   "dispatches_per_token": 52,
+   "seq": {
+    "whole_tokenwise": 5,
+    "chunks": 5,
+    "reset": 5,
+    "turns": 5,
+    "refusal": 5,
+    "n": 5,
+    "pass": true
+   },
+   "trace": {
+    "file": "pk_kimi_recurrence.json",
+    "tol": 0.00001,
+    "forwards": 7,
+    "top1": "7/7",
+    "worst_rel": 2.384185791015625e-7,
+    "state_tensors_checked": 32,
+    "worst_state_rel": 1.7096370645668373e-7,
+    "steps": [
+     {
+      "method": "forward",
+      "rel": 2.384185791015625e-7,
+      "state_rel": 1.1166265016114037e-7,
+      "len": 4
+     },
+     {
+      "method": "snapshot",
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 1.1920928955078125e-7,
+      "state_rel": 9.011103481710163e-8,
+      "len": 5
+     },
+     {
+      "method": "forward",
+      "rel": 1.1920928955078125e-7,
+      "state_rel": 1.4977737091587065e-7,
+      "len": 6
+     },
+     {
+      "method": "forward",
+      "rel": 1.0893227201346926e-7,
+      "state_rel": 1.2937643276313257e-7,
+      "len": 7
+     },
+     {
+      "method": "forward",
+      "rel": 1.7881393432617188e-7,
+      "state_rel": 1.7096370645668373e-7,
+      "len": 8
+     },
+     {
+      "method": "forward",
+      "rel": 7.450580596923828e-8,
+      "state_rel": 1.1920928955078125e-7,
+      "len": 9
+     },
+     {
+      "method": "restore",
+      "state_rel": 1.1166265016114037e-7,
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 1.1920928955078125e-7,
+      "state_rel": 1.2750894570885857e-7,
+      "len": 7
+     }
+    ],
+    "pass": true
+   },
+   "pass": true
+  },
+  {
+   "name": "pk_srd_rec",
+   "recurrent": true,
+   "dispatches_per_token": 82,
+   "seq": {
+    "whole_tokenwise": 5,
+    "chunks": 5,
+    "reset": 5,
+    "turns": 5,
+    "refusal": 5,
+    "n": 5,
+    "pass": true
+   },
+   "trace": {
+    "file": "pk_srd_recurrence.json",
+    "tol": 0.00001,
+    "forwards": 7,
+    "top1": "7/7",
+    "worst_rel": 2.2245858859220492e-7,
+    "state_tensors_checked": 32,
+    "worst_state_rel": 1.9434254596897607e-7,
+    "steps": [
+     {
+      "method": "forward",
+      "rel": 8.911132130821598e-8,
+      "state_rel": 1.0944122048849089e-7,
+      "len": 4
+     },
+     {
+      "method": "snapshot",
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 8.127357644860804e-8,
+      "state_rel": 9.014688262614456e-8,
+      "len": 5
+     },
+     {
+      "method": "forward",
+      "rel": 1.0315779418513956e-7,
+      "state_rel": 1.5037694613144404e-7,
+      "len": 6
+     },
+     {
+      "method": "forward",
+      "rel": 7.299651999310446e-8,
+      "state_rel": 1.9434254596897607e-7,
+      "len": 7
+     },
+     {
+      "method": "forward",
+      "rel": 2.2245858859220492e-7,
+      "state_rel": 1.6846304426198024e-7,
+      "len": 8
+     },
+     {
+      "method": "forward",
+      "rel": 5.199068701221688e-8,
+      "state_rel": 1.7881393432617188e-7,
+      "len": 9
+     },
+     {
+      "method": "restore",
+      "state_rel": 1.0944122048849089e-7,
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 7.737200117729236e-8,
+      "state_rel": 1.7881393432617188e-7,
+      "len": 7
+     }
+    ],
+    "pass": true
+   },
+   "pass": true
+  },
+  {
+   "name": "pk_mamba_rec",
+   "recurrent": true,
+   "dispatches_per_token": 40,
+   "seq": {
+    "whole_tokenwise": 5,
+    "chunks": 5,
+    "reset": 5,
+    "turns": 5,
+    "refusal": 5,
+    "n": 5,
+    "pass": true
+   },
+   "trace": {
+    "file": "pk_mamba_recurrence.json",
+    "tol": 0.00001,
+    "forwards": 7,
+    "top1": "7/7",
+    "worst_rel": 1.3749068500609085e-7,
+    "state_tensors_checked": 16,
+    "worst_state_rel": 4.6566128730773926e-9,
+    "steps": [
+     {
+      "method": "forward",
+      "rel": 7.074378673238482e-8,
+      "state_rel": 4.6566128730773926e-9,
+      "len": 4
+     },
+     {
+      "method": "snapshot",
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 4.818410026841435e-8,
+      "state_rel": 3.725290298461914e-9,
+      "len": 5
+     },
+     {
+      "method": "forward",
+      "rel": 4.818408633817326e-8,
+      "state_rel": 1.862645149230957e-9,
+      "len": 6
+     },
+     {
+      "method": "forward",
+      "rel": 8.522431892985527e-8,
+      "state_rel": 3.725290298461914e-9,
+      "len": 7
+     },
+     {
+      "method": "forward",
+      "rel": 8.522427535077033e-8,
+      "state_rel": 1.862645149230957e-9,
+      "len": 8
+     },
+     {
+      "method": "forward",
+      "rel": 8.534104543292701e-8,
+      "state_rel": 1.862645149230957e-9,
+      "len": 9
+     },
+     {
+      "method": "restore",
+      "state_rel": 4.6566128730773926e-9,
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 1.3749068500609085e-7,
+      "state_rel": 3.725290298461914e-9,
+      "len": 7
+     }
+    ],
+    "pass": true
+   },
+   "pass": true
+  },
+  {
+   "name": "tp_mamba1_rec",
+   "recurrent": true,
+   "dispatches_per_token": 61,
+   "seq": {
+    "whole_tokenwise": 5,
+    "chunks": 5,
+    "reset": 5,
+    "turns": 5,
+    "refusal": 5,
+    "n": 5,
+    "pass": true
+   },
+   "trace": {
+    "file": "tp_mamba1_recurrence.json",
+    "tol": 0.00001,
+    "forwards": 7,
+    "top1": "7/7",
+    "worst_rel": 6.508288921590597e-7,
+    "state_tensors_checked": 32,
+    "worst_state_rel": 0.000001076779577773192,
+    "steps": [
+     {
+      "method": "forward",
+      "rel": 1.6780605110857712e-7,
+      "state_rel": 6.96559137174187e-7,
+      "len": 4
+     },
+     {
+      "method": "snapshot",
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 3.867007053517541e-7,
+      "state_rel": 0.0000010396513865433028,
+      "len": 5
+     },
+     {
+      "method": "forward",
+      "rel": 3.3932978070134265e-7,
+      "state_rel": 0.000001076779577773192,
+      "len": 6
+     },
+     {
+      "method": "forward",
+      "rel": 4.2443920969419157e-7,
+      "state_rel": 5.953807030922168e-7,
+      "len": 7
+     },
+     {
+      "method": "forward",
+      "rel": 2.736304709419832e-7,
+      "state_rel": 6.959315147714944e-7,
+      "len": 8
+     },
+     {
+      "method": "forward",
+      "rel": 6.384471479521169e-7,
+      "state_rel": 6.702331192649371e-7,
+      "len": 9
+     },
+     {
+      "method": "restore",
+      "state_rel": 6.96559137174187e-7,
+      "len": 4
+     },
+     {
+      "method": "forward",
+      "rel": 6.508288921590597e-7,
+      "state_rel": 7.271577041449807e-7,
+      "len": 7
+     }
+    ],
+    "pass": true
+   },
+   "pass": true
+  },
+  {
+   "name": "kimi_tiny_rec",
+   "recurrent": true,
+   "dispatches_per_token": 52,
+   "seq": {
+    "whole_tokenwise": 5,
+    "chunks": 5,
+    "reset": 5,
+    "turns": 5,
+    "refusal": 5,
+    "n": 5,
+    "pass": true
+   },
+   "pass": true
+  },
+  {
+   "name": "srd_tiny_rec",
+   "recurrent": true,
+   "dispatches_per_token": 82,
+   "seq": {
+    "whole_tokenwise": 5,
+    "chunks": 5,
+    "reset": 5,
+    "turns": 5,
+    "refusal": 5,
+    "n": 5,
+    "pass": true
+   },
+   "pass": true
+  },
+  {
+   "name": "mamba_tiny_rec",
+   "recurrent": true,
+   "dispatches_per_token": 40,
+   "seq": {
+    "whole_tokenwise": 5,
+    "chunks": 5,
+    "reset": 5,
+    "turns": 5,
+    "refusal": 5,
+    "n": 5,
+    "pass": true
+   },
+   "pass": true
+  },
+  {
+   "name": "kimi_tiny_custom",
+   "recurrent": true,
+   "dispatches_per_token": 56,
+   "seq": {
+    "whole_tokenwise": 5,
+    "chunks": 5,
+    "reset": 5,
+    "turns": 5,
+    "refusal": 5,
+    "n": 5,
+    "pass": true
+   },
+   "pass": true
+  },
+  {
+   "name": "mamba_tiny (hand-written ssm_scan, for comparison)",
+   "recurrent": true,
+   "dispatches_per_token": 34,
+   "seq": {
+    "whole_tokenwise": 5,
+    "chunks": 5,
+    "reset": 5,
+    "turns": 5,
+    "refusal": 5,
+    "n": 5,
+    "pass": true
+   },
+   "pass": true
+  }
+ ],
+ "pass": true
+}

@@ -1,0 +1,22 @@
+{
+ "gguf": "flex_highway_tiny.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "flex_highway",
+ "prompts": 40,
+ "of": 40,
+ "len": 24,
+ "gen": 32,
+ "vocab": 8192,
+ "ctx": 128,
+ "dispatches_per_token": 60,
+ "worst_rel": 4.521126030004987e-7,
+ "median_rel": 3.6640957615091364e-7,
+ "worst_spec_rel": 8.978636070086907e-7,
+ "top1_agree": "960/960",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "gpu_errors": 0,
+ "pass": true,
+ "load_ms": 478.81320000000005,
+ "ms_per_prompt": 1596.9815400000002
+}

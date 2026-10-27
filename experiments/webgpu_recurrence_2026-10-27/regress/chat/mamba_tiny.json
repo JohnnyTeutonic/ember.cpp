@@ -1,0 +1,17 @@
+{
+ "gguf": "mamba_tiny.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "backend": "ir_webgpu",
+ "family_hint": "mamba",
+ "n": 40,
+ "webgpu_vs_wasm": 40,
+ "webgpu_vs_ember_cpu": 40,
+ "wasm_vs_ember_cpu": 40,
+ "tokens": 2400,
+ "ms_per_reply": {
+  "webgpu_swiftshader": 1646.3794125000004,
+  "wasm_node": 110.70585750000097
+ },
+ "errors": 0,
+ "first_diffs": []
+}

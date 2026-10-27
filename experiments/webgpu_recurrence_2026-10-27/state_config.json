@@ -1,0 +1,109 @@
+[
+ {
+  "name": "pk_recurrence",
+  "gguf": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\models\\pk_recurrence\\pk_recurrence.gguf",
+  "doc": null,
+  "seq": {
+   "n": 5,
+   "len": 6
+  },
+  "trace": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\state\\pk_recurrence_decode.json"
+ },
+ {
+  "name": "pk_recurrence_snapshot",
+  "gguf": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\models\\pk_recurrence\\pk_recurrence.gguf",
+  "doc": null,
+  "trace": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\state\\pk_recurrence_snapshot.json"
+ },
+ {
+  "name": "pk_recurrence_chunks",
+  "gguf": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\models\\pk_recurrence\\pk_recurrence.gguf",
+  "doc": null,
+  "trace": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\state\\pk_recurrence_chunks.json"
+ },
+ {
+  "name": "pk_kimi_rec",
+  "gguf": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\models\\pk_kimi\\pk_kimi.gguf",
+  "doc": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\recurrence\\pk_kimi.ir.json",
+  "seq": {
+   "n": 5,
+   "len": 6
+  },
+  "trace": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\state\\pk_kimi_recurrence.json"
+ },
+ {
+  "name": "pk_srd_rec",
+  "gguf": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\models\\pk_srd\\pk_srd.gguf",
+  "doc": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\recurrence\\pk_srd.ir.json",
+  "seq": {
+   "n": 5,
+   "len": 6
+  },
+  "trace": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\state\\pk_srd_recurrence.json"
+ },
+ {
+  "name": "pk_mamba_rec",
+  "gguf": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\models\\pk_mamba\\pk_mamba.gguf",
+  "doc": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\recurrence\\pk_mamba.ir.json",
+  "seq": {
+   "n": 5,
+   "len": 6
+  },
+  "trace": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\state\\pk_mamba_recurrence.json"
+ },
+ {
+  "name": "tp_mamba1_rec",
+  "gguf": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\models\\tp_mamba1\\tp_mamba1.gguf",
+  "doc": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\recurrence\\tp_mamba1.ir.json",
+  "seq": {
+   "n": 5,
+   "len": 24
+  },
+  "trace": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\keramos\\conformance\\state\\tp_mamba1_recurrence.json"
+ },
+ {
+  "name": "kimi_tiny_rec",
+  "gguf": "C:\\ml_artifacts\\kimi_tiny\\kimi_tiny.gguf",
+  "doc": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\ember.cpp\\experiments\\webgpu_recurrence_2026-10-27\\docs\\kimi_tiny_rec.ir.json",
+  "seq": {
+   "n": 5,
+   "len": 24
+  }
+ },
+ {
+  "name": "srd_tiny_rec",
+  "gguf": "C:\\ml_artifacts\\srd_tiny\\srd_tiny.gguf",
+  "doc": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\ember.cpp\\experiments\\webgpu_recurrence_2026-10-27\\docs\\srd_tiny_rec.ir.json",
+  "seq": {
+   "n": 5,
+   "len": 24
+  }
+ },
+ {
+  "name": "mamba_tiny_rec",
+  "gguf": "C:\\ml_artifacts\\mamba_tiny\\mamba_tiny.gguf",
+  "doc": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\ember.cpp\\experiments\\webgpu_recurrence_2026-10-27\\docs\\mamba_tiny_rec.ir.json",
+  "seq": {
+   "n": 5,
+   "len": 24
+  }
+ },
+ {
+  "name": "kimi_tiny_custom",
+  "gguf": "C:\\ml_artifacts\\kimi_tiny\\kimi_tiny.gguf",
+  "doc": "C:\\Users\\jonat\\OneDrive\\Documents\\research_portfolio_complete\\ember.cpp\\experiments\\webgpu_recurrence_2026-10-27\\docs\\kimi_tiny_custom.ir.json",
+  "seq": {
+   "n": 5,
+   "len": 24
+  }
+ },
+ {
+  "name": "mamba_tiny (hand-written ssm_scan, for comparison)",
+  "gguf": "C:\\ml_artifacts\\mamba_tiny\\mamba_tiny.gguf",
+  "doc": null,
+  "seq": {
+   "n": 5,
+   "len": 24
+  }
+ }
+]

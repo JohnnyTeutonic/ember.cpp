@@ -1,0 +1,262 @@
+{
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "models": 23,
+ "passed": 23,
+ "gpu_errors": 0,
+ "rows": [
+  {
+   "name": "kimi_tiny",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 38,
+   "dispatches_new": 38,
+   "pass": true,
+   "ms": 2958.6036000000004
+  },
+  {
+   "name": "srd_tiny",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 68,
+   "dispatches_new": 68,
+   "pass": true,
+   "ms": 4793.469999999999
+  },
+  {
+   "name": "attnres_tiny",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 46,
+   "dispatches_new": 46,
+   "pass": true,
+   "ms": 8799.780799999999
+  },
+  {
+   "name": "flex_highway_tiny",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 60,
+   "dispatches_new": 60,
+   "pass": true,
+   "ms": 4095.9142999999967
+  },
+  {
+   "name": "mamba_tiny",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 34,
+   "dispatches_new": 34,
+   "pass": true,
+   "ms": 4772.991400000003
+  },
+  {
+   "name": "gpt2_tiny",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 40,
+   "dispatches_new": 40,
+   "pass": true,
+   "ms": 4038.926800000001
+  },
+  {
+   "name": "swa_tiny",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 40,
+   "dispatches_new": 40,
+   "pass": true,
+   "ms": 3965.8418999999994
+  },
+  {
+   "name": "gpt2_tiny_expr",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 40,
+   "dispatches_new": 40,
+   "pass": true,
+   "ms": 4013.9730999999956
+  },
+  {
+   "name": "gpt2_tiny_exprnorm",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 41,
+   "dispatches_new": 41,
+   "pass": true,
+   "ms": 3988.2810000000027
+  },
+  {
+   "name": "moe_tiny_v3",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 39,
+   "dispatches_new": 39,
+   "pass": true,
+   "ms": 4520.956100000003
+  },
+  {
+   "name": "rec_b2x4",
+   "prompts": 3,
+   "len": 8,
+   "positions": 24,
+   "bit_equal_positions": 24,
+   "dispatches_old": 139,
+   "dispatches_new": 139,
+   "pass": true,
+   "ms": 2881.3551000000007
+  },
+  {
+   "name": "rec_p1_b2x3_c1",
+   "prompts": 3,
+   "len": 8,
+   "positions": 24,
+   "bit_equal_positions": 24,
+   "dispatches_old": 139,
+   "dispatches_new": 139,
+   "pass": true,
+   "ms": 2695.455600000001
+  },
+  {
+   "name": "rec_p1_b2x3_c1_inject",
+   "prompts": 3,
+   "len": 8,
+   "positions": 24,
+   "bit_equal_positions": 24,
+   "dispatches_old": 156,
+   "dispatches_new": 156,
+   "pass": true,
+   "ms": 2963.9104000000007
+  },
+  {
+   "name": "mor3",
+   "prompts": 3,
+   "len": 8,
+   "positions": 24,
+   "bit_equal_positions": 24,
+   "dispatches_old": 147,
+   "dispatches_new": 147,
+   "pass": true,
+   "ms": 3065.264199999998
+  },
+  {
+   "name": "mor2p0",
+   "prompts": 3,
+   "len": 8,
+   "positions": 24,
+   "bit_equal_positions": 24,
+   "dispatches_old": 130,
+   "dispatches_new": 130,
+   "pass": true,
+   "ms": 2830.2992999999988
+  },
+  {
+   "name": "state4",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 37,
+   "dispatches_new": 37,
+   "pass": true,
+   "ms": 2538.341999999997
+  },
+  {
+   "name": "state4_q8_0",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 37,
+   "dispatches_new": 37,
+   "pass": true,
+   "ms": 2981.4226999999955
+  },
+  {
+   "name": "ar3",
+   "prompts": 3,
+   "len": 8,
+   "positions": 24,
+   "bit_equal_positions": 24,
+   "dispatches_old": 69,
+   "dispatches_new": 69,
+   "pass": true,
+   "ms": 8786.7791
+  },
+  {
+   "name": "ar3_q8_0",
+   "prompts": 3,
+   "len": 8,
+   "positions": 24,
+   "bit_equal_positions": 24,
+   "dispatches_old": 69,
+   "dispatches_new": 69,
+   "pass": true,
+   "ms": 8564.295000000013
+  },
+  {
+   "name": "synthetic-gpt2",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 58,
+   "dispatches_new": 58,
+   "pass": true,
+   "ms": 3604.030099999989
+  },
+  {
+   "name": "synthetic-mistral-swa",
+   "prompts": 2,
+   "len": 24,
+   "positions": 48,
+   "bit_equal_positions": 48,
+   "dispatches_old": 54,
+   "dispatches_new": 54,
+   "pass": true,
+   "ms": 3057.787599999996
+  },
+  {
+   "name": "pythia-160m",
+   "prompts": 1,
+   "len": 8,
+   "positions": 8,
+   "bit_equal_positions": 8,
+   "dispatches_old": 243,
+   "dispatches_new": 243,
+   "pass": true,
+   "ms": 42400.028999999995
+  },
+  {
+   "name": "mamba-130m",
+   "prompts": 1,
+   "len": 8,
+   "positions": 8,
+   "bit_equal_positions": 8,
+   "dispatches_old": 411,
+   "dispatches_new": 411,
+   "pass": true,
+   "ms": 35463.39659999998
+  }
+ ],
+ "pass": true
+}

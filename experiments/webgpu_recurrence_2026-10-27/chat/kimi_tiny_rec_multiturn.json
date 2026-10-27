@@ -1,0 +1,17 @@
+{
+ "gguf": "kimi_tiny_rec.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "backend": "ir_webgpu",
+ "family_hint": "kimi_recurrence",
+ "n": 20,
+ "webgpu_vs_wasm": 20,
+ "webgpu_vs_ember_cpu": null,
+ "wasm_vs_ember_cpu": null,
+ "tokens": 800,
+ "ms_per_reply": {
+  "webgpu_swiftshader": 2842.725175,
+  "wasm_node": 145.42032000000054
+ },
+ "errors": 0,
+ "first_diffs": []
+}
