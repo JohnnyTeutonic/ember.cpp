@@ -6,6 +6,10 @@
 //   request JSON -> Conversation (system, (user, assistant) turns, the new user message, thinking)
 //   -> the context rule (build_chat_prompt) -> ChatFormat::prompt -> chat::render of the record.
 // Request errors throw RequestError, the template's refusals chat::Error; both are HTTP 400.
+// Messages as keramos IR_SPEC 8.1.1 reads them (v1.4.2): every history entry is an object with a string
+// content (an assistant entry with tool_calls may leave it null: ""), or a pair of strings; tool_calls (even
+// null or []) and tool_call_id are refused under a record without tool turns, and under one with them on any
+// message but an assistant's and a tool's respectively; a null tool_call_id answers a call without an id.
 //
 // Records with tool turns (paperkiln/2, chat::Template::has_tool; schema v2): the request becomes the
 // whole message list (Conversation::general), tool calls and results included, plus the request's
@@ -74,9 +78,39 @@ inline std::vector<chat::json> tool_definitions(const nlohmann::json& r, const c
     return out;
 }
 
+// A history entry's content (IR_SPEC 8.1.1: every message has a string content). Missing or null is
+// refused, except on an assistant entry with tool_calls (OpenAI's null content beside calls), where it is "".
+inline std::string history_content(const nlohmann::json& h, size_t i, bool calls_may_omit = false) {
+    const std::string at = "history[" + std::to_string(i) + "]";
+    const bool calls = h.contains("tool_calls") && !h["tool_calls"].is_null();
+    if (!h.contains("content") || h["content"].is_null()) {
+        if (calls_may_omit && calls && h.value("role", "") == "assistant") return std::string();
+        throw RequestError(at + " needs a string content (an assistant entry with tool_calls may leave it null)");
+    }
+    if (!h["content"].is_string()) throw RequestError(at + ".content must be a string");
+    return h["content"].get<std::string>();
+}
+
+// A message's tool_calls or tool_call_id under a record without tool turns (IR_SPEC 8.1.1): any such member,
+// null or an empty list included, is refused.
+inline void refuse_tool_members_v1(const nlohmann::json& m, const std::string& at) {
+    if (m.contains("tool_calls"))
+        throw RequestError(at + ": tool_calls are not supported: this model's chat template has no tool turns");
+    if (m.contains("tool_call_id"))
+        throw RequestError(at + ": tool_call_id is not supported: this model's chat template has no tool messages");
+}
+
+// A {user, assistant} pair entry: both strings.
+inline std::pair<std::string, std::string> history_pair(const nlohmann::json& h, size_t i) {
+    const std::string at = "history[" + std::to_string(i) + "]";
+    if (!h.contains("user") || !h["user"].is_string() || !h.contains("assistant") || !h["assistant"].is_string())
+        throw RequestError(at + " needs a string role and content, or string user and assistant");
+    return {h["user"].get<std::string>(), h["assistant"].get<std::string>()};
+}
+
 // One message of a tool-turn conversation, through the header's parser (its tool_calls and
-// tool_call_id rules): role, content (missing or null is ""), tool_calls and tool_call_id as given;
-// render's structure rules decide whether they belong where they are.
+// tool_call_id rules): role, content, tool_calls and tool_call_id as given; render's structure rules
+// decide whether they belong where they are.
 inline chat::Message tool_turn_message(const std::string& role, const std::string& content, const nlohmann::json& m) {
     chat::json x = chat::json::object();
     x["role"] = role;
@@ -123,16 +157,15 @@ inline Conversation chat_conversation_tools(const nlohmann::json& r, const chat:
         const auto& hist = r["history"];
         for (size_t i = 0; i < hist.size(); ++i) {
             const auto& h = hist[i];
-            if (!h.is_object()) continue;
+            if (!h.is_object()) throw RequestError("history[" + std::to_string(i) + "] must be an object");
             if (h.contains("role")) {
-                const std::string role = h.value("role", "");
-                std::string content;
-                if (h.contains("content") && !h["content"].is_null()) {
-                    if (!h["content"].is_string())
-                        throw RequestError("history[" + std::to_string(i) + "].content must be a string");
-                    content = h["content"].get<std::string>();
-                }
+                if (!h["role"].is_string()) throw RequestError("history[" + std::to_string(i) + "].role must be a string");
+                const std::string role = h["role"].get<std::string>();
+                const std::string content = detail::history_content(h, i, /*calls_may_omit=*/true);
                 if (role == "system") {
+                    if (h.contains("tool_calls") || h.contains("tool_call_id"))
+                        throw RequestError("history[" + std::to_string(i) +
+                                           "]: tool_calls belong on assistant messages, tool_call_id on tool messages");
                     if (i != 0) throw RequestError("a system message is allowed only as the first history entry");
                     if (has_system)
                         throw RequestError("give the system message once: the 'system' field or a leading history entry");
@@ -145,8 +178,9 @@ inline Conversation chat_conversation_tools(const nlohmann::json& r, const chat:
                                        "' is not allowed here (user, assistant, tool; system only first)");
                 }
             } else {
-                c.messages.push_back({"user", h.value("user", "")});
-                c.messages.push_back({"assistant", h.value("assistant", "")});
+                const auto pr = detail::history_pair(h, i);
+                c.messages.push_back({"user", pr.first});
+                c.messages.push_back({"assistant", pr.second});
             }
         }
     }
@@ -191,13 +225,12 @@ inline Conversation chat_conversation(const nlohmann::json& r, const chat::Templ
         bool have_user = false;
         for (size_t i = 0; i < hist.size(); ++i) {
             const auto& h = hist[i];
-            if (!h.is_object()) continue;
+            if (!h.is_object()) throw RequestError("history[" + std::to_string(i) + "] must be an object");
             if (h.contains("role")) {
-                const std::string role = h.value("role", "");
-                const std::string content = h.value("content", "");
-                if (h.contains("tool_calls") && !h["tool_calls"].is_null() &&
-                    !(h["tool_calls"].is_array() && h["tool_calls"].empty()))
-                    throw RequestError("tool_calls are not supported: this model's chat template has no tool turns");
+                if (!h["role"].is_string()) throw RequestError("history[" + std::to_string(i) + "].role must be a string");
+                const std::string role = h["role"].get<std::string>();
+                detail::refuse_tool_members_v1(h, "history[" + std::to_string(i) + "]");
+                const std::string content = detail::history_content(h, i);
                 if (role == "system") {
                     if (i != 0) throw RequestError("a system message is allowed only as the first history entry");
                     if (c.has_system)
@@ -225,7 +258,7 @@ inline Conversation chat_conversation(const nlohmann::json& r, const chat::Templ
                 if (have_user)
                     throw RequestError("history has a user message without its assistant reply before a {user, "
                                        "assistant} pair");
-                c.turns.emplace_back(h.value("user", ""), h.value("assistant", ""));
+                c.turns.push_back(detail::history_pair(h, i));
             }
         }
         if (have_user)
@@ -284,6 +317,9 @@ inline Conversation openai_conversation_tools(const nlohmann::json& body, const 
                 throw RequestError("a " + role +
                                    " message is allowed only before the first user message (this model's chat "
                                    "template has one system message, first)");
+            if (x.contains("tool_calls") || x.contains("tool_call_id"))
+                throw RequestError("messages[" + std::to_string(i) +
+                                   "]: tool_calls belong on assistant messages, tool_call_id on tool messages");
             const std::string s = openai_content(x, i);
             if (s.empty()) continue;
             system += (system.empty() ? "" : "\n\n") + s;
@@ -329,9 +365,7 @@ inline Conversation openai_conversation(const nlohmann::json& body, const chat::
         const std::string role = x["role"].get<std::string>();
         if (role == "tool")
             throw RequestError("tool messages are not supported: this model's chat template has no tool role");
-        if (x.contains("tool_calls") && !x["tool_calls"].is_null() &&
-            !(x["tool_calls"].is_array() && x["tool_calls"].empty()))
-            throw RequestError("tool_calls are not supported: this model's chat template has no tool turns");
+        detail::refuse_tool_members_v1(x, "messages[" + std::to_string(i) + "]");
         if (role == "system" || role == "developer") {
             if (!m.empty())
                 throw RequestError("a " + role +

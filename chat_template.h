@@ -2,7 +2,9 @@
 // at paperkiln 22f8fe6d, whose tests/chat_template_cases.json ember's
 // tools/chat_template_check.cpp runs. ember.cpp renders every chat prompt through it
 // (chat_tokenizer.h). Do not edit here: change it in paperkiln (its tests check C++/Python
-// parity) and re-vendor.
+// parity) and re-vendor. One local change, keramos IR_SPEC 8.1.6 at v1.4.2: a tool_call_id of
+// null is accepted on a tool message that answers a call without an id (and refused against a
+// call with one); 22f8fe6d refuses every null tool_call_id.
 #pragma once
 // Conversations and chat templates (LOCAL_LLM_STACK.md section 3, points 3-5): the C++ twin of
 // tools/chat_template.py, header-only, for mtstudio and for ember.cpp to vendor (as it vendors
@@ -360,6 +362,7 @@ struct Message {
     std::vector<ToolCall> tool_calls;
     bool has_tool_call_id = false;  // tool messages: the call's id, checked, never rendered
     std::string tool_call_id;
+    bool tool_call_id_null = false;  // tool_call_id null: answers a call without an id (IR_SPEC 8.1.6)
 
     Message() = default;
     Message(std::string r, std::string c, int l = -1) : role(std::move(r)), content(std::move(c)), loss(l) {}
@@ -411,8 +414,12 @@ std::vector<Message> messages_from_json(const J& a) {
         }
         if (m.contains("tool_call_id")) {
             x.has_tool_call_id = true;
-            if (!m["tool_call_id"].is_string()) throw Error("tool_call_id is a string");
-            x.tool_call_id = m["tool_call_id"].template get<std::string>();
+            if (m["tool_call_id"].is_null())
+                x.tool_call_id_null = true;
+            else if (!m["tool_call_id"].is_string())
+                throw Error("tool_call_id is a string or null");
+            else
+                x.tool_call_id = m["tool_call_id"].template get<std::string>();
         }
         out.push_back(std::move(x));
     }
@@ -470,7 +477,11 @@ inline size_t check_structure(const std::vector<Message>& m, bool prompt, bool t
         } else {
             const ToolCall& c = caller->tool_calls[call++];
             --pending;
-            if (m[i].has_tool_call_id && (!c.has_id || m[i].tool_call_id != c.id))
+            // A call without an id counts as id null (IR_SPEC 8.1.6): a null tool_call_id answers only such a call.
+            if (m[i].has_tool_call_id && m[i].tool_call_id_null && c.has_id)
+                throw Error("tool_call_id null is not the call's id '" + c.id + "' (tool messages answer the calls in "
+                            "order; null answers a call without an id)");
+            if (m[i].has_tool_call_id && !m[i].tool_call_id_null && (!c.has_id || m[i].tool_call_id != c.id))
                 throw Error("tool_call_id '" + m[i].tool_call_id + "' is not the call's id (tool messages answer the "
                             "calls in order)");
             want = pending ? "tool" : "assistant";

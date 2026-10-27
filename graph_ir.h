@@ -262,8 +262,9 @@ class Interpreter {
   // run on its active tokens only (depth > step), one at a time in position order; each such
   // application keeps a compact kv cache holding just the rows written there, mor_rows_[i] their
   // absolute positions (kv_rows "active"), so attention's causal kernel reads exactly those rows
-  // and RoPE keeps the absolute position. attn_row_ >= 0 places the next kv row (and the query's
-  // causal limit) in that compact cache.
+  // and RoPE keeps the absolute position; a window and sinks keep the rows whose positions they
+  // cover (IR_SPEC 5.15, v1.4.2), never the last `window` rows. attn_row_ >= 0 places the next kv
+  // row (and the query's causal limit) in that compact cache.
   void mor_step(int layer, Env& env, int T, int start_pos);
   std::vector<int> mor_step_;
   std::vector<std::vector<int>> mor_rows_;
@@ -553,7 +554,7 @@ bool has_recurrent_state(const std::string& ir_json);
 // True when the CUDA path has a kernel for every op of the IR (recurrent
 // state, per-turn state tokens: state_weight, mask "turn_state", evict, and
 // Mixture-of-Recursions: depth_route, kv_rows "active", with no pos_embedding
-// in its block) within its limits (depth_attend sources, ssm_scan n);
+// or windowed attention in its block) within its limits (depth_attend sources, ssm_scan n);
 // otherwise the interpreter must run on the CPU.
 bool device_supported(const std::string& ir_json);
 

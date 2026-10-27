@@ -9,8 +9,8 @@
 // --log FILE writes ember's log there (off by default). CPU interpreter only ("backend": "cpu",
 // "exact": true).
 //
-// Methods: hello, check, open, forward, truncate, snapshot, restore, close, digest, dequantize, render_chat, and
-// run_node for recurrence, expr and attention nodes (other ops and run_node_grad reply skip). A session owns one GGUF, one
+// Methods: hello, check, open, forward, truncate, snapshot, restore, close, digest, dequantize, render_chat,
+// parse_reply, and run_node for recurrence, expr and attention nodes (other ops and run_node_grad reply skip). A session owns one GGUF, one
 // interpreter and the ids it has seen.
 //   check / open: "ir" names a document that replaces the file's (ember's EMBER_IR); null reads the
 //     GGUF's paperkiln.ir (or the IR ember builds from third-party metadata). EMBER_IR from the
@@ -30,8 +30,13 @@
 //   digest: ember's digest of the text (ir_digest.h; IR_SPEC 3.10), with its canonical form, or "refused".
 //   dequantize: the f32 values of n elements stored as the bytes, by the interpreter's route
 //     (dequant_span_to_f32, IR_SPEC 4.7): F32, F16, BF16, Q8_0, Q4_0, Q4_1, Q5_0, Q5_1, Q4_K, Q5_K, Q6_K.
-//   render_chat: the text a conversation renders to under a template record (IR_SPEC 8.1.3), through the
-//     vendored chat_template.h ember's chat paths render with, or "refused" with its reason.
+//   render_chat: the text a conversation renders to under a template record (IR_SPEC 8.1.3, 8.1.6), through the
+//     vendored chat_template.h ember's chat paths render with, or "refused" with its reason; "tools" (sent only
+//     when a case has them) are the conversation's tool definitions, read with the request's member order.
+//   parse_reply: a reply's ids split at the call id (IR_SPEC 8.1.6, 11.3), the split chat_reply.h's reply_of
+//     makes for the server's /chat and /v1/chat/completions (chat::parse_reply), each part decoded by joining
+//     its ids' texts from "tokens"; the calls in OpenAI's form (chat_reply.h tool_calls_json). The reported
+//     content is the split's part 0 as decoded: reply_of then strips its ends and makes it valid UTF-8.
 //   run_node: a recurrence node (graph_ir_recurrence.h) as application 0 ({i} is 0), token by token over the
 //     inputs' rows from the slot's initial state (or "state"'s tensors); outputs {out: [T, w]} and the slot's
 //     tensors after the last row. An expr node (graph_ir_expr.h): the interpreter's expression over its inputs
@@ -59,6 +64,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "chat_reply.h"
 #include "chat_template.h"
 #include "cpu_attention.h"
 #include "gguf_parser.h"
@@ -198,7 +204,8 @@ struct Skip {
 
 class Adapter {
  public:
-  json handle(const std::string& method, const json& p) {
+  // raw: the request line, for the members whose order matters (render_chat's tool definitions).
+  json handle(const std::string& method, const json& p, const std::string& raw = std::string()) {
     if (method == "hello") return hello();
     if (method == "check") {
       try {
@@ -250,7 +257,8 @@ class Adapter {
         return r;
       });
     }
-    if (method == "render_chat") return render_chat(p);
+    if (method == "render_chat") return render_chat(p, raw);
+    if (method == "parse_reply") return parse_reply(p);
     if (method == "run_node") return run_node(p);
     if (method == "run_node_grad") throw Skip{"ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)"};
     if (method == "digest") {
@@ -265,12 +273,12 @@ class Adapter {
  private:
   static json hello() {
     return {{"engine", "ember.cpp"},
-            {"version", "ir_adapter 4 (IR versions 0 and 1; spec revision 1.4)"},
+            {"version", "ir_adapter 5 (IR versions 0 and 1; spec revision 1.4.2)"},
             {"backend", "cpu"},
             {"exact", true},
             {"profiles", {"core", "state", "recursion", "thirdparty", "recurrence", "chat"}},
             {"methods", {"hello", "check", "open", "forward", "truncate", "snapshot", "restore", "close", "digest",
-                         "dequantize", "run_node", "render_chat"}}};
+                         "dequantize", "run_node", "render_chat", "parse_reply"}}};
   }
 
   // The call f on s; when it fails (an error or a skip), the session's ids and sequence state as they were
@@ -288,21 +296,57 @@ class Adapter {
     }
   }
 
-  // IR_SPEC 8.1.3 through chat_template.h: the record's fields and values, the conversation's structure and its
-  // reserved texts are checked there; any refusal is a result.
-  static json render_chat(const json& p) {
+  // IR_SPEC 8.1.3 and 8.1.6 through chat_template.h: the record's fields and values, the conversation's structure,
+  // its reserved texts and the tool definitions are checked there; any refusal is a result. The params are read
+  // from the request line as ordered JSON (a definition renders with its members in the order received).
+  static json render_chat(const json& p, const std::string& raw) {
     namespace chat = microtorch::chat;
     try {
-      const chat::Template t = chat::Template::from_json(chat::json::parse(p.at("record").dump()));
-      const std::vector<chat::Message> m = chat::messages_from_json(chat::json::parse(p.at("messages").dump()));
-      const json& th = p.contains("thinking") ? p.at("thinking") : json();
+      chat::json req = chat::json::parse(raw, nullptr, false);
+      const chat::json q = !req.is_discarded() && req.is_object() && req.contains("params") && req["params"].is_object()
+                               ? req["params"]
+                               : chat::json::parse(p.dump());
+      const chat::Template t = chat::Template::from_json(q.at("record"));
+      const std::vector<chat::Message> m = chat::messages_from_json(q.at("messages"));
+      const chat::json th = q.contains("thinking") ? q.at("thinking") : chat::json();
       const int thinking = th.is_boolean() ? (th.get<bool>() ? 1 : 0) : -1;
-      return {{"text", chat::render(m, t, p.value("generation_prompt", false), thinking)}};
+      std::vector<chat::json> tools;
+      if (q.contains("tools")) {  // a list; tool_json refuses a definition that is not an object
+        if (!q.at("tools").is_array()) throw chat::Error("tools is a list of tool definitions");
+        for (const auto& d : q.at("tools")) tools.push_back(d);
+      }
+      return {{"text", chat::render(m, t, q.value("generation_prompt", false), thinking, tools)}};
     } catch (const chat::Error& e) {
       return {{"refused", e.what()}};
     } catch (const nlohmann::json::exception& e) {  // a field of the wrong type
       return {{"refused", std::string("chat template: ") + e.what()}};
     }
+  }
+
+  // IR_SPEC 8.1.6 and 11.3: {"tokens": {id: text}, "ids", "call_id"} -> {"parsed": true, "content", "tool_calls"}
+  // or {"parsed": false}, by chat::parse_reply, the split chat_reply.h's reply_of serves replies with.
+  static json parse_reply(const json& p) {
+    namespace chat = microtorch::chat;
+    std::map<int, std::string> text;
+    for (auto it = p.at("tokens").begin(); it != p.at("tokens").end(); ++it) {
+      size_t used = 0;
+      const int id = std::stoi(it.key(), &used);
+      if (used != it.key().size()) throw std::runtime_error("parse_reply: token key '" + it.key() + "' is not an id");
+      text[id] = it.value().get<std::string>();
+    }
+    const auto decode = [&](const std::vector<int>& part) {
+      std::string s;
+      for (int id : part) {
+        const auto f = text.find(id);
+        if (f == text.end()) throw std::runtime_error("parse_reply: no text for id " + std::to_string(id));
+        s += f->second;
+      }
+      return s;
+    };
+    const chat::ParsedReply r =
+        chat::parse_reply(p.at("ids").get<std::vector<int>>(), p.at("call_id").get<int>(), decode);
+    if (!r.parsed) return {{"parsed", false}};
+    return {{"parsed", true}, {"content", r.content}, {"tool_calls", ember::tool_calls_json<json>(r.tool_calls)}};
   }
 
   // An expr node alone (IR_SPEC 5.19): the interpreter's evaluation (graph_ir_expr.h) and its shape checks.
@@ -664,7 +708,7 @@ int main(int argc, char** argv) {
     if (reply.is_null()) {
       reply["id"] = req.value("id", json(nullptr));
       try {
-        reply["result"] = ad.handle(req.at("method").get<std::string>(), req.value("params", json::object()));
+        reply["result"] = ad.handle(req.at("method").get<std::string>(), req.value("params", json::object()), line);
       } catch (const Skip& s) {
         reply.erase("result");
         reply["skip"] = s.why;
