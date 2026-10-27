@@ -1025,11 +1025,13 @@ void container_errors(const json& doc, const GGUFData& g, Errs& errs) {
 
 // ---------------------------------------------------------------- rule 38 (revision 1.3): the architecture
 
-// A document as rule 38 compares it (IR_SPEC 3.1): "_" members gone; the informative keys and attributes gone;
-// optional attributes at their section 3.5 defaults gone; values renamed in the order they are written (tokens and
-// pos kept) and slots in the order nodes name them, with what each name the block reads before writing it holds
-// after the block; add's and mul's operands in one order; every number the f32 it rounds to; a linear's weight
-// the tensor it reads (its tied_to resolved against the file's tensors).
+// A document in Appendix D.7's normal form (keramos IR_SPEC v1.4.2), the comparison rule 38 makes: "_" members
+// gone at every depth; the top-level keys model, embed, block and head only; attention.softmax and
+// moe_ffn.routing gone; the optional attributes D.7 step 2 lists at their defaults (written here as absent, the
+// same equality); a linear's weight the tied_to name when the file has no tensor named by its weight as written
+// ({i} included), tied_to then null; block.state's slots named by their index (slot0, slot1, ...: every state
+// attribute follows its slot) and compared in order; values named by their writes in the order embed, the
+// block's nodes once, head; add's and mul's operands an unordered pair; every number the f32 it rounds to.
 json rule38_form(const json& doc, const GGUFData& g) {
   std::function<json(const json&)> strip = [&](const json& v) -> json {
     if (v.is_object()) {
@@ -1054,11 +1056,7 @@ json rule38_form(const json& doc, const GGUFData& g) {
     auto it = cur.find(nm);
     return it == cur.end() ? "?" + nm : it->second;
   };
-  auto has_tensor = [&](std::string nm) {
-    const size_t at = nm.find("{i}");
-    if (at != std::string::npos) nm.replace(at, 3, "0");
-    return g.tensor_infos_map.count(nm) > 0;
-  };
+  auto has_tensor = [&](const std::string& nm) { return g.tensor_infos_map.count(nm) > 0; };  // as written (D.7 step 3)
   auto num_is = [](const json& v, double x) { return v.is_number() && v.get<double>() == static_cast<double>(static_cast<float>(x)); };
   auto node_form = [&](json n, bool in_block, std::vector<std::string>* carried, std::set<std::string>* written) {
     const std::string op = n.value("op", "");
@@ -1076,8 +1074,7 @@ json rule38_form(const json& doc, const GGUFData& g) {
     n["in"] = ins;
     if (n.contains("state") && n.at("state").is_string()) {
       const std::string st = n.at("state").get<std::string>();
-      if (!slot.count(st)) slot[st] = "s" + std::to_string(slot.size());
-      n["state"] = slot[st];
+      n["state"] = slot.count(st) ? slot[st] : "?" + st;
     }
     // informative attributes and optional ones at their defaults (IR_SPEC 3.5)
     if (op == "attention") {
@@ -1121,42 +1118,44 @@ json rule38_form(const json& doc, const GGUFData& g) {
     n["out"] = o.is_string() && outs.size() == 1 ? outs[0] : outs;
     return n;
   };
-  json out = json::object();
-  json model = get(d, "model");
-  if (model.is_object() && model.value("dtype", json("f32")) == "f32") model.erase("dtype");
-  out["model"] = model;
-  json embed = json::array();
-  for (const auto& n : get(get(d, "embed"), "nodes").is_array() ? d.at("embed").at("nodes") : json::array())
-    embed.push_back(node_form(n, false, nullptr, nullptr));
-  out["embed"] = embed;
-  const std::map<std::string, std::string> before = cur;
-  std::vector<std::string> carried;
-  std::set<std::string> written;
-  json block = json::array();
+  // D.7 step 4: the k-th slot of block.state is slotk (the first of two slots with one name names it).
   const json& bl = get(d, "block");
-  for (const auto& n : get(bl, "nodes").is_array() ? bl.at("nodes") : json::array())
-    block.push_back(node_form(n, true, &carried, &written));
-  json carry = json::array();
-  for (const auto& nm : carried) {
-    const auto b = before.find(nm);
-    carry.push_back(json::array({b == before.end() ? "?" + nm : b->second, read(nm)}));
-  }
-  std::sort(carry.begin(), carry.end());
-  json slots = json::array();
   if (get(bl, "state").is_array())
-    for (json s : bl.at("state")) {
-      const std::string nm = show(get(s, "name"));
-      s["name"] = slot.count(nm) ? slot[nm] : "?" + nm;
-      if (get(s, "kind") == "kv" && s.value("dtype", json("f32")) == "f32") s.erase("dtype");
-      slots.push_back(s);
+    for (size_t k = 0; k < bl.at("state").size(); ++k) {
+      const json& nm = get(bl.at("state")[k], "name");
+      if (nm.is_string() && !slot.count(nm.get<std::string>())) slot[nm.get<std::string>()] = "slot" + std::to_string(k);
     }
-  std::sort(slots.begin(), slots.end(), [](const json& a, const json& b) { return a.at("name") < b.at("name"); });
-  out["block"] = {{"repeat", get(bl, "repeat")}, {"nodes", block}, {"state", slots}, {"carried", carry}};
-  if (bl.is_object() && bl.contains("weight_index")) out["block"]["weight_index"] = bl.at("weight_index");
-  json head = json::array();
-  for (const auto& n : get(get(d, "head"), "nodes").is_array() ? d.at("head").at("nodes") : json::array())
-    head.push_back(node_form(n, false, nullptr, nullptr));
-  out["head"] = head;
+  // A section as the document writes it (every member compared), its node list in normal form.
+  auto section = [&](const char* key, bool in_block) {
+    json sec = get(d, key);
+    if (!sec.is_object()) return sec;
+    if (sec.contains("nodes") && sec.at("nodes").is_array()) {
+      json nodes = json::array();
+      for (const auto& n : sec.at("nodes")) nodes.push_back(node_form(n, in_block, nullptr, nullptr));
+      sec["nodes"] = nodes;
+    }
+    return sec;
+  };
+  json out = json::object();
+  if (d.is_object() && d.contains("model")) out["model"] = d.at("model");
+  if (d.is_object() && d.contains("embed")) out["embed"] = section("embed", false);
+  if (d.is_object() && d.contains("block")) {
+    json block = section("block", true);
+    if (block.is_object() && block.contains("state") && block.at("state").is_array()) {
+      json slots = json::array();
+      for (size_t k = 0; k < block.at("state").size(); ++k) {
+        json s = block.at("state")[k];
+        if (s.is_object()) {
+          s["name"] = "slot" + std::to_string(k);
+          if (get(s, "kind") == "kv" && s.value("dtype", json("f32")) == "f32") s.erase("dtype");
+        }
+        slots.push_back(s);
+      }
+      block["state"] = slots;
+    }
+    out["block"] = block;
+  }
+  if (d.is_object() && d.contains("head")) out["head"] = section("head", false);
   return out;
 }
 
@@ -1196,6 +1195,11 @@ void architecture_errors(const GGUFData& g, Errs& errs) {
   if (arch == "paperkiln") return;
   const std::string tail = "; a file whose model is not that architecture's graph has general.architecture "
                            "\"paperkiln\", which no llama.cpp release builds a graph for";
+  if (!meta_str(g, "general.architecture")) {  // absent, or not a string
+    errs.push_back(E("3.1 (rule 38)", "a file with an embedded document has no general.architecture string (\"paperkiln\" "
+                                      "or one of llama, mistral, qwen2, qwen3, gpt2, gptneox, gemma3 and mamba)"));
+    return;
+  }
   if (!has_ir_builder(arch)) {
     errs.push_back(E("3.1 (rule 38)", "general.architecture " + q(arch) +
                                           " is neither \"paperkiln\" nor an architecture of section 9.3" + tail));

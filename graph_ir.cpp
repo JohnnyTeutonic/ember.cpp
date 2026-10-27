@@ -482,6 +482,9 @@ bool device_supported(const std::string& ir_json) {
     }
   }
   if (mor && block_pos_embedding) return false;
+  // A window under depth_route (IR_SPEC 5.15, v1.4.2) counts positions over an application's compact cache: the
+  // CPU interpreter's (attention under attn_row_); a CUDA build serves such a document on the CPU.
+  if (mor && has_windowed_attention(ir_json)) return false;
 #ifdef HAS_CUDA
   if (list_tensors + extra > static_cast<size_t>(kIrDepthSourcesMax)) return false;
 #endif
@@ -1064,7 +1067,8 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
   }
   // Mixture-of-Recursions (ir.hpp depth_route, llama_mor): one depth_route node, the block's
   // first, outside it nowhere; its steps one consecutive run of equal-length steps 0 .. R-1; causal
-  // token choice; a kv state with kv_rows "active"; no recurrent state or windowed attention.
+  // token choice; a kv state with kv_rows "active"; no recurrent state. A window and sinks count
+  // positions over each application's rows (IR_SPEC 5.15 and 7.5, v1.4.2, Q16).
   for (const auto* sub : {&embed_, &head_})
     for (const auto& n : *sub)
       if (n.op == "depth_route") throw std::runtime_error("IR depth_route outside the block");
@@ -1111,8 +1115,6 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
   if (!mor_step_.empty()) {
     if (!kv_rows_active) throw std::runtime_error("IR depth_route needs a kv state with kv_rows \"active\"");
     if (!rec_slots_.empty()) throw std::runtime_error("IR depth_route with recurrent state is not implemented in ember");
-    if (window_ > 0 || !window_layer_.empty() || sinks_ > 0)
-      throw std::runtime_error("IR depth_route with windowed attention is not implemented in ember");
     for (const auto& n : block_)
       if (n.op == "attention" && has(n.attrs, "position_bias"))
         throw std::runtime_error("IR depth_route with attention position_bias is not implemented in ember");
@@ -2133,7 +2135,25 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
                                   RV, rv_w, K);
       } else if (ts)
         attention_rows_batch_cpu(q.v, cache, out.v, T, ts_vis_, hq, hkv, hd, scale);
-      else if (window > 0)
+      else if (window > 0 && attn_row_ >= 0) {
+        // A window under depth_route (IR_SPEC 5.15 and 7.5, v1.4.2, Q16): the application's compact cache holds
+        // positions mor_rows_[layer] at rows 0 .. attn_row_ - 1, and mor_step runs one token at a time, its row at
+        // attn_row_ (position p = start_pos). A held row at position j is visible iff j < sink_hi or j >= win_lo
+        // (swa_visible_ranges): the sinks and positions p - window + 1 .. p it holds, counted in positions, never the
+        // last `window` rows; rows of tokens that exited are absent, not replaced.
+        const std::vector<int>& held = mor_rows_.at(layer);
+        if (T != 1 || static_cast<int>(held.size()) != attn_row_)
+          throw std::runtime_error("IR depth_route: application " + std::to_string(layer) + " runs " +
+                                   std::to_string(T) + " rows over " + std::to_string(held.size()) +
+                                   " held positions for " + std::to_string(attn_row_) + " rows");
+        int sink_hi = 0, win_lo = 0;
+        swa_visible_ranges(start_pos, window, sinks, sink_hi, win_lo);
+        std::vector<std::vector<int>> rows(1);
+        for (int r = 0; r < attn_row_; ++r)
+          if (held[r] < sink_hi || held[r] >= win_lo) rows[0].push_back(r);
+        rows[0].push_back(attn_row_);  // its own row, position p
+        attention_rows_batch_cpu(q.v, cache, out.v, 1, rows, hq, hkv, hd, scale);
+      } else if (window > 0)
         attention_window_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale, window, sinks);
       else
         attention_batch_cpu(q.v, cache, out.v, T, kpos, hq, hkv, hd, scale);
