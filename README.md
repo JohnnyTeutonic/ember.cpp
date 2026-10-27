@@ -43,6 +43,7 @@ flowchart LR
 | Mixture-of-Recursions (`depth_route`: each token picks its depth) | IR interpreter | ✅ | ✅ | not gated | ✅ |
 | Per-turn state tokens with eviction (`turn_state`) | IR interpreter | ✅ | ✅ | ✅ | ✅ (every row kept) |
 | Attention residuals over depth (`llama_attnres`) | IR interpreter | ✅ | ✅ | ✅ | ✅ |
+| `llama_attnres` under tied-block recursion (`tensor_index`: each application reads its own pseudo-queries) | IR interpreter | ✅ | ✅ | ✅ | ✅ |
 | Recurrent ops the document defines (`recurrence`: a paper's new state-space model or linear attention as data) | IR interpreter | ✅ | runs on the CPU | ✅ | runs in WebAssembly |
 
 Every paperkiln family is gated the same way: **greedy replies identical to paperkiln's own
@@ -51,8 +52,9 @@ model. The receipts are in [`experiments/`](experiments/). "Runs on the CPU" mea
 serves that family on its CPU path, because the device kernels for it are not written yet; "runs in
 WebAssembly" means the browser page serves it on the CPU for the same reason. The WebGPU column of the
 IR rows is gated on a software adapter (SwiftShader), against ember's CPU interpreter: greedy 40/40, the
-top-1 at every position and logits within 1.2e-6 of the range, plus the page's chat path against
-WebAssembly and ember's CPU replies ([`experiments/webgpu_ir_2026-10-26/`](experiments/webgpu_ir_2026-10-26/));
+top-1 at every position and logits within 1.5e-6 of the range, plus the page's chat path against
+WebAssembly and ember's CPU replies ([`experiments/webgpu_ir_2026-10-26/`](experiments/webgpu_ir_2026-10-26/),
+[`experiments/tensor_index_gate_2026-10-27/`](experiments/tensor_index_gate_2026-10-27/));
 its speed on a GPU is not measured yet.
 
 The last four rows serve paperkiln's research programme,

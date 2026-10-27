@@ -1,0 +1,49 @@
+native state_wasm_gate rc=0
+native ir_wasm_gate rc=0
+In file included from /home/jonat/tig/ember/src/safetensors_loader.cpp:1:
+/home/jonat/tig/ember/src/safetensors_loader.h:294:27: warning: 'result_of<(lambda at /home/jonat/tig/ember/src/safetensors_loader.cpp:561:39) ()>' is deprecated [-Wdeprecated-declarations]
+  294 | std::future<typename std::result_of<F(Args...)>::type> ThreadPool::submit(
+      |                           ^
+/home/jonat/tig/ember/src/safetensors_loader.cpp:561:32: note: while substituting deduced template arguments into function template 'submit' [with F = (lambda at /home/jonat/tig/ember/src/safetensors_loader.cpp:561:39), Args = <>]
+  561 |         futures.push_back(pool.submit([this, tensor_name]() {
+      |                                ^
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__type_traits/result_of.h:25:8: note: 'result_of<(lambda at /home/jonat/tig/ember/src/safetensors_loader.cpp:561:39) ()>' has been explicitly marked deprecated here
+   25 | struct _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_NO_SPECIALIZATIONS result_of;
+      |        ^
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config:540:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  540 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config:504:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  504 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/jonat/tig/ember/src/safetensors_loader.cpp:1:
+/home/jonat/tig/ember/src/safetensors_loader.h:296:37: warning: 'result_of<(lambda at /home/jonat/tig/ember/src/safetensors_loader.cpp:561:39) ()>' is deprecated [-Wdeprecated-declarations]
+  296 |   using return_type = typename std::result_of<F(Args...)>::type;
+      |                                     ^
+/home/jonat/tig/ember/src/safetensors_loader.cpp:561:32: note: in instantiation of function template specialization 'ThreadPool::submit<(lambda at /home/jonat/tig/ember/src/safetensors_loader.cpp:561:39)>' requested here
+  561 |         futures.push_back(pool.submit([this, tensor_name]() {
+      |                                ^
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__type_traits/result_of.h:25:8: note: 'result_of<(lambda at /home/jonat/tig/ember/src/safetensors_loader.cpp:561:39) ()>' has been explicitly marked deprecated here
+   25 | struct _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_NO_SPECIALIZATIONS result_of;
+      |        ^
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config:540:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  540 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/home/jonat/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config:504:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  504 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+wasm state_wasm_gate rc=0
+wasm ir_wasm_gate rc=0
+emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.6 (ce75e06884093bcefb86a6b8fd56a5d62a4cc245)
+total 7728
+drwxr-xr-x 4 jonat jonat    4096 Oct 27 18:06 .
+drwxr-xr-x 4 jonat jonat    4096 Oct 27 18:04 ..
+drwxr-xr-x 2 jonat jonat    4096 Oct 27 18:05 inc
+-rwxr-xr-x 1 jonat jonat 2198336 Oct 27 18:05 ir_wasm_gate
+-rw-r--r-- 1 jonat jonat   87292 Oct 27 18:06 ir_wasm_gate_1gb.js
+-rwxr-xr-x 1 jonat jonat 1665962 Oct 27 18:06 ir_wasm_gate_1gb.wasm
+drwxr-xr-x 2 jonat jonat    4096 Oct 27 18:06 obj
+-rwxr-xr-x 1 jonat jonat 2189344 Oct 27 18:04 state_wasm_gate
+-rw-r--r-- 1 jonat jonat   86885 Oct 27 18:06 state_wasm_gate.js
+-rwxr-xr-x 1 jonat jonat 1656714 Oct 27 18:06 state_wasm_gate.wasm

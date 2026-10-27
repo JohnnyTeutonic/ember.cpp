@@ -1,0 +1,35 @@
+=== vm Tue Oct 27 07:08:02 AM UTC 2026 commit=ec3201b04e6f2fcb6dffd3496b0c72b3bec0c54a ===
+compute capability 75, nproc 2
+--- deps 07:08:02
+--- build 07:08:14
+CUDA toolkit and cuBLAS found
+built (sm_75) in 200 s
+--- ar_rec 07:11:34
+x5_device_logits ar_rec a rc=0
+x5_device_logits ar_rec det a rc=0
+x5_device_logits ar_rec b rc=0
+x5_device_logits ar_rec det b rc=0
+ar_rec default mode a = b
+ar_rec EMBER_DETERMINISTIC=1 a = b
+untagged ar_rec rc=0
+nan45 tagged ar_rec rc=0
+nan45 untagged ar_rec rc=0
+ar_rec nan45 untagged = untagged (bits)
+state_device_gate ar_rec rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 1.9591482328776813e-07, "worst_decode_vs_prefill_rel": 2.0347165370263982e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 1.9591482328776813e-07, "worst_prefill_on_rel": 1.9591482328776813e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate ar_rec rc=0: 40/40 320/320 1.074507996219881e-06 5.21769619929095e-07 pass True
+--- ar_rec_q8_0 07:11:43
+x5_device_logits ar_rec_q8_0 a rc=0
+x5_device_logits ar_rec_q8_0 det a rc=0
+x5_device_logits ar_rec_q8_0 b rc=0
+x5_device_logits ar_rec_q8_0 det b rc=0
+ar_rec_q8_0 default mode a = b
+ar_rec_q8_0 EMBER_DETERMINISTIC=1 a = b
+untagged ar_rec_q8_0 rc=0
+nan45 tagged ar_rec_q8_0 rc=0
+nan45 untagged ar_rec_q8_0 rc=0
+ar_rec_q8_0 nan45 untagged = untagged (bits)
+state_device_gate ar_rec_q8_0 rc=0: {"free_greedy": {"cpu": "40/40", "device": "40/40"}, "kv_rows_held_equal": "40/40", "sequences": 40, "teacher_forced_greedy": {"cpu": "40/40", "device": "40/40"}, "top1_agree": "1419/1419", "worst_decode_rel": 2.0684591727011377e-07, "worst_decode_vs_prefill_rel": 2.3999004521292457e-07, "worst_on_vs_off_rel": 0.0, "worst_prefill_off_rel": 2.0537735418926672e-07, "worst_prefill_on_rel": 2.0537735418926672e-07, "worst_turns_rel": 0.0} pass True
+ir_device_gate ar_rec_q8_0 rc=0: 40/40 320/320 4.230282596414345e-07 9.534723839790083e-07 pass True
+--- pack 07:11:50
+packed 1.2M
+=== done Tue Oct 27 07:11:50 AM UTC 2026 ===

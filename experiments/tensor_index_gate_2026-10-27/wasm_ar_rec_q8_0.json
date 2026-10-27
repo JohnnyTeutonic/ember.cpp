@@ -1,0 +1,68 @@
+{
+ "model": "ar_rec_q8_0",
+ "native_gguf": "/mnt/c/ml_artifacts/attnres_gate_rec/ar_rec/ar_rec_q8_0.gguf",
+ "sequences": 40,
+ "calls": 0,
+ "logit_rows": 1419,
+ "tol": 0.0001,
+ "integer_results_equal": true,
+ "wasm_vs_native": {
+  "prefill_on": {
+   "worst_rel": 0.0,
+   "bit_equal": true,
+   "top1": "473/473"
+  },
+  "prefill_off": {
+   "worst_rel": 0.0,
+   "bit_equal": true,
+   "top1": "473/473"
+  },
+  "decode_on": {
+   "worst_rel": 0.0,
+   "bit_equal": true,
+   "top1": "473/473"
+  }
+ },
+ "inside": {
+  "native": {
+   "on_vs_off": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "473/473"
+   },
+   "decode_vs_prefill": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "473/473"
+   }
+  },
+  "wasm": {
+   "on_vs_off": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "473/473"
+   },
+   "decode_vs_prefill": {
+    "worst_rel": 0.0,
+    "bit_equal": true,
+    "top1": "473/473"
+   }
+  }
+ },
+ "ms": {
+  "native": 529.34148,
+  "wasm": 1926.603438
+ },
+ "greedy": {
+  "native": {
+   "teacher_forced": "40/40",
+   "free_running": "40/40"
+  },
+  "wasm": {
+   "teacher_forced": "40/40",
+   "free_running": "40/40"
+  }
+ },
+ "greedy_ids_equal": true,
+ "pass": true
+}

@@ -1,0 +1,150 @@
+{
+ "dir": "/mnt/c/ml_artifacts/ember_tig_gate/ember-tig-1027/out",
+ "gpu": "T4",
+ "nvidia_smi": [
+  "| NVIDIA-SMI 580.82.07              Driver Version: 580.82.07      CUDA Version: 13.0     |",
+  "|   0  Tesla T4                       Off |   00000000:00:04.0 Off |                    0 |",
+  "Cuda compilation tools, release 13.0, V13.0.88"
+ ],
+ "ar_rec": {
+  "tagged": {
+   "kind": "device",
+   "src": "/mnt/c/ml_artifacts/ember_tig_gate/ember-tig-1027/out/dev_ar_rec_a.json",
+   "cpu": "/home/jonat/tig/work/cpu_f32_tagged.json",
+   "logprob_worst_rel_vs_mtstudio": 3.3894940657409126e-07,
+   "greedy": "40/40",
+   "logits_worst_rel_vs_cpu": 1.9591482328776813e-07,
+   "top1_vs_cpu": "473/473",
+   "free_running_greedy": "40/40",
+   "decode_vs_prefill_rel": 2.0347165887772917e-07
+  },
+  "untagged": {
+   "kind": "device",
+   "src": "/mnt/c/ml_artifacts/ember_tig_gate/ember-tig-1027/out/dev_ar_rec_untagged.json",
+   "cpu": "/home/jonat/tig/work/cpu_f32_untagged.json",
+   "logprob_worst_rel_vs_mtstudio": 0.0025873031733451325,
+   "greedy": "40/40",
+   "logits_worst_rel_vs_cpu": 2.0501342389459645e-07,
+   "top1_vs_cpu": "473/473",
+   "free_running_greedy": "40/40",
+   "decode_vs_prefill_rel": 1.837955771677371e-07
+  },
+  "run_to_run": {
+   "default_mode_byte_equal": true,
+   "deterministic_byte_equal": true,
+   "deterministic_vs_default_byte_equal": true
+  },
+  "untagged_gap": {
+   "device_first8_prompts": 0.021036562270373184,
+   "device_all40_sequences": 0.02120994698340988
+  },
+  "nan_rec_app_4_5": {
+   "tagged_all_nan": true,
+   "untagged_bit_equal": true
+  },
+  "state_device_gate": {
+   "summary": {
+    "free_greedy": {
+     "cpu": "40/40",
+     "device": "40/40"
+    },
+    "kv_rows_held_equal": "40/40",
+    "sequences": 40,
+    "teacher_forced_greedy": {
+     "cpu": "40/40",
+     "device": "40/40"
+    },
+    "top1_agree": "1419/1419",
+    "worst_decode_rel": 1.9591482328776813e-07,
+    "worst_decode_vs_prefill_rel": 2.0347165370263982e-07,
+    "worst_on_vs_off_rel": 0.0,
+    "worst_prefill_off_rel": 1.9591482328776813e-07,
+    "worst_prefill_on_rel": 1.9591482328776813e-07,
+    "worst_turns_rel": 0.0
+   },
+   "pass": true
+  },
+  "ir_device_gate": {
+   "n": null,
+   "len": 8,
+   "gen": 8,
+   "greedy_identical": "40/40",
+   "top1_agree": "320/320",
+   "worst_prefill_rel": 1.074507996219881e-06,
+   "worst_decode_rel": 5.21769619929095e-07,
+   "pass": true
+  },
+  "pass": true
+ },
+ "ar_rec_q8_0": {
+  "tagged": {
+   "kind": "device",
+   "src": "/mnt/c/ml_artifacts/ember_tig_gate/ember-tig-1027/out/dev_ar_rec_q8_0_a.json",
+   "cpu": "/home/jonat/tig/work/cpu_q8_0_tagged.json",
+   "logprob_worst_rel_vs_mtstudio": 0.00016257320499953493,
+   "greedy": "40/40",
+   "logits_worst_rel_vs_cpu": 2.053773647342317e-07,
+   "top1_vs_cpu": "473/473",
+   "free_running_greedy": "40/40",
+   "decode_vs_prefill_rel": 2.3999004521292457e-07
+  },
+  "untagged": {
+   "kind": "device",
+   "src": "/mnt/c/ml_artifacts/ember_tig_gate/ember-tig-1027/out/dev_ar_rec_q8_0_untagged.json",
+   "cpu": "/home/jonat/tig/work/cpu_q8_0_untagged.json",
+   "logprob_worst_rel_vs_mtstudio": 0.002726229268089907,
+   "greedy": "40/40",
+   "logits_worst_rel_vs_cpu": 1.9572595195965227e-07,
+   "top1_vs_cpu": "473/473",
+   "free_running_greedy": "40/40",
+   "decode_vs_prefill_rel": 1.61575863616528e-07
+  },
+  "run_to_run": {
+   "default_mode_byte_equal": true,
+   "deterministic_byte_equal": true,
+   "deterministic_vs_default_byte_equal": true
+  },
+  "untagged_gap": {
+   "device_first8_prompts": 0.021068730123489633,
+   "device_all40_sequences": 0.021219873939145043
+  },
+  "nan_rec_app_4_5": {
+   "tagged_all_nan": true,
+   "untagged_bit_equal": true
+  },
+  "state_device_gate": {
+   "summary": {
+    "free_greedy": {
+     "cpu": "40/40",
+     "device": "40/40"
+    },
+    "kv_rows_held_equal": "40/40",
+    "sequences": 40,
+    "teacher_forced_greedy": {
+     "cpu": "40/40",
+     "device": "40/40"
+    },
+    "top1_agree": "1419/1419",
+    "worst_decode_rel": 2.0684591727011377e-07,
+    "worst_decode_vs_prefill_rel": 2.3999004521292457e-07,
+    "worst_on_vs_off_rel": 0.0,
+    "worst_prefill_off_rel": 2.0537735418926672e-07,
+    "worst_prefill_on_rel": 2.0537735418926672e-07,
+    "worst_turns_rel": 0.0
+   },
+   "pass": true
+  },
+  "ir_device_gate": {
+   "n": null,
+   "len": 8,
+   "gen": 8,
+   "greedy_identical": "40/40",
+   "top1_agree": "320/320",
+   "worst_prefill_rel": 4.230282596414345e-07,
+   "worst_decode_rel": 9.534723839790083e-07,
+   "pass": true
+  },
+  "pass": true
+ },
+ "pass": true
+}

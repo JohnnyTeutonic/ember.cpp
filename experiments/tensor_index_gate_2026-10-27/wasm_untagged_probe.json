@@ -1,0 +1,1 @@
+{"kind": "wasm", "src": "/home/jonat/tig/wasm/untagged_probe/wasm", "cpu": "/home/jonat/tig/work/cpu_f32_untagged.json", "engine": "wasm", "logprob_worst_rel_vs_mtstudio": 0.002587213625135933, "greedy": "40/40", "logits_worst_rel_vs_cpu": 0.0, "top1_vs_cpu": "473/473"}

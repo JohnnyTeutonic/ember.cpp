@@ -1,0 +1,13 @@
+18:07:25 new T4 session ember-tig-1027
+18:07:35 uploaded tig_vm.sh
+18:07:38 uploaded COMMITS
+18:07:43 uploaded small.tgz
+18:07:57 uploaded ember.tgz
+18:08:25 launched
+18:09:35 state=RUNNING CUDA toolkit and cuBLAS found
+18:10:44 state=RUNNING CUDA toolkit and cuBLAS found
+18:11:56 state=RUNNING === done Tue Oct 27 07:11:50 AM UTC 2026 ===
+18:13:02 state=DONE === done Tue Oct 27 07:11:50 AM UTC 2026 ===
+18:13:09 results (DONE) in /mnt/c/ml_artifacts/ember_tig_gate/ember-tig-1027
+18:13:11 stopping ember-tig-1027 (attempt 1)
+[pk-tc-e1-rec] gpu-l4-s-ass1a1-20mhwnk8kx7ly | Hardware: L4 | Variant: GPU
