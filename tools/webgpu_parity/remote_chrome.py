@@ -15,7 +15,7 @@ POST /e6/log and the page's console go to OUT.log; POST /e6/result ends the run.
 
 OUT.json: {"result": the page's result, "chrome": {version, command line, gpu}, "page", "wall_s"}.
 Exit 3 when the page's adapter is a software one (SwiftShader, llvmpipe, lavapipe) unless
---allow-software; 1 when the result has pass false or the run timed out or crashed; else 0.
+--allow-software (or --wasm-only: a WebAssembly-only page has no adapter); 1 when the result has pass false or the run timed out or crashed; else 0.
 
 GPU work is remote only (Jonathan, 26 Oct 2026): this refuses to run without EMBER_WEBGPU_REMOTE=1,
 which only the GPU VM's scripts set. On the laptop use swiftshader_run.py (Dawn on SwiftShader).
@@ -65,6 +65,7 @@ def main():
     ap.add_argument("--allow-software", action="store_true")
     ap.add_argument("--chrome", default=shutil.which("google-chrome") or "/usr/bin/google-chrome")
     ap.add_argument("--arg", action="append", default=[], help="an extra Chrome flag (--arg=--flag)")
+    ap.add_argument("--wasm-only", action="store_true", help="a WebAssembly-only page: no adapter to check")
     ap.add_argument("--no-gpu-flags", action="store_true", help="leave out GPU_FLAGS (probe designs)")
     a = ap.parse_args()
     a.rows = a.rows or os.path.splitext(a.out)[0] + ".rows.jsonl"
@@ -200,7 +201,7 @@ def main():
     rec["adapter_software"] = bool(SOFTWARE.search(desc)) or not ad
     if "error" in rec or res.get("error"):
         rc = 1
-    elif rec["adapter_software"] and not a.allow_software:
+    elif rec["adapter_software"] and not a.allow_software and not a.wasm_only:
         rec["error"] = "the page's adapter is a software one (or none): " + desc
         rc = 3
     else:

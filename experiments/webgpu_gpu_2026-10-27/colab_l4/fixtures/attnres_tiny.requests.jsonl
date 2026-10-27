@@ -1,0 +1,40 @@
+{"i": 0, "request": {"user_input": "Hello, I feel a bit scared today for some reason, do you feel it too?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 1, "request": {"user_input": "I think we should let our feelings out and talk about something important today", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 2, "request": {"user_input": "I feel sad because my manager said my report was not ready for the meeting today.", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 3, "request": {"user_input": "Do you think it is a good idea to grip a soft leather item before buying it", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 4, "request": {"user_input": "Do you ever feel like life is just passing by like a slow swim in deep water?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 5, "request": {"user_input": "Hello there, it is quite surprising to see you here today", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 6, "request": {"user_input": "Do you think the white vessel will withstand the storm tonight", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 7, "request": {"user_input": "Hello, I feel a little scared today, especially near the water by my neck.", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 8, "request": {"user_input": "Hello, I feel a bit sad today, like the weather is gloomy and grey.", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 9, "request": {"user_input": "Do you ever feel disgusted by smelly cheese in a small room?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 10, "request": {"user_input": "Should we talk about how leaves change color before they fall this time of year", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 11, "request": {"user_input": "Why do people add so much sugar to their drinks when it tastes so strange?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 12, "request": {"user_input": "Hello there, I am feeling very angry today about the changes in our land.", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 13, "request": {"user_input": "I saw a flat train station today, and it made me feel a bit sad inside.", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 14, "request": {"user_input": "Do you think we should visit the bright hospital this weekend to see the new changes?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 15, "request": {"user_input": "Do you believe that a happy theory can help us feel better every day?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 16, "request": {"user_input": "I think we should go outside and shake off our heavy feelings together with some fresh air.", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 17, "request": {"user_input": "Have you ever seen a design that really shook up the medical field recently", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 18, "request": {"user_input": "Do you want to chat about the quick rain we had last night?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 19, "request": {"user_input": "Hello there, it is a lovely day with a clear sky and warm sunshine", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 20, "request": {"user_input": "Hello, I feel a bit disgusted looking at that picture on the wall.", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 21, "request": {"user_input": "Do you think it is such a strange feeling to start every day with unease", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 22, "request": {"user_input": "I do not understand why my trousers feel so tight after washing them", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 23, "request": {"user_input": "Hello there, I am surprised to see you here today", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 24, "request": {"user_input": "I think we should go for a swim in the lake, but it feels a bit scary now.", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 25, "request": {"user_input": "Hello there, I feel a bit sad today with everything going on around us.", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 26, "request": {"user_input": "I feel a bit sad today, do you want to talk about something special", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 27, "request": {"user_input": "What if we talk about the future of driving and how hard it can be sometimes?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 28, "request": {"user_input": "Can we go to the park and play with a ball today, it seems fun?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 29, "request": {"user_input": "Hello there, I feel really angry about something that happened yesterday at the market.", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 30, "request": {"user_input": "Hello, I am feeling quite fearful today about many things around me", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 31, "request": {"user_input": "How about we go for a walk in the sunny park today, it feels so nice?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 32, "request": {"user_input": "Hello there, I feel very happy today, how about you?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 33, "request": {"user_input": "Hello there, I feel so disgusted about the bright liquid in that box by the door", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 34, "request": {"user_input": "Do you ever feel disgusted by how some farms cover their fields with plastic waste?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 35, "request": {"user_input": "How about we talk about the fun event we went to last weekend in the park?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 36, "request": {"user_input": "Did you see the price of fruits at the market today, it seems so cheap?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 37, "request": {"user_input": "Hello, it is a lovely day, and I feel so happy talking with you today", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 38, "request": {"user_input": "Do you think the market feels empty without the usual happy sounds around us today?", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}
+{"i": 39, "request": {"user_input": "I have been feeling a bit scared about riding a horse lately", "max_new_tokens": 60, "temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": 0}}

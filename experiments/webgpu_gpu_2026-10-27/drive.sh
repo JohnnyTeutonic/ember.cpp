@@ -7,9 +7,10 @@
 # vm_colab.sh, and stage.part.NN (a tar of the small models and inputs with SHA256SUMS, split at 40 MB).
 # The official checkpoints are fetched on the VM. Every poll packs /content/e6out (Chrome logs cut to 2 MB)
 # and brings it home to /mnt/c/ml_artifacts/e6gpu/SESSION/ (outside OneDrive). GPU: L4, else T4.
+# E6_VM_ENV="K=V ..." is set for vm_colab.sh on the VM (e.g. E6_EXTRA_FAMILIES, E6_ONLY_EXTRA).
 set -uo pipefail
 S=${1:?session}; MAXMIN=${2:?max minutes}; STAGE=${3:?stage dir}; shift 3
-PARTS="$*"
+PARTS="$*"; GRACE=${E6_GRACE:-900}
 COL=~/.local/bin/colab
 COLAB_PY=~/.local/share/uv/tools/google-colab-cli/bin/python
 PK=/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/microtorch
@@ -31,13 +32,23 @@ maybe_refresh() {
     timeout 180 "$COLAB_PY" "$PK/tools/colab_adopt.py" --refresh > /dev/null 2>&1 && last_refresh=$(date +%s)
   fi
 }
-for g in L4 T4; do
-  log "new $g session $S"
-  out=$(c 600 new -s "$S" --gpu $g 2>&1)
-  if echo "$out" | grep -q READY; then GPU=$g; break; fi
-  log "no $g: ${out: -300}"
+# Queue for a slot: an L4 every 5 minutes; after E6_L4_WAIT minutes (default 30) a T4 too; give up after
+# E6_SLOT_WAIT minutes (default 240).
+w0=$(date +%s)
+while [ $GPU = none ]; do
+  waited=$(( ($(date +%s) - w0) / 60 ))
+  gpus=L4; [ $waited -ge "${E6_L4_WAIT:-30}" ] && gpus="L4 T4"
+  for g in $gpus; do
+    log "new $g session $S"
+    out=$(c 600 new -s "$S" --gpu $g 2>&1)
+    if echo "$out" | grep -q READY; then GPU=$g; break; fi
+    log "no $g: $(echo "$out" | grep -v '^\[colab\]' | tail -c 200)"
+    c 120 stop -s "$S" > /dev/null 2>&1   # a half-made session never stays
+  done
+  [ $GPU != none ] && break
+  [ $waited -ge "${E6_SLOT_WAIT:-240}" ] && { log "no slot in $waited min"; exit 1; }
+  sleep 300
 done
-[ $GPU = none ] && exit 1
 start=$(date +%s); echo "$GPU $(date -u +%FT%TZ)" > "$OUT/SESSION"
 for f in ember.tgz COMMIT vm_colab.sh; do
   c 900 upload -s "$S" "$STAGE/$f" "/content/$f" > /dev/null 2>&1 || { log "upload $f failed"; exit 1; }
@@ -45,7 +56,7 @@ done
 cat > "$STAGE/launch.py" << EOF
 import os, subprocess
 if not os.path.exists("/content/e6_vm.log"):
-    subprocess.Popen("cd /content && bash vm_colab.sh $PARTS", shell=True, stdin=subprocess.DEVNULL,
+    subprocess.Popen("cd /content && ${E6_VM_ENV:-} bash vm_colab.sh $PARTS", shell=True, stdin=subprocess.DEVNULL,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True, start_new_session=True)
 print("E6_LAUNCH_SENT")
 EOF
@@ -103,6 +114,16 @@ while :; do
   if c 300 download -s "$S" /content/E6_DONE "$OUT/E6_DONE" > /dev/null 2>&1; then state=DONE
   elif c 300 download -s "$S" /content/E6_FAILED "$OUT/E6_FAILED" > /dev/null 2>&1; then state=FAILED; fi
   fetch
+  if [ "$state" = FAILED ] && [ "$GRACE" -gt 0 ]; then
+    # A failed step can be fixed on the VM (remove /content/E6_FAILED and relaunch vm_colab.sh, which resumes
+    # after its probe and builds) for E6_GRACE seconds before the session goes.
+    log "VM failed; $GRACE s for a fix in place"
+    g0=$(date +%s)
+    while [ $(( $(date +%s) - g0 )) -lt "$GRACE" ]; do
+      sleep 60; maybe_refresh
+      c 300 download -s "$S" /content/E6_FAILED "$OUT/E6_FAILED" > /dev/null 2>&1 || { state=RUNNING; rm -f "$OUT/E6_FAILED"; log "fixed in place"; break; }
+    done
+  fi
   [ "$state" != RUNNING ] && break
   if [ $(( $(date +%s) - start )) -ge $((MAXMIN * 60)) ]; then log "deadline"; state=DEADLINE; break; fi
 done

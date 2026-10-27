@@ -100,7 +100,7 @@ async function chatGpu(req) {
   let pos = prep.prompt_ids.length, stop = -1;
   let logits = await gpu.forward(prep.prompt_ids, 0);
   for (let s = 0; s < prep.max_new_tokens; s++) {
-    ember.HEAPF32.set(logits, logitsPtr >> 2);
+    ember.HEAPF32.set(logits, logitsPtr >>> 2);   // unsigned: a 4gb heap puts pointers past 2^31
     const t = ember._ember_sample(logitsPtr, n);
     if (prep.stop_ids.includes(t)) { stop = t; break; }   // the chat template's stop set
     if (s === prep.max_new_tokens - 1 || pos >= prep.ctx) break;   // the length limit
