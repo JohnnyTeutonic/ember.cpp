@@ -10,7 +10,7 @@
 // "exact": true).
 //
 // Methods: hello, check, open, forward, truncate, snapshot, restore, close, digest, dequantize, render_chat,
-// parse_reply, and run_node for recurrence, expr, attention, mla_attention and split nodes (other ops and
+// parse_reply, and run_node for recurrence, expr, attention, mla_attention, split and rope nodes (other ops and
 // run_node_grad reply skip). A session owns one GGUF, one
 // interpreter and the ids it has seen.
 //   check / open: "ir" names a document that replaces the file's (ember's EMBER_IR); null reads the
@@ -51,6 +51,7 @@
 // later segment is processed (the start of the next call into it), not at the end of the call
 // that completes the state block (IR_SPEC.md 6.8.3 allows either).
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -366,6 +367,9 @@ class Adapter {
     const int KV = attr("kv_heads", json(H)).get<int>();
     const int window = attr("window", json(0)).get<int>(), sinks = attr("sinks", json(0)).get<int>();
     const float scale = attr("scale", nullptr).get<float>();
+    const float softcap = node.contains("softcap") ? attr("softcap", nullptr).get<float>() : 0.0f;  // revision 1.5
+    if (node.contains("softcap") && !(softcap > 0.0f))
+      throw std::runtime_error("IR_SPEC 5.15 (rule 10): softcap is not positive");
     const std::vector<std::string> ins = node.at("in").get<std::vector<std::string>>();
     if (ins.size() != 3) throw std::runtime_error("IR_SPEC 10.1 rule 7: attention reads [q, k, v]");
     std::vector<int64_t> sq, sk, sv;
@@ -395,7 +399,7 @@ class Adapter {
       std::vector<int> qpos(static_cast<size_t>(T));
       for (int t = 0; t < T; ++t) qpos[t] = t;
       attention_bias_batch_cpu(q, cache, out, T, attention_visible_rows(T, 0, window, sinks), nullptr, qpos, H, KV, hd,
-                               scale, W.data(), buckets);
+                               scale, W.data(), buckets, softcap);
     } else if (node.contains("relative_kv")) {  // revision 1.4
       const json& rk = node.at("relative_kv");
       if (node.contains("position_bias"))
@@ -426,9 +430,9 @@ class Adapter {
       for (int t = 0; t < T; ++t) qpos[t] = t;
       attention_relkv_batch_cpu(q, cache, out, T, attention_visible_rows(T, 0, window, sinks), nullptr, qpos, H, KV, hd,
                                 scale, tables[0].data(), widths[0], tables[1].empty() ? nullptr : tables[1].data(),
-                                widths[1], K);
+                                widths[1], K, softcap);
     } else {
-      attention_window_batch_cpu(q, cache, out, T, 0, H, KV, hd, scale, window, sinks);
+      attention_window_batch_cpu(q, cache, out, T, 0, H, KV, hd, scale, window, sinks, softcap);
     }
     json r;
     r["outputs"] = json::object();
@@ -528,6 +532,95 @@ class Adapter {
     return res;
   }
 
+  // A rope node alone (IR_SPEC 5.14): q [T, heads x head_dim], k [T, kv_heads x head_dim], each row at its position
+  // pos[t]; the angle table as the interpreter builds it (graph_ir.cpp build_rope_tables): freq_j = 1 / powf(theta,
+  // f32(2j) / f32(n_rot)), angle (f32(pos) * freq_scale) * freq_j, divided by f_j under freq_factors, cosf and sinf
+  // times attn_factor; with two factor sets the run's length max(pos) + 1 selects the long one past original_ctx
+  // (section 5.14's single-node rule). Each rotated element x0 * cos - x1 * sin or x0 * sin + x1 * cos, no
+  // fused multiply-add; pairing interleaved or neox; the first n_rot dims of each head rotate.
+  static json run_rope(const json& node, const json& inputs, const json& weights) {
+    auto attr = [&](const char* k, const json& dflt) {  // application 0's value
+      const json& v = node.contains(k) ? node.at(k) : dflt;
+      return v.is_object() && v.contains("per_layer") ? v.at("per_layer").at(0) : v;
+    };
+    if (attr("rope_heads", json("all")) != "all")
+      throw Skip{"run_node: rope_heads \"first\" is not implemented in ember (refused at load by name)"};
+    const int H = attr("heads", nullptr).get<int>(), hd = attr("head_dim", nullptr).get<int>();
+    const int KV = attr("kv_heads", json(H)).get<int>(), n_rot = attr("n_rot", json(hd)).get<int>();
+    const float theta = attr("theta", nullptr).get<float>(), fs = attr("freq_scale", json(1.0)).get<float>();
+    const float m = attr("attn_factor", json(1.0)).get<float>();
+    const std::string pairing = attr("pairing", nullptr).get<std::string>();
+    if (pairing != "interleaved" && pairing != "neox") throw std::runtime_error("IR_SPEC 5.14 (rule 5): pairing " + pairing);
+    if (n_rot <= 0 || n_rot % 2 || n_rot > hd) throw std::runtime_error("IR_SPEC 5.14 (rule 10): n_rot is not even in 1 .. head_dim");
+    if (!(fs > 0.0f)) throw std::runtime_error("IR_SPEC 5.14 (rule 10): freq_scale is not positive");
+    if (!(m > 0.0f)) throw std::runtime_error("IR_SPEC 5.14 (rule 10): attn_factor is not positive");
+    const std::vector<std::string> ins = node.at("in").get<std::vector<std::string>>();
+    const std::vector<std::string> outs = node.at("out").get<std::vector<std::string>>();
+    if (ins.size() != 3 || outs.size() != 2) throw std::runtime_error("IR_SPEC 10.1 rule 7: rope reads [q, k, pos] and writes two");
+    std::vector<int64_t> sq, sk;
+    std::vector<float> q = floats(inputs.at(ins[0]), &sq), k = floats(inputs.at(ins[1]), &sk);
+    const json& pj = inputs.at(ins[2]);
+    const std::vector<int> pos = (pj.is_object() && pj.contains("ids") ? pj.at("ids") : pj).get<std::vector<int>>();
+    if (sq.size() != 2 || sk.size() != 2 || sq[0] != sk[0] || sq[1] != H * hd || sk[1] != KV * hd ||
+        static_cast<int64_t>(pos.size()) != sq[0])
+      throw std::runtime_error("IR_SPEC 5.14 (rule 37): rope q must be [T, heads x head_dim], k [T, kv_heads x head_dim], "
+                               "pos T positions");
+    const int T = static_cast<int>(sq[0]), half = n_rot / 2;
+    int n = 0;
+    for (int p : pos) {
+      if (p < 0) throw std::runtime_error("run_node: rope position " + std::to_string(p) + " is negative");
+      n = std::max(n, p + 1);
+    }
+    // The frequency factors in force: a name, or the set {short, long, original_ctx} the length selects.
+    std::vector<float> f;
+    if (node.contains("freq_factors")) {
+      const json& ff = node.at("freq_factors");
+      std::string name;
+      if (ff.is_string()) {
+        name = ff.get<std::string>();
+      } else if (ff.is_object() && ff.contains("short") && ff.contains("long") && ff.contains("original_ctx") &&
+                 ff.at("short").is_string() && ff.at("long").is_string() && ff.at("original_ctx").is_number_integer() &&
+                 ff.at("original_ctx").get<int64_t>() >= 1) {
+        name = (n > ff.at("original_ctx").get<int>() ? ff.at("long") : ff.at("short")).get<std::string>();
+      } else {
+        throw std::runtime_error("IR_SPEC 5.14 (rule 41): freq_factors is a name or {short, long, original_ctx}");
+      }
+      const auto at = name.find("{i}");
+      if (at != std::string::npos) name.replace(at, 3, "0");
+      if (!weights.contains(name)) throw std::runtime_error("run_node: no weight '" + name + "'");
+      std::vector<int64_t> sw;
+      f = floats(weights.at(name), &sw);
+      if (sw.size() != 1 || sw[0] != half)
+        throw std::runtime_error("IR_SPEC 5.14 (rule 41): freq_factors '" + name + "' is not of ne {n_rot / 2}");
+    }
+    const bool neox = pairing == "neox";
+    auto rotate = [&](std::vector<float>& x, int heads) {
+      for (int t = 0; t < T; ++t)
+        for (int j = 0; j < half; ++j) {
+          const float freq = 1.0f / std::pow(theta, float(2 * j) / n_rot);
+          float val = (static_cast<float>(pos[t]) * fs) * freq;
+          if (!f.empty()) val = val / f[j];
+          const float c = std::cos(val) * m, s = std::sin(val) * m;
+          for (int h = 0; h < heads; ++h) {
+            float* r = x.data() + (static_cast<size_t>(t) * heads + h) * hd;
+            const size_t i0 = neox ? j : 2 * j, i1 = neox ? j + half : 2 * j + 1;
+            const float v0 = r[i0], v1 = r[i1];
+            const float a = v0 * c, b = v1 * s, e = v0 * s, g = v1 * c;
+            r[i0] = a - b;
+            r[i1] = e + g;
+          }
+        }
+    };
+    rotate(q, H);
+    rotate(k, KV);
+    json r;
+    r["outputs"] = json::object();
+    r["outputs"][outs[0]] = tensor(sq, q.data(), q.size());
+    r["outputs"][outs[1]] = tensor(sk, k.data(), k.size());
+    r["state"] = json::object();
+    return r;
+  }
+
   static json run_expr(const json& node, const json& inputs) {
     if (!node.contains("expr") || !node.at("expr").is_string()) throw std::runtime_error("IR_SPEC 5.19: expr needs its expr");
     const std::vector<std::string> ins = node.at("in").get<std::vector<std::string>>();
@@ -583,8 +676,9 @@ class Adapter {
     if (node.value("op", "") == "attention") return run_attention(node, p.at("inputs"), p.value("weights", json::object()));
     if (node.value("op", "") == "mla_attention") return run_mla(node, p.at("inputs"), p.value("weights", json::object()));
     if (node.value("op", "") == "split") return run_split(node, p.at("inputs"));
+    if (node.value("op", "") == "rope") return run_rope(node, p.at("inputs"), p.value("weights", json::object()));
     if (node.value("op", "") != "recurrence")
-      throw Skip{"run_node: ember's adapter runs recurrence, expr, attention, mla_attention and split nodes only "
+      throw Skip{"run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split and rope nodes only "
                  "(whole-model methods for the other ops)"};
     const ember_ir::rec::Recurrence prog = ember_ir::rec::Recurrence::compile(node);
     std::vector<std::string> ins;

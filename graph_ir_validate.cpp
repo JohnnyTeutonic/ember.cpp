@@ -237,6 +237,7 @@ std::vector<Sect> sections(const json& doc) {
 const std::set<std::string> kNotPerLayer = {"op", "in", "out", "state", "tensor_index", "sizes", "expr", "weight", "bias",
                                             "position_bias",  // attention's (IR_SPEC 5.15, revision 1.3)
                                             "relative_kv",    // attention's (IR_SPEC 5.15, revision 1.4)
+                                            "freq_factors",   // rope's (IR_SPEC 5.14, revision 1.5)
                                             "router", "experts", "state_weight", "tied_to", "a", "b", "c", "d",
                                             // mla_attention's tensors and split's groups (revision 1.5)
                                             "k_b", "v_b", "groups",
@@ -356,7 +357,40 @@ void node_errors(const json& doc, Errs& errs) {
           break;
         }
       }
+      // Rule 10 (revision 1.5): attn_factor m > 0, the table's scaling (LongRoPE, YaRN).
+      if (const auto af = layers(get(n, "attn_factor"), L))
+        for (int i = 0; i < L; ++i)
+          if ((*af)[i].is_number() && !((*af)[i].get<double>() > 0)) {
+            errs.push_back(E("5.14 (rule 10)", where + ": attn_factor " + show((*af)[i]) + " is not positive"));
+            break;
+          }
     }
+    // Rule 41 (revision 1.5): freq_factors is a tensor name or {short, long, original_ctx} with two names and an
+    // integer original_ctx >= 1 (`_` members allowed, no other); the schema states the same form, its failures
+    // cite this rule (schema_rule).
+    if (op == "rope" && n.contains("freq_factors") && !is_pl(n.at("freq_factors"))) {
+      const json& ff = n.at("freq_factors");
+      bool ok = ff.is_string() && !ff.get<std::string>().empty();
+      if (ff.is_object()) {
+        ok = get(ff, "short").is_string() && get(ff, "long").is_string() && is_int(get(ff, "original_ctx")) &&
+             ff.at("original_ctx").get<int64_t>() >= 1;
+        for (const auto& kv : ff.items())
+          if (kv.key() != "short" && kv.key() != "long" && kv.key() != "original_ctx" && kv.key().rfind('_', 0) != 0)
+            ok = false;
+      }
+      if (!ok)
+        errs.push_back(E("5.14 (rule 41)", where + ": freq_factors " + short_dump(ff) +
+                                               " is neither a tensor name nor {short, long, original_ctx} with two "
+                                               "names and an integer original_ctx >= 1"));
+    }
+    // Rule 10 (revision 1.5): softcap c > 0 (Gemma 2's attention soft cap).
+    if (op == "attention" && L)
+      if (const auto sc = layers(get(n, "softcap"), L))
+        for (int i = 0; i < L; ++i)
+          if ((*sc)[i].is_number() && !((*sc)[i].get<double>() > 0)) {
+            errs.push_back(E("5.15 (rule 10)", where + ": softcap " + show((*sc)[i]) + " is not positive"));
+            break;
+          }
     if (op == "attention" && L) {
       const auto h = layers(get(n, "heads"), L), kvh = layers(get(n, "kv_heads"), L), w = layers(get(n, "window"), L),
                  s = layers(get(n, "sinks"), L), c = layers(get(n, "causal"), L);
@@ -1069,6 +1103,39 @@ void container_errors(const json& doc, const GGUFData& g, Errs& errs) {
       }
     }
   }
+  // Rule 41 (container, revision 1.5): each frequency-factor tensor a rope application reads is ne {n_rot / 2}.
+  for (const auto& [sect, j, np] : sections(doc)) {
+    const json& n = *np;
+    const json& ff = get(n, "freq_factors");
+    if (op_of(n) != "rope" || is_pl(ff)) continue;
+    std::vector<std::string> names;
+    if (ff.is_string()) names.push_back(ff.get<std::string>());
+    for (const char* member : {"short", "long"})
+      if (ff.is_object() && get(ff, member).is_string()) names.push_back(ff.at(member).get<std::string>());
+    const auto hdim = layers(get(n, "head_dim"), std::max(L, 1)), nrot = layers(get(n, "n_rot"), std::max(L, 1));
+    bool reported = false;
+    for (const auto& pattern : names)
+      for (int i = 0; i < (sect == "block" ? L : 1) && !reported; ++i) {
+        std::string w = pattern;
+        const size_t at = w.find("{i}");
+        if (at != std::string::npos) {
+          const bool mapped = wmi.is_array() && i < static_cast<int>(wmi.size()) && is_int(wmi[i]) && !n.contains("tensor_index");
+          w.replace(at, 3, std::to_string(mapped ? wmi[i].get<int64_t>() : i));
+        }
+        const auto* got = ne(w);
+        if (!got || !hdim) continue;  // a missing tensor is rule 25's
+        const json& r = nrot && !(*nrot)[i].is_null() ? (*nrot)[i] : (*hdim)[i];
+        if (!is_int(r)) continue;
+        const int64_t half = r.get<int64_t>() / 2;
+        if (!(got->size() == 1 && static_cast<int64_t>((*got)[0]) == half)) {
+          errs.push_back(E("5.14 (rule 41)", sect + "[" + std::to_string(j) + "] rope freq_factors " + q(w) +
+                                                 (sect == "block" ? " (application " + std::to_string(i) + ")" : "") +
+                                                 " has ne " + ne_str(*got) + ", not {n_rot / 2} = {" +
+                                                 std::to_string(half) + "}"));
+          reported = true;
+        }
+      }
+  }
 }
 
 // Rule 42 (container, revision 1.5): each application's mla_attention k_b is ne {qk_nope, kv_rank, heads} and its v_b
@@ -1185,6 +1252,7 @@ json rule38_form(const json& doc, const GGUFData& g) {
       if (n.contains("kv_heads") && n.at("kv_heads") == get(n, "heads")) n.erase("kv_heads");
       if (n.contains("n_rot") && n.at("n_rot") == get(n, "head_dim")) n.erase("n_rot");
       if (n.contains("freq_scale") && num_is(n.at("freq_scale"), 1.0)) n.erase("freq_scale");
+      if (n.contains("attn_factor") && num_is(n.at("attn_factor"), 1.0)) n.erase("attn_factor");  // revision 1.5
     }
     if (op == "depth_attend" && n.contains("eps") && num_is(n.at("eps"), 1e-5)) n.erase("eps");
     if (op == "split" && n.contains("groups") && num_is(n.at("groups"), 1.0)) n.erase("groups");  // revision 1.5
@@ -1381,6 +1449,9 @@ std::string schema_rule(const json& doc, const std::string& path, const std::str
     if (key == "relative_kv")  // attention's (5.15, revision 1.4); a per-layer one breaks rule 6
       return nodes.is_array() && j < nodes.size() && is_pl(get(nodes[j], "relative_kv")) ? "3.8 (rule 6)"
                                                                                          : "5.15 (rule 40)";
+    if (key == "freq_factors")  // rope's (5.14, revision 1.5); a per-layer one breaks rule 6
+      return nodes.is_array() && j < nodes.size() && is_pl(get(nodes[j], "freq_factors")) ? "3.8 (rule 6)"
+                                                                                          : "5.14 (rule 41)";
     const bool io = key == "in" || key == "out" || (required && (msg.find("'in'") != std::string::npos ||
                                                                  msg.find("'out'") != std::string::npos));
     if (io) return "3.5 (rule 7)";  // the arity: what a node reads and writes

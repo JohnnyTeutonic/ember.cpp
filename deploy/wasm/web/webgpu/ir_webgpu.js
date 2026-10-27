@@ -1374,6 +1374,10 @@ export function irSupport(doc) {
         return { ok: false, reason: 'split groups (revision 1.5) has no WGSL kernel' };
       if (!SUPPORTED.has(n.op)) return { ok: false, reason: `op '${n.op}' has no WGSL kernel` };
       if (n.op === 'rope' && n.rope_heads === 'first') return { ok: false, reason: 'rope_heads "first"' };
+      // Revision 1.5's Gemma 2 soft cap and LongRoPE (IR_SPEC 5.14, 5.15) have no WGSL kernel: WebAssembly runs them.
+      if (n.op === 'attention' && n.softcap !== undefined) return { ok: false, reason: 'attention softcap' };
+      if (n.op === 'rope' && n.freq_factors !== undefined) return { ok: false, reason: 'rope freq_factors' };
+      if (n.op === 'rope' && n.attn_factor !== undefined && n.attn_factor !== 1) return { ok: false, reason: 'rope attn_factor' };
       // T5's relative position bias (IR_SPEC 5.15, revision 1.3) has no WGSL kernel: the CPU interpreter runs it.
       if (n.op === 'attention' && n.position_bias !== undefined) return { ok: false, reason: 'attention position_bias' };
       // Shaw's relative vectors (revision 1.4) on positions: not under depth_route (compact rows), as the CPU refuses.
