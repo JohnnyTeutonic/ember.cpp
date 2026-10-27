@@ -60,6 +60,7 @@
 #include "logger.h"
 #include "tokenizer.h"
 #include "model_macros.h"
+#include "utf8_text.h"
 
 using json = nlohmann::json;
 
@@ -162,7 +163,7 @@ static json bpe_run(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r, 
       if (start == std::string::npos || start >= end) return;
       if (sent < start) sent = start;
       if (end > sent) {
-        on_piece(full.substr(sent, end - sent));
+        on_piece(ember::utf8_valid(full.substr(sent, end - sent)));
         sent = end;
       }
     });
@@ -174,7 +175,8 @@ static json bpe_run(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r, 
   const tinyllama::TtftBreakdown& tb = sess.last_ttft();
   auto ms = [](auto a, auto b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
   json res_json;
-  res_json["reply"] = reply;
+  // the decoded bytes can end inside a character or hold byte tokens that make none (utf8_text.h)
+  res_json["reply"] = ember::utf8_valid(reply);
   res_json["stop_reason"] = sess.last_stop_reason();
   res_json["tokens"] = sess.last_generated_tokens();
   res_json["prompt_tokens"] = p.prompt_tokens;
@@ -516,7 +518,7 @@ int main(int argc, char** argv) {
           Logger::info("Generated reply: " + reply.substr(0, 50) + "...");
 
           json res_json;
-          res_json["reply"] = reply;
+          res_json["reply"] = ember::utf8_valid(reply);
           res_json["stop_reason"] = session->last_stop_reason();
           res_json["tokens"] = session->last_generated_tokens();
 
