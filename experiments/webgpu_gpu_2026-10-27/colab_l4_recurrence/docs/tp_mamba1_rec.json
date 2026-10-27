@@ -1,0 +1,274 @@
+{
+ "_comment": "built by tools/gguf_ir.py from general.architecture = mamba and its metadata",
+ "ir_version": 1,
+ "family_hint": "mamba_recurrence",
+ "model": {
+  "vocab": 24,
+  "d": 16,
+  "n_layers": 2,
+  "ctx": 64,
+  "dtype": "f32"
+ },
+ "tokenizer": {
+  "type": "gguf",
+  "source": "gguf",
+  "specials": {},
+  "bos": null
+ },
+ "inputs": [
+  {
+   "name": "tokens",
+   "kind": "token_ids"
+  }
+ ],
+ "embed": {
+  "nodes": [
+   {
+    "op": "embedding",
+    "in": [
+     "tokens"
+    ],
+    "weight": "token_embd.weight",
+    "out": "x"
+   }
+  ]
+ },
+ "block": {
+  "repeat": 2,
+  "state": [
+   {
+    "name": "conv",
+    "kind": "recurrent",
+    "op": "recurrence",
+    "dtype": "f32",
+    "tensors": [
+     {
+      "name": "x",
+      "shape": [
+       3,
+       32
+      ],
+      "init": 0
+     }
+    ]
+   },
+   {
+    "name": "ssm",
+    "kind": "recurrent",
+    "op": "recurrence",
+    "dtype": "f32",
+    "tensors": [
+     {
+      "name": "s",
+      "shape": [
+       32,
+       8
+      ],
+      "init": 0
+     }
+    ]
+   }
+  ],
+  "nodes": [
+   {
+    "op": "rmsnorm",
+    "in": [
+     "x"
+    ],
+    "weight": "blk.{i}.attn_norm.weight",
+    "eps": 1e-05,
+    "out": "h"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h"
+    ],
+    "weight": "blk.{i}.ssm_in.weight",
+    "bias": null,
+    "out": "xz"
+   },
+   {
+    "op": "split",
+    "in": [
+     "xz"
+    ],
+    "sizes": [
+     32,
+     32
+    ],
+    "out": [
+     "xs",
+     "z"
+    ]
+   },
+   {
+    "op": "recurrence",
+    "in": [
+     "xs"
+    ],
+    "state": "conv",
+    "index": {
+     "c": 32,
+     "k": 4,
+     "r": 3
+    },
+    "inputs": [
+     "u[c]"
+    ],
+    "weights": {
+     "W[c,k]": "blk.{i}.ssm_conv1d.weight",
+     "Bias[c]": "blk.{i}.ssm_conv1d.bias"
+    },
+    "let": [
+     "xx[k,c] = where(k - 2.5, u[c], x[k,c])"
+    ],
+    "update": [
+     "x[r,c] = xx[r + 1,c]"
+    ],
+    "readout": "y[c] = sum(k, W[c,k] * xx[k,c]) + Bias[c]",
+    "out": "xs"
+   },
+   {
+    "op": "silu",
+    "in": [
+     "xs"
+    ],
+    "out": "xs"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "xs"
+    ],
+    "weight": "blk.{i}.ssm_x.weight",
+    "bias": null,
+    "out": "xdb"
+   },
+   {
+    "op": "split",
+    "in": [
+     "xdb"
+    ],
+    "sizes": [
+     2,
+     8,
+     8
+    ],
+    "out": [
+     "dt",
+     "bm",
+     "cm"
+    ]
+   },
+   {
+    "op": "linear",
+    "in": [
+     "dt"
+    ],
+    "weight": "blk.{i}.ssm_dt.weight",
+    "bias": "blk.{i}.ssm_dt.bias",
+    "out": "dt"
+   },
+   {
+    "op": "recurrence",
+    "in": [
+     "xs",
+     "dt",
+     "bm",
+     "cm"
+    ],
+    "state": "ssm",
+    "index": {
+     "c": 32,
+     "n": 8
+    },
+    "inputs": [
+     "x[c]",
+     "dt[c]",
+     "Bm[n]",
+     "Cm[n]"
+    ],
+    "weights": {
+     "A[c,n]": "blk.{i}.ssm_a",
+     "Dk[c]": "blk.{i}.ssm_d"
+    },
+    "let": [
+     "delta[c] = where(dt[c] - 20, dt[c], log(1 + exp(min(20, dt[c]))))",
+     "xd[c] = x[c] * delta[c]"
+    ],
+    "update": [
+     "s[c,n] = s[c,n] * exp(delta[c] * A[c,n]) + Bm[n] * xd[c]"
+    ],
+    "readout": "y[c] = sum(n, s[c,n] * Cm[n]) + Dk[c] * x[c]",
+    "out": "y"
+   },
+   {
+    "op": "silu",
+    "in": [
+     "z"
+    ],
+    "out": "z"
+   },
+   {
+    "op": "mul",
+    "in": [
+     "y",
+     "z"
+    ],
+    "out": "y"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "y"
+    ],
+    "weight": "blk.{i}.ssm_out.weight",
+    "bias": null,
+    "out": "o"
+   },
+   {
+    "op": "add",
+    "in": [
+     "x",
+     "o"
+    ],
+    "out": "x"
+   }
+  ]
+ },
+ "head": {
+  "nodes": [
+   {
+    "op": "rmsnorm",
+    "in": [
+     "x"
+    ],
+    "weight": "output_norm.weight",
+    "eps": 1e-05,
+    "out": "h"
+   },
+   {
+    "op": "linear",
+    "in": [
+     "h"
+    ],
+    "weight": "output.weight",
+    "bias": null,
+    "out": "logits",
+    "tied_to": "token_embd.weight"
+   }
+  ]
+ },
+ "outputs": [
+  {
+   "name": "logits",
+   "kind": "logits"
+  }
+ ],
+ "modes": {
+  "prefill": "all nodes over T tokens",
+  "decode": "the same graph with T = 1, attention reads and appends to the kv state, a recurrent op reads and replaces its recurrent state"
+ }
+}
+

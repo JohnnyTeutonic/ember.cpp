@@ -1,0 +1,7 @@
+{
+ "Qwen/Qwen3-0.6B-GGUF": "23749fefcc72300e3a2ad315e1317431b06b590a",
+ "Qwen/Qwen2.5-0.5B-Instruct-GGUF": "9217f5db79a29953eb74d5343926648285ec7e67",
+ "unsloth/gemma-3-270m-it": "23cf460f6bb16954176b3ddcc8d4f250501458a9",
+ "state-spaces/mamba-130m-hf": "1e76775f628fbf1350fbe4dbb3d971ba64af25a1",
+ "EleutherAI/pythia-160m": "50f5173d932e8e61f858120bcb800b97af589f46"
+}
