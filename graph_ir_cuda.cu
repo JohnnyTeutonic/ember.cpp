@@ -424,7 +424,7 @@ constexpr int kWinDimsPerThread = 4;  // head_dim <= kThreads * 4
 __global__ void window_attention_kernel(const float* __restrict__ Q, const float* __restrict__ K,
                                         const float* __restrict__ V, float* __restrict__ out, int hq, int hkv,
                                         int hd, int start_pos, float scale, int window, int sinks,
-                                        const int* __restrict__ dpos) {
+                                        const int* __restrict__ dpos, float softcap) {
   const int t = blockIdx.x, h = blockIdx.y;
   const int pos = (dpos ? *dpos : start_pos) + t;
   const int win_lo = pos + 1 > window ? pos + 1 - window : 0;
@@ -449,7 +449,11 @@ __global__ void window_attention_kernel(const float* __restrict__ Q, const float
       float dot = 0.0f;
       for (int d = lane; d < hd; d += 32) dot += q[d] * kr[d];
       for (int o = 16; o > 0; o >>= 1) dot += __shfl_xor_sync(0xffffffff, dot, o);
-      if (lane == 0) s[i] = dot * scale;
+      if (lane == 0) {
+        float sc = dot * scale;
+        if (softcap > 0.0f) sc = softcap * tanhf(sc / softcap);  // IR_SPEC 5.15 softcap (revision 1.5)
+        s[i] = sc;
+      }
     }
     __syncthreads();
     float mx = -INFINITY;
@@ -703,13 +707,13 @@ void ir_embedding_state_cuda(const float* table, const float* state, int vocab, 
 
 void ir_window_attention_cuda(const float* q, const float* K, const float* V, float* out, int T, int start_pos,
                               int hq, int hkv, int hd, float scale, int window, int sinks, cudaStream_t stream,
-                              const int* dpos) {
+                              const int* dpos, float softcap) {
   if (window <= 0 || sinks < 0 || hkv <= 0 || hq % hkv != 0 || hd > kThreads * kWinDimsPerThread)
     throw std::runtime_error("IR CUDA window attention: unsupported shape (window " + std::to_string(window) +
                              ", head_dim " + std::to_string(hd) + ")");
   const size_t shm = (size_t)(hd + kWinChunk) * sizeof(float);
   window_attention_kernel<<<dim3(T, hq), kThreads, shm, stream>>>(q, K, V, out, hq, hkv, hd, start_pos, scale, window,
-                                                                  sinks, dpos);
+                                                                  sinks, dpos, softcap);
   check_launch("window attention");
 }
 

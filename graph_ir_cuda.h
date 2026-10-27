@@ -57,7 +57,7 @@ void ir_kv_write_cuda(float* K, float* V, const float* k, const float* v, int T,
 // head_dim <= 1024. Any T, decode included.
 void ir_window_attention_cuda(const float* q, const float* K, const float* V, float* out, int T, int start_pos,
                               int hq, int hkv, int hd, float scale, int window, int sinks, cudaStream_t stream,
-                              const int* dpos = nullptr);
+                              const int* dpos = nullptr, float softcap = 0.0f);
 
 // Per-turn state tokens (IR_SPEC 6.8; CPU forms graph_ir.cpp ts_begin / ts_evict_below and
 // cpu_attention.cpp attention_rows_batch_cpu).

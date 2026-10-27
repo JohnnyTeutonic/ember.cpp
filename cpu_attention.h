@@ -1,7 +1,13 @@
 #pragma once
 
 #include <vector>
+#include <cmath>
 #include "kv_cache.h"
+
+// softcap c > 0 (keramos IR_SPEC 5.15 softcap, revision 1.5; Gemma 2): every kernel below caps its scaled score s as
+// c * tanh(s / c), the division rounded, then tanhf, then the product, before any position bias; 0 leaves s.
+inline float softcap_score(float s, float c) { return c > 0.0f ? c * std::tanh(s / c) : s; }
+
 
 void update_kv_cache_batch_cpu(
     KVCache* kv_cache,
@@ -23,7 +29,8 @@ void attention_batch_cpu(
     int num_q_heads,
     int num_kv_heads,
     int head_dim,
-    float attention_scale
+    float attention_scale,
+    float softcap = 0.0f
 );
 
 // Sliding-window attention with attention sinks, paperkiln's swa_attention
@@ -46,7 +53,8 @@ void attention_window_batch_cpu(
     int head_dim,
     float attention_scale,
     int window,
-    int sinks
+    int sinks,
+    float softcap = 0.0f
 );
 
 // Attention over an explicit list of visible kv rows per query: token t of
@@ -64,7 +72,8 @@ void attention_rows_batch_cpu(
     int num_q_heads,
     int num_kv_heads,
     int head_dim,
-    float attention_scale
+    float attention_scale,
+    float softcap = 0.0f
 );
 
 // The visible kv rows of each query of a batch at positions start_pos .. start_pos + T - 1 over a cache whose row r
@@ -89,7 +98,8 @@ void attention_bias_batch_cpu(
     int head_dim,
     float attention_scale,
     const float* bias,
-    const std::vector<int>& buckets
+    const std::vector<int>& buckets,
+    float softcap = 0.0f
 );
 // attention_rows_batch_cpu with Shaw's relative key and value vectors (keramos IR_SPEC 5.15 relative_kv, revision
 // 1.4; Shaw, Uszkoreit and Vaswani 2018 eqs. 3-4). With p the query's position (query_pos[t]), j the key's
@@ -118,7 +128,8 @@ void attention_relkv_batch_cpu(
     int rk_width,
     const float* rv,
     int rv_width,
-    int max_distance
+    int max_distance,
+    float softcap = 0.0f
 );
 void update_kv_cache_batch_cpu_sequence_aware(
     KVCache* kv_cache,

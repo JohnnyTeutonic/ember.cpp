@@ -117,6 +117,10 @@ class Interpreter {
   // last token ([vocab]) or, with all_rows, for every token ([T][vocab]).
   // tail_rows > 0 (all_rows false): the last min(tail_rows, T) tokens' logits, each row the one
   // all_rows gives (the head ops are row-wise); POST /score's continuation rows.
+  // Under LongRoPE with two frequency-factor sets (rope freq_factors {short, long, original_ctx}, IR_SPEC 5.14 and
+  // 6.9, revision 1.5) a call that changes the set the sequence's length selects (start_pos + T > original_ctx
+  // against the set the held rows were rotated with) runs the whole sequence again from position 0 (the ids
+  // held plus tokens), so every kv row carries the new set; the result is the same rows of logits.
   std::vector<float> forward(const std::vector<int>& tokens, int start_pos, bool all_rows = false, int tail_rows = 0);
 
   // True when a block declares recurrent state (see the header comment).
@@ -183,7 +187,8 @@ class Interpreter {
   std::vector<float> recurrent_values(const std::string& slot, const std::string& tensor, int application) const;
   // Drops the state of positions >= n (IR_SPEC.md section 6.9), as a forward from n would before
   // running. n must be a point the state can resume from (resume_point(n) == n): the caller
-  // re-prefills from resume_point(n) otherwise.
+  // re-prefills from resume_point(n) otherwise. Under LongRoPE with two sets, a cut whose length selects
+  // the other set runs the first n ids again (IR_SPEC 6.9, revision 1.5).
   void truncate(int n);
   // The whole sequence state (kv rows in use, state-token bookkeeping, MoR row sets, recurrent
   // tensors and their snapshots), copied out and back (the adapter's snapshot / restore).
@@ -197,6 +202,8 @@ class Interpreter {
     std::vector<float> rec;
     int rec_pos = 0;
     std::map<int, std::vector<float>> rec_snaps;
+    std::vector<int> ids;    // LongRoPE with two sets: the ids the rows hold
+    bool rope_long = false;  // and the set they were rotated with
   };
   State save_state() const;
   void load_state(const State& s);
@@ -296,17 +303,31 @@ class Interpreter {
   std::vector<KVCacheLayer> kv_;  // per block: [max_len][kv_heads][head_dim]
   int kv_heads_ = 0, head_dim_ = 0;
   int window_ = 0, sinks_ = 0;  // kv state's sliding window (0 = unbounded) and sinks
-  std::vector<std::pair<float, float>> rope_freqs_;  // [max_len][rope_dim_ / 2]
   float rope_theta_ = 0.0f;
   int rope_dim_ = 0;         // n_rot (head_dim_ when the rope node names none)
   bool rope_neox_ = false;   // pairing "neox"
   float rope_freq_scale_ = 1.0f;  // linear RoPE scaling: the angle is (pos * freq_scale) * theta^(-2j/n_rot)
   // Per-layer attributes (paperkiln ir.hpp, {"per_layer": [v_0, ..., v_{L-1}]}): the kv state's window
-  // per block (empty when one value serves every block), each block's RoPE theta and freq_scale, a
-  // table per distinct (theta, freq_scale).
+  // per block (empty when one value serves every block), each block's RoPE theta, freq_scale and
+  // attn_factor, a table per distinct (theta, freq_scale, attn_factor, frequency factors).
   std::vector<int> window_layer_;
-  std::vector<float> rope_theta_layer_, rope_scale_layer_;
-  std::map<std::pair<float, float>, std::vector<std::pair<float, float>>> rope_tables_;
+  std::vector<float> rope_theta_layer_, rope_scale_layer_, rope_attn_layer_;
+  // The RoPE tables ([max_len][rope_dim_ / 2] (cos, sin) each, deduplicated) and each block's: rope_tab_short_ its
+  // table without frequency factors or with the one set or the short set (IR_SPEC 5.14, revision 1.5), rope_tab_long_
+  // its long set's (empty without two sets).
+  std::vector<std::vector<std::pair<float, float>>> rope_tabs_;
+  std::vector<int> rope_tab_short_, rope_tab_long_;
+  // LongRoPE with two sets (freq_factors {short, long, original_ctx}): rope_ff_ctx_ = original_ctx N (0 otherwise).
+  // The set follows the sequence's length n after a call: long when n > N. rope_long_ is the set every row of the kv
+  // slot holds; ids_ the ids at positions 0 .. seq_len_ - 1, so a call that changes the set runs the whole sequence
+  // again (forward, truncate), on either path.
+  nlohmann::json rope_ff_;  // the rope node's freq_factors as written (null: none)
+  int rope_ff_ctx_ = 0;
+  bool rope_long_ = false;
+  std::vector<int> ids_;
+  void build_rope_tables(const GGUFData& gguf);
+  void set_rope_long(bool v);
+  std::vector<float> forward_impl(const std::vector<int>& tokens, int start_pos, bool all_rows, int tail_rows);
   std::set<std::string> offset_applied_;  // rmsnorm weights already read as w + weight_offset
   bool gpu_ = false;
 
@@ -385,6 +406,8 @@ class Interpreter {
     int n_rot = 0, kernel = 0, d_state = 0;  // rope n_rot; conv1d_causal kernel; selective_scan d_state
     bool neox = false;                       // rope pairing
     const float* rope = nullptr;             // rope: this block's (cos, sin) table on the device
+    const float* rope_long = nullptr;        // rope: its long set's table (LongRoPE, two sets), else null
+    float softcap = 0.0f;                    // attention: softcap c (IR_SPEC 5.15, revision 1.5), 0 without
     std::vector<expr::Stage> expr;           // expr: the device program (graph_ir_expr.h lower)
     float eps = 1e-5f, scale = 0.0f, shift = 0.0f;       // eps: also linear_attention's den_floor
     bool flag = false;  // gelu: tanh form; moe_ffn: renorm gates
@@ -429,8 +452,7 @@ class Interpreter {
   std::vector<std::vector<DStep>> plan_block_;  // per block
   int logits_slot_ = -1;
   std::vector<float*> dk_, dv_;  // per block: [max_len][kv_heads][head_dim]
-  float* drope_ = nullptr;  // the first block's table (one of drope_tables_)
-  std::map<std::pair<float, float>, float*> drope_tables_;  // rope_tables_ on the device
+  std::vector<float*> drope_tabs_;  // rope_tabs_ on the device
   DBuf dexpr_;  // expr scratch (a reduction's argument and its columns)
   int* dtokens_ = nullptr;
   int dtokens_cap_ = 0;

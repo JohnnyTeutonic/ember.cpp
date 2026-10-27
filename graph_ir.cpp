@@ -11,6 +11,7 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <tuple>
 #include <type_traits>
 #include <variant>
 
@@ -457,7 +458,7 @@ bool device_supported(const std::string& ir_json) {
   // Mixture-of-Recursions (depth_route) runs a step on its active rows at their own positions: rope and
   // attention take them (mor_step_device); a pos_embedding in its block stays on the CPU.
   size_t list_tensors = 0, extra = 0;
-  bool mor = false, block_pos_embedding = false;
+  bool mor = false, block_pos_embedding = false, softcap = false, turn_state = false;
   for (const char* sub : {"embed", "block", "head"}) {
     if (!j.contains(sub)) continue;
     const size_t times = std::string(sub) == "block" ? j.at(sub).value("repeat", 1) : 1;
@@ -470,6 +471,9 @@ bool device_supported(const std::string& ir_json) {
       }
       if (op == "attention" && n.contains("position_bias")) return false;  // CPU only (IR_SPEC 5.15, revision 1.3)
       if (op == "attention" && n.contains("relative_kv")) return false;    // CPU only (IR_SPEC 5.15, revision 1.4)
+      // softcap (revision 1.5) runs in the window kernel; with turn_state or depth_route it stays on the CPU
+      if (op == "attention" && n.contains("softcap")) softcap = true;
+      if (op == "attention" && n.contains("mask") && n.at("mask") != "causal") turn_state = true;
       if (op == "expr") {  // the CUDA form's limits (graph_ir_expr.h lower)
         try {
           expr::lower(expr::cached(n.at("expr").get<std::string>(), n.at("in").size()));
@@ -490,6 +494,7 @@ bool device_supported(const std::string& ir_json) {
   // A window under depth_route (IR_SPEC 5.15, v1.4.2) counts positions over an application's compact cache: the
   // CPU interpreter's (attention under attn_row_); a CUDA build serves such a document on the CPU.
   if (mor && has_windowed_attention(ir_json)) return false;
+  if (softcap && (mor || turn_state)) return false;
 #ifdef HAS_CUDA
   if (list_tensors + extra > static_cast<size_t>(kIrDepthSourcesMax)) return false;
 #endif
@@ -498,7 +503,7 @@ bool device_supported(const std::string& ir_json) {
 
 bool has_ir_builder(const std::string& arch) {
   static const std::set<std::string> kBuilt = {"llama", "mistral", "qwen2", "qwen3", "gpt2", "gptneox", "gemma3",
-                                               "mamba", "qwen2moe", "qwen3moe", "deepseek2"};
+                                               "mamba", "qwen2moe", "qwen3moe", "deepseek2", "phi3", "gemma2"};
   return kBuilt.count(arch) > 0;
 }
 
@@ -527,7 +532,7 @@ std::string find_ir(const GGUFData& gguf) {
   throw std::runtime_error("ember cannot run general.architecture = '" + arch +
                            "': the GGUF has no paperkiln.ir and ember has no IR builder for that architecture "
                            "(built: llama, mistral, qwen2, qwen3, gpt2, gptneox, gemma3, mamba, qwen2moe, qwen3moe, "
-                           "deepseek2)");
+                           "deepseek2, phi3, gemma2)");
 }
 
 std::string build_ir_from_gguf(const GGUFData& g, bool log) {
@@ -859,6 +864,106 @@ std::string build_ir_from_gguf(const GGUFData& g, bool log) {
               (q_lora ? ", low-rank query" : "") + ", moe_ffn " + std::to_string(static_cast<int>(get("expert_count"))) +
               " experts (" + gate_norm + (s != 1.0 ? ", x " + json(f32_value(s)).dump() : std::string()) + ")" +
               (shexp ? " + shared experts" : "");
+  } else if (arch == "phi3") {
+    // IR_SPEC Appendix D.8 (revision 1.5): pre-RMSNorm, fused (or separate) q/k/v, NEOX RoPE over
+    // rope.dimension_count dims with LongRoPE's factor sets when the file has them, HF's sliding window, SwiGLU
+    // from the fused ffn_up (gate | up), output or the tied embedding.
+    const int H = static_cast<int>(get("attention.head_count"));
+    const int KV = static_cast<int>(get("attention.head_count_kv", H));
+    const int hd = static_cast<int>(get("attention.key_length", d / H));
+    const int n_rot = static_cast<int>(get("rope.dimension_count", hd));
+    const int ff = static_cast<int>(get("feed_forward_length"));
+    ctx = static_cast<int>(get("context_length"));
+    const double eps = get("attention.layer_norm_rms_epsilon");
+    const double theta = get("rope.freq_base", 10000.0);
+    const int window = static_cast<int>(get("attention.sliding_window", 0.0));
+    no_rope_scaling();
+    if (shape_has("blk.0.ffn_gate_inp.weight"))
+      throw std::runtime_error("IR builder: phi3 with a mixture of experts (Phi-3.5-MoE's layout) is not built");
+    const bool fs = shape_has("rope_factors_short.weight"), fl = shape_has("rope_factors_long.weight");
+    if (fs != fl)
+      throw std::runtime_error("IR builder: phi3 with one LongRoPE factor set (rope_factors_short / _long) builds no graph");
+    json r = rope(H, KV, hd, n_rot, f32_value(theta), "neox");
+    double m = 1.0;
+    if (fs) {
+      r["freq_factors"] = {{"short", "rope_factors_short.weight"},
+                           {"long", "rope_factors_long.weight"},
+                           {"original_ctx", static_cast<int>(get("rope.scaling.original_context_length"))}};
+      m = meta_number(g, p + "rope.scaling.attn_factor").value_or(1.0);
+      if (m == 0.0) m = 1.0;
+      if (m != 1.0) r["attn_factor"] = f32_value(m);
+    }
+    auto bias = [&](const std::string& name) { return shape_has("blk.0." + name + ".bias") ? B + name + ".bias" : ""; };
+    nodes = json::array({rmsnorm("x", B + "attn_norm.weight", eps, "h")});
+    if (shape_has("blk.0.attn_qkv.weight")) {
+      nodes.push_back(linear("h", B + "attn_qkv.weight", "qkv", bias("attn_qkv")));
+      nodes.push_back(op("split", {"qkv"}, {"q", "k", "v"}, {{"sizes", {H * hd, KV * hd, KV * hd}}}));
+    } else {
+      for (const char* t : {"q", "k", "v"})
+        nodes.push_back(linear("h", B + "attn_" + t + ".weight", t, bias(std::string("attn_") + t)));
+    }
+    for (json n : {r, attention(H, KV, hd, 1.0 / std::sqrt(static_cast<double>(hd)), window),
+                   linear("a", B + "attn_output.weight", "o", bias("attn_output")), op("add", {"x", "o"}, "x"),
+                   rmsnorm("x", B + "ffn_norm.weight", eps, "h2"), linear("h2", B + "ffn_up.weight", "gu2"),
+                   op("split", {"gu2"}, {"g", "u"}, {{"sizes", {ff, ff}}}), op("silu", {"g"}, "g"),
+                   op("mul", {"g", "u"}, "gu"), linear("gu", B + "ffn_down.weight", "f"), op("add", {"x", "f"}, "x")})
+      nodes.push_back(n);
+    head = tied_head(json::array({rmsnorm("x", "output_norm.weight", eps, "h")}));
+    state = json::array({kv_state(H, KV, hd, ctx, window)});
+    summary = "heads " + std::to_string(H) + "/" + std::to_string(KV) + " x " + std::to_string(hd) + ", NEOX RoPE n_rot " +
+              std::to_string(n_rot) + (fs ? ", LongRoPE (original_ctx " + r["freq_factors"]["original_ctx"].dump() + ")" : "") +
+              (m != 1.0 ? ", attn_factor " + std::to_string(m) : "") + (window ? ", window " + std::to_string(window) : "");
+  } else if (arch == "gemma2") {
+    // IR_SPEC Appendix D.9 (revision 1.5): gemma3's block without q/k norms; one RoPE base; local applications
+    // i % 2 == 0 windowed; the attention scores soft-capped at attn_logit_softcapping, the logits through
+    // tanh(x / C) * C with C = final_logit_softcapping.
+    const int H = static_cast<int>(get("attention.head_count"));
+    const int KV = static_cast<int>(get("attention.head_count_kv", H));
+    const int hd = static_cast<int>(get("attention.key_length", d / H));
+    const int n_rot = static_cast<int>(get("rope.dimension_count", hd));
+    ctx = static_cast<int>(get("context_length"));
+    const double eps = get("attention.layer_norm_rms_epsilon");
+    const double theta = get("rope.freq_base", 10000.0);
+    no_rope_scaling();
+    auto nonzero = [&](const std::string& key, double dflt) {
+      const double v = get(key, dflt);
+      return v == 0.0 ? dflt : v;
+    };
+    const int win = static_cast<int>(nonzero("attention.sliding_window", 4096.0));
+    const double cap = nonzero("attn_logit_softcapping", 50.0), fcap = nonzero("final_logit_softcapping", 30.0);
+    json windows = json::array();
+    for (int i = 0; i < n_layers; ++i) windows.push_back(i % 2 == 0 ? win : 0);
+    windows = {{"per_layer", windows}};
+    const double scale = n_layers == 46 ? 1.0 / std::sqrt(static_cast<double>(d) / H)
+                                        : 1.0 / std::sqrt(static_cast<double>(hd));
+    json att = attention(H, KV, hd, scale, windows);
+    att["softcap"] = f32_value(cap);
+    // C: the shortest decimal that reads back as the f32 nearest fcap, written as Python's repr of that float
+    // (an integral value with ".0").
+    std::string C;
+    {
+      char buf[64];
+      const auto res = std::to_chars(buf, buf + sizeof(buf), f32_value(fcap));
+      C.assign(buf, res.ptr);
+      if (C.find_first_of(".eEn") == std::string::npos) C += ".0";
+    }
+    embed.push_back(op("affine", {"x"}, "x", {{"scale", f32_value(std::sqrt(static_cast<double>(d)))}, {"shift", 0.0}}));
+    nodes = json::array({rmsnorm("x", B + "attn_norm.weight", eps, "h"), linear("h", B + "attn_q.weight", "q"),
+                         linear("h", B + "attn_k.weight", "k"), linear("h", B + "attn_v.weight", "v"),
+                         rope(H, KV, hd, n_rot, f32_value(theta), "neox"), att,
+                         linear("a", B + "attn_output.weight", "o"),
+                         rmsnorm("o", B + "post_attention_norm.weight", eps, "o"), op("add", {"x", "o"}, "x"),
+                         rmsnorm("x", B + "ffn_norm.weight", eps, "h2"), linear("h2", B + "ffn_gate.weight", "g"),
+                         linear("h2", B + "ffn_up.weight", "u"), op("gelu", {"g"}, "g", {{"approx", "tanh"}}),
+                         op("mul", {"g", "u"}, "gu"), linear("gu", B + "ffn_down.weight", "f"),
+                         rmsnorm("f", B + "post_ffw_norm.weight", eps, "f"), op("add", {"x", "f"}, "x")});
+    head = json::array({rmsnorm("x", "output_norm.weight", eps, "h"),
+                        linear("h", "output.weight", "z", "", tied ? "token_embd.weight" : ""),
+                        op("expr", {"z"}, "logits", {{"expr", "tanh(x / " + C + ") * " + C}})});
+    state = json::array({kv_state(H, KV, hd, ctx, windows)});
+    summary = "heads " + std::to_string(H) + "/" + std::to_string(KV) + " x " + std::to_string(hd) +
+              ", sandwich RMSNorms, GeGLU, window " + std::to_string(win) + " on even layers, attention softcap " +
+              std::to_string(cap) + ", final softcap " + C;
   } else {  // mamba
     const int K = static_cast<int>(get("ssm.conv_kernel")), Di = static_cast<int>(get("ssm.inner_size"));
     const int N = static_cast<int>(get("ssm.state_size")), R = static_cast<int>(get("ssm.time_step_rank"));
@@ -1098,9 +1203,13 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
         if (!is_per_layer(kv.value())) continue;
         const bool ok = sub == &block_ && (((n.op == "attention" || n.op == "mla_attention") &&
                                             (kv.key() == "window" || kv.key() == "sinks")) ||
-                                           (n.op == "rope" && (kv.key() == "theta" || kv.key() == "freq_scale")) ||
+                                           (n.op == "attention" && kv.key() == "softcap") ||
+                                           (n.op == "rope" && (kv.key() == "theta" || kv.key() == "freq_scale" ||
+                                                               kv.key() == "attn_factor")) ||
                                            (n.op == "affine" && (kv.key() == "scale" || kv.key() == "shift")) ||
                                            (n.op == "depth_route" && kv.key() == "step"));
+        if (!ok && n.op == "rope" && kv.key() == "freq_factors")  // structural (IR_SPEC 3.8, revision 1.5)
+          throw std::runtime_error("IR_SPEC 3.8 (rule 6): rope freq_factors is structural and cannot be per-layer");
         if (!ok)
           throw std::runtime_error("IR " + n.op + ": a per-layer '" + kv.key() + "' is not implemented in ember");
         if (static_cast<int>(kv.value().at("per_layer").size()) != n_layers_)
@@ -1163,18 +1272,25 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
                                    " (kv state head_dim " + std::to_string(head_dim_) + ") is not usable");
       }
       std::vector<float> thetas(static_cast<size_t>(n_layers_));
-      std::vector<float> scales(static_cast<size_t>(n_layers_), 1.0f);
+      std::vector<float> scales(static_cast<size_t>(n_layers_), 1.0f), attn(static_cast<size_t>(n_layers_), 1.0f);
       for (int l = 0; l < n_layers_; ++l) {
         thetas[l] = at_layer(n.attrs.at("theta"), l).get<float>();
         if (has(n.attrs, "freq_scale")) scales[l] = at_layer(n.attrs.at("freq_scale"), l).get<float>();
         if (!(scales[l] > 0.0f)) throw std::runtime_error("IR rope freq_scale must be positive");
+        // LongRoPE's / YaRN's attention scaling (IR_SPEC 5.14, revision 1.5): the table holds cos * m and sin * m.
+        if (has(n.attrs, "attn_factor") && at_layer(n.attrs.at("attn_factor"), l).is_number())
+          attn[l] = at_layer(n.attrs.at("attn_factor"), l).get<float>();
       }
-      if (rope_dim_ != 0 && (rope_theta_layer_ != thetas || rope_scale_layer_ != scales || rope_dim_ != n_rot ||
-                             rope_neox_ != (pairing == "neox")))
+      const json ff = has(n.attrs, "freq_factors") ? n.attrs.at("freq_factors") : json();
+      if (rope_dim_ != 0 && (rope_theta_layer_ != thetas || rope_scale_layer_ != scales || rope_attn_layer_ != attn ||
+                             rope_dim_ != n_rot || rope_neox_ != (pairing == "neox") || rope_ff_ != ff))
         throw std::runtime_error(
-            "IR rope nodes with different theta, freq_scale, n_rot or pairing are not implemented in ember");
+            "IR rope nodes with different theta, freq_scale, attn_factor, freq_factors, n_rot or pairing are not "
+            "implemented in ember");
       rope_theta_layer_ = thetas;
       rope_scale_layer_ = scales;
+      rope_attn_layer_ = attn;
+      rope_ff_ = ff;  // its form is rule 41's (validate_ir below); the tables are built after it
       rope_theta_ = thetas[0];
       rope_freq_scale_ = scales[0];
       rope_dim_ = n_rot;
@@ -1517,24 +1633,7 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
     bytes_f32 += kv.second.f32.size() * sizeof(float);
   }
 
-  // RoPE table, computed exactly as TinyLlamaModel::initialize_rope_freqs,
-  // over rope_dim_ (n_rot; head_dim for full rotary).
-  // One table per distinct (theta, freq_scale) (per-layer RoPE bases and scales); freq_scale 1 leaves the
-  // angle pos * freq.
-  for (size_t l = 0; l < rope_theta_layer_.size(); ++l) {
-    const float theta = rope_theta_layer_[l], fs = rope_scale_layer_[l];
-    if (!(theta > 0.0f) || rope_tables_.count({theta, fs})) continue;
-    auto& tab = rope_tables_[{theta, fs}];
-    tab.resize(static_cast<size_t>(max_len_) * rope_dim_ / 2);
-    for (int pos = 0; pos < max_len_; ++pos) {
-      for (int i = 0; i < rope_dim_; i += 2) {
-        float freq = 1.0f / std::pow(theta, float(i) / rope_dim_);
-        float val = (static_cast<float>(pos) * fs) * freq;
-        tab[(static_cast<size_t>(pos) * rope_dim_ / 2) + (i / 2)] = {std::cos(val), std::sin(val)};
-      }
-    }
-  }
-  if (rope_theta_ > 0.0f) rope_freqs_ = rope_tables_.at({rope_theta_, rope_freq_scale_});
+  build_rope_tables(gguf);
 #ifdef HAS_CUDA
   if (use_gpu) {
     init_device();
@@ -1580,8 +1679,76 @@ void Interpreter::attention_window(const Node& n, int layer, int& window, int& s
 }
 
 const std::vector<std::pair<float, float>>& Interpreter::rope_table(int layer) const {
-  if (rope_theta_layer_.empty()) return rope_freqs_;
-  return rope_tables_.at({rope_theta_layer_.at(layer), rope_scale_layer_.at(layer)});
+  const std::vector<int>& idx = rope_long_ && !rope_tab_long_.empty() ? rope_tab_long_ : rope_tab_short_;
+  const int l = layer < 0 ? 0 : layer;
+  if (l >= static_cast<int>(idx.size()) || idx[l] < 0)
+    throw std::runtime_error("IR rope: block " + std::to_string(l) + " has no RoPE table (theta must be positive)");
+  return rope_tabs_[idx[l]];
+}
+
+// The RoPE tables, computed as TinyLlamaModel::initialize_rope_freqs over rope_dim_ (n_rot; head_dim for full
+// rotary), one per distinct (theta, freq_scale, attn_factor, frequency factors) among the blocks (IR_SPEC 5.14): for
+// pair j, freq_j = 1 / powf(theta, f32(2j) / f32(n_rot)), angle = (f32(pos) * freq_scale) * freq_j, divided by f_j
+// with frequency factors (revision 1.5), each step rounded; the table holds cosf(angle) * m and sinf(angle) * m
+// (attn_factor m, 1 by default: the product is then exact). With two sets each block has a short and a long table.
+void Interpreter::build_rope_tables(const GGUFData& gguf) {
+  rope_tabs_.clear();
+  rope_tab_short_.clear();
+  rope_tab_long_.clear();
+  rope_ff_ctx_ = 0;
+  if (rope_theta_layer_.empty()) return;
+  const int half = rope_dim_ / 2;
+  std::string short_name, long_name;  // tensor names as written ({i} allowed)
+  if (rope_ff_.is_string()) {
+    short_name = rope_ff_.get<std::string>();
+  } else if (rope_ff_.is_object()) {  // {short, long, original_ctx}: rule 41 holds (validate_ir)
+    short_name = rope_ff_.at("short").get<std::string>();
+    long_name = rope_ff_.at("long").get<std::string>();
+    rope_ff_ctx_ = rope_ff_.at("original_ctx").get<int>();
+  }
+  std::map<std::tuple<float, float, float, std::string>, int> index;
+  auto table = [&](int l, const std::string& pattern) -> int {
+    const float theta = rope_theta_layer_[l], fs = rope_scale_layer_[l], m = rope_attn_layer_.empty() ? 1.0f : rope_attn_layer_[l];
+    if (!(theta > 0.0f)) return -1;
+    const std::string name = pattern.empty() ? std::string() : layer_name(pattern, l);
+    const auto key = std::make_tuple(theta, fs, m, name);
+    if (const auto it = index.find(key); it != index.end()) return it->second;
+    std::vector<float> f;
+    if (!name.empty()) {
+      bind_tensor(name, gguf);
+      f = weight(name);
+      if (f.size() != static_cast<size_t>(half))
+        throw std::runtime_error("IR_SPEC 5.14 (rule 41): rope freq_factors '" + name + "' holds " +
+                                 std::to_string(f.size()) + " values, not n_rot / 2 = " + std::to_string(half));
+    }
+    std::vector<std::pair<float, float>> tab(static_cast<size_t>(max_len_) * half);
+    for (int pos = 0; pos < max_len_; ++pos)
+      for (int i = 0; i < rope_dim_; i += 2) {
+        const float freq = 1.0f / std::pow(theta, float(i) / rope_dim_);
+        float val = (static_cast<float>(pos) * fs) * freq;
+        if (!f.empty()) val = val / f[i / 2];
+        tab[static_cast<size_t>(pos) * half + i / 2] = {std::cos(val) * m, std::sin(val) * m};
+      }
+    rope_tabs_.push_back(std::move(tab));
+    index[key] = static_cast<int>(rope_tabs_.size()) - 1;
+    return index[key];
+  };
+  for (int l = 0; l < static_cast<int>(rope_theta_layer_.size()); ++l) {
+    rope_tab_short_.push_back(table(l, short_name));
+    if (!long_name.empty()) rope_tab_long_.push_back(table(l, long_name));
+  }
+  if (rope_ff_ctx_ > 0)
+    Logger::info("[IR] LongRoPE: frequency factors '" + short_name + "' up to " + std::to_string(rope_ff_ctx_) +
+                 " positions, '" + long_name + "' past them; the set follows the sequence's length (a call or a "
+                 "truncate that changes it runs the sequence again)");
+}
+
+void Interpreter::set_rope_long(bool v) {
+  if (v == rope_long_) return;
+  rope_long_ = v;
+#ifdef HAS_CUDA
+  if (gpu_) ++alloc_epoch_;  // the captured decode step reads the other set's tables: it is captured again
+#endif
 }
 
 std::string Interpreter::layer_name(const std::string& pattern, int layer) const {
@@ -2260,6 +2427,8 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       Buf out{{}, hq * hd};
       int window = 0, sinks = 0;
       attention_window(n, layer, window, sinks);
+      // Gemma 2's soft cap of the scaled scores (IR_SPEC 5.15, revision 1.5), before any position bias; 0: none.
+      const float softcap = has(n.attrs, "softcap") ? at_layer(n.attrs.at("softcap"), std::max(layer, 0)).get<float>() : 0.0f;
       if (has(n.attrs, "position_bias")) {  // T5's relative position bias (IR_SPEC 5.15, revision 1.3)
         const json& pb = n.attrs.at("position_bias");
         const std::vector<int> buckets = pb.at("buckets").get<std::vector<int>>();
@@ -2269,7 +2438,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
         // under turn_state the compact cache's row r holds position kv_pos_[r]; elsewhere row r is position r
         const std::vector<std::vector<int>> rows = ts ? ts_vis_ : attention_visible_rows(T, start_pos, window, sinks);
         attention_bias_batch_cpu(q.v, cache, out.v, T, rows, ts ? &kv_pos_ : nullptr, qpos, hq, hkv, hd, scale, W.data(),
-                                 buckets);
+                                 buckets, softcap);
       } else if (has(n.attrs, "relative_kv")) {  // Shaw's relative key and value vectors (IR_SPEC 5.15, revision 1.4)
         const json& rk = n.attrs.at("relative_kv");
         const int K = rk.at("max_distance").get<int>();
@@ -2292,9 +2461,9 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
         for (int t = 0; t < T; ++t) qpos[t] = start_pos + t;
         const std::vector<std::vector<int>> rows = ts ? ts_vis_ : attention_visible_rows(T, start_pos, window, sinks);
         attention_relkv_batch_cpu(q.v, cache, out.v, T, rows, ts ? &kv_pos_ : nullptr, qpos, hq, hkv, hd, scale, RK, rk_w,
-                                  RV, rv_w, K);
+                                  RV, rv_w, K, softcap);
       } else if (ts)
-        attention_rows_batch_cpu(q.v, cache, out.v, T, ts_vis_, hq, hkv, hd, scale);
+        attention_rows_batch_cpu(q.v, cache, out.v, T, ts_vis_, hq, hkv, hd, scale, softcap);
       else if (window > 0 && attn_row_ >= 0) {
         // A window under depth_route (IR_SPEC 5.15 and 7.5, v1.4.2, Q16): the application's compact cache holds
         // positions mor_rows_[layer] at rows 0 .. attn_row_ - 1, and mor_step runs one token at a time, its row at
@@ -2312,11 +2481,11 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
         for (int r = 0; r < attn_row_; ++r)
           if (held[r] < sink_hi || held[r] >= win_lo) rows[0].push_back(r);
         rows[0].push_back(attn_row_);  // its own row, position p
-        attention_rows_batch_cpu(q.v, cache, out.v, 1, rows, hq, hkv, hd, scale);
+        attention_rows_batch_cpu(q.v, cache, out.v, 1, rows, hq, hkv, hd, scale, softcap);
       } else if (window > 0)
-        attention_window_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale, window, sinks);
+        attention_window_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale, window, sinks, softcap);
       else
-        attention_batch_cpu(q.v, cache, out.v, T, kpos, hq, hkv, hd, scale);
+        attention_batch_cpu(q.v, cache, out.v, T, kpos, hq, hkv, hd, scale, softcap);
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "mla_attention") {  // multi-head latent attention (IR_SPEC 5.20). ROUNDING.
       const Buf &qn = in(n, 0), &qr = in(n, 1), &c = in(n, 2), &kr = in(n, 3);
@@ -2643,6 +2812,44 @@ void Interpreter::mor_step(int layer, Env& env, int T, int start_pos) {
 std::vector<float> Interpreter::forward(const std::vector<int>& tokens, int start_pos, bool all_rows, int tail_rows) {
   const int T = static_cast<int>(tokens.size());
   if (T == 0) return {};
+  if (rope_ff_ctx_ <= 0) return forward_impl(tokens, start_pos, all_rows, tail_rows);
+  // LongRoPE with two sets (IR_SPEC 5.14, 6.9; revision 1.5): n = start_pos + T selects the long set when
+  // n > original_ctx, for this call's rows and every row the kv slot holds.
+  if (start_pos < 0 || start_pos > static_cast<int>(ids_.size()))
+    throw std::runtime_error("IR forward at position " + std::to_string(start_pos) + ": the sequence holds " +
+                             std::to_string(ids_.size()) + " ids");
+  const bool want = start_pos + T > rope_ff_ctx_;
+  if (want == rope_long_ || start_pos == 0) {
+    set_rope_long(want);
+    std::vector<float> out = forward_impl(tokens, start_pos, all_rows, tail_rows);
+    ids_.resize(start_pos);
+    ids_.insert(ids_.end(), tokens.begin(), tokens.end());
+    return out;
+  }
+  // The held rows were rotated with the other set: the whole sequence again from position 0, as Phi-3's own
+  // generation recomputes its cache when the length first passes original_ctx; the same rows of logits come back.
+  std::vector<int> all(ids_.begin(), ids_.begin() + start_pos);
+  all.insert(all.end(), tokens.begin(), tokens.end());
+  set_rope_long(want);
+  Logger::info("[IR] LongRoPE: the sequence's length " + std::to_string(all.size()) + (want ? " passes " : " is within ") +
+               std::to_string(rope_ff_ctx_) + ": the " + (want ? "long" : "short") +
+               " set, every kv row recomputed from position 0");
+  std::vector<float> out;
+  if (all_rows) {
+    out = forward_impl(all, 0, true, 0);
+    const size_t width = out.size() / all.size();  // the head's row width
+    out.erase(out.begin(), out.end() - static_cast<size_t>(T) * width);
+  } else {
+    out = forward_impl(all, 0, false, std::min(T, std::max(1, tail_rows)));
+  }
+  ids_ = std::move(all);
+  return out;
+}
+
+std::vector<float> Interpreter::forward_impl(const std::vector<int>& tokens, int start_pos, bool all_rows,
+                                             int tail_rows) {
+  const int T = static_cast<int>(tokens.size());
+  if (T == 0) return {};
   if (rec_floats_ > 0 && (start_pos < 0 || start_pos + T > max_len_))
     throw std::runtime_error("IR recurrent state: positions " + std::to_string(start_pos) + ".." +
                              std::to_string(start_pos + T - 1) + " exceed model.ctx (" + std::to_string(max_len_) + ")");
@@ -2789,6 +2996,16 @@ void Interpreter::truncate(int n) {
     rec_pos_ = n;
   }
   seq_len_ = n;
+  if (rope_ff_ctx_ > 0) {  // LongRoPE with two sets (IR_SPEC 6.9, revision 1.5)
+    ids_.resize(static_cast<size_t>(n));
+    if (n > 0 && (n > rope_ff_ctx_) != rope_long_) {
+      // The kept rows were rotated with the other set: the first n ids again, with the set n selects.
+      const std::vector<int> prefix = ids_;
+      set_rope_long(n > rope_ff_ctx_);
+      Logger::info("[IR] LongRoPE: a truncate to " + std::to_string(n) + " changes the set; the rows recomputed");
+      forward_impl(prefix, 0, false, 1);
+    }
+  }
 }
 
 Interpreter::State Interpreter::save_state() const {
@@ -2810,6 +3027,8 @@ Interpreter::State Interpreter::save_state() const {
   s.rec = rec_;
   s.rec_pos = rec_pos_;
   s.rec_snaps = rec_snaps_;
+  s.ids = ids_;
+  s.rope_long = rope_long_;
   return s;
 }
 
@@ -2834,6 +3053,8 @@ void Interpreter::load_state(const State& s) {
   rec_ = s.rec;
   rec_pos_ = s.rec_pos;
   rec_snaps_ = s.rec_snaps;
+  ids_ = s.ids;
+  rope_long_ = s.rope_long;
 }
 
 #ifdef HAS_CUDA
@@ -2867,18 +3088,17 @@ void Interpreter::init_device() {
     gpuErrchk(cudaMemset(dk_[l], 0, kv_floats * sizeof(float)));
     gpuErrchk(cudaMemset(dv_[l], 0, kv_floats * sizeof(float)));
   }
-  for (const auto& tab : rope_tables_) {  // one per distinct (theta, freq_scale)
-    std::vector<float> flat(tab.second.size() * 2);
-    for (size_t i = 0; i < tab.second.size(); ++i) {
-      flat[2 * i] = tab.second[i].first;
-      flat[2 * i + 1] = tab.second[i].second;
+  for (const auto& tab : rope_tabs_) {  // one per distinct (theta, freq_scale, attn_factor, frequency factors)
+    std::vector<float> flat(tab.size() * 2);
+    for (size_t i = 0; i < tab.size(); ++i) {
+      flat[2 * i] = tab[i].first;
+      flat[2 * i + 1] = tab[i].second;
     }
     float* d = nullptr;
     gpuErrchk(cudaMalloc(&d, flat.size() * sizeof(float)));
     gpuErrchk(cudaMemcpy(d, flat.data(), flat.size() * sizeof(float), cudaMemcpyHostToDevice));
-    drope_tables_[tab.first] = d;
+    drope_tabs_.push_back(d);
   }
-  if (rope_theta_ > 0.0f) drope_ = drope_tables_.at({rope_theta_, rope_freq_scale_});
   if (rec_floats_ > 0) {  // rec_ holds every block's initial state here
     const size_t bytes = rec_.size() * sizeof(float);
     gpuErrchk(cudaMalloc(&drec_, bytes));
@@ -2995,9 +3215,13 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
         s.hd = n.attrs.at("head_dim").get<int>();
         s.n_rot = rope_dim_;
         s.neox = rope_neox_;
-        s.rope = layer < 0 || rope_theta_layer_.empty()
-                     ? drope_
-                     : drope_tables_.at({rope_theta_layer_.at(layer), rope_scale_layer_.at(layer)});
+        {  // this block's tables (the long set's too under LongRoPE with two sets); null: no table
+          const int l = layer < 0 ? 0 : layer;
+          const int a = l < static_cast<int>(rope_tab_short_.size()) ? rope_tab_short_[l] : -1;
+          const int b = l < static_cast<int>(rope_tab_long_.size()) ? rope_tab_long_[l] : -1;
+          s.rope = a >= 0 ? drope_tabs_[a] : nullptr;
+          s.rope_long = b >= 0 ? drope_tabs_[b] : nullptr;
+        }
         break;
       case DOp::Attention:
         s.hd = n.attrs.at("head_dim").get<int>();
@@ -3006,6 +3230,7 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
         if (s.hd != head_dim_ || s.hkv != kv_heads_) throw std::runtime_error("IR attention shape differs from its kv state");
         s.scale = n.attrs.contains("scale") ? n.attrs.at("scale").get<float>() : 1.0f / std::sqrt(float(s.hd));
         s.ts = n.attrs.value("mask", "causal") == "turn_state";
+        s.softcap = has(n.attrs, "softcap") ? at_layer(n.attrs.at("softcap"), layer < 0 ? 0 : layer).get<float>() : 0.0f;
         attention_window(n, layer < 0 ? 0 : layer, s.window, s.sinks);
         if (s.window > 0 && layer <= 0)
           Logger::info("[IR] CUDA sliding-window attention (ir_window_attention_cuda): window " +
@@ -3186,11 +3411,11 @@ void Interpreter::free_device() {
   for (float* p : dsnap_pool_) cudaFree(p);
   dsnaps_.clear();
   dsnap_pool_.clear();
-  for (auto& tab : drope_tables_) cudaFree(tab.second);
-  drope_tables_.clear();
+  for (float* tab : drope_tabs_) cudaFree(tab);
+  drope_tabs_.clear();
   for (float* p : {drec_, drec_init_, drec_rows_.alloc, dmoe_.alloc, dexpr_.alloc})
     if (p) cudaFree(p);
-  drope_ = drec_ = drec_init_ = nullptr;
+  drec_ = drec_init_ = nullptr;
   drec_rows_ = dmoe_ = dexpr_ = DBuf{};
   if (dtokens_) cudaFree(dtokens_);
   if (dts_code_) cudaFree(dts_code_);
@@ -3409,7 +3634,9 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         break;
       }
       case DOp::Rope: {
-        if (start_pos + T > max_len_ || !s.rope)
+        // LongRoPE with two sets: the set the sequence's length selects (forward's set_rope_long).
+        const float* tab = rope_long_ && s.rope_long ? s.rope_long : s.rope;
+        if (start_pos + T > max_len_ || !tab)
           throw std::runtime_error("IR rope: position " + std::to_string(start_pos + T - 1) + " exceeds the rope table");
         DBuf* q = &in(s, 0);
         DBuf* k = &in(s, 1);
@@ -3426,20 +3653,20 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         rope_widths(*s.node, layer, q->width, k->width);
         if (drowpos_) {  // a recursion step's active rows, each at its own position (mor_step_device)
           if (!s.neox && s.n_rot == s.hd) {
-            ir_rope_at_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, drowpos_, s.rope, st);
+            ir_rope_at_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, drowpos_, tab, st);
           } else {
             if (q->width % s.hd != 0 || k->width % s.hd != 0)
               throw std::runtime_error("IR rope: q/k widths are not whole heads");
-            ir_rope_rows_at_cuda(q->p, T, q->width / s.hd, s.hd, s.n_rot, s.neox, drowpos_, s.rope, st);
-            ir_rope_rows_at_cuda(k->p, T, k->width / s.hd, s.hd, s.n_rot, s.neox, drowpos_, s.rope, st);
+            ir_rope_rows_at_cuda(q->p, T, q->width / s.hd, s.hd, s.n_rot, s.neox, drowpos_, tab, st);
+            ir_rope_rows_at_cuda(k->p, T, k->width / s.hd, s.hd, s.n_rot, s.neox, drowpos_, tab, st);
           }
         } else if (!s.neox && s.n_rot == s.hd) {  // full interleaved: the llama path's form
-          ir_rope_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, start_pos, s.rope, st, dpos_);
+          ir_rope_cuda(q->p, k->p, T, q->width / s.hd, k->width / s.hd, s.hd, start_pos, tab, st, dpos_);
         } else {  // NEOX pairing or partial rotary (rope_rows_cpu)
           if (q->width % s.hd != 0 || k->width % s.hd != 0)
             throw std::runtime_error("IR rope: q/k widths are not whole heads");
-          ir_rope_rows_cuda(q->p, T, q->width / s.hd, s.hd, s.n_rot, s.neox, start_pos, s.rope, st, dpos_);
-          ir_rope_rows_cuda(k->p, T, k->width / s.hd, s.hd, s.n_rot, s.neox, start_pos, s.rope, st, dpos_);
+          ir_rope_rows_cuda(q->p, T, q->width / s.hd, s.hd, s.n_rot, s.neox, start_pos, tab, st, dpos_);
+          ir_rope_rows_cuda(k->p, T, k->width / s.hd, s.hd, s.n_rot, s.neox, start_pos, tab, st, dpos_);
         }
         break;
       }
@@ -3481,8 +3708,10 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         }
         ir_kv_write_cuda(K, V, k.p, v.p, T, static_cast<int>(row), start_pos, st, dpos_);
         DBuf& out = dout(s.out[0], T, hq * hd, {&q, &k, &v});
-        if (s.window > 0)  // the cache keeps every position, so the window reads it in place
-          ir_window_attention_cuda(q.p, K, V, out.p, T, start_pos, hq, hkv, hd, s.scale, s.window, s.sinks, st, dpos_);
+        if (s.window > 0 || s.softcap > 0.0f)  // the cache keeps every position, so the window reads it in place
+          // Gemma 2's soft cap (IR_SPEC 5.15, revision 1.5) is this kernel's: unwindowed, its window is max_len
+          ir_window_attention_cuda(q.p, K, V, out.p, T, start_pos, hq, hkv, hd, s.scale, s.window > 0 ? s.window : max_len_,
+                                   s.sinks, st, dpos_, s.softcap);
         else if (T == 1 && dpos_)  // the same split kernel as below, its length read from dstep_[1]
           attention_devpos_cuda(q.p, K, V, out.p, hq, hd, s.scale, max_len_, hkv, dstep_, st);
         else if (T == 1)

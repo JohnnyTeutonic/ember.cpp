@@ -98,7 +98,8 @@ void attention_batch_cpu(
     int num_q_heads,
     int num_kv_heads,
     int head_dim,
-    float attention_scale
+    float attention_scale,
+    float softcap
 ) {
     size_t expected_q_size = (size_t)num_tokens_in_batch * num_q_heads * head_dim;
     if (q_batch_roped.size() != expected_q_size) {
@@ -170,7 +171,7 @@ void attention_batch_cpu(
                             "," + std::to_string(current_layer_kv_cache.k[k_cache_offset + 1]) + "]" +
                             ", dot=" + std::to_string(current_dot_product) + ", scale=" + std::to_string(attention_scale));
             }
-                scores[t_hist] = current_dot_product * attention_scale;
+                scores[t_hist] = softcap_score(current_dot_product * attention_scale, softcap);
 
             }
 
@@ -226,12 +227,13 @@ void attention_window_batch_cpu(
     int head_dim,
     float attention_scale,
     int window,
-    int sinks
+    int sinks,
+    float softcap
 ) {
     // window 0 is unbounded attention: today's kernel, untouched.
     if (window <= 0) {
         attention_batch_cpu(q_batch_roped, current_layer_kv_cache, batch_attn_output, num_tokens_in_batch,
-                            start_pos_in_sequence, num_q_heads, num_kv_heads, head_dim, attention_scale);
+                            start_pos_in_sequence, num_q_heads, num_kv_heads, head_dim, attention_scale, softcap);
         return;
     }
     const size_t expected_size = (size_t)num_tokens_in_batch * num_q_heads * head_dim;
@@ -275,7 +277,7 @@ void attention_window_batch_cpu(
                 const size_t k_off = ((size_t)visible[i] * num_kv_heads + kv_head) * head_dim;
                 float dot = 0.0f;
                 for (int d = 0; d < head_dim; ++d) dot += q_head[d] * current_layer_kv_cache.k[k_off + d];
-                scores[i] = dot * attention_scale;
+                scores[i] = softcap_score(dot * attention_scale, softcap);
             }
             softmax_vector_cpu(scores, scores);
             float* out_head = batch_attn_output.data() + token_offset + (h_q * head_dim);
@@ -300,7 +302,8 @@ void attention_rows_batch_cpu(
     int num_q_heads,
     int num_kv_heads,
     int head_dim,
-    float attention_scale
+    float attention_scale,
+    float softcap
 ) {
     const size_t expected_size = (size_t)num_tokens_in_batch * num_q_heads * head_dim;
     batch_attn_output.assign(expected_size, 0.0f);
@@ -332,7 +335,7 @@ void attention_rows_batch_cpu(
                     const size_t k_off = ((size_t)visible[i] * num_kv_heads + kv_head) * head_dim;
                     float dot = 0.0f;
                     for (int d = 0; d < head_dim; ++d) dot += q_head[d] * current_layer_kv_cache.k[k_off + d];
-                    scores[i] = dot * attention_scale;
+                    scores[i] = softcap_score(dot * attention_scale, softcap);
                 }
                 softmax_vector_cpu(scores, scores);
                 float* out_head = batch_attn_output.data() + token_offset + (h_q * head_dim);
@@ -375,7 +378,8 @@ void attention_bias_batch_cpu(
     int head_dim,
     float attention_scale,
     const float* bias,
-    const std::vector<int>& buckets
+    const std::vector<int>& buckets,
+    float softcap
 ) {
     const size_t expected_size = (size_t)num_tokens_in_batch * num_q_heads * head_dim;
     batch_attn_output.assign(expected_size, 0.0f);
@@ -418,7 +422,8 @@ void attention_bias_batch_cpu(
                     const size_t k_off = ((size_t)visible[i] * num_kv_heads + kv_head) * head_dim;
                     float dot = 0.0f;
                     for (int d = 0; d < head_dim; ++d) dot += q_head[d] * current_layer_kv_cache.k[k_off + d];
-                    const float s = dot * attention_scale;  // rounded, then the bias added and rounded
+                    // rounded (and capped, revision 1.5), then the bias added and rounded
+                    const float s = softcap_score(dot * attention_scale, softcap);
                     scores[i] = s + bias[(size_t)bucket[i] * num_q_heads + h_q];
                 }
                 softmax_vector_cpu(scores, scores);
@@ -452,7 +457,8 @@ void attention_relkv_batch_cpu(
     int rk_width,
     const float* rv,
     int rv_width,
-    int max_distance
+    int max_distance,
+    float softcap
 ) {
     const size_t expected_size = (size_t)num_tokens_in_batch * num_q_heads * head_dim;
     batch_attn_output.assign(expected_size, 0.0f);
@@ -502,7 +508,7 @@ void attention_relkv_batch_cpu(
                     for (int d = 0; d < head_dim; ++d) dot += q_head[d] * current_layer_kv_cache.k[k_off + d];
                     for (int d = 0; d < head_dim; ++d) rel += q_head[d] * rk_row[d];
                     const float s = dot + rel;  // rounded, then the product
-                    scores[i] = s * attention_scale;
+                    scores[i] = softcap_score(s * attention_scale, softcap);
                 }
                 softmax_vector_cpu(scores, scores);
                 float* out_head = batch_attn_output.data() + token_offset + (h_q * head_dim);
