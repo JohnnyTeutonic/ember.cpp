@@ -436,6 +436,99 @@ void attention_bias_batch_cpu(
 #endif
 }
 
+void attention_relkv_batch_cpu(
+    const std::vector<float>& q_batch_roped,
+    const KVCacheLayer& current_layer_kv_cache,
+    std::vector<float>& batch_attn_output,
+    int num_tokens_in_batch,
+    const std::vector<std::vector<int>>& rows,
+    const std::vector<int>* key_pos,
+    const std::vector<int>& query_pos,
+    int num_q_heads,
+    int num_kv_heads,
+    int head_dim,
+    float attention_scale,
+    const float* rk,
+    int rk_width,
+    const float* rv,
+    int rv_width,
+    int max_distance
+) {
+    const size_t expected_size = (size_t)num_tokens_in_batch * num_q_heads * head_dim;
+    batch_attn_output.assign(expected_size, 0.0f);
+    const auto width_ok = [&](int w) { return w == head_dim || w == num_q_heads * head_dim; };
+    if (q_batch_roped.size() != expected_size || rows.size() != (size_t)num_tokens_in_batch ||
+        query_pos.size() != (size_t)num_tokens_in_batch || !rk || max_distance < 0 || !width_ok(rk_width) ||
+        (rv && !width_ok(rv_width))) {
+        Logger::error("[ATTN_RELKV_CPU] q, row lists, positions or the relative tables do not match the batch");
+        return;
+    }
+    const size_t row_floats = (size_t)num_kv_heads * head_dim;
+    // a head's column offset within a table row: 0 when the vectors are shared, h * head_dim per head
+    const bool rk_per_head = rk_width != head_dim, rv_per_head = rv && rv_width != head_dim;
+#if defined(__EMSCRIPTEN_PTHREADS__)
+    ember::parallel_for(num_tokens_in_batch, [&](int64_t token_idx) {
+#else
+#pragma omp parallel for schedule(dynamic)
+    for (int token_idx = 0; token_idx < num_tokens_in_batch; ++token_idx) {
+#endif
+        const size_t token_offset = (size_t)token_idx * num_q_heads * head_dim;
+        const std::vector<int>& visible = rows[token_idx];
+        const int p = query_pos[token_idx];
+        std::vector<float> scores(visible.size());
+        std::vector<int> dist(visible.size());
+        std::vector<float> rel_sum((size_t)head_dim);
+        bool in_range = !visible.empty();
+        for (size_t i = 0; i < visible.size(); ++i) {
+            const int r = visible[i];
+            if (r < 0 || ((size_t)r + 1) * row_floats > current_layer_kv_cache.k.size() ||
+                ((size_t)r + 1) * row_floats > current_layer_kv_cache.v.size() ||
+                (key_pos && (size_t)r >= key_pos->size())) {
+                in_range = false;
+                break;
+            }
+            const int j = key_pos ? (*key_pos)[r] : r;
+            dist[i] = std::min(std::max(p - j, 0), max_distance);
+        }
+        if (in_range) {
+            for (int h_q = 0; h_q < num_q_heads; ++h_q) {
+                const float* q_head = q_batch_roped.data() + token_offset + (h_q * head_dim);
+                const int kv_head = h_q / (num_q_heads / num_kv_heads);
+                const size_t rk_col = rk_per_head ? (size_t)h_q * head_dim : 0;
+                for (size_t i = 0; i < visible.size(); ++i) {
+                    const size_t k_off = ((size_t)visible[i] * num_kv_heads + kv_head) * head_dim;
+                    const float* rk_row = rk + (size_t)dist[i] * rk_width + rk_col;
+                    float dot = 0.0f, rel = 0.0f;
+                    for (int d = 0; d < head_dim; ++d) dot += q_head[d] * current_layer_kv_cache.k[k_off + d];
+                    for (int d = 0; d < head_dim; ++d) rel += q_head[d] * rk_row[d];
+                    const float s = dot + rel;  // rounded, then the product
+                    scores[i] = s * attention_scale;
+                }
+                softmax_vector_cpu(scores, scores);
+                float* out_head = batch_attn_output.data() + token_offset + (h_q * head_dim);
+                for (size_t i = 0; i < visible.size(); ++i) {
+                    if (scores[i] == -std::numeric_limits<float>::infinity() || scores[i] == 0.0f) continue;
+                    const size_t v_off = ((size_t)visible[i] * num_kv_heads + kv_head) * head_dim;
+                    for (int d = 0; d < head_dim; ++d) out_head[d] += scores[i] * current_layer_kv_cache.v[v_off + d];
+                }
+                if (rv) {  // the second sum from 0, then added to the first
+                    const size_t rv_col = rv_per_head ? (size_t)h_q * head_dim : 0;
+                    std::fill(rel_sum.begin(), rel_sum.end(), 0.0f);
+                    for (size_t i = 0; i < visible.size(); ++i) {
+                        if (scores[i] == -std::numeric_limits<float>::infinity() || scores[i] == 0.0f) continue;
+                        const float* rv_row = rv + (size_t)dist[i] * rv_width + rv_col;
+                        for (int d = 0; d < head_dim; ++d) rel_sum[d] += scores[i] * rv_row[d];
+                    }
+                    for (int d = 0; d < head_dim; ++d) out_head[d] = out_head[d] + rel_sum[d];
+                }
+            }
+        }
+    }
+#if defined(__EMSCRIPTEN_PTHREADS__)
+    );
+#endif
+}
+
 void update_kv_cache_batch_cpu_sequence_aware(
     KVCache* kv_cache,
     int layer_idx,

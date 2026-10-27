@@ -91,6 +91,35 @@ void attention_bias_batch_cpu(
     const float* bias,
     const std::vector<int>& buckets
 );
+// attention_rows_batch_cpu with Shaw's relative key and value vectors (keramos IR_SPEC 5.15 relative_kv, revision
+// 1.4; Shaw, Uszkoreit and Vaswani 2018 eqs. 3-4). With p the query's position (query_pos[t]), j the key's
+// (key_pos[row], or the row itself when key_pos is null) and n = min(p - j, max_distance), head h computes
+//   s(p, j) = ((q . k_j) + (q . rk[n])) * scale
+//   out_p   = (sum over the visible j of a v_j) + (sum over the visible j of a rv[n])
+// in the stated order: each dot product sums the head's columns from 0 in ascending order, rounded, then the sum,
+// then the product; each output sum runs from 0 over the visible keys in ascending row order; then the two sums
+// are added. rk (and rv, null for keys only) is the table [max_distance + 1][width] row-major, row n the vectors of
+// distance n; width head_dim (shared by the heads) or num_q_heads * head_dim (head h's at columns h * head_dim).
+// Under grouped-query attention rk[n] and rv[n] are the query head's, k_j and v_j its kv head's. Softmax as
+// attention_rows_batch_cpu.
+void attention_relkv_batch_cpu(
+    const std::vector<float>& q_batch_roped,
+    const KVCacheLayer& current_layer_kv_cache,
+    std::vector<float>& batch_attn_output,
+    int num_tokens_in_batch,
+    const std::vector<std::vector<int>>& rows,
+    const std::vector<int>* key_pos,
+    const std::vector<int>& query_pos,
+    int num_q_heads,
+    int num_kv_heads,
+    int head_dim,
+    float attention_scale,
+    const float* rk,
+    int rk_width,
+    const float* rv,
+    int rv_width,
+    int max_distance
+);
 void update_kv_cache_batch_cpu_sequence_aware(
     KVCache* kv_cache,
     int layer_idx,

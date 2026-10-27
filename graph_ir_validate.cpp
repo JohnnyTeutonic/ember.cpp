@@ -236,6 +236,7 @@ std::vector<Sect> sections(const json& doc) {
 
 const std::set<std::string> kNotPerLayer = {"op", "in", "out", "state", "tensor_index", "sizes", "expr", "weight", "bias",
                                             "position_bias",  // attention's (IR_SPEC 5.15, revision 1.3)
+                                            "relative_kv",    // attention's (IR_SPEC 5.15, revision 1.4)
                                             "router", "experts", "state_weight", "tied_to", "a", "b", "c", "d",
                                             // recurrence (IR_SPEC 6.10.1: every key structural)
                                             "index", "inputs", "weights", "init", "let", "update", "readout"};
@@ -367,6 +368,11 @@ void node_errors(const json& doc, Errs& errs) {
       for (int i = 0; c && i < L; ++i) not_true = not_true || !((*c)[i].is_boolean() && (*c)[i].get<bool>());
       if (not_true) errs.push_back(E("5.15", where + ": causal must be true (Q6)"));
     }
+    // Rule 40 (revision 1.4): relative_kv and position_bias are each defined alone on a node. The members of
+    // relative_kv (key a name, value a name or null, max_distance an integer >= 0, nothing else) are the schema's.
+    if (op == "attention" && n.contains("relative_kv") && n.contains("position_bias"))
+      errs.push_back(E("5.15 (rule 40)", where + ": relative_kv and position_bias on one node (revision 1.4 defines "
+                                                 "each alone)"));
     if (op == "linear_attention" && !(get(n, "causal").is_boolean() && n.at("causal").get<bool>()))
       errs.push_back(E("6.4", where + ": causal must be true"));
     if (op == "moe_ffn" && is_int(get(n, "top_k")) && is_int(get(n, "n_experts"))) {
@@ -981,6 +987,40 @@ void container_errors(const json& doc, const GGUFData& g, Errs& errs) {
       }
     }
   }
+  // Rule 40 (container, revision 1.4): each application's relative_kv key and value tensors are ne
+  // {head_dim or heads * head_dim, max_distance + 1}.
+  for (const auto& [sect, j, np] : sections(doc)) {
+    const json& n = *np;
+    const json& rk = get(n, "relative_kv");
+    if (op_of(n) != "attention" || !rk.is_object() || !is_int(get(rk, "max_distance"))) continue;
+    const int64_t K = rk.at("max_distance").get<int64_t>();
+    if (K < 0) continue;  // the schema's (rule 40)
+    const auto heads = layers(get(n, "heads"), std::max(L, 1)), hdim = layers(get(n, "head_dim"), std::max(L, 1));
+    for (const char* member : {"key", "value"}) {
+      if (!get(rk, member).is_string()) continue;
+      for (int i = 0; i < (sect == "block" ? L : 1); ++i) {
+        std::string w = rk.at(member).get<std::string>();
+        const size_t at = w.find("{i}");
+        if (at != std::string::npos) {
+          const bool mapped = wmi.is_array() && i < static_cast<int>(wmi.size()) && is_int(wmi[i]) && !n.contains("tensor_index");
+          w.replace(at, 3, std::to_string(mapped ? wmi[i].get<int64_t>() : i));
+        }
+        const auto* got = ne(w);
+        if (!got || !heads || !hdim || !is_int((*heads)[i]) || !is_int((*hdim)[i])) continue;  // rule 25 names a missing tensor
+        const int64_t H = (*heads)[i].get<int64_t>(), hd = (*hdim)[i].get<int64_t>();
+        const bool ok = got->size() == 2 && static_cast<int64_t>((*got)[1]) == K + 1 &&
+                        (static_cast<int64_t>((*got)[0]) == hd || static_cast<int64_t>((*got)[0]) == H * hd);
+        if (!ok) {
+          errs.push_back(E("5.15 (rule 40)", sect + "[" + std::to_string(j) + "] attention relative_kv " + member + " " +
+                                                 q(w) + (sect == "block" ? " (application " + std::to_string(i) + ")" : "") +
+                                                 " has ne " + ne_str(*got) + ", not {head_dim or heads * head_dim, " +
+                                                 "max_distance + 1} = {" + std::to_string(hd) + " or " +
+                                                 std::to_string(H * hd) + ", " + std::to_string(K + 1) + "}"));
+          break;
+        }
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------- rule 38 (revision 1.3): the architecture
@@ -1242,6 +1282,9 @@ std::string schema_rule(const json& doc, const std::string& path, const std::str
     if (key == "position_bias")  // attention's (5.15, revision 1.3); a per-layer one breaks rule 6
       return nodes.is_array() && j < nodes.size() && is_pl(get(nodes[j], "position_bias")) ? "3.8 (rule 6)"
                                                                                            : "5.15 (rule 39)";
+    if (key == "relative_kv")  // attention's (5.15, revision 1.4); a per-layer one breaks rule 6
+      return nodes.is_array() && j < nodes.size() && is_pl(get(nodes[j], "relative_kv")) ? "3.8 (rule 6)"
+                                                                                         : "5.15 (rule 40)";
     const bool io = key == "in" || key == "out" || (required && (msg.find("'in'") != std::string::npos ||
                                                                  msg.find("'out'") != std::string::npos));
     if (io) return "3.5 (rule 7)";  // the arity: what a node reads and writes
