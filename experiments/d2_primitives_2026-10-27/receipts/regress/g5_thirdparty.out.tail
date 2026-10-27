@@ -1,0 +1,3 @@
+qwen3-0.6b {"kind": "qwen2_bpe", "resolved": true, "stop_ids": [151645, 151643], "template": "chatml-qwen3/1", "why": "tokenizer.chat_template sha256 57f1fd00f001"} {"n": 909, "text_same": 909, "ids_same": 909, "errors": 0}
+gemma-3-270m-it {"kind": "spm", "resolved": true, "stop_ids": [106, 1], "template": "gemma3/1", "why": "markers and architecture gemma3"} {"n": 409, "text_same": 409, "ids_same": 409, "errors": 0}
+pass True

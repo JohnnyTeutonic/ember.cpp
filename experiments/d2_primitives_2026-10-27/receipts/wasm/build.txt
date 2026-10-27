@@ -1,0 +1,5 @@
+native state_wasm_gate rc=0
+native ir_wasm_gate rc=0
+wasm state_wasm_gate rc=0
+wasm ir_wasm_gate rc=0
+emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.6 (ce75e06884093bcefb86a6b8fd56a5d62a4cc245)

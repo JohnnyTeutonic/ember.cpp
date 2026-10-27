@@ -1,0 +1,3 @@
+pk_base_v1_2026-10-24/pk_base_v1_q8_0_all_parity.jsonl {"gguf": "/mnt/c/ml_artifacts/next_base/base/pk_base_v1_q8_0_all.gguf", "gguf_sha256": "50b0a101f5bb1f971ce28637ae825848aff33afb55cf190ccfd79c3a56028433", "records": 40, "receipt_sha256": "fe1b3ce60fdaec73851832417a4629190ccd8df61406d11f3ef9aa5654d91568", "byte_identical": true, "lines_identical": 41}
+pk_base_v1_2026-10-24/pk_base_v1_parity.jsonl {"gguf": "/mnt/c/ml_artifacts/next_base/base/pk_base_v1.gguf", "gguf_sha256": "510d288cf10ead4d3902247e3d898b6fa39e1d31d7465d3a8b6820761d6c9178", "records": 40, "receipt_sha256": "919c19df5615c21c60bd5bb3714f68ef09c544b5c0136d1532222e881cb28910", "byte_identical": true, "lines_identical": 41}
+pass True

@@ -1,0 +1,12 @@
+18:28:48 new T4 session ember-d2-1027
+18:28:56 uploaded d2_vm.sh
+18:28:59 uploaded COMMITS
+18:29:05 uploaded small.tgz
+18:29:12 uploaded ember.tgz
+18:29:51 launched
+18:31:05 state=RUNNING HAS_CUDA:BOOL=ON
+18:32:53 state=RUNNING === done Tue Oct 27 07:32:46 AM UTC 2026 ===
+18:34:27 state=DONE === done Tue Oct 27 07:32:46 AM UTC 2026 ===
+18:34:33 results (DONE) in /mnt/c/ml_artifacts/ember_d2_gate/ember-d2-1027
+18:34:35 stopping ember-d2-1027 (attempt 1)
+[pk-tc-e1-rec] gpu-l4-s-ass1a1-20mhwnk8kx7ly | Hardware: L4 | Variant: GPU

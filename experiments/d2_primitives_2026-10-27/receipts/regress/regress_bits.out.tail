@@ -1,0 +1,3 @@
+mor_gate_mor3 {"sequences": 8, "positions": 101, "rc": [0, 0], "bit_equal": true}
+mor_gate_mor2p0 {"sequences": 8, "positions": 101, "rc": [0, 0], "bit_equal": true}
+pass True

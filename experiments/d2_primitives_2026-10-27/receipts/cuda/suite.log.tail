@@ -1,0 +1,2 @@
+PASS chat/render/qwen3 thinking off: text equal
+summary ember.cpp: 413 pass, 0 fail, 52 skip, 0 xfail, 0 xpass; by kind model 27/0/0, trace 80/0/0, op 27/0/41, refuse 105/0/0, digest 90/0/0, dequant 10/0/0, grad 0/0/11, accept 42/0/0, chat 32/0/0 (pass/fail/skip)

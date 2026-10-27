@@ -1,0 +1,6 @@
+{"case": "relative_kv", "elements": 72, "ember_eq_stated": 72, "ember_eq_reference": 30, "stated_eq_reference": 30, "ember_vs_stated_differ": []}
+{"case": "relative_kv_per_head", "elements": 72, "ember_eq_stated": 72, "ember_eq_reference": 37, "stated_eq_reference": 37, "ember_vs_stated_differ": []}
+{"case": "relative_kv_keys_only", "elements": 72, "ember_eq_stated": 72, "ember_eq_reference": 27, "stated_eq_reference": 27, "ember_vs_stated_differ": []}
+{"case": "relative_kv_window_sinks", "elements": 72, "ember_eq_stated": 72, "ember_eq_reference": 21, "stated_eq_reference": 21, "ember_vs_stated_differ": []}
+{"case": "relative_kv_grouped_query", "elements": 72, "ember_eq_stated": 72, "ember_eq_reference": 32, "stated_eq_reference": 32, "ember_vs_stated_differ": []}
+{"case": "relative_kv_distance_zero", "elements": 72, "ember_eq_stated": 72, "ember_eq_reference": 40, "stated_eq_reference": 40, "ember_vs_stated_differ": []}

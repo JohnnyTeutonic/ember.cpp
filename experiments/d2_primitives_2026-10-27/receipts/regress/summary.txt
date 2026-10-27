@@ -1,0 +1,21 @@
+recursion_gate rc=0: recursion_gate_cpu.json byte-identical
+mor_gate rc=0: mor_gate_cpu.json byte-identical
+mor_refusals rc=0: mor_refusals.json byte-identical
+attnres_gate rc=0: attnres_gate_cpu.json byte-identical
+state_tokens_gate rc=0: state_tokens_gate_cpu.json DIFFERS or missing
+state4_gate rc=0: state4_gate_cpu.json byte-identical
+regress_bits rc=0: regress_bits.json DIFFERS or missing
+regress_parity rc=0: regress_parity.json byte-identical
+g5_thirdparty rc=0: g5_thirdparty.json byte-identical
+cpu regression done
+adapter_selftest rc=0
+adapter self-test committed: 189 / 189 requests 3072
+adapter self-test this build: 189 / 189 requests 3072 failures 0 pass True
+same check names: True
+checks with identical records: 189 of 189
+
+[exited with code 0]
+# The two receipts marked DIFFERS: state_tokens_gate_cpu.json differs from the committed one only in its
+# vs_numpy_rel / causal_vs_numpy_rel fields (distances to paperkiln's numpy reference, which move with the
+# environment's numpy, as in earlier runs); regress_bits.json only in its "new" field (the path of the binary
+# compared: the committed receipt names /home/jonat/wi/build_cpu). Every other field is equal.
