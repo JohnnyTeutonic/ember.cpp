@@ -1,0 +1,78 @@
+{
+ "f32_ember_vs_mtstudio_recorded": {
+  "n": 40,
+  "reply": 40,
+  "tokens": 40,
+  "stop_reason": 40,
+  "prompt_tokens_vs_llama3_bpe": 40,
+  "reply_vs_recorded_ember_cpu_aa50a61": 40,
+  "distinct_replies": 40
+ },
+ "q8_vs_f32_greedy": {
+  "n": 40,
+  "reply": 37,
+  "tokens": 38,
+  "stop_reason": 40,
+  "prompt_ids": 40,
+  "ids": 37,
+  "stop_id": 40,
+  "all_fields_40": false,
+  "differing_rows": [
+   7,
+   10,
+   14
+  ]
+ },
+ "teacher_forced_logits_q8_vs_f32": {
+  "positions": 733,
+  "vocab": 16384,
+  "prompts": 40,
+  "max_abs_dlogit": 0.18147233128547668,
+  "mean_abs_dlogit": 0.0172062722174229,
+  "max_abs_over_row_range": 0.005077407148870687,
+  "mean_abs_over_row_range": 0.0005742225094649878,
+  "max_abs_over_global_range": 0.004179203956188707,
+  "top1_agree": 730,
+  "f32_min_top1_margin": 0.01259613037109375,
+  "f32_top1_margin_p01": 0.022229766845703127,
+  "max_abs_dlogit_at_smallest_margin_row": 0.09202682971954346
+ },
+ "q8_vs_f32_divergences": [
+  {
+   "i": 7,
+   "first_divergent_token": 10,
+   "f32_token": 321,
+   "q8_token": 3446,
+   "f32_margin_f32choice_minus_q8choice": 0.031932830810546875,
+   "q8_margin_q8choice_minus_f32choice": 0.018854141235351562,
+   "f32_top1_top2_margin": 0.031932830810546875,
+   "max_abs_dlogit_there": 0.08217620849609375,
+   "f32_reply": "It is understandable to feel fearful when the water is so dark and cold.",
+   "q8_reply": "It is understandable to feel fearful when the water feels so heavy and heavy."
+  },
+  {
+   "i": 10,
+   "first_divergent_token": 11,
+   "f32_token": 15,
+   "q8_token": 291,
+   "f32_margin_f32choice_minus_q8choice": 0.025760650634765625,
+   "q8_margin_q8choice_minus_f32choice": 0.00426483154296875,
+   "f32_top1_top2_margin": 0.025760650634765625,
+   "max_abs_dlogit_there": 0.07500016689300537,
+   "f32_reply": "It is surprising how nature can change the color of leaves, isn't it?",
+   "q8_reply": "It is surprising how nature can change the color of leaves in unexpected ways."
+  },
+  {
+   "i": 14,
+   "first_divergent_token": 13,
+   "f32_token": 689,
+   "q8_token": 2556,
+   "f32_margin_f32choice_minus_q8choice": 0.012869834899902344,
+   "q8_margin_q8choice_minus_f32choice": 0.03619956970214844,
+   "f32_top1_top2_margin": 0.012869834899902344,
+   "max_abs_dlogit_there": 0.06807518005371094,
+   "f32_reply": "I feel a bit fearful about going there, especially with the new hospital being so busy.",
+   "q8_reply": "I feel a bit fearful about going there, especially with the fluorescent lights."
+  }
+ ]
+}
