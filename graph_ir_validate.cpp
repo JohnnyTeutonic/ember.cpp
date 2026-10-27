@@ -238,6 +238,8 @@ const std::set<std::string> kNotPerLayer = {"op", "in", "out", "state", "tensor_
                                             "position_bias",  // attention's (IR_SPEC 5.15, revision 1.3)
                                             "relative_kv",    // attention's (IR_SPEC 5.15, revision 1.4)
                                             "router", "experts", "state_weight", "tied_to", "a", "b", "c", "d",
+                                            // mla_attention's tensors and split's groups (revision 1.5)
+                                            "k_b", "v_b", "groups",
                                             // recurrence (IR_SPEC 6.10.1: every key structural)
                                             "index", "inputs", "weights", "init", "let", "update", "readout"};
 const std::set<std::string> kSlotNotPerLayer = {"name", "kind", "op", "dtype", "tensors", "evict", "kv_rows"};
@@ -245,9 +247,11 @@ const std::map<std::string, size_t> kArity = {
     {"embedding", 1}, {"pos_embedding", 2}, {"linear", 1}, {"scale", 1}, {"split", 1}, {"rmsnorm", 1},
     {"layernorm", 1}, {"gelu", 1}, {"silu", 1}, {"sigmoid", 1}, {"relu", 1}, {"add", 2}, {"mul", 2}, {"sub", 2},
     {"affine", 1}, {"mul_col", 2}, {"rms_row", 1}, {"rope", 3}, {"attention", 3}, {"moe_ffn", 1}, {"append", 2},
-    {"linear_attention", 3}, {"ssm_scan", 1}, {"conv1d_causal", 1}, {"selective_scan", 4}, {"depth_route", 1}};
+    {"linear_attention", 3}, {"ssm_scan", 1}, {"conv1d_causal", 1}, {"selective_scan", 4}, {"depth_route", 1},
+    {"mla_attention", 4}};
 const std::set<std::string> kAtLeastOne = {"list", "depth_attend", "expr", "recurrence"};
 const std::map<std::string, std::string> kStateful = {{"attention", "kv"},
+                                                      {"mla_attention", "kv"},
                                                       {"linear_attention", "recurrent"},
                                                       {"ssm_scan", "recurrent"},
                                                       {"conv1d_causal", "recurrent"},
@@ -264,6 +268,9 @@ std::vector<std::pair<std::string, std::string>> tensor_names(const json& n) {
   for (const char* k : {"weight", "bias", "router", "state_weight", "tied_to"})
     if (get(n, k).is_string()) out.emplace_back(k, get(n, k).get<std::string>());
   const std::string op = op_of(n);
+  if (op == "mla_attention")
+    for (const char* k : {"k_b", "v_b"})
+      if (get(n, k).is_string()) out.emplace_back(k, get(n, k).get<std::string>());
   if (op == "ssm_scan" || op == "selective_scan")
     for (const char* k : {"a", "b", "c", "d"})
       if (get(n, k).is_string()) out.emplace_back(k, get(n, k).get<std::string>());
@@ -375,6 +382,17 @@ void node_errors(const json& doc, Errs& errs) {
                                                  "each alone)"));
     if (op == "linear_attention" && !(get(n, "causal").is_boolean() && n.at("causal").get<bool>()))
       errs.push_back(E("6.4", where + ": causal must be true"));
+    if (op == "mla_attention" && L) {  // revision 1.5 (5.20): causal true (rule 14), window and sinks >= 0 (rule 10)
+      const auto w = layers(get(n, "window"), L), s = layers(get(n, "sinks"), L), c = layers(get(n, "causal"), L);
+      for (int i = 0; i < L; ++i)
+        if ((w && is_int((*w)[i]) && (*w)[i].get<int64_t>() < 0) || (s && is_int((*s)[i]) && (*s)[i].get<int64_t>() < 0)) {
+          errs.push_back(E("5.20 (rule 10)", where + ": window and sinks must be >= 0"));
+          break;
+        }
+      bool not_true = false;
+      for (int i = 0; c && i < L; ++i) not_true = not_true || !((*c)[i].is_boolean() && (*c)[i].get<bool>());
+      if (not_true) errs.push_back(E("5.20 (rule 14)", where + ": causal must be true"));
+    }
     if (op == "moe_ffn" && is_int(get(n, "top_k")) && is_int(get(n, "n_experts"))) {
       const int64_t k = n.at("top_k").get<int64_t>(), e = n.at("n_experts").get<int64_t>();
       if (!(1 <= k && k <= e))
@@ -423,6 +441,36 @@ void slot_fit(const json& node, const json& slot, int L, Errs& errs) {
           errs.push_back(E("5.15", "attention " + std::string(key) + " " + show((*a)[i]) + " (application " +
                                        std::to_string(i) + ") differs from its kv state " + show(get(slot, "name")) +
                                        "'s " + show((*b)[i]) + (q7 ? " (Q7)" : "")));
+          break;
+        }
+    }
+    return;
+  }
+  if (op == "mla_attention") {  // revision 1.5 (5.20): kv_heads 1, head_dim kv_rank + qk_rope, the node's window and sinks
+    const auto kr = layers(get(node, "kv_rank"), L), qr = layers(get(node, "qk_rope"), L);
+    const auto kvh = layers(get(slot, "kv_heads"), L), hd = layers(get(slot, "head_dim"), L);
+    for (int i = 0; kvh && i < L; ++i)
+      if ((*kvh)[i] != json(1)) {
+        errs.push_back(E("5.20 (rule 12)", "mla_attention reads kv state " + show(get(slot, "name")) + " of kv_heads " +
+                                                show((*kvh)[i]) + " (application " + std::to_string(i) + "), not 1"));
+        break;
+      }
+    for (int i = 0; kr && qr && hd && i < L; ++i)
+      if (is_int((*kr)[i]) && is_int((*qr)[i]) && (*hd)[i] != json((*kr)[i].get<int64_t>() + (*qr)[i].get<int64_t>())) {
+        errs.push_back(E("5.20 (rule 12)", "mla_attention reads kv state " + show(get(slot, "name")) + " of head_dim " +
+                                                show((*hd)[i]) + " (application " + std::to_string(i) +
+                                                "), not kv_rank + qk_rope = " +
+                                                std::to_string((*kr)[i].get<int64_t>() + (*qr)[i].get<int64_t>())));
+        break;
+      }
+    for (const char* key : {"window", "sinks"}) {
+      const auto a = layers(get(node, key), L), b = layers(get(slot, key), L);
+      if (!a || !b) continue;
+      for (int i = 0; i < L; ++i)
+        if ((*a)[i] != (*b)[i]) {
+          errs.push_back(E("5.20 (rule 12)", "mla_attention " + std::string(key) + " " + show((*a)[i]) + " (application " +
+                                                  std::to_string(i) + ") differs from its kv state " +
+                                                  show(get(slot, "name")) + "'s " + show((*b)[i])));
           break;
         }
     }
@@ -566,7 +614,7 @@ void state_errors(const json& doc, Errs& errs) {
       continue;
     }
     used.insert(st);
-    if (op == "attention" || op == "recurrence") {
+    if (op == "attention" || op == "mla_attention" || op == "recurrence") {
       if (!readers.count(st)) reader_order.push_back(st);
       ++readers[st];
     }
@@ -1023,6 +1071,49 @@ void container_errors(const json& doc, const GGUFData& g, Errs& errs) {
   }
 }
 
+// Rule 42 (container, revision 1.5): each application's mla_attention k_b is ne {qk_nope, kv_rank, heads} and its v_b
+// ne {kv_rank, v_head_dim, heads} (a trailing ne of 1 may be left out, as GGUF stores a one-head stack).
+void mla_container_errors(const json& doc, const GGUFData& g, Errs& errs) {
+  const json& blk = get(doc, "block");
+  const int L = is_int(get(blk, "repeat")) ? blk.at("repeat").get<int>() : 0;
+  const json& wmi = get(get(blk, "weight_index"), "per_layer");
+  for (const auto& [sect, j, np] : sections(doc)) {
+    const json& n = *np;
+    if (op_of(n) != "mla_attention" || sect != "block") continue;
+    const auto H = layers(get(n, "heads"), L), r = layers(get(n, "kv_rank"), L), dn = layers(get(n, "qk_nope"), L),
+               dv = layers(get(n, "v_head_dim"), L);
+    if (!H || !r || !dn || !dv) continue;
+    for (const char* key : {"k_b", "v_b"}) {
+      if (!get(n, key).is_string()) continue;
+      for (int i = 0; i < L; ++i) {
+        if (!is_int((*H)[i]) || !is_int((*r)[i]) || !is_int((*dn)[i]) || !is_int((*dv)[i])) break;
+        std::string w = n.at(key).get<std::string>();
+        const size_t at = w.find("{i}");
+        if (at != std::string::npos) {
+          const bool mapped = wmi.is_array() && i < static_cast<int>(wmi.size()) && is_int(wmi[i]) && !n.contains("tensor_index");
+          w.replace(at, 3, std::to_string(mapped ? wmi[i].get<int64_t>() : i));
+        }
+        const auto it = g.tensor_infos_map.find(w);
+        if (it == g.tensor_infos_map.end()) continue;  // rule 25 names a missing tensor
+        std::vector<uint64_t> got = it->second.shape;
+        while (got.size() < 3) got.push_back(1);
+        const uint64_t a = (*H)[i].get<uint64_t>(), b = (*r)[i].get<uint64_t>(), c = (*dn)[i].get<uint64_t>(),
+                       e = (*dv)[i].get<uint64_t>();
+        const std::vector<uint64_t> want = std::string(key) == "k_b" ? std::vector<uint64_t>{c, b, a}
+                                                                      : std::vector<uint64_t>{b, e, a};
+        if (got != want) {
+          errs.push_back(E("5.20 (rule 42)", "block[" + std::to_string(j) + "] mla_attention " + key + " " + q(w) +
+                                                 " (application " + std::to_string(i) + ") has ne " +
+                                                 ne_str(it->second.shape) + ", not " + ne_str(want) +
+                                                 (std::string(key) == "k_b" ? " {qk_nope, kv_rank, heads}"
+                                                                            : " {kv_rank, v_head_dim, heads}")));
+          break;
+        }
+      }
+    }
+  }
+}
+
 // ---------------------------------------------------------------- rule 38 (revision 1.3): the architecture
 
 // A document in Appendix D.7's normal form (keramos IR_SPEC v1.4.2), the comparison rule 38 makes: "_" members
@@ -1096,6 +1187,7 @@ json rule38_form(const json& doc, const GGUFData& g) {
       if (n.contains("freq_scale") && num_is(n.at("freq_scale"), 1.0)) n.erase("freq_scale");
     }
     if (op == "depth_attend" && n.contains("eps") && num_is(n.at("eps"), 1e-5)) n.erase("eps");
+    if (op == "split" && n.contains("groups") && num_is(n.at("groups"), 1.0)) n.erase("groups");  // revision 1.5
     if (op == "embedding" && n.contains("state_weight") && n.at("state_weight").is_null()) n.erase("state_weight");
     if (op == "conv1d_causal" && n.contains("bias") && n.at("bias").is_null()) n.erase("bias");
     if (op == "selective_scan") {
@@ -1295,8 +1387,10 @@ std::string schema_rule(const json& doc, const std::string& path, const std::str
     if (unknown_key || key == "op") return "3.5 (rule 4)";
     if (required && rest.empty()) return "3.5 (rule 8)";
     if (key == "tensor_index" || kClosed.count(op + "." + key)) return "3.5 (rule 5)";
-    if (key == "causal" && (op == "attention" || op == "linear_attention"))
-      return op == "attention" ? "5.15 (rule 14)" : "6.4 (rule 14)";
+    if (key == "causal" && (op == "attention" || op == "linear_attention" || op == "mla_attention"))
+      return op == "attention" ? "5.15 (rule 14)" : op == "mla_attention" ? "5.20 (rule 14)" : "6.4 (rule 14)";
+    if (op == "split" && key == "groups")  // revision 1.5: a positive integer (rule 10), structural (rule 6)
+      return nodes.is_array() && j < nodes.size() && is_pl(get(nodes[j], "groups")) ? "3.8 (rule 6)" : "5.5 (rule 10)";
     if (op == "recurrence" && kRecDecl.count(key)) return "6.10 (rule 31)";
     return "3.5 (rule 1)";
   }
@@ -1358,6 +1452,7 @@ std::vector<std::string> ir_document_errors(const json& doc) {
 std::vector<std::string> ir_container_errors(const json& doc, const GGUFData& gguf) {
   Errs errs;
   container_errors(doc, gguf, errs);
+  mla_container_errors(doc, gguf, errs);
   architecture_errors(gguf, errs);
   std::vector<std::string> out;
   std::set<std::string> seen;

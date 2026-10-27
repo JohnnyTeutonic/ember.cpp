@@ -131,5 +131,86 @@ void depth_attend(const std::vector<const float*>& sources, const float* w, floa
   }
 }
 
+void mla_attention(const float* qn, const float* qr, const float* kv, float* out, int T,
+                   const std::vector<std::vector<int>>& rows, int H, int r, int dn, int dr, int dv, const float* Kb,
+                   const float* Vb, float scale) {
+  const size_t w = static_cast<size_t>(r) + dr;
+#pragma omp parallel for schedule(dynamic)
+  for (int t = 0; t < T; ++t) {
+    const std::vector<int>& vis = rows[t];
+    std::vector<float> qa(static_cast<size_t>(r)), u(static_cast<size_t>(r)), s(vis.size());
+    for (int h = 0; h < H; ++h) {
+      const float* qnh = qn + (static_cast<size_t>(t) * H + h) * dn;
+      const float* qrh = qr + (static_cast<size_t>(t) * H + h) * dr;
+      const float* K = Kb + static_cast<size_t>(h) * r * dn;
+      const float* V = Vb + static_cast<size_t>(h) * dv * r;
+      for (int i = 0; i < r; ++i) {  // qa = K[h] qn_h
+        float acc = 0.0f;
+        for (int k = 0; k < dn; ++k) {
+          const float p = K[static_cast<size_t>(i) * dn + k] * qnh[k];
+          acc += p;
+        }
+        qa[i] = acc;
+      }
+      float mx = -std::numeric_limits<float>::infinity();
+      for (size_t j = 0; j < vis.size(); ++j) {
+        const float* c = kv + static_cast<size_t>(vis[j]) * w;
+        float a = 0.0f, b = 0.0f;
+        for (int i = 0; i < r; ++i) {
+          const float p = qa[i] * c[i];
+          a += p;
+        }
+        for (int e = 0; e < dr; ++e) {
+          const float p = qrh[e] * c[r + e];
+          b += p;
+        }
+        const float sum = a + b;
+        s[j] = sum * scale;
+        mx = std::max(mx, s[j]);
+      }
+      float z = 0.0f;
+      for (size_t j = 0; j < vis.size(); ++j) {
+        s[j] = std::exp(s[j] - mx);
+        z += s[j];
+      }
+      std::fill(u.begin(), u.end(), 0.0f);
+      for (size_t j = 0; j < vis.size(); ++j) {
+        const float a = s[j] / z;
+        const float* c = kv + static_cast<size_t>(vis[j]) * w;
+        for (int i = 0; i < r; ++i) {
+          const float p = a * c[i];
+          u[i] += p;
+        }
+      }
+      float* o = out + (static_cast<size_t>(t) * H + h) * dv;
+      for (int k = 0; k < dv; ++k) {  // out = V[h] u
+        float acc = 0.0f;
+        for (int i = 0; i < r; ++i) {
+          const float p = V[static_cast<size_t>(k) * r + i] * u[i];
+          acc += p;
+        }
+        o[k] = acc;
+      }
+    }
+  }
+}
+
+void split_groups(const float* x, int T, const std::vector<int>& sizes, int g, const std::vector<float*>& outs) {
+  int group = 0;
+  for (int s : sizes) group += s;
+  const size_t width = static_cast<size_t>(group) * g;
+  for (int t = 0; t < T; ++t) {
+    const float* row = x + static_cast<size_t>(t) * width;
+    for (int q = 0; q < g; ++q) {
+      int col = 0;
+      for (size_t k = 0; k < sizes.size(); ++k) {
+        float* dst = outs[k] + (static_cast<size_t>(t) * g + q) * sizes[k];
+        std::memcpy(dst, row + static_cast<size_t>(q) * group + col, static_cast<size_t>(sizes[k]) * sizeof(float));
+        col += sizes[k];
+      }
+    }
+  }
+}
+
 }  // namespace cpu
 }  // namespace ember_ir

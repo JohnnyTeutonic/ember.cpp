@@ -46,6 +46,21 @@ void mor_route(const float* l, int R, int& depth, float& gate);
 // MoR gate "score" after a recursion step: x = x_in + g (x - x_in) per element, the difference
 // rounded, then the product, then the sum. EXACT.
 void mor_gate(const float* x_in, float* x, size_t n, float g);
+// Multi-head latent attention (IR_SPEC 5.20, revision 1.5; DeepSeek-V2's MLA in the absorbed form
+// llama.cpp converts to). qn [T, H * dn] and qr [T, H * dr] (head h at columns h * dn and h * dr);
+// kv the slot's rows [c | kr], r + dr floats each (row index as in `rows`); rows[t] the kv rows query t
+// sees, in ascending position (section 5.15's masking); Kb [H, r, dn] (ne {dn, r, H}) and Vb [H, dv, r]
+// (ne {r, dv, H}); out [T, H * dv]. Per head, in the reference's order: qa_i = sum_k Kb[h][i][k] qn_k
+// (ascending k); s_j = ((qa . c_j) + (qr_h . kr_j)) * scale, each dot product accumulated in ascending
+// order and rounded, then the sum, then the product; a_j = e_j / z with e_j = exp(s_j - max) and z summed
+// in ascending j; u_i = sum_j a_j c_j[i] (ascending j); out_o = sum_i Vb[h][o][i] u_i. ROUNDING.
+void mla_attention(const float* qn, const float* qr, const float* kv, float* out, int T,
+                   const std::vector<std::vector<int>>& rows, int H, int r, int dn, int dr, int dv, const float* Kb,
+                   const float* Vb, float scale);
+// split with groups g (IR_SPEC 5.5, revision 1.5): x [T, g * sum(sizes)] is g consecutive groups of
+// sum(sizes) columns, and output k is the k-th part of every group, the groups in order ([T, g * sizes[k]]).
+// g = 1 is the plain split. Copies. EXACT.
+void split_groups(const float* x, int T, const std::vector<int>& sizes, int g, const std::vector<float*>& outs);
 
 }  // namespace cpu
 }  // namespace ember_ir

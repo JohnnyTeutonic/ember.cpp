@@ -10,7 +10,8 @@
 // "exact": true).
 //
 // Methods: hello, check, open, forward, truncate, snapshot, restore, close, digest, dequantize, render_chat,
-// parse_reply, and run_node for recurrence, expr and attention nodes (other ops and run_node_grad reply skip). A session owns one GGUF, one
+// parse_reply, and run_node for recurrence, expr, attention, mla_attention and split nodes (other ops and
+// run_node_grad reply skip). A session owns one GGUF, one
 // interpreter and the ids it has seen.
 //   check / open: "ir" names a document that replaces the file's (ember's EMBER_IR); null reads the
 //     GGUF's paperkiln.ir (or the IR ember builds from third-party metadata). EMBER_IR from the
@@ -70,6 +71,7 @@
 #include "gguf_parser.h"
 #include "graph_ir.h"
 #include "graph_ir_expr.h"
+#include "graph_ir_ops.h"
 #include "graph_ir_recurrence.h"
 #include "graph_ir_validate.h"
 #include "ir_digest.h"
@@ -435,6 +437,97 @@ class Adapter {
     return r;
   }
 
+  // An mla_attention node alone (IR_SPEC 5.20; section 11.2's defaults): its own kv slot (kv_heads 1, head_dim
+  // kv_rank + qk_rope, the node's window and sinks), empty at the start, rows [c | kr] at positions 0 .. T-1,
+  // through the interpreter's kernel (graph_ir_ops.h). The kv slot is not reported (state {}).
+  static json run_mla(const json& node, const json& inputs, const json& weights) {
+    auto attr = [&](const char* k, const json& dflt) {  // application 0's value
+      const json& v = node.contains(k) ? node.at(k) : dflt;
+      return v.is_object() && v.contains("per_layer") ? v.at("per_layer").at(0) : v;
+    };
+    for (const char* k : {"heads", "kv_rank", "qk_nope", "qk_rope", "v_head_dim", "k_b", "v_b", "scale", "causal"})
+      if (!node.contains(k)) throw std::runtime_error(std::string("IR_SPEC 5.20 (rule 8): mla_attention needs ") + k);
+    if (attr("causal", nullptr) != json(true)) throw std::runtime_error("IR_SPEC 5.20 (rule 14): mla_attention causal must be true");
+    const int H = attr("heads", nullptr).get<int>(), r = attr("kv_rank", nullptr).get<int>();
+    const int dn = attr("qk_nope", nullptr).get<int>(), dr = attr("qk_rope", nullptr).get<int>();
+    const int dv = attr("v_head_dim", nullptr).get<int>();
+    const int window = attr("window", json(0)).get<int>(), sinks = attr("sinks", json(0)).get<int>();
+    const std::vector<std::string> ins = node.at("in").get<std::vector<std::string>>();
+    if (ins.size() != 4) throw std::runtime_error("IR_SPEC 10.1 rule 7: mla_attention reads [qn, qr, c, kr]");
+    std::vector<int64_t> s[4];
+    std::vector<float> v[4];
+    for (int k = 0; k < 4; ++k) {
+      if (!inputs.contains(ins[k])) throw std::runtime_error("run_node: no input '" + ins[k] + "'");
+      v[k] = floats(inputs.at(ins[k]), &s[k]);
+      if (s[k].size() != 2 || s[k][0] != s[0][0]) throw std::runtime_error("run_node: mla_attention inputs are [T, w]");
+    }
+    const int64_t want[4] = {static_cast<int64_t>(H) * dn, static_cast<int64_t>(H) * dr, r, dr};
+    for (int k = 0; k < 4; ++k)
+      if (s[k][1] != want[k])
+        throw std::runtime_error("IR_SPEC 5.20 (rule 37): mla_attention input '" + ins[k] + "' is " + std::to_string(s[k][1]) +
+                                 " wide, not " + std::to_string(want[k]));
+    auto tensor_of = [&](const char* key, const std::vector<int64_t>& shape) {
+      std::string wn = node.at(key).get<std::string>();
+      const auto at = wn.find("{i}");
+      if (at != std::string::npos) wn.replace(at, 3, "0");
+      if (!weights.contains(wn)) throw std::runtime_error("run_node: no weight '" + wn + "'");
+      std::vector<int64_t> sw;
+      std::vector<float> w = floats(weights.at(wn), &sw);
+      if (sw != shape) throw std::runtime_error(std::string("IR_SPEC 5.20 (rule 42): mla_attention ") + key + " has the wrong shape");
+      return w;
+    };
+    const std::vector<float> Kb = tensor_of("k_b", {H, r, dn}), Vb = tensor_of("v_b", {H, dv, r});
+    const int T = static_cast<int>(s[0][0]);
+    std::vector<float> kv(static_cast<size_t>(T) * (r + dr));
+    for (int t = 0; t < T; ++t) {
+      std::memcpy(kv.data() + static_cast<size_t>(t) * (r + dr), v[2].data() + static_cast<size_t>(t) * r, r * sizeof(float));
+      std::memcpy(kv.data() + static_cast<size_t>(t) * (r + dr) + r, v[3].data() + static_cast<size_t>(t) * dr,
+                  dr * sizeof(float));
+    }
+    std::vector<float> out(static_cast<size_t>(T) * H * dv);
+    ember_ir::cpu::mla_attention(v[0].data(), v[1].data(), kv.data(), out.data(), T,
+                                 attention_visible_rows(T, 0, window, sinks), H, r, dn, dr, dv, Kb.data(), Vb.data(),
+                                 attr("scale", nullptr).get<float>());
+    json res;
+    res["outputs"] = json::object();
+    res["outputs"][node.at("out").get<std::string>()] = tensor({T, static_cast<int64_t>(H) * dv}, out.data(), out.size());
+    res["state"] = json::object();
+    return res;
+  }
+
+  // A split node alone (IR_SPEC 5.5, groups of revision 1.5): the interpreter's copies (graph_ir_ops.h).
+  static json run_split(const json& node, const json& inputs) {
+    const std::vector<std::string> ins = node.at("in").get<std::vector<std::string>>();
+    if (ins.size() != 1) throw std::runtime_error("IR_SPEC 10.1 rule 7: split reads one value");
+    const std::vector<int> sizes = node.at("sizes").get<std::vector<int>>();
+    const std::vector<std::string> outs = node.at("out").get<std::vector<std::string>>();
+    if (sizes.size() != outs.size()) throw std::runtime_error("IR_SPEC 5.5 (rule 10): sizes and outputs differ in count");
+    const json& gj = node.contains("groups") ? node.at("groups") : json(1);
+    if (!gj.is_number_integer() || gj.get<int64_t>() < 1)
+      throw std::runtime_error("IR_SPEC 5.5 (rule 10): split groups is not a positive integer");
+    const int g = gj.get<int>();
+    if (!inputs.contains(ins[0])) throw std::runtime_error("run_node: no input '" + ins[0] + "'");
+    std::vector<int64_t> sx;
+    const std::vector<float> x = floats(inputs.at(ins[0]), &sx);
+    if (sx.size() != 2) throw std::runtime_error("run_node: split input is not [T, w]");
+    int64_t total = 0;
+    for (int s : sizes) total += s;
+    if (total * g != sx[1])
+      throw std::runtime_error("IR_SPEC 5.5 (rule 37): split sizes times groups do not sum to the input width");
+    const int T = static_cast<int>(sx[0]);
+    std::vector<std::vector<float>> parts;
+    std::vector<float*> ptrs;
+    for (int s : sizes) parts.emplace_back(static_cast<size_t>(T) * g * s);
+    for (auto& p : parts) ptrs.push_back(p.data());
+    ember_ir::cpu::split_groups(x.data(), T, sizes, g, ptrs);
+    json res;
+    res["outputs"] = json::object();
+    for (size_t k = 0; k < outs.size(); ++k)
+      res["outputs"][outs[k]] = tensor({T, static_cast<int64_t>(g) * sizes[k]}, parts[k].data(), parts[k].size());
+    res["state"] = json::object();
+    return res;
+  }
+
   static json run_expr(const json& node, const json& inputs) {
     if (!node.contains("expr") || !node.at("expr").is_string()) throw std::runtime_error("IR_SPEC 5.19: expr needs its expr");
     const std::vector<std::string> ins = node.at("in").get<std::vector<std::string>>();
@@ -488,9 +581,11 @@ class Adapter {
     const json& node = p.at("node");
     if (node.value("op", "") == "expr") return run_expr(node, p.at("inputs"));
     if (node.value("op", "") == "attention") return run_attention(node, p.at("inputs"), p.value("weights", json::object()));
+    if (node.value("op", "") == "mla_attention") return run_mla(node, p.at("inputs"), p.value("weights", json::object()));
+    if (node.value("op", "") == "split") return run_split(node, p.at("inputs"));
     if (node.value("op", "") != "recurrence")
-      throw Skip{"run_node: ember's adapter runs recurrence, expr and attention nodes only (whole-model methods for the other "
-                 "ops)"};
+      throw Skip{"run_node: ember's adapter runs recurrence, expr, attention, mla_attention and split nodes only "
+                 "(whole-model methods for the other ops)"};
     const ember_ir::rec::Recurrence prog = ember_ir::rec::Recurrence::compile(node);
     std::vector<std::string> ins;
     if (node.at("in").is_string())
