@@ -1,0 +1,36 @@
+{
+ "REC_SUM_NEST": 100,
+ "cases": {
+  "deepest_sum_nesting": 50,
+  "as_exported": {
+   "ok": true
+  },
+  "deepest_sum_nesting_that_parses": {
+   "ok": true
+  },
+  "outside_the_block": {
+   "ok": false,
+   "reason": "recurrence outside the block"
+  },
+  "beside_depth_route": {
+   "ok": false,
+   "reason": "recurrence beside depth_route"
+  },
+  "body_does_not_parse": {
+   "ok": false,
+   "reason": "IR_SPEC 6.10 (rule 31): readout does not parse: expected an operand at column 20"
+  },
+  "row_reduction_in_a_body": {
+   "ok": false,
+   "reason": "IR_SPEC 6.10 (rule 31): readout uses rowsum at column 10 (the row reductions are not part of a recurrence body; sum replaces them)"
+  },
+  "index_out_of_scope": {
+   "ok": false,
+   "reason": "IR_SPEC 6.10 (rule 32): let[0]: index 'f' at column 15 is not declared"
+  },
+  "one_sum_deeper": {
+   "ok": false,
+   "reason": "IR_SPEC 6.10 (rule 31): update[0] does not parse: nesting deeper than the limit at column 470"
+  }
+ }
+}

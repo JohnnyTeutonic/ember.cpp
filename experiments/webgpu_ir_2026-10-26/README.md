@@ -9,7 +9,8 @@ before; otherwise it runs the document on `ir_webgpu.js` when every op has a ker
 
 ## What `ir_webgpu.js` runs
 
-Every op of the core, state, recursion and thirdparty profiles except `recurrence`: embedding (with
+Every op of the core, state, recursion and thirdparty profiles (`recurrence` too, compiled from its bodies:
+[`../webgpu_recurrence_2026-10-27/`](../webgpu_recurrence_2026-10-27/)): embedding (with
 `state_weight`), pos_embedding, linear (bias, `tied_to`), scale, split, rmsnorm (`group`,
 `weight_offset`), layernorm, gelu (tanh and erf), silu, sigmoid, relu, add, mul, sub, affine (per-layer
 scale and shift), mul_col, rms_row, rope (interleaved, NEOX, partial `n_rot`, per-layer theta and
@@ -26,7 +27,7 @@ the position's turn_state code. Prefill runs one token per step, which the IR de
 (IR_SPEC 3.9, 6.3). Recurrent state, kv rows and MoR's per-application row counts stay on the GPU;
 MoR's routing, the inactive-token pass-through and the step gate run on the GPU too (no readback).
 `turn_state` keeps every kv row (eviction is a memory policy; the IR defines both to give the same
-values). Refused (the page stays in WebAssembly): `recurrence`, `rope_heads` "first", lists that fork,
+values). Refused (the page stays in WebAssembly): `rope_heads` "first", lists that fork,
 depth_attend with more than two extra sources, an `expr` with more inputs than the device binds, other
 stored matrix types (the k-quants, Q4_0/Q5_x), kv contexts past the workgroup score array (4,096
 positions at 32 KB of workgroup memory).
@@ -141,8 +142,7 @@ WebGPU replies equal WebAssembly's 40/40 and gate 1 passes.
   worker's steps in node instead; the worker's routing (`ember_ir_doc`) is the same code.
 - The 70M fw_moe on the llama path: not rerun (SwiftShader runs it at seconds per token);
   `llama_webgpu.js` is unchanged, and chat_sftfinal_v3's page path is the regression.
-- `recurrence` documents stay in WebAssembly (no WGSL kernel; their bodies would need a compiler like
-  `expr`'s).
+- `recurrence`: its WGSL compiler and gates are in [`../webgpu_recurrence_2026-10-27/`](../webgpu_recurrence_2026-10-27/).
 
 ## Files
 

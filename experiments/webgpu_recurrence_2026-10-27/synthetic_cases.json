@@ -1,0 +1,547 @@
+{
+ "op": "recurrence",
+ "_comment": "Synthetic recurrence op cases beside keramos's ops/recurrence.json, in its format (IR_SPEC 11.2: 8 hex digits",
+ "cases": [
+  {
+   "name": "grammar_all",
+   "node": {
+    "op": "recurrence",
+    "in": [
+     "x",
+     "z"
+    ],
+    "state": "g",
+    "index": {
+     "c": 3,
+     "j": 4,
+     "k": 2,
+     "o": 1
+    },
+    "inputs": [
+     "x[c]",
+     "z[j]"
+    ],
+    "weights": {
+     "W[c,j]": "blk.{i}.w",
+     "V[k,c,j]": "blk.{i}.v",
+     "b[o]": "blk.{i}.b"
+    },
+    "init": [
+     "h[c] = b[0] * c + 0.5"
+    ],
+    "let": [
+     "a[c,j] = W[c,j] * z[j] - x[c] / (abs(z[j]) + 1)",
+     "m[c] = sum(j, sum(k, V[k,c,j] * a[c,j]))"
+    ],
+    "update": [
+     "h[c] = tanh(h[c - 1] + m[c]) * sigmoid(x[c]) + relu(-x[c]) ^ 2",
+     "n[c] = n[c] + 1",
+     "q[j,c] = where(x[c] - z[j], erf(z[j]), q[j,c] * 0.5) + max(z[j], x[c]) - min(z[j], x[c])"
+    ],
+    "readout": "y[c] = h[c] / sqrt(n[c]) + sum(j, q[j,c]) + pi * x[2] + z[3] + x[5] + min(exp(100), 1) * 1.0001 ^ n[c] + log(n[c]) + exp(-abs(x[c]))",
+    "out": "y"
+   },
+   "slot": {
+    "name": "g",
+    "kind": "recurrent",
+    "op": "recurrence",
+    "dtype": "f32",
+    "tensors": [
+     {
+      "name": "h",
+      "shape": [
+       3
+      ],
+      "init": "body"
+     },
+     {
+      "name": "n",
+      "shape": [
+       3
+      ],
+      "init": 0
+     },
+     {
+      "name": "q",
+      "shape": [
+       4,
+       3
+      ],
+      "init": 0
+     }
+    ]
+   },
+   "inputs": {
+    "x": {
+     "shape": [
+      6,
+      3
+     ],
+     "f32": "bf9921dcbf2758453ea518cabf65a0ab3de24a82beaa1675bf4a304bc00677df3eaf9a493f6aa6c5bfa0c6a0c0076ffbbee7e1103f1789503f97dc6bbefae9123d81d80c3f2309ff"
+    },
+    "z": {
+     "shape": [
+      6,
+      4
+     ],
+     "f32": "3fa41960bf5b535e3ec22931bfc39c52be8a5f0ebf5d1457bffcb48ebf598a3abf0aa251be136366be95de8c3dcd0c093f56e0cbbee00306c01b8a933d02b9f23f756949bf9f8b45bf97161c3f703ef2bf85c9fb3e8a41a53e4b886cbd83c76f"
+    }
+   },
+   "weights": {
+    "blk.0.w": {
+     "shape": [
+      3,
+      4
+     ],
+     "f32": "be985e9dbeb94fe0bf71726e3e0379c3bfc3d5e53cdead87bf890061bf2319db3f461dcfbdffc75240009650bebbf2eb"
+    },
+    "blk.0.v": {
+     "shape": [
+      2,
+      3,
+      4
+     ],
+     "f32": "bf9b0e5abe3ab8eb3f489b69c01ce8f23dc87f5dbfbb0821bd139fc2bff29f663eee25364063b67abf72e5553f3472b8be1d38e33e723504bf021d1c3e8be0f73f8d15e13f3e733b3e9ff95a3fb786d33fb589bc3f581fe73fdcf04b3d1205d7"
+    },
+    "blk.0.b": {
+     "shape": [
+      1
+     ],
+     "f32": "3ea59996"
+    }
+   },
+   "expect": {
+    "y": {
+     "shape": [
+      6,
+      3
+     ],
+     "f32": "40bb29e0405992cc4082d0b1401ee665402772c03f8522e640e4576c4164f8cc409f30173fc37a5e40840a794099231e41354bcb414db844414543c340f463e140ed021f40f87843"
+    }
+   },
+   "class": "ROUNDING",
+   "tol": 1e-05,
+   "expect_state": {
+    "g": {
+     "h": {
+      "shape": [
+       3
+      ],
+      "f32": "bde7dede3efd6d3abf276d64"
+     },
+     "n": {
+      "shape": [
+       3
+      ],
+      "f32": "40c0000040c0000040c00000"
+     },
+     "q": {
+      "shape": [
+       4,
+       3
+      ],
+      "f32": "be9c66c43e7df0a03f524b253f3222803f2a2fe23f2a0efc3f199f723f11acd43f28d2fd3facfffc3d62432e3f20f330"
+     }
+    }
+   }
+  },
+  {
+   "name": "wide_2d",
+   "node": {
+    "op": "recurrence",
+    "in": [
+     "x",
+     "bb"
+    ],
+    "state": "w",
+    "index": {
+     "c": 100,
+     "n": 7
+    },
+    "inputs": [
+     "x[c]",
+     "b[n]"
+    ],
+    "update": [
+     "s[c,n] = 0.875 * s[c,n] + x[c] * b[n]"
+    ],
+    "readout": "y[c] = sum(n, s[c,n] * b[n])",
+    "out": "y"
+   },
+   "slot": {
+    "name": "w",
+    "kind": "recurrent",
+    "op": "recurrence",
+    "dtype": "f32",
+    "tensors": [
+     {
+      "name": "s",
+      "shape": [
+       100,
+       7
+      ],
+      "init": 0
+     }
+    ]
+   },
+   "inputs": {
+    "x": {
+     "shape": [
+      6,
+      100
+     ],
+     "f32": "bcc9790dbfbad3f2bf81109bbf0b40c0bf8f2caabfa09d583fc2c9203f405192be2d0ed7bf27306dbf2782afbc87d742bf5a08f0be0b6da13ff5032ebf07cfcb3f101bcf3ff6a5ffc0171ab8bec60e5a3fdabdc7bd4d355a3f6089dcbf206e603f6a6da53fef6f193f201f11beb87c9d3d8bd4d2bf66c9b93f0ce3e8be6e514b3f5e5e1dbede1af83fa428aabf28a8bbbeb4eebf3e045485bf5695c43fa3fc7fbc466557bfc5384f3e5551683f8e51963f49a577bfbc368fbfb758a13e906d9c3ec489873ed48bb83fd008ff3e81c58dbebe9b4cbf47641b3ebf21b23f705a3fbf31e45ebf5f8a1b3f8b0f0fbf2393f5be2cf7683f11a3663f4b16433f407a123de871ecbfb0f306bf1d4751c0121b45bd23f60d3eecf6d53f78e67ac00f48eebf30d463bf7356853f463611bd9a0ce7bf3d9d1c4009d750be3acb9d3f178dec3e9499373ee688ab3e697f013e496557bf81660dbf864342bf2deffcbf7636e83f03e1453f817fe83e0fea93bd28456e3f663579bde7647bbe8410b8bdcfffd23e33e318bf2ebe9f3f7d5ee8bf04bae13bfdb95ebd0373bb3fd9b4a23ea2b34cbf04a8583cc1841ebeacef80c0184e2f3f2251953f6cac5dbf9ebc5bbf5ef7a13f0313d73ef9750a3fdad9313fd76f4b3dc0ba07bf8450e0bfc8576abfc34e52bfc712cabd2e3e94bef0e3643df12727be5b991dbfadf076bf6bcae9bebdffa83f2f747540150790bef3818abfd028ec3d70bbd23f11137f3f47b21d3ed4b3a03ea09de8bf3af3d1bd01d2583f835cf23dfb92ca3e0be9e03f0eb0bbbfec573a3e9a925bbf929956bf182775c00d95153ecbb5ca3f227a05bebb381cbe95edf63fb96e3fbf9b69e3bf4bb9a0bf1fc34abf84fa5f401571fa3e341bc9c004e9c9be9dd8eabee5a2a83f843c133e88ed193e0ef5273f2ad731bf3fe9223eb05c483ebb342d3cebc596c028a3e83f574e8e3eb0ed22bf42fee93e933135bfc6aa7c3fc8d59a3e19cd353e9835a4bf3486d13d81d0c1bf2a721bbf98b02bbf342184bf3d5286be65bddabf8f7a503f4445293f30d136bf05ba88bf5a2db2c05275f8be852123bf5e4cfcbf1f0558be80f643bed2608c3e4ee235bfcd816e3d4e27febc7f688abf1698933ea3ae95bfde4f4abe8e503b3fcfc0393f3efa57be0950fcbea1306bbf875d663f0a9cb4bf65aa92be692591be74c4ebbe4cff2dbfd21a36bf39087f3e8f1044bf0454dabfd8dd233ef8423abf5fda513ecc0eabbe9d4952bd43c96abf97dc3f3f21897dbf4105b23c0cd355bfe555883f234c583ffb8d94bf9d47e43b475c6e3f3c6acbbf0042f83f4549f83fcf7648bed3fde4bf5242e03fb52f2ebf8f7db1be8a8b57bd5c3bd43e56bbc73ed21d56bf3f2dbe3f486d5c3e6c3a713e4f1db3bf5d20ea4002b27b402094703f2acf32bdf58e053ee64e283f6030793f8ff762be81e8f23fa72fd3c02ddba5bee64e37be3991edbf4348dc3eccd88fbfd279b0beac1ec93f3ced6d3ffc38d9bdb827eec00e9886bf5d299bbd9e02d83fd2ea013f59313abfb72bc7be04ddadbd7a54dc3f921b713f251c58bd24fc6d3fbd9e5bbf9386b63e9c77573efa94083ff5b52c3d1ed8dcbeb580704009d4a43f9653973f69fb033e95fa57bf377ec13e142fecbf87745ac02c1bc6bf3c298d4007307f3f7276353ed2d48f3ec56933bef55e1fbf984142bf5f27fbbe723d0a3e5f2a653f9f5834bf5ad4693fc6e1cf3e90f12dbf39e5113f071c54bdbdba80bef7c29e3fd0e7c43e9509de3ef8cee63f1ddb7bbfeeeb3cbd62be91be9bbfee3f8341263f84c08f3fc1242b3f4896aa3fddd13dbf104f7fc04966e43d9637ba3facb0f7bfda513cbf2a63553ef0ec14c00414a43f4152d73f4527633ee7eb3abdb911ce3e094c1ebf83596cbf4241483eba0e0a3f2dc81f3f7d79ba3f9bd465bfa864ffc013643e3e7e30cd3f35313d3e61e6203fedd851bf33d386bc4902513f6f9f58bed34031be2db563bf90d282bf7f2fbd3f369704bf0c64483ed546fabf30e47ebefc09fd3fae592ebe58aa5c401715793dc97451bebf1388bf5b3c4140457666bf08492fbefec35abf124ffdbf1d79dd3e4fa71abe46765c3fb105fc3f04616ebee44149400bd3f93f0b0bc0bea3677f3e47ce33be9a68ae3f2e7e21bfcee9ecbf8f6492bf96b70cbf4492c7bf1318d3bf8fba27bd012aa1be1346093e336e563fb56db33edd53e3bf99667d3ea3c92a3eabda55bf12a086bf7dc3733e494efa3f92d00abc53c1f43f6a9c8a3f1ac9fbbf66fa4abd11f96f3f99f6a23e9e1f4cbf0b0b7d3f857cd93fd7c054bf9d78b83f1acd213e96a7a33db39f29bf6510c03e8e645a3e8708b2bd24f24abebcf68c3fdca1e34000d3f33f21afd13d8fd6953f150febbeb64080bed20daabe685611bf9e76503e80b729bdb5be3a3cf42f58beaf9675be878bb63f5ab3263f1d4bae3e8f9906bfc71186bef0b4febc4a4b933f30973abe00c30b3ede6ea83e6279dfbe2de82b3fbd1e4ebf91c8c5c00e84e63ecf5d5f3fd8bf603f75a1b1be8433e93fa9fd7ebe86ab3cbf1bd0cc3e037562c00d6193bf8da4423f98832c3fe6384a3cba542c3e1a29983fe26c633ff4057a3de8baa23ea99b123f4fac3dbd0fb8aebda13691bec85f913fce1ba1bf3ab5c7bf35b8fb3d9e3fb4bf1deddfbfb0d2f23f41b0acc041d13d3e1e9298bee4bcdfbf2aafc0bfae80bb3ec49120bf0376523f5f7464bf63e83e3f8bf771bf5a3437bd6ae43f3e144479bfccf348bf8ca6b3be9e90823e5f43bdbf5b4f313fc706edbe5805a9be300f17be6dfd13401ecae53f18f061bfc908d4bfd62bc74033920d3f9d40773f1c9ede3f938782bf32401f3ee1369fbf7ecf3c3efe196d3f077eb4bf76f95bbfab01bfbe7b3839be34ebcbbfa8f337bf93a56abf10f388be264db63fa5e546bd010a0bbf8c3e8bbef96ccb3f8593963fd4811ebea10fb6bfbd92ff3d8d74e4bda458493d75de6b4003ee22be602c44bedc0e58c007df56bed28bcec0001a8d402375473f93c3d2bf06f06abef179053ee47650bd8d98563f7d003d3fae1ccc3f09b088bff6a5823fb01e22bf522ab8be8dfaa1400205d140167448bf74c794bf627a42bf15fa013faff5373faacc213f83a0b9bee50e153fac6d703f095ff73e6f691e3e39cf50be3fa4ba3f897a453e80bb31bf097c973f8e495e3fd65eb93f985c0dbf02d4f9bebbfb723f3e2c6f3f9dcbd83f8ae09f3d3fb128bf65f8b6bf11600d3ee2d4073f00fda83f1f4a48be6ee9323f155125bf7b887abfdd72d33fd0721bbfa498d53d553af6bf448bebbe945027bf07d5e2400ab1e83f1ee8553f99757b3fa2958abf77ce773ee1b761bfbf3c82"
+    },
+    "bb": {
+     "shape": [
+      6,
+      7
+     ],
+     "f32": "bf1ab579bed0c19a3dfc74fdbe72030b3f6064fbbf384f153d85d2c2bf5426da3e96e13a3fa4610f3f13ac33bfa257d1be6bc033bf190b82c01f3153bf6e9ba8be760dac3ee107723fad3787be732460bfea450b3f5ce1a73d299e0c3f6ee99d3dc902723ed11a9dbf9924473ec99daebb65f7edbd0270cd3ff61a52bf4c520e3ed1ced4bf8ff9b9bf8a35d5bff1f3f9bf9187893fc571ac3e1ef16abe584216bee62b8fbfdade04"
+    }
+   },
+   "weights": {},
+   "expect": {
+    "y": {
+     "shape": [
+      6,
+      100
+     ],
+     "f32": "bd3ebd0ec030dfb3bff46071bf83d568c0078bd5c0180ea4403868573fb61270bea3d669bf9e480cbf9e95ebbd009a74bfce6b0cbe83ffe54067f554bf8093633f886e3c406981d4c08f0dbabf3b80f6404f1640bdc246693fd49344bf97e22b3fddf0274062ad553f979716bf2ea84d3e046196bfda7de23f85623bbee19ec03fd28520bf52458f401b699ebf9fac4cbf2b4ae93e7a8f33bfcb26ee401b3fcebcbbd350c03ab6523ec9f3da4006bc6d3fbee71bc0322f6cc02d93df3f08bbad3f3a10db3f4938b24044f37f3ef5b70ebf347383bfbcc4813f34f2c13fe38bf4bfa86a01bfd3a1234003a65cbf9adcd4bea3c03a3f89e0f63fc0443f3fb638c73e5c0f7cc0278585bf94e61cc08a5272bd9b39b23f6056c03feba398c087a697bfa76883bfe65f823fbba68fbe11d7babfb382df40827f3abeb0d7d03f8f7aca3f0cae673f5a404c3edd0e3a3ebeaa66bff5023bbffe37f4bfa4ab90bfe918a83f79b4f93ff5332f3e883fa0bd9f4e4a3fd9f189be5b1064befa0ed1be44eace3eaa4d84bfa56f303fefdf0dbf7b51033d4ac3323f172f82410a27143fe5afeebff3bb163f4091d6c018d7a1c13bec68404743244097e6c6c0b2cdb2c084cd1c40383ca64019527440e6033b4104e6cd3e2658bec0bd5c48c0c8a29ec0e2d147c104beaebe35d7a6c02c5f7e3f61ae02bfbecad2c0ee1ff2c096ecf5bfcb4986404f342341393d0cc023475bc0f4ac5cbe25eaed403b5125404489cd40146e853fd6c500c0635e753e8d38b94087e8b33f17b95b3fb80157402386f5c1161e653f851fe7c097023dc006e6d5c12b4c783fda1e5a4034666ac024be33bfc37eb440e3689bc0accea9c07f598fc05d51f7c093658b413980f93e92845bc11970e4bfb1653dc01b9af64090e78a3f64cc063f1bd57140790235c05109264033b5e13fe210c1bdc997f5c151393a40a5021740001f03c049c1203f7a61fec0ebe8d640fbcd7bbec2c62e3fc1951cc06acac03e1e7502c05a22d5c0b9f933c05d6d22c041034ebf096407c0a02e784084d2644042415ac0409ec6c0848162c17ae149bfd990bac082d4d3c03566d1bf934f4fc00349703fa7ff2fc102b8483f01284ebe79c413c12c0126405bf0afc1b5a80fc0d254ac418c1cb64147e95ac018d4e4c06c26bac15d162f408108dac142dcbfc0890a28c03411f14066edbac1a0b6d4c0f5de7a40db7fa2c157a827c1bd88f84106820bc132079540d0d759c0a557903fa35ff3c13fd09a41068635c12a90b13f764c40c1b151f7410c6a8341b3b5bac155e00ebec0e5ac414f5dacc0ebcb424112db82419f10e3c0e495c2c0ca7a40418ed46ec18b93abc0166943bc48b8004097aa8b3f1e440bc153fd66410367d84085aa69408442b3c0efb3b441cf2ff24200649a40ab408bbfbafd3440e4ef4b410568064167d834bf04d930414cec52c20b1ba0c0998b5b3f17ebe8c0f2773640ad756ac1b8def8c0cc5808408c631641c7fde6bd245560c1e34697c1719d5dc00c85b6418dc280414b4cc2c19da1c5bfdc9a224089fe57416344d0410b9eab3e647127419779d4c1726bc3406442ad4044b98641ab9deac00d64c9c0bbb32641e72ced41841cbd412eb2483e6c7670c0e6627c3f2c21b2c167f554c208e3e8c113ca0e41c922ff414825104080fcbe3fa91d55bf9f4bd5c0a2f6233e4c7f4cbf615d70c048393140622eb4c016f66b40ba26a2402f7ba1c07c38f0405f75b4be9538a4bf9ae77340e105e44080de5d4057cde0402066e7c0d498e44036ae38bf9416f540a50f81404a75bf40ac0b36404e189b4111dcf2c03761c6c115dc373e9cf1ce40f79932c0d81b92c0cabcb3408f4773c0e5ce343feac5944050acd6be210e64c05dfcb43f5169b8bf8dcbecc0ab3a144027963a403e1a41407c4f5a408480b8c0c36821c0e3a7fdbf2d5bd3400aa32f3f1b0f06410d4708c0c8d0f0c0a31eda3faea84bbf808774bf7df96dc0bf550bc0bd5e1c406018f9c09c517c40d4bad6bf95ea64bf52eb3d40d0bd66bfb7913a41283bdc3f1f772dc07aa010c0d8c735412dad9d403d3e7ebf90c7bac0084ed2c0bbfeffbf0ddc51400223f04093efd64041db51c0756a4140cc88b94004bd1bc072b007403ee1ccbfc7236e3f41ea71c11d1156c08948f9c0703036c0d0a457c06f865ec0b22c5fbf6471943fb213f33e4a433340d66ce840d5f6dac02220a5c05b91bcbe9569d2c04159dac0becdcfc005c97740eb04c5c09cbea640606a2040c4af6cbf9be490c0b5a5ec4148520840057a96c0e8f13a40b73d95413286acc116dfd0414577b0401b14c63fab27eac0859bd6c1013f25c06e1f42bf9bf3abbfc1ec5e417260cf4186673940d6a72e401a28a3402e6e11c1443742bfbf3d753feee234c1409a763eb19048befa24c0c08a88f040411276bf27c73041068e8540aff5be3f531f2dc13c5cadc02f5e30c006a52d40e3637dbef5524a40f06903c086c4d6c123801d410c84d7c09a58c8c153280240dce978414f1d154147d9b8bf8dd59740e26f8cbfd8bddcc0fd8c274048c419c14b39e7c12e3db5408db2bb411e0a593f84f9944089c040414b146c418230c8bf9f5c203f822fca40e41ab940f4724bc10a35a4c0be44c2411931b0c0c2c704bff9ec5ac09695b33f4003ccc0c7236b40c77658c173d8f4402d1fafc00f8baac0f43cb8c12aa750403fb131c0bb41c23f766ecbc113f8574129b4fec0ad7605c03df8d2c07a919ec142b595c1074c71bfc5369fc005c094c12835134168b68bbf58fe62c0160d3ec0e3a37f41b1b1a6418af4a3c1cc872ac18a31bd4220016341500b42bdcc4f204185ec49c11fc4063fb6f859c1556879414279cc3c8326e0c024887ec18e920fc0b41ea6c0b2f5b0c1aa306cc1c7783dc0bf1db7c10cc17041b596dd40c7eaf7c10e131fc1611f0e4174da3641333536c04a4452c1aba242bfbe739e40dcf002c0bcc05c41bc4c7f40585718c10399e7c15962db40b7e04bc1b6ed50419b01734193f20ec1508871bfec42fbbf1caba44063889f4119320c40e20fc4412c4ce8c1b5f30c40f0a8bdc13c324a417e8040422d46b341b61ae6c0cc2ec2c10afca6c0e125a141d9dcda4072104840dfc408c17c01fc419940264106bf1ebe5eb110414ae1e8c03710d040e57a0440e84a04412695f44126470bbfcd40f140c754b63fffe8a0bf18276c412c483f3f6196d6412fc154c077b8463fa1ebbac190adcc40ab3da0412480d2c0c4919bc1082eae40ec3df6c0323d61c189e2334149f3e640c8a8d440403b9ec09eaf90c11cca7ac185163e417ef21cc053973fc025732f40964fe54109f9ee40ab8c0ec16318b6"
+    }
+   },
+   "class": "EXACT",
+   "tol": 1e-05,
+   "expect_state": {
+    "w": {
+     "s": {
+      "shape": [
+       100,
+       7
+      ],
+      "f32": "3f3a164d3ea3fe55bfdf37073f2fa8c5be5dedd83f3cc7b33fbb9e1ac063c4e1c00b2c4d4072cd6d3e519963bfe26eeebe6e9960c078e719c03dc202bee3414c404aa59ebbcabeb0bfc1e648be5d116ac05f142a40a9a4b64040bca1c0254db2bf236438c0000e0b3ff9cb5a408dea564082172e400bfc6ebfcfe8aabf84fd083e7419a43f18172e401a290bc0efa326c07c9a8f40a5b3483f2ae8613f15053ebfed5244c0eafe74c0430fc0c00b2c163f7d0e363f55d6e53fb57d1ebfb845bcbfcf21cabf130b43bf9a6311bfb98522bf612eee3fc9bfdf3f1bae0dbe7c8438bf631014bf74067240adba18becde910be22e2d4c0464b06c01ec2b84041237a3fdfd3163ef20300be6369aabfcbf3fd3d0cc8803ff7ac35bfb40812bf6c6838bfe8781a3e5987ad3f1a9d693fa99478bf35894b4084cd8d3fc429f53dabe780bfb32c153f136f46bf4bc7fe4011f254bf1c1cf2be525cde4079cf37bf65d0d2beffb0ebbfc1fdccc0197671bf8e672abea45107bf99e7fe3f82065bbfac13a03fb8271f3e6ab4f43fe7a0e03f936e304008ae1ebe2623bd3ead7d91c023faaa3fa3f15440998fa9403c94d73e0f3e30be76a467c01ff32c3e8c6651405ff1f13fe264e83f2449103eada1c8be9fc47ebe729e00bf06da563fad789d3e3bb7efbf02ba1cc002783d3e1260713fe6131abe62932c3fb575384067562c3ffd6d9ac084ad24bf6f41c8bf1256f6404c769e402236e440ba7999400b5d72c011a197bfaaea8bbe825ef93f6d8e084089c7243e931790be964dfec0132782bf2c435f4017f2803d98a3063f6c1b02401ea4d03f46cd4bbd07d2903d3378c0bf0f9f92beadef0b400156bcc01e8f6ec00024fc40a8df0ebf894eba3fe31458c063631ac074e3723fd97c583ebdd73a40907696bfa2ce7d3f0d6c5bc0456ceabf8a10a1401f26853f86f199be277150bf3ff69d3f9d864cbf92ff113fd6b5e24083ed2b3f38c3ecbddec6c8bf83d7663fb90a81bfe0c9df40521752c04942cdbff3c6673fb72fc6befa1bc63facd1d6bf3b9ebac03bcd90c06ab91cbfbf67babeef3a68bd0b4330c0020aa6403289e7c01a29143e8d445b3ef0b854bf1aaa4c3ef03aadbf075ea43eb7c68d3f32fdc240ba690f405c519e3e9069483ecc53ccc046e17abd306790409021bac01061cebf319390c067bab43f35181d3e4003164020970abd7476e2c02ce46cbfb2b822bfdda82bbe396b8640323e1d3ec84134c00980ff3ff9445b3f0b7dfc3f139405beae5e42bf2a1c82bf0100123fd1afd7c0acfd18c00e4a004009db823ec741b6bfd77ef03f8240d5c08c8b84bf8b6a5fbe9f0a3c3e32f7303f1657c83f52c32abf73a4ddbe53bfe4400a317e3f857b92be534e3c3e7ed4f4bf5296e53c79bd403fd4f984403ee2b9400346b1bfb64b78bf042a823f99f794beabe8023ff2495dbfd5cf3abf37b8b2beef737cbe91f80840165b1cbf0b487abfd0d99d409ac440402cd57cc021eda4bf0709e9be275e183f617238406c1392c0a0e4a3c01e218c3fc9b4503fad7af8c0165e333f576e68c0211372c0a3176ac00bbf933e9f77a83f6907383f096f3e3ecd976cc0626720406101283fd41720bec6d058be1269d6bfcb87643f2524e040130a413fba08643f429c263fb27a37bed73c48bbe06330bf99520c3f00b7783ee7e3a0bf7d85ebbe01cd24bf0b21003fff4005bf917e1f3ecf24cc3e45f84cbe0dbcbd3fde635abe1e00a83f5eef00bff0356bbe85ff1ac01a361ebfa8b6fdbd846e30be409fb43cb185a03f967349c01c945fc0075ad0bf739e68be8066f8bdb96d4cbff944c340192963bfe454eebf965a6ebfc993183fdc0cecbfbd9e36403e67d6bfed3efcc01a9fc0405aac4a4005b8b8c08312ed3f3495dd3e9c921a3f8da951408598afc04e3a36bfcca4c9bf7eaf30400095b0bf8f9acd3f8ccb32bf23848040790b1e3f8f046f3f3590d0bf587b2c3f8f3e4ec00948b44034acb0c0523210bf9102d83fb167aabf4e8daf40284327bfa38214c06ebcacc109ee1dc064d59d40ace0283f6b07763f70ffa7c0136d92c0ff6129c0835d8ec0465c7c40328fa03efde2b13f5c6c4abfa84a32c07a62894000178c3f6577e6bdbbb8e0bfba6f4e3f9995acbf02baf83f31b8dc3f52d7d13ed87528c01a50ecbe2294963faaab3f3ef4b4293fb450c5bec136e43d8797e8c06cfea63e75a9753f4e3b0d400a00f43f00b136c0bfd91ebfdb72a0404953d63fa34072bfd51c66bb394100c09ff7bec002cc2fbfbc53acbf6815ec3fd408dfbf3925723f09546b3e9ce430c0516d58c00c91f8c01eccb43f26a7ec3fd3e47e3fb8038dbfe2fc8940bb125c400aaf2c3fe73ea2bfe07e59bfd429bebf5129cc404cab92c00de757bfc2745c408c2f8ebfb9d9dc3ea6cb4ebfe910c0c05eeda2bfe48756bf002a173faf86d43e6bbe06bf55b430be5d6f6cbf99b1103faecb003e0dc6723ffaba88be4469f6bdf98c7abfd8c0043f3c45d0bfa10297bf0301ad4049c321bf89320a3f56f8a3bfe06728c0252f6540980e413fd5332040a91e86bfa310a1bf92d560c05172303f776cbdbf59ce82bf8192903faf407abe3ba5adbe374354be9b4682bfa144e6bfb4c58abe6c5b2c3f2cb4e43ec7c124bf2a17303f14f963bffa8f3fc0401d10bf19170cbdf5e550bbb684103fd108afbdf6d392c029b784bd908360bf99b12c407b3d603eb64c193f529399c05cebc2bf525c5e3f964cc6bf97d1a53f01d1f8bfb1e9f8be304a3b3e27236c3f3cef88bf5a3d70be5233403fb9f54f3f38da6cc03d96aa3f9408bdbf9023923f4223423f4537c43fdedcdebf88d295be05f696bf1c5d79bf5e9278bfe5467abf0b1d8bc0486c4e3f3fbb923fa0d3793fd1ab53bf27639ec043ef0dbfbaee7a3e66c6783f6122973f0e35e2be8fbc1cbfd3a4903f340d50bf44cc333f7349cdbf5070afbef0e4993c4711403d67df40bfb9d472bf2a63944031dd283fa48439bfd14849bf885269bfa2af37bec33edabec4ed6fbfcfc8323f4856e73eea59a23d71c8903fbcde93bf16b5803eb9cd6abece43debe786a7e3f86d5b8bdb1b59cbf52b3503fce1f003e1a949ec0a03895400485583f8bd2dc3f8116de407de4babf08617cbf03f0423fb3c7fcbcc608343e36ed58bf755b27bf340393c05c947fbfda3413bf69e1763f05cecc3fd646b43e461c01c006a20c3fb12af0be5df57abf387282be461f1cbebadd0a3eea6e433fbb58b23c902790bd74f578c05bdcfc3f38aea43eb5a0e63fd92b273fbcbd9cbf4bde70bf5fc9333faaa6a8bde0d4923f4440d7bf5e81c2bfc3c1c8bffc9f263d7e9ce0c082856e3f337d403f7411444022918abf21dd8c404df4a93fea6b6dc03931edbf9faf6a3f641f6c3faba0884007924bc0559089bfa790c03f3f0fc63f875b10c016b9953fc3effcc00a8a01c00a7b283d97a7e0bef937fcbe5cec9d40060525bed7707cbff730f8c01f8061bf8b5d70c012152b3f1b4f143fb4b0ad3f5a1728bf2e1158bee2c3c03dbb92f8c037399abe4c65523fa86eb93fac87343e583c003fd2fd70bed60ad5c0301085bf95a7474032e3a33edba1ac3f9207fa3ffa39383f5ba09bc068dca13f1df74cbf0f2a273fe1b0a240581dcdc070bd5ec0293eac3f6f6f083f612de6bd912e843da93fc0c01f73e43ff45ba9bd3754d03f915e18bd91db26bed32d50bf6cd9773f9521fe4029d5833e9a55644030c286bf4c608cc015847abf2677bf3fa0d38ebfe8f915bf8db343bf04a3723ea84e2fbf9db35f3fbd1bdebf2c38d8bfaf613cbd976cd03f8f6232bee0cf58401478f5bfbfecc9c019ab5dbfdba71fbfc7bb81bf3bc8b9be1272b8401bbd78bf18f49bbf8267243ff2bc263fc5cb95c0441d0c3d3d67d43e35d5503fbe0a14400049de"
+     }
+    }
+   }
+  },
+  {
+   "name": "shift3d_init",
+   "node": {
+    "op": "recurrence",
+    "in": [
+     "u"
+    ],
+    "state": "sh",
+    "index": {
+     "a": 2,
+     "b": 3,
+     "c": 4
+    },
+    "inputs": [
+     "u[c]"
+    ],
+    "weights": {
+     "S0[a,b,c]": "blk.{i}.s0"
+    },
+    "init": [
+     "s[a,b,c] = S0[a,b,c] * 0.5 + a - c"
+    ],
+    "update": [
+     "s[a,b,c] = s[a,b + 1,c - 1] + u[c] * (a + 1) - s[a - 1,b,c + 2] / 4"
+    ],
+    "readout": "y[a,c] = sum(b, s[a,b,c]) + s[1,2,3] + s[2,0,0] + u[c - 3]",
+    "out": "y"
+   },
+   "slot": {
+    "name": "sh",
+    "kind": "recurrent",
+    "op": "recurrence",
+    "dtype": "f32",
+    "tensors": [
+     {
+      "name": "s",
+      "shape": [
+       2,
+       3,
+       4
+      ],
+      "init": "body"
+     }
+    ]
+   },
+   "inputs": {
+    "u": {
+     "shape": [
+      6,
+      4
+     ],
+     "f32": "be35aa563d42215f3d669cd33e5db340bf4d6da7bf5bdf2ebf53bc9f3f5346623f4a7d3cbdea4b84c01b85553f601f7abefb2d35bf0aee6e3fa0fbe63f16feeb3f07bababe2fed113dc759a83c6c8c3ac029fc36bf8194b0be3531b5bf57cbc6"
+    }
+   },
+   "weights": {
+    "blk.0.s0": {
+     "shape": [
+      2,
+      3,
+      4
+     ],
+     "f32": "3f83eba6bff8fa833fe4168f3e9a9881bf471543bffce2b8befba0d5bf07a378c04c41ccbd6b76753ea8df643f24f3cf3dd7a0e04015a3febea36f4ebeee4fb7bedaf9d03f63f3893d9609653efebe3a3efcb48abf90a40c3f0a0b88404de091"
+    }
+   },
+   "expect": {
+    "y": {
+     "shape": [
+      6,
+      8
+     ],
+     "f32": "bdcb3100bfb4672cc01a89d9c04b3eb83f2a8092409e58283f26aa27be0e76eebf41bc30bfa3f2fac0153a21401a1a8ac01cf139c0156485bec7a71040aeb9114083f6d5be49e2b0c0ede5404063f0dd40efc176c0139841c17cf65340a80588be958bf43f911682407af92cc050a9773f0850723f9df81640c71e6fc0e871c33fcf4a48bfbbdd503cd8cc1a404036f4402192c1bf0c13e8b910d30040a7b8dec11a76a1c06a678ec043427ec0e70077c18cf8a9c0db37b4c05fbc4bc1250870"
+    }
+   },
+   "class": "EXACT",
+   "tol": 1e-05,
+   "expect_state": {
+    "sh": {
+     "s": {
+      "shape": [
+       2,
+       3,
+       4
+      ],
+      "f32": "c029fc36bef6dd4cbf56de4cbfa4e780c029fc36bef6dd4cbeb28f63bf3ee091c029fc36bf8194b0be3531b5bf57cbc6c0acc006bfc51084bf1c71a8c032e977c0a66c1cbfcc62e0bf584f1ebfbee091c0aac390c001cfd3beb531b5bfd7cbc6"
+     }
+    }
+   }
+  },
+  {
+   "name": "overflow_constants",
+   "node": {
+    "op": "recurrence",
+    "in": [
+     "x"
+    ],
+    "state": "ov",
+    "index": {
+     "c": 3
+    },
+    "inputs": [
+     "x[c]"
+    ],
+    "update": [
+     "m[c] = m[c] + x[c]"
+    ],
+    "readout": "y[c] = m[c] + min(exp(100), 1) - 1 / exp(100) + max(-exp(100), x[c]) + 3.4e38 * 0",
+    "out": "y"
+   },
+   "slot": {
+    "name": "ov",
+    "kind": "recurrent",
+    "op": "recurrence",
+    "dtype": "f32",
+    "tensors": [
+     {
+      "name": "m",
+      "shape": [
+       3
+      ],
+      "init": 0
+     }
+    ]
+   },
+   "inputs": {
+    "x": {
+     "shape": [
+      6,
+      3
+     ],
+     "f32": "bf9bab1e3ebd89b4bf8b97fd3f4659d9becb4a453fa89ac63f13d28f3ebb4e4e3dd7ea3abfa5e6093f66c4f1c0003da2bed1d2933ee679a73fead7d13e8d656ac003420fc00f6bb8"
+    }
+   },
+   "weights": {},
+   "expect": {
+    "y": {
+     "shape": [
+      6,
+      3
+     ],
+     "f32": "bfb7563c3fdec4dabf972ffa3faaaebb3f137a964022cec83fdb545e3fda37023fb80010bfba60fc40491430c02b3a8ebf7ac87a4049015e403fdae5bc8f38e0bfb4a3eac0546874"
+    }
+   },
+   "class": "ROUNDING",
+   "tol": 1e-05,
+   "expect_state": {
+    "ov": {
+     "m": {
+      "shape": [
+       3
+      ],
+      "f32": "bfa5963ebeb87f30c004fcbc"
+     }
+    }
+   }
+  },
+  {
+   "name": "pow_forms",
+   "node": {
+    "op": "recurrence",
+    "in": [
+     "x"
+    ],
+    "state": "pw",
+    "index": {
+     "c": 5
+    },
+    "inputs": [
+     "x[c]"
+    ],
+    "update": [
+     "p[c] = 0.5 * p[c] + x[c]"
+    ],
+    "readout": "y[c] = p[c] ^ 2 + p[c] ^ 3 + abs(p[c]) ^ 0.5 + 2 ^ x[c] + (-2) ^ 3 + p[c] ^ -1 + (-1.5) ^ (2 + 0 * x[c]) + (-1.5) ^ (3 + 0 * x[c]) + p[c] ^ 4 ^ 1",
+    "out": "y"
+   },
+   "slot": {
+    "name": "pw",
+    "kind": "recurrent",
+    "op": "recurrence",
+    "dtype": "f32",
+    "tensors": [
+     {
+      "name": "p",
+      "shape": [
+       5
+      ],
+      "init": 0
+     }
+    ]
+   },
+   "inputs": {
+    "x": {
+     "shape": [
+      6,
+      5
+     ],
+     "f32": "3d9743a63fd937063f6216bebcc9798d3f9115b03f547961bf6a5236bfca11053e39613ebda4d2ee3eaf5c92bfccd655bedadbf6bf0ee501bff18eb0be7991da3e6e82a43f54a8dc40254e53bf7e41f43ee1f204bf8144a23f8b90b23fefe30c3d864924be978a673f7745eebef40df63de2afb9bff8c57c"
+    }
+   },
+   "weights": {},
+   "expect": {
+    "y": {
+     "shape": [
+      6,
+      5
+     ],
+     "f32": "40b7d22e41411afdc048683ec2429422bf17b59cc052dfdac1ba611fc0e37c32bfcf5f17c0a09426c0882dafc02c9be2c0ecc80ec11b3134c0276c88bf71c07ec10a3d95c066ab60423e1f5c3eb076a0c0944dd4c0bca0883f7ab23c42f0cd79c0f77ae7c20651a8c052e684bfb2d81b410036d0417e1700"
+    }
+   },
+   "class": "ROUNDING",
+   "tol": 1e-05,
+   "expect_state": {
+    "pw": {
+     "p": {
+      "shape": [
+       5
+      ],
+      "f32": "bd20d2d83ea1445c3e1b53103fd12eeec01754b6"
+     }
+    }
+   }
+  },
+  {
+   "name": "deep_sums",
+   "node": {
+    "op": "recurrence",
+    "in": [
+     "x"
+    ],
+    "state": "ds",
+    "index": {
+     "c": 2,
+     "z0": 1,
+     "z1": 1,
+     "z2": 1,
+     "z3": 1,
+     "z4": 1,
+     "z5": 1,
+     "z6": 1,
+     "z7": 1,
+     "z8": 1,
+     "z9": 1,
+     "z10": 1,
+     "z11": 1,
+     "z12": 1,
+     "z13": 1,
+     "z14": 1,
+     "z15": 1,
+     "z16": 1,
+     "z17": 1,
+     "z18": 1,
+     "z19": 1,
+     "z20": 1,
+     "z21": 1,
+     "z22": 1,
+     "z23": 1,
+     "z24": 1,
+     "z25": 1,
+     "z26": 1,
+     "z27": 1,
+     "z28": 1,
+     "z29": 1
+    },
+    "inputs": [
+     "x[c]"
+    ],
+    "update": [
+     "m[c] = sum(z0, sum(z1, sum(z2, sum(z3, sum(z4, sum(z5, sum(z6, sum(z7, sum(z8, sum(z9, sum(z10, sum(z11, sum(z12, sum(z13, sum(z14, sum(z15, sum(z16, sum(z17, sum(z18, sum(z19, sum(z20, sum(z21, sum(z22, sum(z23, sum(z24, sum(z25, sum(z26, sum(z27, sum(z28, sum(z29, m[c] * 0.5 + x[c]))))))))))))))))))))))))))))))"
+    ],
+    "readout": "y[c] = m[c]",
+    "out": "y"
+   },
+   "slot": {
+    "name": "ds",
+    "kind": "recurrent",
+    "op": "recurrence",
+    "dtype": "f32",
+    "tensors": [
+     {
+      "name": "m",
+      "shape": [
+       2
+      ],
+      "init": 0
+     }
+    ]
+   },
+   "inputs": {
+    "x": {
+     "shape": [
+      6,
+      2
+     ],
+     "f32": "bf0b4abf3f0a2122bd27ee343f058a223f42985d3df4c8313df99231bdf34240be91e62b3f405e4bc02c8341bfb1b32f"
+    }
+   },
+   "weights": {},
+   "expect": {
+    "y": {
+     "shape": [
+      6,
+      2
+     ],
+     "f32": "bf0b4abf3f0a2122bea048863f4a9ab33f1a863c3f03e6603ed8eac83e0e2ba0bd95c31c3f5223bfc02eda4dbf7a547e"
+    }
+   },
+   "class": "EXACT",
+   "tol": 1e-05,
+   "expect_state": {
+    "ds": {
+     "m": {
+      "shape": [
+       2
+      ],
+      "f32": "c02eda4dbf7a547e"
+     }
+    }
+   }
+  }
+ ]
+}

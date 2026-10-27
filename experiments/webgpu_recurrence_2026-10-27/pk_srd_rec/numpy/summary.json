@@ -1,0 +1,22 @@
+{
+ "gguf": "pk_srd.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "srd_recurrence",
+ "prompts": 40,
+ "of": 40,
+ "len": 8,
+ "gen": 8,
+ "vocab": 15,
+ "ctx": 16,
+ "dispatches_per_token": 82,
+ "worst_rel": 2.3079637597375877e-7,
+ "median_rel": 1.1485955096146705e-7,
+ "worst_spec_rel": 3.1268555933661885e-7,
+ "top1_agree": "320/320",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "gpu_errors": 0,
+ "pass": true,
+ "load_ms": 822.2491,
+ "ms_per_prompt": 234.80223500000002
+}

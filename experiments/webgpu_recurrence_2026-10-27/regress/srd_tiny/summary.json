@@ -1,0 +1,22 @@
+{
+ "gguf": "srd_tiny.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "srd",
+ "prompts": 40,
+ "of": 40,
+ "len": 24,
+ "gen": 32,
+ "vocab": 8192,
+ "ctx": 128,
+ "dispatches_per_token": 68,
+ "worst_rel": 3.701602763710846e-7,
+ "median_rel": 3.2471778047084275e-7,
+ "worst_spec_rel": 7.181670480971554e-7,
+ "top1_agree": "960/960",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "gpu_errors": 0,
+ "pass": true,
+ "load_ms": 665.3165,
+ "ms_per_prompt": 1767.3222524999994
+}

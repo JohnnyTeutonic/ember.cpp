@@ -1,0 +1,17 @@
+{
+ "gguf": "flex_highway_tiny.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "backend": "ir_webgpu",
+ "family_hint": "flex_highway",
+ "n": 40,
+ "webgpu_vs_wasm": 40,
+ "webgpu_vs_ember_cpu": 40,
+ "wasm_vs_ember_cpu": 40,
+ "tokens": 2400,
+ "ms_per_reply": {
+  "webgpu_swiftshader": 1984.25985,
+  "wasm_node": 234.58730750000012
+ },
+ "errors": 0,
+ "first_diffs": []
+}

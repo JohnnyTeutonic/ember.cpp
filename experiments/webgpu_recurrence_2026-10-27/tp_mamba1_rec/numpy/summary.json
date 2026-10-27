@@ -1,0 +1,22 @@
+{
+ "gguf": "tp_mamba1.gguf",
+ "adapter": "google | swiftshader | swiftshader-device-subzero- | SwiftShader driver 5.0.0",
+ "family_hint": "mamba_recurrence",
+ "prompts": 40,
+ "of": 40,
+ "len": 24,
+ "gen": 32,
+ "vocab": 24,
+ "ctx": 64,
+ "dispatches_per_token": 61,
+ "worst_rel": 0.0000025398835984261504,
+ "median_rel": 7.759188773118919e-7,
+ "worst_spec_rel": 0.000004791682029827977,
+ "top1_agree": "960/960",
+ "greedy_identical": "40/40",
+ "tol": 0.0001,
+ "gpu_errors": 0,
+ "pass": true,
+ "load_ms": 328.5310999999999,
+ "ms_per_prompt": 392.09515249999987
+}

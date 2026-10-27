@@ -13,15 +13,19 @@
 // defines to equal prefill (IR_SPEC 3.9, 6.3); recurrent state stays on the GPU between calls.
 //
 // Numerics follow ember's CPU interpreter op for op (graph_ir.cpp, graph_ir_ops.cpp,
-// graph_ir_mamba.cpp; IR_SPEC sections 5-7) in f32. Reductions (matrix products, norms, softmax
-// sums) use other summation orders, so results are ROUNDING against the CPU (IR_SPEC 4.2, 4.3):
-// gated on greedy tokens, the argmax at every position and logits to rounding
-// (tools/webgpu_parity/ir_gate.mjs).
+// graph_ir_mamba.cpp, graph_ir_recurrence.cpp; IR_SPEC sections 5-7) in f32. Reductions (matrix
+// products, norms, softmax sums) use other summation orders, so results are ROUNDING against the
+// CPU (IR_SPEC 4.2, 4.3): gated on greedy tokens, the argmax at every position and logits to
+// rounding (tools/webgpu_parity/ir_gate.mjs, recurrence_gate.mjs, recurrence_state_check.mjs).
 //
-// What it refuses (irSupport, then the worker falls back to WebAssembly): recurrence nodes, rope
-// heads "first", lists that fork, depth_attend with more than two sources beside its list, expr with
-// more than 9 inputs, stored types other than F32, F16, BF16 and Q8_0 for matrices (vectors are read
-// at load for every type gguf.js reads), and attention contexts past MAX_KEYS positions.
+// Every op of the core, state, recursion, thirdparty and recurrence profiles has a kernel; `recurrence`
+// nodes compile to WGSL from their bodies (compileRecurrence, recurrenceKernels below).
+//
+// What it refuses (irSupport, then the worker falls back to WebAssembly): rope heads "first", lists
+// that fork, depth_attend with more than two sources beside its list, expr with more than 9 inputs,
+// a recurrence outside the block or beside depth_route, or with sums nested deeper than REC_SUM_NEST,
+// stored types other than F32, F16, BF16 and Q8_0 for matrices (vectors are read at load for every
+// type gguf.js reads), and attention contexts past MAX_KEYS positions.
 import { GGML_F16, GGML_F32, GGML_Q8_0, f16ToF32, readGguf, tensorF32 } from './gguf.js';
 
 const GGML_BF16 = 30;
@@ -33,7 +37,7 @@ const MAXWG = 65535;
 const SUPPORTED = new Set(['embedding', 'pos_embedding', 'linear', 'scale', 'split', 'rmsnorm', 'layernorm', 'gelu',
   'silu', 'sigmoid', 'relu', 'add', 'mul', 'sub', 'affine', 'mul_col', 'rms_row', 'rope', 'attention', 'moe_ffn',
   'list', 'append', 'depth_attend', 'expr', 'linear_attention', 'ssm_scan', 'conv1d_causal', 'selective_scan',
-  'depth_route']);
+  'depth_route', 'recurrence']);
 
 // ---- WGSL ----------------------------------------------------------------------------------------
 
@@ -716,6 +720,645 @@ fn min_s(a: f32, b: f32) -> f32 { return select(b, a, a <= b); }
 }`;
 }
 
+// ---- recurrence -> WGSL (IR_SPEC 6.10) ---------------------------------------------------------------
+//
+// A recurrence node compiles to one WGSL kernel per assignment (each init, each let, each update, the
+// readout) with one invocation per point of the assignment's index space (row-major, the last index
+// fastest), a copy kernel per input and a commit kernel. Per application the node owns a work buffer M,
+//   [inputs (row t of each value of `in`) | state | new state | lets],
+// and a weight buffer W (its weights' f32 values, each row-major as stored, in declaration order). Per
+// token (6.10.3): the inputs are copied into M; the lets run in order; every update writes its part of
+// the new state from the state before the token; the commit copies the whole new state over the old,
+// so none of it replaces the old before all of it is formed; the readout writes the output row from
+// the state after the token. At the start of a sequence M is cleared and the init kernels write their
+// state tensors from the weights (every other state tensor starts at +0). The state stays on the GPU.
+//
+// The parser and its checks follow ember's CPU interpreter (graph_ir_recurrence.cpp) rule for rule.
+// A body compiles to straight-line f32 code, one WGSL `let` per primitive, so no WGSL expression nests
+// deeper than one operation and every intermediate is rounded to f32; numbers are bound through `let`s
+// (never folded at shader creation). Reads outside a tensor's shape are +0 (bounds decided at compile
+// time where the index ranges allow), a bare index is its value as f32, sum(j, e) is a loop from +0 in
+// ascending j, and the functions are expr's: where / max / min / relu as selections (a NaN condition
+// selects where's third operand), sigmoid 1 / (1 + exp(-x)), tanh_s and erf_s as above, ^ as pow_s
+// (repeated products for a literal exponent 1 to 4). Numbers are the nearest f32 (strtof's rounding).
+// The shading language's f32 division, sqrt, exp and log have error bounds of their own and a driver
+// may fuse a multiply and an add, so a recurrence on this path is ROUNDING against the CPU (IR_SPEC
+// 4.2, 4.3, 6.10.4), as every other op here is.
+//
+// Refused (irSupport: the page stays in WebAssembly): a recurrence outside the block or beside
+// depth_route. Sums nested deeper than REC_SUM_NEST would be too (WGSL guarantees 127 nested blocks in
+// a function), but no body within 6.10.2's depth limit gets there: at most 50 nested sums parse, here
+// and in ember's CPU interpreter. At load (createIr throws; the worker falls back to WebAssembly with
+// a console warning): a work or weight buffer past the device's storage binding size.
+
+const REC_FN = { exp: 1, log: 1, sqrt: 1, tanh: 1, erf: 1, abs: 1, sigmoid: 1, relu: 1, max: 2, min: 2, where: 3 };
+const REC_ROW_RED = new Set(['rowsum', 'rowmean', 'rowmax']);
+const REC_RESERVED = new Set([...Object.keys(REC_FN), ...REC_ROW_RED, 'pi', 'sum', 'per_layer']);
+export const REC_SUM_NEST = 100;
+
+const recFail = (rule, msg) => { throw new Error(`IR_SPEC 6.10 (rule ${rule}): ${msg}`); };
+
+// strtof: the f32 nearest the decimal text (ties to even). parseFloat then fround rounds twice, which
+// differs only when the double lands exactly halfway between two floats; that case is settled exactly.
+function recStrtof(text) {
+  const d = parseFloat(text), f = Math.fround(d);
+  if (f === d || !isFinite(f)) return f;
+  const bits = (x) => new Uint32Array(new Float32Array([x]).buffer)[0];
+  const fromBits = (b) => new Float32Array(new Uint32Array([b]).buffer)[0];
+  const lo = f < d ? f : fromBits(bits(f) - 1), hi = f < d ? fromBits(bits(f) + 1) : f;
+  const mid = (lo + hi) / 2;
+  if (mid !== d) return f;
+  const dv = new DataView(new ArrayBuffer(8));
+  dv.setFloat64(0, mid);
+  const h = dv.getUint32(0), e = (h >>> 20) & 0x7ff;
+  let M = (BigInt(h & 0xfffff) << 32n) | BigInt(dv.getUint32(4));
+  if (e) M |= 1n << 52n;
+  const K = (e || 1) - 1075;
+  const m = /^(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/.exec(text);
+  const fp = m[2] || '';
+  let a = BigInt((m[1] || '') + fp || '0'), b = M;
+  const E = (m[3] ? parseInt(m[3], 10) : 0) - fp.length;
+  if (E >= 0) a *= 10n ** BigInt(E); else b *= 10n ** BigInt(-E);
+  if (K >= 0) b *= 2n ** BigInt(K); else a *= 2n ** BigInt(-K);
+  return a < b ? lo : a > b ? hi : f;   // f: fround's tie to even
+}
+
+function recLex(s, where) {
+  const out = [];
+  const alpha = (c) => /[A-Za-z_]/.test(c), alnum = (c) => /[A-Za-z0-9_]/.test(c), digit = (c) => c >= '0' && c <= '9';
+  let i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (c === ' ' || c === '\t') { i++; continue; }
+    const t = { col: i + 1 };
+    if (alpha(c)) {
+      let j = i;
+      while (j < s.length && alnum(s[j])) j++;
+      Object.assign(t, { kind: 'id', text: s.slice(i, j) });
+      i = j;
+    } else if (digit(c) || c === '.') {
+      let j = i, mant = 0, integer = true;
+      while (j < s.length && digit(s[j])) { j++; mant++; }
+      if (s[j] === '.') { integer = false; j++; while (j < s.length && digit(s[j])) { j++; mant++; } }
+      if (!mant) recFail(31, `${where} does not parse: a malformed number at column ${t.col}`);
+      if (s[j] === 'e' || s[j] === 'E') {
+        integer = false;
+        let k = j + 1;
+        if (s[k] === '+' || s[k] === '-') k++;
+        const d0 = k;
+        while (k < s.length && digit(s[k])) k++;
+        if (k === d0) recFail(31, `${where} does not parse: a malformed number (an exponent without digits) at column ${t.col}`);
+        j = k;
+      }
+      Object.assign(t, { kind: 'num', text: s.slice(i, j), integer });
+      i = j;
+    } else if ('()[],+-*/^='.includes(c)) {
+      Object.assign(t, { kind: c, text: c });
+      i++;
+    } else recFail(31, `${where} does not parse: unexpected character '${c}' at column ${t.col}`);
+    out.push(t);
+  }
+  out.push({ kind: 'end', text: '', col: s.length + 1 });
+  return out;
+}
+
+// name '[' index (',' index)* ']' at toks[pos.i]
+function recHead(P, toks, pos, where, distinct) {
+  const syntax = (what) => recFail(31, `${where} does not parse: ${what} at column ${toks[pos.i].col}`);
+  if (toks[pos.i].kind !== 'id') syntax('expected a name');
+  const name = toks[pos.i++].text;
+  if (toks[pos.i].kind !== '[') syntax(`expected '[' after ${name}`);
+  pos.i++;
+  const ids = [];
+  for (;;) {
+    if (toks[pos.i].kind !== 'id') syntax('expected an index name');
+    const t = toks[pos.i++];
+    if (!P.idxOf.has(t.text)) recFail(32, `${where}: index '${t.text}' at column ${t.col} is not declared`);
+    const id = P.idxOf.get(t.text);
+    if (distinct && ids.includes(id)) recFail(32, `${where}: the assignment repeats index '${t.text}' at column ${t.col}`);
+    ids.push(id);
+    if (toks[pos.i].kind === ',') { pos.i++; continue; }
+    if (toks[pos.i].kind !== ']') syntax("expected ',' or ']'");
+    pos.i++;
+    break;
+  }
+  return { name, ids };
+}
+
+// A body (section 6.10.2) into a tree: {k: 'num' | 'idx' | 'read' | 'neg' | '+' | '-' | '*' | '/' | '^' |
+// a function name | 'sum', v, id, ix: [{index, off}], a: [operands]}. rules: which tensors it reads.
+function recBody(P, toks, start, where, rules, scope) {
+  let i = start;
+  const inScope = P.idxNames.map((_, k) => scope.includes(k));
+  const peek = () => toks[i];
+  const syntax = (what) => recFail(31, `${where} does not parse: ${what} at column ${peek().col}`);
+  const expect = (k, what) => { if (peek().kind !== k) syntax(`expected ${what}`); i++; };
+  const enter = (depth) => { if (depth > 256) syntax('nesting deeper than the limit'); };
+  const declared = (t) => {
+    if (!P.idxOf.has(t.text)) recFail(32, `${where}: index '${t.text}' at column ${t.col} is not declared`);
+    return P.idxOf.get(t.text);
+  };
+  function expr(depth) {
+    enter(depth);
+    let left = term(depth + 1);
+    while (peek().kind === '+' || peek().kind === '-') { const k = toks[i++].kind; left = { k, a: [left, term(depth + 1)] }; }
+    return left;
+  }
+  function term(depth) {
+    enter(depth);
+    let left = unary(depth + 1);
+    while (peek().kind === '*' || peek().kind === '/') { const k = toks[i++].kind; left = { k, a: [left, unary(depth + 1)] }; }
+    return left;
+  }
+  function unary(depth) {
+    enter(depth);
+    if (peek().kind === '-') { i++; return { k: 'neg', a: [unary(depth + 1)] }; }
+    return power(depth + 1);
+  }
+  function power(depth) {
+    enter(depth);
+    const base = primary(depth + 1);
+    if (peek().kind === '^') { i++; P.exact = false; return { k: '^', a: [base, unary(depth + 1)] }; }
+    return base;
+  }
+  function ix() {
+    const t = peek();
+    if (t.kind === 'num') {
+      if (!t.integer) syntax('an index offset or position must be an integer');
+      i++;
+      return { index: -1, off: parseInt(t.text, 10) };
+    }
+    if (t.kind !== 'id') syntax('expected an index');
+    i++;
+    const r = { index: declared(t), off: 0 };
+    if (!inScope[r.index]) recFail(32, `${where}: index '${t.text}' at column ${t.col} is not in scope`);
+    if (peek().kind === '+' || peek().kind === '-') {
+      const minus = toks[i++].kind === '-';
+      const n = peek();
+      if (n.kind !== 'num' || !n.integer) syntax('expected an integer offset');
+      i++;
+      r.off = (minus ? -1 : 1) * parseInt(n.text, 10);
+    }
+    return r;
+  }
+  function primary(depth) {
+    enter(depth);
+    const t = peek();
+    if (t.kind === 'num') {
+      i++;
+      const v = recStrtof(t.text);
+      if (!isFinite(v)) syntax(`the number ${t.text} is not finite in f32`);
+      return { k: 'num', v, integer: t.integer };
+    }
+    if (t.kind === '(') { i++; const e = expr(depth + 1); expect(')', "')'"); return e; }
+    if (t.kind !== 'id') syntax('expected an operand');
+    const name = t.text, col = t.col;
+    i++;
+    if (name === 'pi') return { k: 'num', v: Math.fround(Math.PI), integer: false };
+    if (REC_ROW_RED.has(name))
+      recFail(31, `${where} uses ${name} at column ${col} (the row reductions are not part of a recurrence body; sum replaces them)`);
+    if (name === 'sum') {
+      expect('(', "'(' after sum");
+      const it = peek();
+      if (it.kind !== 'id') syntax("expected sum's index");
+      i++;
+      const id = declared(it);
+      if (inScope[id]) recFail(32, `${where}: sum over index '${it.text}' at column ${it.col}, which is already in scope`);
+      expect(',', "',' after sum's index");
+      inScope[id] = true;
+      const arg = expr(depth + 1);
+      inScope[id] = false;
+      expect(')', "')'");
+      return { k: 'sum', id, a: [arg] };
+    }
+    if (peek().kind === '(') {
+      if (!REC_FN[name]) recFail(31, `${where}: unknown function '${name}' at column ${col}`);
+      i++;
+      if (['exp', 'log', 'tanh', 'erf', 'sigmoid'].includes(name)) P.exact = false;
+      const a = [expr(depth + 1)];
+      while (peek().kind === ',') { i++; a.push(expr(depth + 1)); }
+      expect(')', "')'");
+      if (a.length !== REC_FN[name]) recFail(31, `${where}: ${name} at column ${col} takes ${REC_FN[name]} argument(s), not ${a.length}`);
+      return { k: name, a };
+    }
+    if (REC_FN[name]) syntax(`expected '(' after ${name}`);
+    if (peek().kind === '[') {
+      i++;
+      if (!P.tensorOf.has(name)) recFail(32, `${where} reads '${name}' at column ${col}, which is not declared`);
+      const id = P.tensorOf.get(name), tn = P.tensors[id];
+      const ok = (tn.kind === 'input' && rules.inputs) || (tn.kind === 'weight' && rules.weights) ||
+                 (tn.kind === 'state' && rules.state) || (tn.kind === 'let' && tn.pos < rules.lets);
+      if (!ok) recFail(32, `${where} reads '${name}' at column ${col}, which its section cannot read`);
+      const xs = [ix()];
+      while (peek().kind === ',') { i++; xs.push(ix()); }
+      expect(']', "']'");
+      if (xs.length !== tn.sizes.length)
+        recFail(32, `${where} reads '${name}' at column ${col} with ${xs.length} index(es); it has ${tn.sizes.length} dimension(s)`);
+      return { k: 'read', id, ix: xs };
+    }
+    if (P.idxOf.has(name)) {
+      const id = P.idxOf.get(name);
+      if (!inScope[id]) recFail(32, `${where}: index '${name}' at column ${col} is not in scope`);
+      return { k: 'idx', id };
+    }
+    if (P.tensorOf.has(name))
+      recFail(32, `${where} reads '${name}' at column ${col} without indices; it has ${P.tensors[P.tensorOf.get(name)].sizes.length} dimension(s)`);
+    recFail(32, `${where}: '${name}' at column ${col} is not declared`);
+  }
+  const e = expr(0);
+  if (peek().kind !== 'end') syntax(`unexpected '${peek().text}'`);
+  return e;
+}
+
+// Parses and checks a recurrence node (rules 31-33 as ember's CPU interpreter checks them).
+export function compileRecurrence(node) {
+  const P = { idxNames: [], idxSizes: [], idxOf: new Map(), tensors: [], tensorOf: new Map(), inputs: [], weights: [],
+              states: [], lets: [], out: -1, init: [], let: [], update: [], readout: null, initOfState: [],
+              weightInfo: [], inWidths: [], outWidth: 0, exact: true };
+  const names = new Set();
+  const declare = (name, what) => {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) recFail(31, `${what} name '${name}' is not an identifier`);
+    if (REC_RESERVED.has(name)) recFail(31, `${what} name '${name}' is reserved`);
+    if (names.has(name)) recFail(31, `the name '${name}' is declared twice`);
+    names.add(name);
+  };
+  const isMap = (v) => v && typeof v === 'object' && !Array.isArray(v);
+  if (!isMap(node.index) || !Object.keys(node.index).length) recFail(31, "'index' is not a map of names to positive integers");
+  for (const [k, v] of Object.entries(node.index)) {
+    if (!Number.isInteger(v) || v <= 0) recFail(31, `index '${k}' has size ${JSON.stringify(v)}, not a positive integer`);
+    if (v > (1 << 24)) throw new Error(`IR recurrence: index '${k}' of size ${v} is larger than ember's interpreter takes (2^24)`);
+    declare(k, 'index');
+    P.idxOf.set(k, P.idxNames.length);
+    P.idxNames.push(k);
+    P.idxSizes.push(v);
+  }
+  const addTensor = (name, kind, ids, list) => {
+    const sizes = ids.map((id) => P.idxSizes[id]);
+    const strides = sizes.map(() => 1);
+    for (let d = sizes.length - 1; d > 0; d--) strides[d - 1] = strides[d] * sizes[d];
+    let numel = 1;
+    for (const s of sizes) {
+      numel *= s;
+      if (numel > 2 ** 28) throw new Error(`IR recurrence: tensor '${name}' holds more than 2^28 elements, more than ember's interpreter takes`);
+    }
+    const id = P.tensors.length;
+    P.tensors.push({ name, kind, sizes, strides, numel, pos: list.length });
+    P.tensorOf.set(name, id);
+    list.push(id);
+    return id;
+  };
+  const strings = (key, required, nonempty) => {
+    const v = node[key];
+    if (v === undefined || v === null) { if (required) recFail(31, `'${key}' is missing`); return []; }
+    if (!Array.isArray(v)) recFail(31, `'${key}' is not a list of strings`);
+    if (v.some((x) => typeof x !== 'string')) recFail(31, `'${key}' holds a value that is not a string`);
+    if (nonempty && !v.length) recFail(31, `'${key}' is empty`);
+    return v;
+  };
+  const nIn = node.in === undefined ? 0 : Array.isArray(node.in) ? node.in.length : 1;
+  const inputs = strings('inputs', true, true);
+  if (inputs.length !== nIn) recFail(31, `'inputs' declares ${inputs.length} value(s) for the ${nIn} of 'in'`);
+  const declaration = (text, where) => {
+    const toks = recLex(text, where), pos = { i: 0 };
+    const h = recHead(P, toks, pos, where, false);
+    if (toks[pos.i].kind !== 'end') recFail(31, `${where} does not parse: unexpected '${toks[pos.i].text}' at column ${toks[pos.i].col}`);
+    return h;
+  };
+  inputs.forEach((text, v) => {
+    const h = declaration(text, `inputs[${v}]`);
+    declare(h.name, 'input');
+    P.inWidths.push(P.tensors[addTensor(h.name, 'input', h.ids, P.inputs)].numel);
+  });
+  if (node.weights !== undefined && node.weights !== null) {
+    if (!isMap(node.weights)) recFail(31, "'weights' is not a map of declarations to tensor names");
+    for (const [decl, tensor] of Object.entries(node.weights)) {
+      if (typeof tensor !== 'string' || !tensor) recFail(31, `weight '${decl}' does not name a tensor`);
+      const h = declaration(decl, `weights '${decl}'`);
+      declare(h.name, 'weight');
+      const id = addTensor(h.name, 'weight', h.ids, P.weights);
+      P.weightInfo.push({ decl: h.name, tensor, numel: P.tensors[id].numel });
+    }
+  }
+  const heads = (src, section, dst) => src.map((text, k) => {
+    const where = `${section}[${k}]`, toks = recLex(text, where), pos = { i: 0 };
+    const h = recHead(P, toks, pos, where, true);
+    if (toks[pos.i].kind !== '=') recFail(31, `${where} does not parse: expected '=' at column ${toks[pos.i].col}`);
+    dst.push({ tensor: -1, lhs: h.ids, where, toks, start: pos.i + 1, body: null });
+    return h.name;
+  });
+  const initSrc = strings('init', false, false), letSrc = strings('let', false, false), updSrc = strings('update', true, true);
+  if (typeof node.readout !== 'string') recFail(31, "'readout' is not one assignment");
+  const updNames = heads(updSrc, 'update', P.update), letNames = heads(letSrc, 'let', P.let);
+  const initNames = heads(initSrc, 'init', P.init);
+  const ro = [];
+  const roNames = heads([node.readout], 'readout', ro);
+  P.readout = ro[0];
+  P.readout.where = 'readout';
+  P.update.forEach((a, k) => { declare(updNames[k], 'state'); a.tensor = addTensor(updNames[k], 'state', a.lhs, P.states); });
+  P.let.forEach((a, k) => { declare(letNames[k], 'let'); a.tensor = addTensor(letNames[k], 'let', a.lhs, P.lets); });
+  declare(roNames[0], 'readout');
+  P.readout.tensor = addTensor(roNames[0], 'out', P.readout.lhs, []);
+  P.out = P.readout.tensor;
+  P.outWidth = P.tensors[P.out].numel;
+  P.initOfState = P.states.map(() => -1);
+  P.init.forEach((a, k) => {
+    const id = P.tensorOf.get(initNames[k]);
+    if (id === undefined || P.tensors[id].kind !== 'state')
+      recFail(33, `${a.where} assigns '${initNames[k]}', which is not a state tensor (an update's)`);
+    const st = P.tensors[id];
+    if (P.initOfState[st.pos] >= 0) recFail(33, `${a.where} assigns '${initNames[k]}' a second time`);
+    if (a.lhs.map((x) => P.idxSizes[x]).join(',') !== st.sizes.join(','))
+      recFail(33, `${a.where} assigns '${initNames[k]}' with other sizes than its update`);
+    P.initOfState[st.pos] = k;
+    a.tensor = id;
+  });
+  const body = (a, rules) => { a.body = recBody(P, a.toks, a.start, a.where, rules, a.lhs); delete a.toks; };
+  for (const a of P.init) body(a, { inputs: false, weights: true, state: false, lets: 0 });
+  P.let.forEach((a, k) => body(a, { inputs: true, weights: true, state: true, lets: k }));
+  for (const a of P.update) body(a, { inputs: true, weights: true, state: true, lets: P.let.length });
+  body(P.readout, { inputs: true, weights: true, state: true, lets: P.let.length });
+  return P;
+}
+
+// Rule 33 against the node's slot declaration (block.state): '' when the slot's tensors are the update's.
+export function recurrenceSlotErrors(P, slot) {
+  const name = slot && slot.name !== undefined ? JSON.stringify(slot.name) : '?';
+  if (!slot || slot.op !== 'recurrence') return `the slot ${name} of a recurrence is not of op recurrence`;
+  if (!Array.isArray(slot.tensors)) return `the slot ${name} declares no tensors`;
+  const declared = new Map();
+  for (const t of slot.tensors) {
+    if (!t || typeof t.name !== 'string') return `the slot ${name} holds a tensor without a name`;
+    if (declared.has(t.name)) return `the slot ${name} declares tensor '${t.name}' twice`;
+    declared.set(t.name, t);
+  }
+  for (const s of P.states) {
+    const st = P.tensors[s], t = declared.get(st.name);
+    if (!t) return `the slot ${name} has no tensor '${st.name}' (the update assigns it)`;
+    if (JSON.stringify(t.shape) !== JSON.stringify(st.sizes)) return `the slot ${name}'s tensor '${st.name}' has shape ${JSON.stringify(t.shape)}, the update's is ${JSON.stringify(st.sizes)}`;
+    const body = P.initOfState[st.pos] >= 0;
+    if (body ? t.init !== 'body' : t.init !== 0) return `the slot ${name}'s tensor '${st.name}' has init ${JSON.stringify(t.init)}, not ${body ? '"body"' : '0'}`;
+  }
+  for (const k of declared.keys()) if (!P.states.some((s) => P.tensors[s].name === k)) return `the slot ${name}'s tensor '${k}' is not one the update assigns`;
+  return '';
+}
+
+// The kernels of a compiled recurrence: M's layout and WGSL per kernel ({code, n, key}). Device-free.
+export function recurrenceKernels(node) {
+  const P = compileRecurrence(node);
+  const L = { in: [], st: [], nst: [], let: [] };
+  let m = 0;
+  for (const id of P.inputs) { L.in.push(m); m += P.tensors[id].numel; }
+  const st0 = m;
+  for (const id of P.states) { L.st.push(m); m += P.tensors[id].numel; }
+  const stateN = m - st0, nst0 = m;
+  for (const id of P.states) { L.nst.push(m); m += P.tensors[id].numel; }
+  for (const id of P.lets) { L.let.push(m); m += P.tensors[id].numel; }
+  const wOff = [];
+  let w = 0;
+  for (const id of P.weights) { wOff.push(w); w += P.tensors[id].numel; }
+  const src = (id) => {   // [buffer, offset] of a tensor a body reads
+    const t = P.tensors[id];
+    if (t.kind === 'input') return ['M', L.in[t.pos]];
+    if (t.kind === 'weight') return ['W', wOff[t.pos]];
+    if (t.kind === 'state') return ['M', L.st[t.pos]];
+    return ['M', L.let[t.pos]];
+  };
+  const head = `${MATH}
+@group(0) @binding(0) var<storage, read> W: array<f32>;
+@group(0) @binding(1) var<storage, read_write> M: array<f32>;
+@group(0) @binding(2) var<storage, read_write> Y: array<f32>;
+fn relu_s(e: f32) -> f32 { return select(0.0, e, e > 0.0); }
+fn max_s(a: f32, b: f32) -> f32 { return select(b, a, a >= b); }
+fn min_s(a: f32, b: f32) -> f32 { return select(b, a, a <= b); }
+@compute @workgroup_size(${WG}) fn main(@builtin(global_invocation_id) g: vec3u) {
+  let pt = g.y * ${MAXWG * WG}u + g.x;`;
+  const kernel = (a, dst, dstOff) => {
+    const lines = [];
+    let n = 0, depth = 1, nest = 0;
+    const put = (s) => lines.push('  '.repeat(depth) + s);
+    const fresh = () => `t${n++}`;
+    const N = P.tensors[a.tensor].numel;
+    put(`if (pt >= ${N}u) { return; }`);
+    const k = a.lhs.length;
+    if (k === 1) put(`let ix${a.lhs[0]} = i32(pt);`);
+    else {
+      put('var q = pt;');
+      for (let d = k - 1; d > 0; d--) { const s = P.idxSizes[a.lhs[d]]; put(`let ix${a.lhs[d]} = i32(q % ${s}u); q = q / ${s}u;`); }
+      put(`let ix${a.lhs[0]} = i32(q);`);
+    }
+    function gen(e) {
+      const t = fresh();
+      switch (e.k) {
+        case 'num': put(`let ${t} = ${f32lit(e.v)};`); return t;
+        case 'idx': put(`let ${t} = f32(ix${e.id});`); return t;
+        case 'read': {
+          const tn = P.tensors[e.id], [buf, base] = src(e.id);
+          const conds = [], terms = [];
+          let out = false;
+          e.ix.forEach((x, d) => {
+            const S = tn.sizes[d];
+            if (x.index < 0) {   // a constant position
+              if (x.off < 0 || x.off >= S) out = true; else terms.push(`${x.off * tn.strides[d]}u`);
+              return;
+            }
+            const lo = x.off, hi = P.idxSizes[x.index] - 1 + x.off;
+            if (hi < 0 || lo >= S) { out = true; return; }
+            const c = x.off === 0 ? `ix${x.index}` : `(ix${x.index} + ${x.off})`;
+            if (lo < 0 || hi >= S) conds.push(`${c} >= 0 && ${c} < ${S}`);
+            terms.push(tn.strides[d] === 1 ? `u32(${c})` : `u32(${c}) * ${tn.strides[d]}u`);
+          });
+          if (out) { put(`let ${t} = 0.0;`); return t; }
+          const at = `${buf}[${[`${base}u`, ...terms].join(' + ')}]`;
+          if (!conds.length) put(`let ${t} = ${at};`);
+          else { put(`var ${t} = 0.0;`); put(`if (${conds.join(' && ')}) { ${t} = ${at}; }`); }
+          return t;
+        }
+        case 'sum': {
+          nest++;
+          if (nest > REC_SUM_NEST) throw new Error(`WebGPU IR path: recurrence ${a.where} nests sums deeper than ${REC_SUM_NEST}`);
+          const j = `ix${e.id}`;
+          put(`var ${t} = 0.0;`);
+          put(`for (var ${j}: i32 = 0; ${j} < ${P.idxSizes[e.id]}; ${j}++) {`);
+          depth++;
+          const v = gen(e.a[0]);
+          put(`${t} = ${t} + ${v};`);
+          depth--;
+          put('}');
+          nest--;
+          return t;
+        }
+        case '^': {
+          const b = e.a[1];
+          if (b.k === 'num' && b.integer && b.v >= 1 && b.v <= 4) {   // x^n as repeated products
+            const x = gen(e.a[0]);
+            let r = x;
+            for (let p = 1; p < b.v; p++) { const u = fresh(); put(`let ${u} = ${r} * ${x};`); r = u; }
+            put(`let ${t} = ${r};`);
+            return t;
+          }
+          const x = gen(e.a[0]), y = gen(b);
+          put(`let ${t} = pow_s(${x}, ${y});`);
+          return t;
+        }
+        default: {
+          const v = e.a.map(gen);
+          const [x, y, z] = v;
+          let r;
+          switch (e.k) {
+            case 'neg': r = `-${x}`; break;
+            case '+': case '-': case '*': case '/': r = `${x} ${e.k} ${y}`; break;
+            case 'exp': case 'log': case 'sqrt': case 'abs': r = `${e.k}(${x})`; break;
+            case 'tanh': r = `tanh_s(${x})`; break;
+            case 'erf': r = `erf_s(${x})`; break;
+            case 'sigmoid': {
+              const u = fresh(), w2 = fresh();
+              put(`let ${u} = exp(-${x});`);
+              put(`let ${w2} = 1.0 + ${u};`);
+              r = `1.0 / ${w2}`;
+              break;
+            }
+            case 'relu': r = `relu_s(${x})`; break;
+            case 'max': r = `max_s(${x}, ${y})`; break;
+            case 'min': r = `min_s(${x}, ${y})`; break;
+            case 'where': r = `select(${z}, ${y}, ${x} > 0.0)`; break;
+            default: throw new Error(`recurrence: no WGSL for '${e.k}'`);
+          }
+          put(`let ${t} = ${r};`);
+          return t;
+        }
+      }
+    }
+    const v = gen(a.body);
+    put(`${dst}[${dstOff}u + pt] = ${v};`);
+    return { code: `${head}\n${lines.join('\n')}\n}\n`, n: N, where: a.where };
+  };
+  const K = {
+    P, mFloats: m, wFloats: w, wOff, inOff: L.in, stateN, st0, nst0,
+    init: P.init.map((a) => kernel(a, 'M', L.st[P.tensors[a.tensor].pos])),
+    let: P.let.map((a, k) => kernel(a, 'M', L.let[k])),
+    update: P.update.map((a, s) => kernel(a, 'M', L.nst[s])),
+    readout: kernel(P.readout, 'Y', 0),
+    commit: { code: `${head}\n  if (pt >= ${stateN}u) { return; }\n  M[${st0}u + pt] = M[${nst0}u + pt];\n}\n`, n: stateN, where: 'commit' },
+    copy: P.inputs.map((id, v) => ({
+      code: `@group(0) @binding(0) var<storage, read> X: array<f32>;
+@group(0) @binding(1) var<storage, read_write> M: array<f32>;
+@compute @workgroup_size(${WG}) fn main(@builtin(global_invocation_id) g: vec3u) {
+  let pt = g.y * ${MAXWG * WG}u + g.x;
+  if (pt < ${P.tensors[id].numel}u) { M[${L.in[v]}u + pt] = X[pt]; }
+}
+`, n: P.tensors[id].numel, where: `inputs[${v}]` })),
+  };
+  return K;
+}
+
+// Per device: the two bind group layouts every recurrence kernel uses, pipelines by code, two dummies.
+const recDevices = new WeakMap();
+function recDevice(device) {
+  if (!recDevices.has(device)) {
+    const S = GPUShaderStage.COMPUTE;
+    const ro = { type: 'read-only-storage' }, rw = { type: 'storage' };
+    const main = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: S, buffer: ro },
+      { binding: 1, visibility: S, buffer: rw }, { binding: 2, visibility: S, buffer: rw }] });
+    const copy = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: S, buffer: ro }, { binding: 1, visibility: S, buffer: rw }] });
+    const usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
+    recDevices.set(device, {
+      main, copy, pipes: new Map(),
+      mainLayout: device.createPipelineLayout({ bindGroupLayouts: [main] }),
+      copyLayout: device.createPipelineLayout({ bindGroupLayouts: [copy] }),
+      dummyR: device.createBuffer({ size: 16, usage }), dummyW: device.createBuffer({ size: 16, usage }),
+    });
+  }
+  return recDevices.get(device);
+}
+
+// One application's dispatches: {init, step} lists of [pipeline, bindGroup, [wx, wy]]. ins: one buffer per
+// value of `in` (input v's row at offset 0), Y the output row's buffer, W and M this application's.
+export function recurrenceDispatches(device, K, W, M, ins, Y) {
+  const R = recDevice(device);
+  const pipeOf = (code, layout) => {
+    if (!R.pipes.has(code))
+      R.pipes.set(code, device.createComputePipeline({ layout, compute: { module: device.createShaderModule({ code }), entryPoint: 'main' } }));
+    return R.pipes.get(code);
+  };
+  const size = (n) => { const gs = Math.ceil(Math.max(1, n) / WG); return [Math.min(gs, MAXWG), Math.ceil(gs / MAXWG)]; };
+  const entry = (k, y) => {
+    const pl = pipeOf(k.code, R.mainLayout);
+    const bg = device.createBindGroup({ layout: R.main, entries: [{ binding: 0, resource: { buffer: W || R.dummyR } },
+      { binding: 1, resource: { buffer: M } }, { binding: 2, resource: { buffer: y || R.dummyW } }] });
+    return [pl, bg, size(k.n)];
+  };
+  const step = K.copy.map((k, v) => [pipeOf(k.code, R.copyLayout),
+    device.createBindGroup({ layout: R.copy, entries: [{ binding: 0, resource: { buffer: ins[v] } }, { binding: 1, resource: { buffer: M } }] }),
+    size(k.n)]);
+  for (const k of K.let) step.push(entry(k));
+  for (const k of K.update) step.push(entry(k));
+  step.push(entry(K.commit));
+  step.push(entry(K.readout, Y));
+  return { init: K.init.map((k) => entry(k)), step };
+}
+
+// A recurrence node alone, as application 0 ({i} is 0), token by token over the inputs' rows from the
+// slot's initial state, as ember's adapter's run_node (tools/ir_adapter.cpp): the gate of single nodes
+// (tools/webgpu_parity/recurrence_gate.mjs). inputs: one Float32Array [T * w] per value of `in`;
+// weights: {tensor name: Float32Array}. Returns {y: Float32Array [T * out width], state: {name: Float32Array}}.
+export async function runRecurrenceNode(device, node, inputs, weights, T) {
+  const K = recurrenceKernels(node), P = K.P;
+  const usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
+  const bufs = [];
+  const mk = (floats) => { const b = device.createBuffer({ size: 4 * Math.max(4, floats), usage }); bufs.push(b); return b; };
+  let W = null;
+  if (K.wFloats) {
+    const all = new Float32Array(K.wFloats);
+    P.weightInfo.forEach((wd, k) => {
+      const name = wd.tensor.replace('{i}', '0'), v = weights[name];
+      if (!v) throw new Error(`run_node: no weight '${name}'`);
+      if (v.length !== wd.numel) throw new Error(`IR_SPEC 6.10 (rule 34): recurrence weight ${wd.decl} reads '${name}', which has ${v.length} elements; its declaration has ${wd.numel}`);
+      all.set(v, K.wOff[k]);
+    });
+    W = mk(K.wFloats);
+    device.queue.writeBuffer(W, 0, all);
+  }
+  const M = mk(K.mFloats), Y = mk(P.outWidth);
+  const ins = P.inWidths.map((w, v) => {
+    if (inputs[v].length !== T * w) throw new Error(`IR_SPEC 6.10 (rule 34): recurrence input ${v} is not [${T}, ${w}]`);
+    return mk(w);
+  });
+  const d = recurrenceDispatches(device, K, W, M, ins, Y);
+  const run = (list, enc) => {
+    const pass = enc.beginComputePass();
+    for (const [pl, bg, n] of list) { pass.setPipeline(pl); pass.setBindGroup(0, bg); pass.dispatchWorkgroups(n[0], n[1]); }
+    pass.end();
+  };
+  let enc = device.createCommandEncoder();
+  enc.clearBuffer(M);
+  if (d.init.length) run(d.init, enc);
+  device.queue.submit([enc.finish()]);
+  const ow = P.outWidth, yOut = mk(Math.max(1, T) * ow);
+  for (let t = 0; t < T; t++) {
+    P.inWidths.forEach((w, v) => device.queue.writeBuffer(ins[v], 0, inputs[v], t * w, w));
+    enc = device.createCommandEncoder();
+    run(d.step, enc);
+    enc.copyBufferToBuffer(Y, 0, yOut, 4 * t * ow, 4 * ow);
+    device.queue.submit([enc.finish()]);
+  }
+  const read = async (buf, off, n) => {
+    const rb = device.createBuffer({ size: 4 * Math.max(4, n), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    const e = device.createCommandEncoder();
+    e.copyBufferToBuffer(buf, 4 * off, rb, 0, 4 * n);
+    device.queue.submit([e.finish()]);
+    await rb.mapAsync(GPUMapMode.READ);
+    const out = new Float32Array(rb.getMappedRange().slice(0, 4 * n));
+    rb.unmap(); rb.destroy();
+    return out;
+  };
+  const y = T ? await read(yOut, 0, T * ow) : new Float32Array(0);
+  const state = {};
+  let off = K.st0;
+  for (const id of P.states) { const t = P.tensors[id]; state[t.name] = await read(M, off, t.numel); off += t.numel; }
+  for (const b of bufs) b.destroy();
+  return { y, state, exact: P.exact };
+}
+
 // ---- support check ------------------------------------------------------------------------------------
 
 function nodesOf(doc) { return [...doc.embed.nodes, ...doc.block.nodes, ...doc.head.nodes]; }
@@ -737,6 +1380,11 @@ export function irSupport(doc) {
         compileExpr(n.expr, n.in.length);
       }
       if (n.op === 'depth_attend' && n.in.length > 3) return { ok: false, reason: 'depth_attend with more than two extra sources' };
+      if (n.op === 'recurrence') {   // IR_SPEC 6.10: a block node over a block slot, as ember's CPU runs it
+        if (!doc.block.nodes.includes(n)) return { ok: false, reason: 'recurrence outside the block' };
+        if (doc.block.nodes.some((b) => b.op === 'depth_route')) return { ok: false, reason: 'recurrence beside depth_route' };
+        recurrenceKernels(n);   // parses, checks and compiles every body (throws with the rule or the limit)
+      }
       if (n.op === 'moe_ffn' && (n.n_experts > 256 || n.top_k > 16)) return { ok: false, reason: 'moe_ffn past 256 experts or top-16' };
     }
     return { ok: true };
@@ -875,6 +1523,7 @@ export async function createIr(device, ggufBuffer, docIn, opts = {}) {
   const cnt = scratch(Math.max(4, L));
 
   // Slots.
+  const stateViews = [];   // every recurrent slot's tensors per application, for readState
   const slots = Object.fromEntries((doc.block.state || []).map((s) => [s.name, s]));
   const kv = [], rec = [];   // per application: {slotName: {kc, vc}} / {slotName: {tensor: buf}}
   let maxKeys = 0;
@@ -886,8 +1535,9 @@ export async function createIr(device, ggufBuffer, docIn, opts = {}) {
         maxKeys = Math.max(maxKeys, rows);
         const kvd = s.kv_heads * s.head_dim;
         kv[l][s.name] = { kc: scratch(rows * kvd), vc: scratch(rows * kvd), rows };
-      } else if (s.kind === 'recurrent') {
+      } else if (s.kind === 'recurrent' && s.op !== 'recurrence') {   // a recurrence's slot: its node's work buffer
         rec[l][s.name] = Object.fromEntries(s.tensors.map((t) => [t.name, scratch(t.shape.reduce((a, b) => a * b, 1))]));
+        for (const t of s.tensors) stateViews.push({ slot: s.name, l, name: t.name, buf: rec[l][s.name][t.name], off: 0, n: t.shape.reduce((a, b) => a * b, 1) });
       }
     }
   }
@@ -937,6 +1587,7 @@ export async function createIr(device, ggufBuffer, docIn, opts = {}) {
   };
   const put = (name, w) => { const v = { buf: scratch(w), w }; env.set(name, v); return v; };
   const frozen = new Set();
+  const recK = new Map(), recW = new Map(), recInit = [];   // recurrence: kernels per node, weights, the init dispatches
 
   function runNode(n, l) {
     const op = n.op, out = Array.isArray(n.out) ? n.out : [n.out];
@@ -1096,6 +1747,47 @@ export async function createIr(device, ggufBuffer, docIn, opts = {}) {
       if (has(n, 'd')) ad.set(vecF32(tname(n.d, l, n)).subarray(0, D), D * N);
       const y = put(out[0], D);
       emit('selscan', [words([D, N, has(n, 'd') ? 1 : 0, (n.dt_softplus ?? true) ? 1 : 0]), x.buf, dt.buf, Bm.buf, Cm.buf, storage(ad), r.s, y.buf], groups(D));
+    } else if (op === 'recurrence') {   // IR_SPEC 6.10: the node's own kernels (recurrenceKernels)
+      if (l < 0) throw new Error('WebGPU IR path: recurrence outside the block');
+      if (!recK.has(n)) recK.set(n, recurrenceKernels(n));
+      const K = recK.get(n), P = K.P;
+      const slot = slots[n.state];
+      if (!slot || slot.kind !== 'recurrent') throw new Error(`IR_SPEC 6.10 (rule 33): recurrence names no recurrent slot '${n.state}'`);
+      const why = recurrenceSlotErrors(P, slot);
+      if (why) throw new Error('IR_SPEC 6.10 (rule 33): ' + why);
+      if (rec[l][n.state]) throw new Error(`IR_SPEC 6.10 (rule 33): the slot '${n.state}' of a recurrence is read by another node`);
+      const ins = (Array.isArray(n.in) ? n.in : [n.in]).map((nm, k) => {
+        const v = env.get(nm);
+        if (!v || v.list) throw new Error(`IR op 'recurrence': input '${nm}' is not a tensor`);
+        if (v.w !== P.inWidths[k]) throw new Error(`IR_SPEC 6.10 (rule 34): recurrence input '${nm}' is ${v.w} wide; its declaration is ${P.inWidths[k]}`);
+        return v.buf;
+      });
+      let W = null;
+      if (K.wFloats) {   // this application's weights, each as many elements as its declaration, row-major as stored
+        const names = P.weightInfo.map((wd) => tname(wd.tensor, l, n)), key = names.join('|');
+        if (!recW.has(key)) {
+          const all = new Float32Array(K.wFloats);
+          P.weightInfo.forEach((wd, k) => {
+            const v = vecF32(names[k]);
+            if (v.length !== wd.numel)
+              throw new Error(`IR_SPEC 6.10 (rule 34): recurrence weight ${wd.decl} reads '${names[k]}', which has ${v.length} elements; its declaration has ${wd.numel}`);
+            all.set(v, K.wOff[k]);
+          });
+          recW.set(key, storage(all));
+        }
+        W = recW.get(key);
+      }
+      const maxB = device.limits.maxStorageBufferBindingSize;
+      if (4 * K.mFloats > maxB || 4 * K.wFloats > maxB)
+        throw new Error(`WebGPU IR path: a recurrence's work (${4 * K.mFloats} bytes) or weights (${4 * K.wFloats}) past the device's storage binding size (${maxB})`);
+      const M = scratch(K.mFloats);
+      rec[l][n.state] = { M };
+      let so = K.st0;
+      for (const id of P.states) { const t = P.tensors[id]; stateViews.push({ slot: n.state, l, name: t.name, buf: M, off: so, n: t.numel }); so += t.numel; }
+      const y = put(out[0], P.outWidth);
+      const d = recurrenceDispatches(device, K, W, M, ins, y.buf);
+      prog.push(...d.step);
+      recInit.push(...d.init);
     } else if (op === 'depth_route') {
       // handled by the block loop
     } else {
@@ -1137,6 +1829,11 @@ export async function createIr(device, ggufBuffer, docIn, opts = {}) {
     const enc = device.createCommandEncoder();
     for (const b of recBufs) enc.clearBuffer(b);
     enc.clearBuffer(cnt);
+    if (recInit.length) {   // a recurrence's init bodies (IR_SPEC 6.10.3), after the clear
+      const pass = enc.beginComputePass();
+      for (const [pl, bg, n] of recInit) { pass.setPipeline(pl); pass.setBindGroup(0, bg); pass.dispatchWorkgroups(n[0], n[1]); }
+      pass.end();
+    }
     device.queue.submit([enc.finish()]);
     seqLen = 0; ids.length = 0; tsRun = 0; tsDone = 0;
   }
@@ -1181,6 +1878,21 @@ export async function createIr(device, ggufBuffer, docIn, opts = {}) {
       await readback.mapAsync(GPUMapMode.READ);
       const out = new Float32Array(readback.getMappedRange().slice(0));
       readback.unmap();
+      return out;
+    },
+    // The recurrent state on the GPU after the last call: {slot: [per application {tensor: Float32Array}]}
+    // (IR_SPEC 6.3's slot tensors; conformance traces compare it).
+    async readState() {
+      const out = {};
+      for (const v of stateViews) {
+        const rb = device.createBuffer({ size: 4 * Math.max(4, v.n), usage: S.MAP_READ | S.COPY_DST });
+        const enc = device.createCommandEncoder();
+        enc.copyBufferToBuffer(v.buf, 4 * v.off, rb, 0, 4 * v.n);
+        device.queue.submit([enc.finish()]);
+        await rb.mapAsync(GPUMapMode.READ);
+        ((out[v.slot] ??= [])[v.l] ??= {})[v.name] = new Float32Array(rb.getMappedRange().slice(0, 4 * v.n));
+        rb.unmap(); rb.destroy();
+      }
       return out;
     },
     destroy() { for (const b of allBufs) b.destroy(); readback.destroy(); },
