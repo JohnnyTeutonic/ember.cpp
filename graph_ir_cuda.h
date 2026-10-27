@@ -153,5 +153,21 @@ size_t ir_expr_scratch_floats(const std::vector<expr::Stage>& stages, int T, int
 void ir_expr_cuda(const std::vector<expr::Stage>& stages, const float* const* ins, int n_ins, float* scratch,
                   float* out, int T, int w, cudaStream_t stream);
 
+// Multi-head latent attention (IR_SPEC 5.20, revision 1.5; CPU form graph_ir_ops.h cpu::mla_attention).
+// The slot's rows [c | kr] (r + dr floats) of c [T, r] and kr [T, dr] into KV [pos][r + dr] at positions
+// start_pos + t (from *dpos when given). EXACT (a copy).
+void ir_mla_kv_write_cuda(float* KV, const float* c, const float* kr, int T, int r, int dr, int start_pos,
+                          cudaStream_t stream, const int* dpos = nullptr);
+// qn [T, H dn], qr [T, H dr] at positions start_pos + t (from *dpos) over KV [pos][r + dr] already holding
+// positions <= start_pos + T - 1; Kb [H, r, dn], Vb [H, dv, r]; out [T, H dv]. One block per (row, head),
+// every sum sequential in the CPU's order with no contraction: qa, the scores, the max, z and u = sum_j
+// (e_j / z) c_j over up to kMlaChunk visible keys exactly as the CPU (expf ROUNDING apart); past that an online
+// softmax over chunks of kMlaChunk keys (u summed unnormalised, divided by z at the end): ROUNDING.
+// Deterministic run to run (no atomics). section 5.15's window and sinks (window 0: unbounded).
+constexpr int kMlaChunk = 1024;
+void ir_mla_attention_cuda(const float* qn, const float* qr, const float* KV, const float* Kb, const float* Vb,
+                           float* out, int T, int start_pos, int H, int r, int dn, int dr, int dv, float scale,
+                           int window, int sinks, cudaStream_t stream, const int* dpos = nullptr);
+
 }  // namespace ember_ir
 #endif  // HAS_CUDA

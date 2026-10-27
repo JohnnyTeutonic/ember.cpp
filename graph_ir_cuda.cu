@@ -875,4 +875,129 @@ void ir_expr_cuda(const std::vector<expr::Stage>& stages, const float* const* in
   }
 }
 
+namespace {
+
+__global__ void mla_kv_write_kernel(float* __restrict__ KV, const float* __restrict__ c, const float* __restrict__ kr,
+                                    int T, int r, int dr, int start_pos, const int* __restrict__ dpos) {
+  if (dpos) start_pos = *dpos;
+  const int w = r + dr;
+  const size_t n = (size_t)T * w;
+  for (size_t i = (size_t)blockIdx.x * blockDim.x + threadIdx.x; i < n; i += (size_t)gridDim.x * blockDim.x) {
+    const int t = (int)(i / w), e = (int)(i % w);
+    KV[((size_t)start_pos + t) * w + e] = e < r ? c[(size_t)t * r + e] : kr[(size_t)t * dr + (e - r)];
+  }
+}
+
+// One block per (row t, head h). Shared: qa [r], qr_h [dr], u [r], the chunk's scores [kMlaChunk].
+__global__ void mla_attention_kernel(const float* __restrict__ qn, const float* __restrict__ qr,
+                                     const float* __restrict__ KV, const float* __restrict__ Kb,
+                                     const float* __restrict__ Vb, float* __restrict__ out, int H, int r, int dn, int dr,
+                                     int dv, float scale, int window, int sinks, int start_pos,
+                                     const int* __restrict__ dpos) {
+  extern __shared__ float sm[];
+  float* qa = sm;
+  float* q2 = qa + r;
+  float* u = q2 + dr;
+  float* sc = u + r;
+  __shared__ float m_s, z_s, alpha_s;
+  const int t = blockIdx.x / H, h = blockIdx.x % H;
+  if (dpos) start_pos = *dpos;
+  const int p = start_pos + t;
+  const int w = r + dr;
+  const float* K = Kb + (size_t)h * r * dn;
+  const float* V = Vb + (size_t)h * dv * r;
+  const float* qnh = qn + ((size_t)t * H + h) * dn;
+  const float* qrh = qr + ((size_t)t * H + h) * dr;
+  for (int i = threadIdx.x; i < r; i += blockDim.x) {
+    float acc = 0.0f;
+    for (int k = 0; k < dn; ++k) acc = __fadd_rn(acc, __fmul_rn(K[(size_t)i * dn + k], qnh[k]));
+    qa[i] = acc;
+    u[i] = 0.0f;
+  }
+  for (int e = threadIdx.x; e < dr; e += blockDim.x) q2[e] = qrh[e];
+  // section 5.15: [0, sink_hi) then [win_lo, p] (cpu_attention.cpp swa_visible_ranges)
+  int win_lo = 0, sink_hi = 0;
+  if (window > 0) {
+    win_lo = p + 1 > window ? p + 1 - window : 0;
+    sink_hi = min(min(sinks, p + 1), win_lo);
+  }
+  const int nvis = sink_hi + (p + 1 - win_lo);
+  const bool one_chunk = nvis <= kMlaChunk;
+  if (threadIdx.x == 0) {
+    m_s = -INFINITY;
+    z_s = 0.0f;
+  }
+  __syncthreads();
+  for (int c0 = 0; c0 < nvis; c0 += kMlaChunk) {
+    const int cn = min(kMlaChunk, nvis - c0);
+    for (int j = threadIdx.x; j < cn; j += blockDim.x) {
+      const int v = c0 + j;
+      const int key = v < sink_hi ? v : win_lo + (v - sink_hi);
+      const float* row = KV + (size_t)key * w;
+      float a = 0.0f, b = 0.0f;
+      for (int i = 0; i < r; ++i) a = __fadd_rn(a, __fmul_rn(qa[i], row[i]));
+      for (int e = 0; e < dr; ++e) b = __fadd_rn(b, __fmul_rn(q2[e], row[r + e]));
+      sc[j] = __fmul_rn(__fadd_rn(a, b), scale);
+    }
+    __syncthreads();
+    if (threadIdx.x == 0) {  // max, then e_j and z in ascending j (the CPU's order within a chunk)
+      float cm = m_s;
+      for (int j = 0; j < cn; ++j) cm = fmaxf(cm, sc[j]);
+      const float alpha = m_s == -INFINITY ? 0.0f : expf(__fsub_rn(m_s, cm));
+      float zc = 0.0f;
+      for (int j = 0; j < cn; ++j) {
+        sc[j] = expf(__fsub_rn(sc[j], cm));
+        zc = __fadd_rn(zc, sc[j]);
+      }
+      z_s = __fadd_rn(__fmul_rn(z_s, alpha), zc);
+      m_s = cm;
+      alpha_s = alpha;
+    }
+    __syncthreads();
+    const float alpha = alpha_s, z = z_s;
+    for (int i = threadIdx.x; i < r; i += blockDim.x) {
+      float acc = one_chunk ? 0.0f : __fmul_rn(u[i], alpha);
+      for (int j = 0; j < cn; ++j) {
+        const int v = c0 + j;
+        const int key = v < sink_hi ? v : win_lo + (v - sink_hi);
+        const float a = one_chunk ? __fdiv_rn(sc[j], z) : sc[j];
+        acc = __fadd_rn(acc, __fmul_rn(a, KV[(size_t)key * w + i]));
+      }
+      u[i] = acc;
+    }
+    __syncthreads();
+  }
+  if (!one_chunk) {
+    for (int i = threadIdx.x; i < r; i += blockDim.x) u[i] = __fdiv_rn(u[i], z_s);
+    __syncthreads();
+  }
+  float* o = out + ((size_t)t * H + h) * dv;
+  for (int k = threadIdx.x; k < dv; k += blockDim.x) {
+    float acc = 0.0f;
+    for (int i = 0; i < r; ++i) acc = __fadd_rn(acc, __fmul_rn(V[(size_t)k * r + i], u[i]));
+    o[k] = acc;
+  }
+}
+
+}  // namespace
+
+void ir_mla_kv_write_cuda(float* KV, const float* c, const float* kr, int T, int r, int dr, int start_pos,
+                          cudaStream_t stream, const int* dpos) {
+  const size_t n = (size_t)T * (r + dr);
+  mla_kv_write_kernel<<<blocks_for(n), kThreads, 0, stream>>>(KV, c, kr, T, r, dr, start_pos, dpos);
+  check_launch("mla kv write");
+}
+
+void ir_mla_attention_cuda(const float* qn, const float* qr, const float* KV, const float* Kb, const float* Vb,
+                           float* out, int T, int start_pos, int H, int r, int dn, int dr, int dv, float scale,
+                           int window, int sinks, cudaStream_t stream, const int* dpos) {
+  const size_t smem = (static_cast<size_t>(r) * 2 + dr + kMlaChunk) * sizeof(float);
+  if (smem > 48 * 1024)
+    throw std::runtime_error("IR mla_attention on CUDA: kv_rank " + std::to_string(r) + " needs " + std::to_string(smem) +
+                             " bytes of shared memory (at most 48 KiB)");
+  mla_attention_kernel<<<static_cast<unsigned>(T) * H, 128, smem, stream>>>(qn, qr, KV, Kb, Vb, out, H, r, dn, dr, dv,
+                                                                           scale, window, sinks, start_pos, dpos);
+  check_launch("mla attention");
+}
+
 }  // namespace ember_ir

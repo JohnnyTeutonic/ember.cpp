@@ -364,7 +364,7 @@ class Interpreter {
   enum class DOp {
     Embedding, PosEmbedding, LayerNorm, Split, Gelu, RmsNorm, Linear, Rope, Attention, Add, Mul, MoeFfn, Silu,
     Sub, Relu, Sigmoid, Affine, MulCol, RmsRow, List, Append, DepthAttend, LinearAttention, SsmScan, Expr,
-    Conv1dCausal, SelectiveScan, Scale
+    Conv1dCausal, SelectiveScan, Scale, MlaAttention
   };
   struct DStep {
     DOp op = DOp::Add;
@@ -389,8 +389,11 @@ class Interpreter {
     float eps = 1e-5f, scale = 0.0f, shift = 0.0f;       // eps: also linear_attention's den_floor
     bool flag = false;  // gelu: tanh form; moe_ffn: renorm gates
     std::vector<int> sizes;  // split
+    int groups = 1;          // split: groups (IR_SPEC 5.5, revision 1.5)
     const float* state_w = nullptr;  // embedding: the state rows (state_weight), ids vocab .. vocab + k - 1
     bool ts = false;                 // attention: mask turn_state
+    // mla_attention (IR_SPEC 5.20): heads in hq, k_b in w, v_b in b, window and sinks as attention's
+    int kv_rank = 0, qk_nope = 0, qk_rope = 0, v_dim = 0;
   };
   void init_device();
   void compile_device();

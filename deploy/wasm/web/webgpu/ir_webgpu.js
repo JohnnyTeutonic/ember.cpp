@@ -1368,6 +1368,10 @@ export function irSupport(doc) {
   try {
     if (!doc || !doc.block || !doc.embed || !doc.head) return { ok: false, reason: 'not an IR document' };
     for (const n of nodesOf(doc)) {
+      // Revision 1.5's mla_attention (IR_SPEC 5.20) and split groups (5.5) have no WGSL kernel: WebAssembly runs them.
+      if (n.op === 'mla_attention') return { ok: false, reason: 'mla_attention (revision 1.5) has no WGSL kernel' };
+      if (n.op === 'split' && n.groups !== undefined && n.groups !== 1)
+        return { ok: false, reason: 'split groups (revision 1.5) has no WGSL kernel' };
       if (!SUPPORTED.has(n.op)) return { ok: false, reason: `op '${n.op}' has no WGSL kernel` };
       if (n.op === 'rope' && n.rope_heads === 'first') return { ok: false, reason: 'rope_heads "first"' };
       // T5's relative position bias (IR_SPEC 5.15, revision 1.3) has no WGSL kernel: the CPU interpreter runs it.

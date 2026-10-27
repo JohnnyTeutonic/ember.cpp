@@ -48,6 +48,8 @@ const std::set<std::string> kCpuOps = {"embedding", "pos_embedding", "rmsnorm", 
                                        "expr", "scale",
                                        // Mixture-of-Recursions' control node (forward's mor_step runs it)
                                        "depth_route",
+                                       // multi-head latent attention (IR_SPEC 5.20, revision 1.5; graph_ir_ops.h)
+                                       "mla_attention",
                                        // a recurrent op defined in the document (graph_ir_recurrence.h); no CUDA
                                        // kernel: a CUDA build serves its documents on the CPU (device_supported)
                                        "recurrence"};
@@ -60,7 +62,9 @@ const std::set<std::string> kCudaOps = {"embedding", "pos_embedding", "rmsnorm",
                                         "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
                                         "expr", "scale",
                                         // Mixture-of-Recursions' control node (run_device's mor_step_device runs it)
-                                        "depth_route"};
+                                        "depth_route",
+                                        // multi-head latent attention (IR_SPEC 5.20; graph_ir_cuda.h ir_mla_attention_cuda)
+                                        "mla_attention"};
 const std::set<std::string> kRowWiseOps = {"rmsnorm", "layernorm", "linear", "add", "mul", "silu", "gelu",
                                            "sub", "relu", "sigmoid", "affine", "mul_col", "rms_row", "list", "append", "depth_attend",
                                            "expr", "scale"};
@@ -232,7 +236,8 @@ bool has_windowed_attention(const std::string& ir_json) {
   for (const auto& s : blk.value("state", json::array()))
     if (any_nonzero(s, "window")) return true;
   for (const auto& n : blk.value("nodes", json::array()))
-    if (n.value("op", "") == "attention" && any_nonzero(n, "window")) return true;
+    if ((n.value("op", "") == "attention" || n.value("op", "") == "mla_attention") && any_nonzero(n, "window"))
+      return true;
   return false;
 }
 
@@ -493,7 +498,7 @@ bool device_supported(const std::string& ir_json) {
 
 bool has_ir_builder(const std::string& arch) {
   static const std::set<std::string> kBuilt = {"llama", "mistral", "qwen2", "qwen3", "gpt2", "gptneox", "gemma3",
-                                               "mamba"};
+                                               "mamba", "qwen2moe", "qwen3moe", "deepseek2"};
   return kBuilt.count(arch) > 0;
 }
 
@@ -521,7 +526,8 @@ std::string find_ir(const GGUFData& gguf) {
   if (has_ir_builder(arch)) return build_ir_from_gguf(gguf);
   throw std::runtime_error("ember cannot run general.architecture = '" + arch +
                            "': the GGUF has no paperkiln.ir and ember has no IR builder for that architecture "
-                           "(built: llama, mistral, qwen2, qwen3, gpt2, gptneox, gemma3, mamba)");
+                           "(built: llama, mistral, qwen2, qwen3, gpt2, gptneox, gemma3, mamba, qwen2moe, qwen3moe, "
+                           "deepseek2)");
 }
 
 std::string build_ir_from_gguf(const GGUFData& g, bool log) {
@@ -601,7 +607,33 @@ std::string build_ir_from_gguf(const GGUFData& g, bool log) {
   int ctx = 0;
   std::string summary;
 
-  if (arch == "llama" || arch == "mistral" || arch == "qwen2" || arch == "qwen3") {
+  // A truth value (IR_SPEC D.1): a bool, or a number that is true when non-zero.
+  auto truth = [&](const std::string& key, bool dflt) {
+    if (const auto b = meta_bool(g, p + key)) return *b;
+    if (const auto v = meta_number(g, p + key)) return *v != 0.0;
+    return dflt;
+  };
+  // moe_ffn in llama.cpp's expert layout (IR_SPEC D.3, D.10), its gates normalised as gate_norm says.
+  auto moe_node = [&](const std::string& gate_norm) {
+    return op("moe_ffn", {"h2"}, "f",
+              {{"router", B + "ffn_gate_inp.weight"},
+               {"experts", {{"gate", B + "ffn_gate_exps.weight"}, {"up", B + "ffn_up_exps.weight"},
+                            {"down", B + "ffn_down_exps.weight"}}},
+               {"n_experts", static_cast<int>(get("expert_count"))},
+               {"top_k", static_cast<int>(get("expert_used_count"))},
+               {"gate_norm", gate_norm},
+               {"activation", "silu"}});
+  };
+  // The shared expert's SwiGLU over ffn_{gate,up,down}_shexp (IR_SPEC D.10, D.11) -> sf.
+  auto shared_expert = [&](json& nodes) {
+    for (json n : {linear("h2", B + "ffn_gate_shexp.weight", "sg"), linear("h2", B + "ffn_up_shexp.weight", "su"),
+                   op("silu", {"sg"}, "sg"), op("mul", {"sg", "su"}, "sgu"),
+                   linear("sgu", B + "ffn_down_shexp.weight", "sf")})
+      nodes.push_back(n);
+  };
+  const bool qwen_moe = arch == "qwen2moe" || arch == "qwen3moe";
+
+  if (arch == "llama" || arch == "mistral" || arch == "qwen2" || arch == "qwen3" || qwen_moe) {
     const int H = static_cast<int>(get("attention.head_count"));
     const int KV = static_cast<int>(get("attention.head_count_kv", H));
     const int hd = static_cast<int>(get("attention.key_length", d / H));
@@ -616,7 +648,7 @@ std::string build_ir_from_gguf(const GGUFData& g, bool log) {
     if (arch == "llama" || arch == "mistral")
       window = static_cast<int>(meta_number(g, p + "attention.sliding_window").value_or(0));
     const bool bias = shape_has("blk.0.attn_q.bias"), qk_norm = shape_has("blk.0.attn_q_norm.weight");
-    const std::string pairing = arch == "qwen2" || arch == "qwen3" ? "neox" : "interleaved";
+    const std::string pairing = arch == "qwen2" || arch == "qwen3" || qwen_moe ? "neox" : "interleaved";
     auto proj = [&](const std::string& name, const std::string& out) {
       return linear("h", B + name + ".weight", out, bias ? B + name + ".bias" : "");
     };
@@ -635,15 +667,20 @@ std::string build_ir_from_gguf(const GGUFData& g, bool log) {
                    linear("a", B + "attn_output.weight", "o"), op("add", {"x", "o"}, "x"),
                    rmsnorm("x", B + "ffn_norm.weight", eps, "h2")})
       nodes.push_back(n);
+    // Qwen-MoE (IR_SPEC D.10, revision 1.5): qwen2's / qwen3's attention, moe_ffn with gate_norm raw for qwen2moe
+    // (llama.cpp b6000's graph ignores norm_topk_prob) and renorm for qwen3moe; qwen2moe's shared expert times
+    // sigmoid(ffn_gate_inp_shexp h2) per token, added to f.
+    const bool shexp = arch == "qwen2moe" && shape_has("blk.0.ffn_gate_inp_shexp.weight");
     if (moe) {
-      nodes.push_back(op("moe_ffn", {"h2"}, "f",
-                         {{"router", B + "ffn_gate_inp.weight"},
-                          {"experts", {{"gate", B + "ffn_gate_exps.weight"}, {"up", B + "ffn_up_exps.weight"},
-                                       {"down", B + "ffn_down_exps.weight"}}},
-                          {"n_experts", static_cast<int>(get("expert_count"))},
-                          {"top_k", static_cast<int>(get("expert_used_count"))},
-                          {"gate_norm", "renorm"},
-                          {"activation", "silu"}}));
+      nodes.push_back(moe_node("renorm"));
+    } else if (qwen_moe) {
+      nodes.push_back(moe_node(arch == "qwen2moe" ? "raw" : "renorm"));
+      if (shexp) {
+        shared_expert(nodes);
+        for (json n : {linear("h2", B + "ffn_gate_inp_shexp.weight", "sgate"), op("sigmoid", {"sgate"}, "sgate"),
+                       op("mul_col", {"sf", "sgate"}, "sf"), op("add", {"f", "sf"}, "f")})
+          nodes.push_back(n);
+      }
     } else {
       for (json n : {linear("h2", B + "ffn_gate.weight", "g"), linear("h2", B + "ffn_up.weight", "u"),
                      op("silu", {"g"}, "g"), op("mul", {"g", "u"}, "gu"), linear("gu", B + "ffn_down.weight", "f")})
@@ -655,7 +692,8 @@ std::string build_ir_from_gguf(const GGUFData& g, bool log) {
     summary = "heads " + std::to_string(H) + "/" + std::to_string(KV) + " x " + std::to_string(hd) + ", n_rot " +
               std::to_string(n_rot) + ", " + pairing + " RoPE" + (window ? ", window " + std::to_string(window) : "") +
               (bias ? ", q/k/v biases" : "") + (qk_norm ? ", per-head q/k RMSNorm" : "") +
-              (moe ? ", moe_ffn " + std::to_string(static_cast<int>(get("expert_count"))) + " experts" : "");
+              (moe || qwen_moe ? ", moe_ffn " + std::to_string(static_cast<int>(get("expert_count"))) + " experts" : "") +
+              (shexp ? " + a gated shared expert" : "");
   } else if (arch == "gpt2" || arch == "gptneox") {
     // LayerNorm blocks over a fused, biased qkv (q | k | v as llama.cpp's convert
     // writes it; for gptneox it has already de-interleaved HF's per-head [q k v] rows).
@@ -754,6 +792,73 @@ std::string build_ir_from_gguf(const GGUFData& g, bool log) {
     summary = "heads " + std::to_string(H) + "/" + std::to_string(KV) + " x " + std::to_string(hd) +
               ", sandwich RMSNorms, GeGLU, window " + std::to_string(win) + " on 5 of every 6 layers" +
               (factor != 1.0 ? ", global RoPE scaled 1/" + std::to_string(factor) : "");
+  } else if (arch == "deepseek2") {
+    // DeepSeek-V2 in llama.cpp's MLA layout (IR_SPEC D.11, revision 1.5): the query from attn_q (V2-Lite) or the
+    // low-rank attn_q_a / attn_q_b; attn_kv_a_mqa h split into the latent c and the shared rotary key kr;
+    // mla_attention over a kv slot holding [c | kr]; moe_ffn (times expert_weights_scale) plus ungated shared
+    // experts. Leading dense blocks (Q17), DeepSeek-V3's sigmoid router and selection bias, YaRN and files
+    // converted before llama.cpp's MLA keys build no graph.
+    const int H = static_cast<int>(get("attention.head_count"));
+    ctx = static_cast<int>(get("context_length"));
+    const double eps = get("attention.layer_norm_rms_epsilon");
+    if (!shape_has("blk.0.attn_k_b.weight") || !meta_number(g, p + "attention.key_length_mla"))
+      throw std::runtime_error("IR builder: deepseek2 file without attn_k_b / attention.key_length_mla (converted "
+                               "before llama.cpp's MLA layout) builds no graph");
+    if (get("leading_dense_block_count", 0.0) > 0)
+      throw std::runtime_error("IR builder: deepseek2 with leading dense blocks (leading_dense_block_count > 0) builds no "
+                               "graph: a block is one node list (IR_SPEC Q17)");
+    double gating = get("expert_gating_func", 1.0);
+    if (gating == 0.0) gating = 1.0;
+    if (gating != 1.0 || shape_has("blk.0.exp_probs_b.bias"))
+      throw std::runtime_error("IR builder: deepseek2 with DeepSeek-V3's sigmoid router or selection bias "
+                               "(expert_gating_func != 1, exp_probs_b) builds no graph");
+    no_rope_scaling();  // YaRN among them
+    const int dr = static_cast<int>(get("rope.dimension_count"));
+    const int dn = static_cast<int>(get("attention.key_length_mla")) - dr;
+    const int dv = static_cast<int>(get("attention.value_length_mla"));
+    const int r = static_cast<int>(get("attention.kv_lora_rank"));
+    const double theta = get("rope.freq_base", 10000.0);
+    const std::string gate_norm = truth("expert_weights_norm", false) ? "renorm" : "raw";
+    double s = get("expert_weights_scale", 1.0);
+    if (s == 0.0) s = 1.0;
+    nodes = json::array({rmsnorm("x", B + "attn_norm.weight", eps, "h")});
+    const bool q_lora = shape_has("blk.0.attn_q_a.weight");
+    if (q_lora) {
+      for (json n : {linear("h", B + "attn_q_a.weight", "qa"), rmsnorm("qa", B + "attn_q_a_norm.weight", eps, "qa"),
+                     linear("qa", B + "attn_q_b.weight", "q")})
+        nodes.push_back(n);
+    } else {
+      nodes.push_back(linear("h", B + "attn_q.weight", "q"));
+    }
+    for (json n : {op("split", {"q"}, {"qn", "qr"}, {{"sizes", {dn, dr}}, {"groups", H}}),
+                   linear("h", B + "attn_kv_a_mqa.weight", "ckr"), op("split", {"ckr"}, {"c", "kr"}, {{"sizes", {r, dr}}}),
+                   rmsnorm("c", B + "attn_kv_a_norm.weight", eps, "c"),
+                   json{{"op", "rope"}, {"in", {"qr", "kr", "pos"}}, {"heads", H}, {"kv_heads", 1}, {"head_dim", dr},
+                        {"n_rot", dr}, {"theta", f32_value(theta)}, {"rope_heads", "all"}, {"pairing", "interleaved"},
+                        {"out", {"qr", "kr"}}},
+                   json{{"op", "mla_attention"}, {"in", {"qn", "qr", "c", "kr"}}, {"state", "kv"}, {"heads", H},
+                        {"kv_rank", r}, {"qk_nope", dn}, {"qk_rope", dr}, {"v_head_dim", dv},
+                        {"k_b", B + "attn_k_b.weight"}, {"v_b", B + "attn_v_b.weight"},
+                        {"scale", f32_value(1.0 / std::sqrt(static_cast<double>(dn + dr)))}, {"causal", true},
+                        {"window", 0}, {"sinks", 0}, {"out", "a"}},
+                   linear("a", B + "attn_output.weight", "o"), op("add", {"x", "o"}, "x"),
+                   rmsnorm("x", B + "ffn_norm.weight", eps, "h2"), moe_node(gate_norm)})
+      nodes.push_back(n);
+    if (s != 1.0) nodes.push_back(op("affine", {"f"}, "f", {{"scale", f32_value(s)}, {"shift", 0.0}}));
+    const bool shexp = shape_has("blk.0.ffn_gate_shexp.weight");
+    if (shexp) {
+      shared_expert(nodes);
+      nodes.push_back(op("add", {"f", "sf"}, "f"));
+    }
+    nodes.push_back(op("add", {"x", "f"}, "x"));
+    head = tied_head(json::array({rmsnorm("x", "output_norm.weight", eps, "h")}));
+    state = json::array({{{"name", "kv"}, {"kind", "kv"}, {"heads", H}, {"kv_heads", 1}, {"head_dim", r + dr},
+                          {"max_len", ctx}, {"window", 0}, {"sinks", 0}, {"dtype", "f32"}}});
+    summary = "MLA: heads " + std::to_string(H) + ", kv_rank " + std::to_string(r) + ", qk_nope " + std::to_string(dn) +
+              ", qk_rope " + std::to_string(dr) + ", v_head_dim " + std::to_string(dv) +
+              (q_lora ? ", low-rank query" : "") + ", moe_ffn " + std::to_string(static_cast<int>(get("expert_count"))) +
+              " experts (" + gate_norm + (s != 1.0 ? ", x " + json(f32_value(s)).dump() : std::string()) + ")" +
+              (shexp ? " + shared experts" : "");
   } else {  // mamba
     const int K = static_cast<int>(get("ssm.conv_kernel")), Di = static_cast<int>(get("ssm.inner_size"));
     const int N = static_cast<int>(get("ssm.state_size")), R = static_cast<int>(get("ssm.time_step_rank"));
@@ -947,7 +1052,9 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
     sinks_ = s.value("sinks", 0);
   }
   for (const auto& n : block_) {
-    if (n.op != "attention") continue;
+    if (n.op != "attention" && n.op != "mla_attention") continue;
+    if (n.op == "mla_attention" && !(n.attrs.contains("causal") && n.attrs.at("causal") == json(true)))
+      throw std::runtime_error("IR_SPEC 5.20 (rule 14): mla_attention causal must be true");
     if (!n.attrs.value("causal", true))
       throw std::runtime_error("IR attention with causal=false is not implemented in ember");
     for (int l = 0; l < n_layers_; ++l) {
@@ -989,7 +1096,8 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
       if (n.op == "rms_row" && !has(n.attrs, "eps")) throw std::runtime_error("IR rms_row needs its eps attribute");
       for (const auto& kv : n.attrs.items()) {  // per-layer attributes: block nodes, the attributes ember reads per block
         if (!is_per_layer(kv.value())) continue;
-        const bool ok = sub == &block_ && ((n.op == "attention" && (kv.key() == "window" || kv.key() == "sinks")) ||
+        const bool ok = sub == &block_ && (((n.op == "attention" || n.op == "mla_attention") &&
+                                            (kv.key() == "window" || kv.key() == "sinks")) ||
                                            (n.op == "rope" && (kv.key() == "theta" || kv.key() == "freq_scale")) ||
                                            (n.op == "affine" && (kv.key() == "scale" || kv.key() == "shift")) ||
                                            (n.op == "depth_route" && kv.key() == "step"));
@@ -1015,6 +1123,25 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
   if (use_gpu && !device_supported(ir_json))
     throw std::runtime_error("IR uses an op or a shape that has no CUDA kernel (EMBER_IR_DEVICE=cpu runs it)");
 #endif
+  // Multi-head latent attention (IR_SPEC 5.20): its kv slot holds [c | kr] per position (kv_heads 1, head_dim
+  // r + dr), and its rope rotates qr and kr, dr wide per head, not the slot's head_dim.
+  bool mla = false;
+  for (const auto& n : block_) mla = mla || n.op == "mla_attention";
+  for (const auto& n : block_) {
+    if (n.op == "mla_attention") {  // IR_SPEC 5.20: the slot holds c and kr, r + dr values per position (rule 12)
+      for (const char* k : {"heads", "kv_rank", "qk_nope", "qk_rope", "v_head_dim"})
+        if (!n.attrs.contains(k) || !n.attrs.at(k).is_number_integer() || n.attrs.at(k).get<int>() <= 0)
+          throw std::runtime_error(std::string("IR_SPEC 5.20 (rule 8): mla_attention needs a positive integer ") + k);
+      for (const char* k : {"k_b", "v_b"})
+        if (!n.attrs.contains(k) || !n.attrs.at(k).is_string())
+          throw std::runtime_error(std::string("IR_SPEC 5.20 (rule 8): mla_attention needs its tensor ") + k);
+      const int r = n.attrs.at("kv_rank").get<int>(), dr = n.attrs.at("qk_rope").get<int>();
+      if (kv_heads_ != 1 || head_dim_ != r + dr)
+        throw std::runtime_error("IR_SPEC 5.20 (rule 12): mla_attention reads a kv slot of kv_heads " +
+                                 std::to_string(kv_heads_) + " and head_dim " + std::to_string(head_dim_) +
+                                 "; it holds c and kr: kv_heads 1, head_dim kv_rank + qk_rope = " + std::to_string(r + dr));
+    }
+  }
   for (const auto& n : block_) {
     if (n.op == "rope") {
       const std::string pairing = n.attrs.value("pairing", "interleaved");
@@ -1029,9 +1156,9 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
       // (default head_dim) must fit the kv state's heads.
       const int hd = n.attrs.at("head_dim").get<int>();
       int n_rot = head_dim_;
-      if (has(n.attrs, "n_rot") || pairing == "neox") {
+      if (has(n.attrs, "n_rot") || pairing == "neox" || mla) {
         n_rot = has(n.attrs, "n_rot") ? n.attrs.at("n_rot").get<int>() : hd;
-        if (hd != head_dim_ || n_rot <= 0 || n_rot % 2 != 0 || n_rot > hd)
+        if ((!mla && hd != head_dim_) || n_rot <= 0 || n_rot % 2 != 0 || n_rot > hd)
           throw std::runtime_error("IR rope: n_rot " + std::to_string(n_rot) + " / head_dim " + std::to_string(hd) +
                                    " (kv state head_dim " + std::to_string(head_dim_) + ") is not usable");
       }
@@ -1064,6 +1191,11 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
         throw std::runtime_error("IR attention: heads " + std::to_string(hq) + " is not a multiple of kv_heads " +
                                  std::to_string(hkv));
     }
+  }
+  if (mla) {
+    for (const auto& n : block_)
+      if (n.op == "depth_route")
+        throw std::runtime_error("IR mla_attention under depth_route is not implemented in ember");
   }
   // Mixture-of-Recursions (ir.hpp depth_route, llama_mor): one depth_route node, the block's
   // first, outside it nowhere; its steps one consecutive run of equal-length steps 0 .. R-1; causal
@@ -1190,7 +1322,7 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
     }
   }
   bool has_attention = false;
-  for (const auto& n : block_) has_attention = has_attention || n.op == "attention";
+  for (const auto& n : block_) has_attention = has_attention || n.op == "attention" || n.op == "mla_attention";
   if ((has_kv || has_attention) && (kv_heads_ <= 0 || head_dim_ <= 0 || max_len_ <= 0))
     throw std::runtime_error("IR block declares no usable kv state (kv_heads, head_dim, max_len)");
   if (max_len_ <= 0) throw std::runtime_error("IR model.ctx is required when no kv state bounds the sequence");
@@ -1575,6 +1707,21 @@ void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData
       bind_tensor(layer_name(n.attrs.at("router").get<std::string>(), layer), gguf);
       for (const char* part : {"gate", "up", "down"})
         bind_tensor(layer_name(n.attrs.at("experts").at(part).get<std::string>(), layer), gguf);
+    }
+    if (n.op == "mla_attention") {  // k_b ne {dn, r, H}, v_b ne {r, dv, H} (IR_SPEC 5.20, rule 42)
+      const auto at = [&](const char* k) { return static_cast<int64_t>(at_layer(n.attrs.at(k), std::max(layer, 0)).get<int>()); };
+      const int64_t H = at("heads"), r = at("kv_rank"), dn = at("qk_nope"), dv = at("v_head_dim");
+      const std::pair<const char*, std::vector<int64_t>> parts[] = {{"k_b", {dn, r, H}}, {"v_b", {r, dv, H}}};
+      for (const auto& [key, want] : parts) {
+        const std::string w = layer_name(n.attrs.at(key).get<std::string>(), layer);
+        bind_tensor(w, gguf);
+        std::vector<int64_t> got = shapes_.at(w);
+        while (got.size() < 3) got.push_back(1);  // trailing ne of 1 (one head) may be left out
+        if (got != want)
+          throw std::runtime_error("IR_SPEC 5.20 (rule 42): mla_attention " + std::string(key) + " '" + w +
+                                   "' is not of ne {" + std::to_string(want[0]) + ", " + std::to_string(want[1]) + ", " +
+                                   std::to_string(want[2]) + "}");
+      }
     }
     if (n.op == "ssm_scan") {
       const size_t sn = n.attrs.at("n").get<size_t>();
@@ -1998,9 +2145,22 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       int total = 0;
       for (int s : sizes) total += s;
       if (sizes.size() != n.out.size()) throw std::runtime_error("IR split: sizes do not match the outputs");
-      if (total != x.width)
+      // groups g (revision 1.5): x is g groups of sum(sizes) columns, output k the k-th part of every group
+      const int groups = n.attrs.contains("groups") ? n.attrs.at("groups").get<int>() : 1;
+      if (groups < 1) throw std::runtime_error("IR_SPEC 5.5 (rule 10): split groups " + std::to_string(groups) + " is not positive");
+      if (static_cast<int64_t>(total) * groups != x.width)
         throw std::runtime_error("IR_SPEC 5.5 (rule 37): split sizes sum to " + std::to_string(total) +
+                                 (groups > 1 ? " times groups " + std::to_string(groups) : std::string()) +
                                  ", not the input width " + std::to_string(x.width));
+      if (groups > 1) {
+        std::vector<Buf> parts;
+        std::vector<float*> ptrs;
+        for (int s : sizes) parts.push_back(Buf{std::vector<float>(static_cast<size_t>(T) * groups * s), groups * s});
+        for (auto& b : parts) ptrs.push_back(b.v.data());
+        cpu::split_groups(x.v.data(), T, sizes, groups, ptrs);
+        for (size_t o = 0; o < sizes.size(); ++o) env[n.out[o]] = std::move(parts[o]);
+        continue;
+      }
       int col = 0;
       for (size_t o = 0; o < sizes.size(); ++o) {
         Buf part{std::vector<float>(static_cast<size_t>(T) * sizes[o]), sizes[o]};
@@ -2157,6 +2317,37 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
         attention_window_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale, window, sinks);
       else
         attention_batch_cpu(q.v, cache, out.v, T, kpos, hq, hkv, hd, scale);
+      env[n.out.at(0)] = std::move(out);
+    } else if (n.op == "mla_attention") {  // multi-head latent attention (IR_SPEC 5.20). ROUNDING.
+      const Buf &qn = in(n, 0), &qr = in(n, 1), &c = in(n, 2), &kr = in(n, 3);
+      const int L = std::max(layer, 0);
+      auto at = [&](const char* k) { return at_layer(n.attrs.at(k), L).get<int>(); };
+      const int H = at("heads"), r = at("kv_rank"), dn = at("qk_nope"), dr = at("qk_rope"), dv = at("v_head_dim");
+      if (qn.width != H * dn || qr.width != H * dr || c.width != r || kr.width != dr)
+        throw std::runtime_error("IR_SPEC 5.20 (rule 37): mla_attention reads qn " + std::to_string(qn.width) + ", qr " +
+                                 std::to_string(qr.width) + ", c " + std::to_string(c.width) + " and kr " +
+                                 std::to_string(kr.width) + " wide, not heads x qk_nope " + std::to_string(H * dn) +
+                                 ", heads x qk_rope " + std::to_string(H * dr) + ", kv_rank " + std::to_string(r) +
+                                 " and qk_rope " + std::to_string(dr));
+      if (start_pos + T > max_len_)
+        throw std::runtime_error("IR mla_attention: position " + std::to_string(start_pos + T) + " exceeds the kv state (" +
+                                 std::to_string(max_len_) + ")");
+      // The slot's row of position p is [c_p | kr_p] (kv_heads 1, head_dim r + dr; rule 12 at load).
+      KVCacheLayer& cache = kv_.at(layer);
+      const size_t w = static_cast<size_t>(r) + dr;
+      for (int t = 0; t < T; ++t) {
+        float* dst = cache.k.data() + static_cast<size_t>(start_pos + t) * w;
+        std::memcpy(dst, c.v.data() + static_cast<size_t>(t) * r, static_cast<size_t>(r) * sizeof(float));
+        std::memcpy(dst + r, kr.v.data() + static_cast<size_t>(t) * dr, static_cast<size_t>(dr) * sizeof(float));
+      }
+      int window = 0, sinks = 0;
+      attention_window(n, layer, window, sinks);
+      const auto& Kb = weight(layer_name(n.attrs.at("k_b").get<std::string>(), layer));
+      const auto& Vb = weight(layer_name(n.attrs.at("v_b").get<std::string>(), layer));
+      Buf out{std::vector<float>(static_cast<size_t>(T) * H * dv), H * dv};
+      cpu::mla_attention(qn.v.data(), qr.v.data(), cache.k.data(), out.v.data(), T,
+                         attention_visible_rows(T, start_pos, window, sinks), H, r, dn, dr, dv, Kb.data(), Vb.data(),
+                         n.attrs.at("scale").get<float>());
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "add" || n.op == "mul") {
       const Buf &a = in(n, 0), &b = in(n, 1);
@@ -2733,7 +2924,7 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
       {"rms_row", DOp::RmsRow},      {"list", DOp::List},                  {"append", DOp::Append},
       {"depth_attend", DOp::DepthAttend}, {"linear_attention", DOp::LinearAttention}, {"ssm_scan", DOp::SsmScan},
       {"expr", DOp::Expr},           {"conv1d_causal", DOp::Conv1dCausal}, {"selective_scan", DOp::SelectiveScan},
-      {"scale", DOp::Scale}};
+      {"scale", DOp::Scale},         {"mla_attention", DOp::MlaAttention}};
   auto wname = [&](const Node& n) {
     std::string w = layer_name(n.attrs.at("weight").get<std::string>(), layer);
     if (!weights_.count(w) && has(n.attrs, "tied_to")) w = layer_name(n.attrs.at("tied_to").get<std::string>(), layer);
@@ -2775,7 +2966,28 @@ std::vector<Interpreter::DStep> Interpreter::compile_nodes(const std::vector<Nod
       case DOp::Split:
         s.sizes = n.attrs.at("sizes").get<std::vector<int>>();
         if (s.sizes.size() != n.out.size()) throw std::runtime_error("IR split: sizes do not match the outputs");
+        s.groups = n.attrs.contains("groups") ? n.attrs.at("groups").get<int>() : 1;
+        if (s.groups < 1) throw std::runtime_error("IR_SPEC 5.5 (rule 10): split groups is not positive");
         break;
+      case DOp::MlaAttention: {
+        const int L = layer < 0 ? 0 : layer;
+        s.hq = at_layer(n.attrs.at("heads"), L).get<int>();
+        s.kv_rank = at_layer(n.attrs.at("kv_rank"), L).get<int>();
+        s.qk_nope = at_layer(n.attrs.at("qk_nope"), L).get<int>();
+        s.qk_rope = at_layer(n.attrs.at("qk_rope"), L).get<int>();
+        s.v_dim = at_layer(n.attrs.at("v_head_dim"), L).get<int>();
+        s.scale = n.attrs.at("scale").get<float>();
+        s.w = dweight(layer_name(n.attrs.at("k_b").get<std::string>(), layer));
+        s.b = dweight(layer_name(n.attrs.at("v_b").get<std::string>(), layer));
+        attention_window(n, L, s.window, s.sinks);
+        if (kv_heads_ != 1 || head_dim_ != s.kv_rank + s.qk_rope)
+          throw std::runtime_error("IR_SPEC 5.20 (rule 12): mla_attention's kv slot is not kv_heads 1, head_dim kv_rank + qk_rope");
+        if (layer <= 0)
+          Logger::info("[IR] CUDA multi-head latent attention (ir_mla_attention_cuda, absorbed form): heads " +
+                       std::to_string(s.hq) + ", kv_rank " + std::to_string(s.kv_rank) + ", qk_rope " +
+                       std::to_string(s.qk_rope));
+        break;
+      }
       case DOp::Gelu:
         s.flag = n.attrs.value("approx", "none") == "tanh";
         break;
@@ -3134,16 +3346,36 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         const DBuf& x = in(s, 0);
         int total = 0;
         for (int sz : s.sizes) total += sz;
-        if (total != x.width)
+        if (static_cast<int64_t>(total) * s.groups != x.width)
           throw std::runtime_error("IR_SPEC 5.5 (rule 37): split sizes sum to " + std::to_string(total) +
+                                   (s.groups > 1 ? " times groups " + std::to_string(s.groups) : std::string()) +
                                    ", not the input width " + std::to_string(x.width));
+        // groups g (revision 1.5): x [T, g * total] read as [T g, total] rows; part o is [T g, sizes[o]] rows,
+        // which is [T, g * sizes[o]] (the o-th part of every group, in order). g = 1: the plain split.
         int col = 0;
         for (size_t o = 0; o < s.sizes.size(); ++o) {
-          DBuf& part = dout(s.out[o], T, s.sizes[o], {&x});
-          gpuErrchk(cudaMemcpy2DAsync(part.p, s.sizes[o] * sizeof(float), x.p + col, x.width * sizeof(float),
-                                      s.sizes[o] * sizeof(float), T, cudaMemcpyDeviceToDevice, st));
+          DBuf& part = dout(s.out[o], T, s.groups * s.sizes[o], {&x});
+          gpuErrchk(cudaMemcpy2DAsync(part.p, s.sizes[o] * sizeof(float), x.p + col, total * sizeof(float),
+                                      s.sizes[o] * sizeof(float), static_cast<size_t>(T) * s.groups,
+                                      cudaMemcpyDeviceToDevice, st));
           col += s.sizes[o];
         }
+        break;
+      }
+      case DOp::MlaAttention: {
+        const DBuf &qn = in(s, 0), &qr = in(s, 1), &c = in(s, 2), &kr = in(s, 3);
+        const int H = s.hq, r = s.kv_rank, dn = s.qk_nope, dr = s.qk_rope, dv = s.v_dim;
+        if (qn.width != H * dn || qr.width != H * dr || c.width != r || kr.width != dr)
+          throw std::runtime_error("IR_SPEC 5.20 (rule 37): mla_attention input widths do not fit its attributes");
+        if (attn_row_ >= 0 || s.ts) throw std::runtime_error("IR mla_attention under depth_route or turn_state");
+        if (start_pos + T > max_len_)
+          throw std::runtime_error("IR mla_attention: position " + std::to_string(start_pos + T) +
+                                   " exceeds the kv state (" + std::to_string(max_len_) + ")");
+        float* KV = dk_[layer];
+        ir_mla_kv_write_cuda(KV, c.p, kr.p, T, r, dr, start_pos, st, dpos_);
+        DBuf& out = dout(s.out[0], T, H * dv, {&qn, &qr, &c, &kr});
+        ir_mla_attention_cuda(qn.p, qr.p, KV, s.w, s.b, out.p, T, start_pos, H, r, dn, dr, dv, s.scale, s.window,
+                              s.sinks, st, dpos_);
         break;
       }
       case DOp::Gelu: {
