@@ -30,10 +30,10 @@ for rec in g["records"]:
         rows.append({"id": rec["id"], "in_file": False})
         continue
     e = same(rec["status"][0], rec["ember"], r)
-    m = same(rec["status"][1], rec["mtstudio"], r)
+    m = None if rec["status"][1] is None else same(rec["status"][1], rec["mtstudio"], r)  # None: ember alone
     ember_ok += e
-    mts_ok += m
-    if not m:
+    mts_ok += bool(m)
+    if m is False:
         mts_vs_file.append(rec["id"])
     rows.append({"id": rec["id"], "ember_equal_file": e, "live_mtstudio_equal_file": m, "status": rec["status"],
                  "file": "error" if "error" in r else r.get("stop_reason")})

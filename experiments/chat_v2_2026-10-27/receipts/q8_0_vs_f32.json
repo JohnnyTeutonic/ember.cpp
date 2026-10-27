@@ -1,0 +1,613 @@
+{
+ "summary": {
+  "ids_equal": 35,
+  "first_id_equal": 39,
+  "tool_calls_equal": 38,
+  "stop_equal": 40,
+  "rows": 40,
+  "f32_rows_with_calls": 10,
+  "q8_rows_with_calls": 10
+ },
+ "rows": [
+  {
+   "id": "v2/system/0",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 12,
+   "f32_tokens": 12,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/system/1",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 37,
+   "f32_tokens": 37,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/system/2",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": false,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 14,
+   "f32_tokens": 36,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/system/3",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 10,
+   "f32_tokens": 10,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/system/4",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 60,
+   "f32_tokens": 60,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/system/5",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 60,
+   "f32_tokens": 60,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/system/6",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": false,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 1,
+   "f32_tokens": 10,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/system/7",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 60,
+   "f32_tokens": 60,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/system/8",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 52,
+   "f32_tokens": 52,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/system/9",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 60,
+   "f32_tokens": 60,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/history/0",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 25,
+   "f32_tokens": 25,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/history/1",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 2,
+   "f32_tokens": 2,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/history/2",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 10,
+   "f32_tokens": 10,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/history/3",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 13,
+   "f32_tokens": 13,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/history/4",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 3,
+   "f32_tokens": 3,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/history/5",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 8,
+   "f32_tokens": 8,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/history/6",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 7,
+   "f32_tokens": 7,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/history/7",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 11,
+   "f32_tokens": 11,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/history/8",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 7,
+   "f32_tokens": 7,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/history/9",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 60,
+   "f32_tokens": 60,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/tool_user/0",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": false,
+   "first_id_equal": true,
+   "tool_calls_equal": false,
+   "stop_equal": true,
+   "common_prefix": 45,
+   "f32_tokens": 48,
+   "f32_calls": true,
+   "q8_calls": true
+  },
+  {
+   "id": "v2/tool_user/1",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 17,
+   "f32_tokens": 17,
+   "f32_calls": true,
+   "q8_calls": true
+  },
+  {
+   "id": "v2/tool_user/2",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 29,
+   "f32_tokens": 29,
+   "f32_calls": true,
+   "q8_calls": true
+  },
+  {
+   "id": "v2/tool_user/3",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 20,
+   "f32_tokens": 20,
+   "f32_calls": true,
+   "q8_calls": true
+  },
+  {
+   "id": "v2/tool_user/4",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": false,
+   "first_id_equal": true,
+   "tool_calls_equal": false,
+   "stop_equal": true,
+   "common_prefix": 36,
+   "f32_tokens": 48,
+   "f32_calls": true,
+   "q8_calls": true
+  },
+  {
+   "id": "v2/tool_user/5",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": false,
+   "first_id_equal": false,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 0,
+   "f32_tokens": 32,
+   "f32_calls": true,
+   "q8_calls": true
+  },
+  {
+   "id": "v2/tool_user/6",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 31,
+   "f32_tokens": 31,
+   "f32_calls": true,
+   "q8_calls": true
+  },
+  {
+   "id": "v2/tool_user/7",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 25,
+   "f32_tokens": 25,
+   "f32_calls": true,
+   "q8_calls": true
+  },
+  {
+   "id": "v2/tool_user/8",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 25,
+   "f32_tokens": 25,
+   "f32_calls": true,
+   "q8_calls": true
+  },
+  {
+   "id": "v2/tool_user/9",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 18,
+   "f32_tokens": 18,
+   "f32_calls": true,
+   "q8_calls": true
+  },
+  {
+   "id": "v2/after_tool/0",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 31,
+   "f32_tokens": 31,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/after_tool/1",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 19,
+   "f32_tokens": 19,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/after_tool/2",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 13,
+   "f32_tokens": 13,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/after_tool/3",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 24,
+   "f32_tokens": 24,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/after_tool/4",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 60,
+   "f32_tokens": 60,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/after_tool/5",
+   "status": [
+    400,
+    400
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 0,
+   "f32_tokens": 0,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/after_tool/6",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 41,
+   "f32_tokens": 41,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/after_tool/7",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 18,
+   "f32_tokens": 18,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/after_tool/8",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 18,
+   "f32_tokens": 18,
+   "f32_calls": false,
+   "q8_calls": false
+  },
+  {
+   "id": "v2/after_tool/9",
+   "status": [
+    200,
+    200
+   ],
+   "ids_equal": true,
+   "first_id_equal": true,
+   "tool_calls_equal": true,
+   "stop_equal": true,
+   "common_prefix": 14,
+   "f32_tokens": 14,
+   "f32_calls": false,
+   "q8_calls": false
+  }
+ ]
+}

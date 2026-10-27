@@ -18,7 +18,8 @@ request plus temperature 1, top_k 1, top_p 1, seed, max_new_tokens and return_id
   - stream = plain on ember: /chat streamed (joined pieces, the final object) equals /chat plain, and the conversation
     as an OpenAI messages list gives the same content and tool_calls plain and streamed (one whole delta per call),
     finish_reason "tool_calls" exactly when the reply has calls and did not stop at the length limit.
-The gate passes when every count is n/n."""
+The gate passes when every count is n/n. --mts none runs ember alone (its replies recorded, the mtstudio counts left
+out; compare them with the reference file by ref_compare.py); --rows reruns only the given row ids."""
 import argparse
 import json
 import os
@@ -43,7 +44,9 @@ ap.add_argument("--max-new", type=int, default=60)
 ap.add_argument("--seed", type=int, default=7)
 ap.add_argument("--ember-port", type=int, default=8211)
 ap.add_argument("--mts-port", type=int, default=8212)
+ap.add_argument("--rows", help="only these row ids (comma-separated): a rerun of differing rows")
 a = ap.parse_args()
+LIVE = a.mts != "none"  # --mts none: ember alone, compared with --ref (or later, ref_compare.py)
 WORK = os.path.expanduser("~/cv2/work")
 os.makedirs(WORK, exist_ok=True)
 GREEDY = {"temperature": 1.0, "top_k": 1, "top_p": 1.0, "seed": a.seed, "max_new_tokens": a.max_new, "return_ids": True}
@@ -129,6 +132,8 @@ def compare(e_status, e, m_status, m):
 
 
 rows = [json.loads(x) for x in open(a.prompts, encoding="utf-8") if x.strip()][:a.n]
+if a.rows:
+    rows = [r for r in rows if r.get("id") in a.rows.split(",")]
 bodies = [r.get("request") or r.get("chat") or r for r in rows]
 ref = {}
 if a.ref and os.path.exists(a.ref):
@@ -137,10 +142,12 @@ if a.ref and os.path.exists(a.ref):
             r = json.loads(x)
             ref[r.get("id")] = r
 pe, he = start([a.ember, a.gguf, str(a.ember_port), "127.0.0.1", "-", "0"], a.ember_port, "gate_ember")
-words = shlex.split(a.mts.format(port=a.mts_port))
-env = dict(w.split("=", 1) for w in words if "=" in w.split("/")[0] and not w.startswith("-"))
-argv = [os.path.expanduser(w) for w in words if w.split("=", 1)[0] not in env]
-pm, hm = start(argv, a.mts_port, "gate_mtstudio", env)
+pm = hm = None
+if LIVE:
+    words = shlex.split(a.mts.format(port=a.mts_port))
+    env = dict(w.split("=", 1) for w in words if "=" in w.split("/")[0] and not w.startswith("-"))
+    argv = [os.path.expanduser(w) for w in words if w.split("=", 1)[0] not in env]
+    pm, hm = start(argv, a.mts_port, "gate_mtstudio", env)
 ctx = he.get("context")
 # The rendering: chat_template_check render on every request, with ember's context and max_new.
 def render(c):
@@ -161,13 +168,15 @@ try:
     for i, (row, b) in enumerate(zip(rows, bodies)):
         body = {**b, **GREEDY}
         se, e = post(a.ember_port, "/chat", body)
-        sm, m = post(a.mts_port, "/chat", body)
+        sm, m = post(a.mts_port, "/chat", body) if LIVE else (se, e)  # ember alone: compared with itself (not counted)
         eq, all_eq = compare(se, e, sm, m)
+        if not LIVE:
+            m, sm = None, None
         counts["mtstudio_status"] += se == sm
         for k in FIELDS:
             counts["mtstudio_" + k] += eq[k]
         counts["mtstudio_all"] += all_eq
-        if se == sm == 200 and "prompt_tokens" in m:
+        if LIVE and se == sm == 200 and "prompt_tokens" in m:
             pt_reported += 1
             pt_same += e["prompt_tokens"] == m["prompt_tokens"]
         rd = rendered[i] if i < len(rendered) else {"error": "no render row"}
@@ -199,34 +208,43 @@ try:
             ok_oa = so == 200 and msg.get("content") == e["reply"] and msg.get("tool_calls") == e.get("tool_calls")
             want_finish = "length" if e["stop_reason"] == "length" else ("tool_calls" if e.get("tool_calls") else "stop")
             s3, oraw = post(a.ember_port, "/v1/chat/completions", {**ob, "stream": True}, raw=True)
-            content, calls, finish = "", [], None
+            content, calls, finish, chunks = "", [], None, []
             for x in (events(oraw) if s3 == 200 else []):
                 if x == "[DONE]" or not x.get("choices"):
                     continue
                 d = x["choices"][0]["delta"]
                 content += d.get("content") or ""
+                if "tool_calls" in d:
+                    chunks.append(d["tool_calls"])
                 calls += [{k: c[k] for k in ("id", "type", "function")} for c in d.get("tool_calls", [])]
                 finish = x["choices"][0]["finish_reason"] or finish
-            ok_os = s3 == 200 and content == msg.get("content") and calls == (msg.get("tool_calls") or [])
+            # one whole delta per call: each tool_calls chunk holds one call, indexed in order, with full name
+            # and arguments (equal to message.tool_calls)
+            whole = all(len(c) == 1 for c in chunks) and [c[0].get("index") for c in chunks] == list(range(len(chunks)))
+            ok_os = s3 == 200 and content == msg.get("content") and calls == (msg.get("tool_calls") or []) and whole
             ok_fin = finish == want_finish and (o["choices"][0]["finish_reason"] if so == 200 else None) == want_finish
         else:  # a refused request: both endpoints refuse it (400), streamed or not
             so, _ = post(a.ember_port, "/v1/chat/completions", openai_messages(b))
             s2, _ = post(a.ember_port, "/chat", {**body, "stream": True})
             ok_stream = s2 == 400
             ok_oa = ok_os = ok_fin = so == 400
+            finish, chunks = None, []
         counts["chat_stream"] += ok_stream
         counts["openai_plain"] += ok_oa
         counts["openai_stream"] += ok_os
         counts["finish_reason"] += ok_fin
-        rec.update({"chat_stream_equal": ok_stream, "openai_equal": ok_oa, "openai_stream_equal": ok_os, "finish_ok": ok_fin})
+        rec.update({"chat_stream_equal": ok_stream, "openai_equal": ok_oa, "openai_stream_equal": ok_os, "finish_ok": ok_fin,
+                    "openai_finish_reason": finish, "openai_call_chunks": len(chunks)})
         recs.append(rec)
         print(f"[{i}] {row.get('id')} {'same' if all_eq else 'DIFF'} status {se}/{sm}", flush=True)
 finally:
     for p in (pe, pm):
-        p.terminate()
-        p.wait()
+        if p:
+            p.terminate()
+            p.wait()
 n = len(bodies)
-need = [k for k in counts if not (k == "ref_all" and not ref)]
+need = [k for k in counts if not (k == "ref_all" and not ref) and not (k.startswith("mtstudio_") and not LIVE)]
+counts["with_tool_calls"] = [r["id"] for r in recs if r["ember"].get("tool_calls")]
 summary = {"n": n, "gguf": a.gguf, "prompts": a.prompts, "ember": a.ember, "mts": a.mts, "request": GREEDY,
            "ember_health": he, "mtstudio_health": hm, "counts": counts, "mtstudio_prompt_tokens": [pt_same, pt_reported],
            "ref": a.ref if ref else None, "ref_rows": n_ref,
