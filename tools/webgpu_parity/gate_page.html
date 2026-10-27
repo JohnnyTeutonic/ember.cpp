@@ -1,0 +1,114 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>WebGPU logit gate</title></head>
+<body><pre id="out">pending</pre>
+<script type="module">
+// ir_gate.mjs in a browser on a hardware adapter (driven by remote_chrome.py on a GPU VM): the page's
+// WebGPU forward pass against ember's native CPU on tools/ir_wasm_gate's reference (ids.json, ref.jsonl,
+// ref_<i>.bin: the CPU's prefill logits at every position, float32 [len][vocab]). Per prompt: the prompt one
+// token per forward (the page's decode step; IR_SPEC 3.9), each position's logits against the CPU's row
+// (max |dlogit| over the row's range, and IR_SPEC 4.3's max |d| / max(1, max |ref|)) and argmax, then `gen`
+// greedy tokens against the CPU's. Rows go to the driver (POST /e6/row; a rerun resumes after them).
+//
+//   gate_page.html?model=M.gguf&ref=DIR&path=ir|llama[&doc=DOC.json][&first=K][&ctx=1024][&tol=1e-4]
+//
+// path=ir runs deploy/wasm/web/webgpu/ir_webgpu.js on the document (doc=, else the file's paperkiln.ir);
+// path=llama runs llama_webgpu.js, the tuned path the page takes when ember_ir_doc() is "".
+import { createIr, irSupport } from './webgpu/ir_webgpu.js';
+import { createLlama } from './webgpu/llama_webgpu.js';
+import { readGguf } from './webgpu/gguf.js';
+import { q, num, row, result, doneRows, adapterInfo, irDevice, argmax, median, guard, log } from './e6_common.js';
+
+guard(async () => {
+  const model = q.get('model'), refDir = q.get('ref'), path = q.get('path') || 'ir';
+  const first = num('first', 0), ctx = num('ctx', 1024), tol = num('tol', 1e-4);
+  const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+  const info = adapterInfo(adapter);
+  const device = await irDevice(adapter);
+  const t0 = performance.now();
+  const buf = await (await fetch(model)).arrayBuffer();
+  let m, family;
+  if (path === 'llama') {
+    m = await createLlama(device, buf);
+    family = 'llama (tuned path)';
+  } else {
+    const docText = q.get('doc') ? await (await fetch(q.get('doc'))).text() : readGguf(buf).meta['paperkiln.ir'];
+    if (!docText) throw new Error('no IR document: pass doc=');
+    const sup = irSupport(JSON.parse(docText));
+    if (!sup.ok) throw new Error('the WebGPU IR path refuses this document: ' + sup.reason);
+    m = await createIr(device, buf, docText, { ctx });
+    family = m.config.family_hint;
+  }
+  const loadMs = performance.now() - t0;
+  const V = m.config.vocab;
+  const ids = await (await fetch(refDir + '/ids.json')).json();
+  if (ids.vocab !== V) throw new Error(`vocab ${V} differs from the reference's ${ids.vocab}`);
+  const refRows = (await (await fetch(refDir + '/ref.jsonl')).text()).split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const ref = new Map(refRows.map((r) => [r.i, r]));
+  const done = new Map((await doneRows()).map((r) => [r.i, r]));
+  const upto = first > 0 ? Math.min(first, ids.n) : ids.n;
+  for (let s = 0; s < upto; s++) {
+    if (done.has(s)) continue;
+    const r = ref.get(s);
+    if (!r) throw new Error(`reference prompt ${s} missing`);
+    const R = new Float32Array(await (await fetch(`${refDir}/ref_${s}.bin`)).arrayBuffer());
+    const p = ids.ids[s], len = ids.len, gen = ids.gen;
+    const t1 = performance.now();
+    let rel = 0, spec = 0, top1 = 0, lg = null;
+    const flips = [], fwd = [];
+    for (let t = 0; t < len; t++) {
+      const tf = performance.now();
+      lg = await m.forward([p[t]], t);
+      fwd.push(performance.now() - tf);
+      const rowR = R.subarray(t * V, (t + 1) * V);
+      let lo = Infinity, hi = -Infinity, d = 0, mref = 0;
+      for (let i = 0; i < V; i++) {
+        const x = rowR[i];
+        if (x < lo) lo = x;
+        if (x > hi) hi = x;
+        const e = Math.abs(lg[i] - x);
+        if (!(e <= d)) d = e;   // NaN propagates, as Math.max in ir_gate.mjs
+        if (Math.abs(x) > mref) mref = Math.abs(x);
+      }
+      if (!(d <= Infinity)) d = Infinity;   // NaN in the WebGPU row fails the gate
+      rel = Math.max(rel, hi > lo ? d / (hi - lo) : d);
+      spec = Math.max(spec, d / Math.max(1, mref));
+      const a = argmax(rowR), b = argmax(lg);
+      top1 += a === b;
+      if (a !== b) flips.push({ pos: t, ref_top: a, webgpu_top: b });
+    }
+    const g = [];
+    let pos = len;
+    for (let k = 0; k < gen; k++) {
+      const t = argmax(lg);
+      g.push(t);
+      if (k + 1 < gen) { const tf = performance.now(); lg = await m.forward([t], pos++); fwd.push(performance.now() - tf); }
+    }
+    let firstDiff = -1;
+    for (let k = 0; k < gen; k++) if (g[k] !== r.greedy[k]) { firstDiff = k; break; }
+    const out = { i: s, rel, spec_rel: spec, top1, greedy_first_diff: firstDiff, ms: performance.now() - t1,
+                  ms_per_forward_median: median(fwd) };
+    if (flips.length) out.flips = flips;
+    await row(out);
+    done.set(s, out);
+    log(`webgpu prompt ${s}: rel ${rel.toExponential(2)}, top1 ${top1}/${len}, greedy ${firstDiff < 0 ? 'same' : 'differs at ' + firstDiff}, ${out.ms.toFixed(0)} ms`);
+  }
+  const all = [...done.values()].filter((r) => r.i < upto);
+  const worst = Math.max(0, ...all.map((r) => r.rel)), worstSpec = Math.max(0, ...all.map((r) => r.spec_rel));
+  const top1 = all.reduce((a, r) => a + r.top1, 0), positions = all.length * ids.len;
+  const same = all.filter((r) => r.greedy_first_diff < 0).length;
+  const summary = {
+    gguf: model.split('/').pop(), path, adapter: info, family_hint: family, prompts: upto, of: ids.n, len: ids.len,
+    gen: ids.gen, vocab: V, ctx: m.config.ctx, dispatches_per_token: m.config.dispatchesPerToken,
+    worst_rel: worst, median_rel: median(all.map((r) => r.rel)), worst_spec_rel: worstSpec,
+    top1_agree: `${top1}/${positions}`, greedy_identical: `${same}/${upto}`, tol, gpu_errors: device.e6Errors,
+    pass_greedy_top1: !device.e6Errors && all.length === upto && same === upto && top1 === positions,
+    pass: !device.e6Errors && all.length === upto && same === upto && top1 === positions && worst <= tol,
+    load_ms: loadMs, ms_per_prompt: all.length ? all.reduce((a, r) => a + r.ms, 0) / all.length : 0,
+    ms_per_forward_median: median(all.map((r) => r.ms_per_forward_median)),
+  };
+  document.getElementById('out').textContent = 'RESULT ' + JSON.stringify(summary);
+  if (m.destroy) m.destroy();
+  device.destroy();
+  await result(summary);
+});
+</script></body></html>

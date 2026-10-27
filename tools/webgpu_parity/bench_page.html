@@ -1,0 +1,177 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>WebGPU vs WASM throughput</title></head>
+<body><pre id="out">pending</pre>
+<script type="module">
+// Replies per second, WebGPU against WebAssembly, with the page's own code paths (driven by
+// remote_chrome.py on a GPU VM). ember's WebAssembly build (ember=, default ember.js: deploy/wasm/build.sh,
+// single-threaded, SIMD) loads the model; the WebGPU forward pass is the one worker.js picks
+// (llama_webgpu.js when ember_ir_doc() is "", else ir_webgpu.js on that document), and its replies are
+// worker.js's chatGpu (ember_prepare, the GPU's logits, ember_sample, ember_finish), timed per step.
+// The WebAssembly replies are ember_chat, the page's ?backend=wasm path.
+//
+//   bench_page.html?model=M.gguf&prompts=P.json|R.jsonl[&ember=ember.js][&n=40][&runs=3][&warm=2]
+//                   [&max_new=60][&backends=webgpu,wasm][&ctx=N]
+//
+// P.json: [{user_input}] sent as page_test.html's greedy request (max_new tokens, top_k 1, seed 0);
+// R.jsonl: {"i", "request"} rows sent as they are. Each run: the WebGPU pass over the n requests, the
+// WebAssembly pass, then a WebAssembly pass with max_new_tokens 1 (its time is the prompt's prefill and one
+// sample: ember_chat has no per-step clock). The first `warm` requests run once on each backend before the
+// runs and are not counted.
+// Per reply: reply_ms (wall), first_ms (WebGPU: ember_prepare and the prefill forward to the first logits;
+// WebAssembly: the max_new_tokens 1 reply), the prompt's ids, and the decode forwards (tokens, or tokens - 1
+// at a length stop). Per run: replies per second (n / the pass's seconds), ms per reply, prefill ms per
+// prompt token (first_ms / prompt ids, summed) and decode ms per token ((reply_ms - first_ms) / forwards,
+// summed); the result holds every run and the median over runs.
+import { q, num, row, result, adapterInfo, irDevice, median, guard, log, saveFile } from './e6_common.js';
+
+guard(async () => {
+  const emberJs = q.get('ember') || 'ember.js';
+  await new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = emberJs; s.onload = res; s.onerror = () => rej(new Error('cannot load ' + emberJs));
+    document.head.appendChild(s);
+  });
+  const ember = await createEmber();   // eslint-disable-line no-undef
+  if (q.has('ctx')) ember._ember_set_ctx(num('ctx', 0));
+  const model = q.get('model');
+  const t0 = performance.now();
+  const buf = new Uint8Array(await (await fetch(model)).arrayBuffer());
+  ember.FS.writeFile('/model.gguf', buf);
+  const ok = ember.ccall('ember_load', 'number', ['string'], ['/model.gguf']);
+  ember.FS.unlink('/model.gguf');
+  if (ok !== 1) throw new Error('ember_load: ' + ok);
+  const wasmLoadMs = performance.now() - t0;
+  const doc = ember.ccall('ember_ir_doc', 'string', [], []);
+  if (doc) await saveFile(model.split('/').pop() + '.ember_ir_doc.json', doc);
+  const backends = (q.get('backends') || 'webgpu,wasm').split(',');
+
+  // worker.js initGpu, step for step.
+  let gpu = null, gpuPath = null, gpuWhy = null, info = null, device = null, gpuLoadMs = null;
+  if (backends.includes('webgpu')) {
+    const adapter = await navigator.gpu.requestAdapter();
+    info = adapterInfo(adapter);
+    const t1 = performance.now();
+    if (!doc) {
+      device = await adapter.requestDevice({ requiredLimits: {
+        maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize,
+        maxBufferSize: adapter.limits.maxBufferSize } });
+      device.e6Errors = 0;
+      device.onuncapturederror = (e) => { device.e6Errors++; log('WebGPU error: ' + (e.error && e.error.message)); };
+      const { createLlama } = await import('./webgpu/llama_webgpu.js');
+      gpu = await createLlama(device, buf.buffer); gpuPath = 'llama_webgpu';
+    } else {
+      const { createIr, irSupport } = await import('./webgpu/ir_webgpu.js');
+      const sup = irSupport(JSON.parse(doc));
+      if (!sup.ok) gpuWhy = 'the document stays in WebAssembly: ' + sup.reason;
+      else {
+        device = await irDevice(adapter);
+        gpu = await createIr(device, buf.buffer, doc, { ctx: ember._ember_ctx() }); gpuPath = 'ir_webgpu';
+      }
+    }
+    gpuLoadMs = performance.now() - t1;
+  }
+  const V = gpu ? gpu.config.vocab : 0;
+  const logitsPtr = gpu ? ember._malloc(4 * V) : 0;
+
+  async function chatGpu(req) {
+    const t = performance.now();
+    const prep = JSON.parse(ember.ccall('ember_prepare', 'string', ['string'], [JSON.stringify(req)]));
+    if (prep.error) return { out: prep };
+    let p = prep.prompt_ids.length, stop = -1, forwards = 0, fwdMs = 0;
+    const tp = performance.now();
+    let logits = await gpu.forward(prep.prompt_ids, 0);
+    const prefillFwdMs = performance.now() - tp, firstMs = performance.now() - t;
+    for (let s = 0; s < prep.max_new_tokens; s++) {
+      ember.HEAPF32.set(logits, logitsPtr >> 2);
+      const tok = ember._ember_sample(logitsPtr, V);
+      if (prep.stop_ids.includes(tok)) { stop = tok; break; }
+      if (s === prep.max_new_tokens - 1 || p >= prep.ctx) break;
+      const tf = performance.now();
+      logits = await gpu.forward([tok], p++);
+      fwdMs += performance.now() - tf; forwards++;
+    }
+    const out = JSON.parse(ember.ccall('ember_finish', 'string', ['number'], [stop]));
+    return { out, reply_ms: performance.now() - t, first_ms: firstMs, prefill_forward_ms: prefillFwdMs,
+             prompt_ids: prep.prompt_ids.length, forwards, decode_forward_ms: fwdMs };
+  }
+  const chatWasm = (req) => {
+    const t = performance.now();
+    const out = JSON.parse(ember.ccall('ember_chat', 'string', ['string'], [JSON.stringify(req)]));
+    return { out, reply_ms: performance.now() - t };
+  };
+
+  const ptext = await (await fetch(q.get('prompts'))).text();
+  const maxNew = num('max_new', 60);
+  const all = q.get('prompts').endsWith('.jsonl')
+    ? ptext.split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l).request)
+    : JSON.parse(ptext).map((p) => ({ user_input: p.user_input, max_new_tokens: maxNew, temperature: 1.0, top_k: 1, top_p: 1.0, seed: 0 }));
+  const n = Math.min(num('n', all.length), all.length), runs = num('runs', 3), warm = num('warm', 2);
+  const reqs = all.slice(0, n);
+  // Prompt ids per request (ember_prepare: the ids generate() runs), for the WebAssembly rows too.
+  const promptIds = reqs.map((r) => { const p = JSON.parse(ember.ccall('ember_prepare', 'string', ['string'], [JSON.stringify(r)])); return p.prompt_ids ? p.prompt_ids.length : null; });
+  const forwardsOf = (o) => (o.stop_reason === 'length' ? Math.max(0, o.tokens - 1) : o.tokens);
+
+  for (let i = 0; i < Math.min(warm, n); i++) {
+    if (gpu) await chatGpu(reqs[i]);
+    if (backends.includes('wasm')) { chatWasm(reqs[i]); chatWasm({ ...reqs[i], max_new_tokens: 1 }); }
+  }
+  const per = { webgpu: [], wasm: [] }, same = [];
+  for (let r = 0; r < runs; r++) {
+    const res = {};
+    if (gpu) {
+      const t = performance.now(), rs = [];
+      for (let i = 0; i < n; i++) {
+        const x = await chatGpu(reqs[i]);
+        rs.push(x);
+        await row({ run: r, backend: 'webgpu', i, reply: x.out.reply, stop_reason: x.out.stop_reason, tokens: x.out.tokens,
+                    reply_ms: x.reply_ms, first_ms: x.first_ms, prefill_forward_ms: x.prefill_forward_ms,
+                    prompt_ids: x.prompt_ids, forwards: x.forwards, decode_forward_ms: x.decode_forward_ms });
+      }
+      const pass = performance.now() - t;
+      const sum = (k) => rs.reduce((a, x) => a + (x[k] || 0), 0);
+      res.webgpu = rs;
+      per.webgpu.push({ run: r, pass_ms: pass, replies_per_s: 1000 * n / pass, ms_per_reply: pass / n,
+                        prefill_ms_per_token: sum('first_ms') / sum('prompt_ids'),
+                        prefill_forward_ms_per_token: sum('prefill_forward_ms') / sum('prompt_ids'),
+                        decode_ms_per_token: (sum('reply_ms') - sum('first_ms')) / Math.max(1, sum('forwards')),
+                        decode_forward_ms_per_token: sum('decode_forward_ms') / Math.max(1, sum('forwards')),
+                        tokens: sum('forwards') + rs.length, prompt_ids: sum('prompt_ids') });
+    }
+    if (backends.includes('wasm')) {
+      const t = performance.now(), rs = [];
+      for (let i = 0; i < n; i++) rs.push(chatWasm(reqs[i]));
+      const pass = performance.now() - t;
+      for (let i = 0; i < n; i++) rs[i].first_ms = chatWasm({ ...reqs[i], max_new_tokens: 1 }).reply_ms;
+      for (let i = 0; i < n; i++) {
+        const x = rs[i];
+        await row({ run: r, backend: 'wasm', i, reply: x.out.reply, stop_reason: x.out.stop_reason, tokens: x.out.tokens,
+                    reply_ms: x.reply_ms, first_ms: x.first_ms, prompt_ids: promptIds[i], forwards: forwardsOf(x.out) });
+      }
+      const sum = (f) => rs.reduce((a, x, i) => a + f(x, i), 0);
+      res.wasm = rs;
+      per.wasm.push({ run: r, pass_ms: pass, replies_per_s: 1000 * n / pass, ms_per_reply: pass / n,
+                      prefill_ms_per_token: sum((x) => x.first_ms) / sum((x, i) => promptIds[i] || 0),
+                      decode_ms_per_token: sum((x) => x.reply_ms - x.first_ms) / Math.max(1, sum((x) => forwardsOf(x.out))),
+                      tokens: sum((x) => x.out.tokens || 0), prompt_ids: sum((x, i) => promptIds[i] || 0) });
+    }
+    if (res.webgpu && res.wasm) {
+      const eq = (a, b) => a.reply === b.reply && a.stop_reason === b.stop_reason && a.tokens === b.tokens;
+      same.push(res.webgpu.filter((x, i) => eq(x.out, res.wasm[i].out)).length);
+    }
+    log(`run ${r}: ` + JSON.stringify({ webgpu: per.webgpu[r] && per.webgpu[r].ms_per_reply, wasm: per.wasm[r] && per.wasm[r].ms_per_reply }));
+  }
+  const med = (list, k) => median(list.map((x) => x[k]));
+  const summ = (list) => (list.length ? Object.fromEntries(['replies_per_s', 'ms_per_reply', 'prefill_ms_per_token',
+    'prefill_forward_ms_per_token', 'decode_ms_per_token', 'decode_forward_ms_per_token'].filter((k) => k in list[0]).map((k) => [k, med(list, k)])) : null);
+  const out = {
+    gguf: model.split('/').pop(), ember_js: emberJs, crossOriginIsolated: self.crossOriginIsolated,
+    hardwareConcurrency: navigator.hardwareConcurrency, userAgent: navigator.userAgent, adapter: info,
+    gpu_path: gpuPath, gpu_refused: gpuWhy, ir_doc: doc ? JSON.parse(doc).family_hint : '' , n, runs, warm, max_new: maxNew,
+    wasm_load_ms: wasmLoadMs, gpu_load_ms: gpuLoadMs, gpu_errors: device ? device.e6Errors : null,
+    webgpu_vs_wasm_same: same, median: { webgpu: summ(per.webgpu), wasm: summ(per.wasm) }, runs_detail: per,
+    pass: (!gpu || !backends.includes('wasm') || same.every((s) => s === n)) && !(device && device.e6Errors),
+  };
+  document.getElementById('out').textContent = 'RESULT ' + JSON.stringify(out);
+  await result(out);
+});
+</script></body></html>
