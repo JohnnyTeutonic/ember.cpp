@@ -1,0 +1,30 @@
+--- ICD files
+/etc/vulkan/icd.d:
+total 4
+drwxr-xr-x 2 root   root     37 Oct 27 13:03 .
+drwxr-xr-x 5 root   root     83 Oct 27 13:07 ..
+-rw-r--r-- 1 nobody nogroup 140 Jul 29 02:41 nvidia_icd.json
+
+/usr/share/vulkan/icd.d:
+total 20
+drwxr-xr-x 2 root root 181 Oct 27 13:07 .
+drwxr-xr-x 5 root root  83 Oct 27 13:07 ..
+-rw-r--r-- 1 root root 169 May 13 06:54 intel_hasvk_icd.x86_64.json
+-rw-r--r-- 1 root root 163 May 13 06:54 intel_icd.x86_64.json
+-rw-r--r-- 1 root root 161 May 13 06:54 lvp_icd.x86_64.json
+-rw-r--r-- 1 root root 164 May 13 06:54 radeon_icd.x86_64.json
+-rw-r--r-- 1 root root 164 May 13 06:54 virtio_icd.x86_64.json
+cat: /usr/share/vulkan/icd.d/nvidia_icd.json: No such file or directory
+{
+    "file_format_version" : "1.0.1",
+    "ICD": {
+        "library_path": "libGLX_nvidia.so.0",
+        "api_version" : "1.4.329"
+    }
+}
+--- NVIDIA graphics libraries
+	libnvidia-gpucomp.so.595.91.07 (libc6,x86-64) => /lib/x86_64-linux-gnu/libnvidia-gpucomp.so.595.91.07
+	libnvidia-glvkspirv.so.595.91.07 (libc6,x86-64) => /lib/x86_64-linux-gnu/libnvidia-glvkspirv.so.595.91.07
+	libnvidia-eglcore.so.595.91.07 (libc6,x86-64) => /lib/x86_64-linux-gnu/libnvidia-eglcore.so.595.91.07
+	libGLX_nvidia.so.0 (libc6,x86-64) => /lib/x86_64-linux-gnu/libGLX_nvidia.so.0
+	libEGL_nvidia.so.0 (libc6,x86-64) => /lib/x86_64-linux-gnu/libEGL_nvidia.so.0
