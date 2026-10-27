@@ -47,12 +47,15 @@ inline int token_id(const std::vector<std::string>& tokens, const std::string& t
 // A chat model's template and where its reply ends: generation stops at an id in eos_ids (stop
 // reason "eos") or turn_ids ("turn": the model starting the next turn); the stop id is cut from
 // the reply. A close's text after its stop token (ChatML's "<|im_end|>\n") is never generated: the
-// next prompt renders it from the history.
+// next prompt renders it from the history. A record with tool turns (paperkiln/2: Template::has_tool)
+// has tool_call_id, the id of its tool_call.open (<|tool_call|>), which is not a stop: a reply is
+// split on it (chat_reply.h, chat::parse_reply); -1 for every other record.
 struct ChatFormat {
     chat::Template tmpl;
     std::string name;  // tmpl.id(): "paperkiln/1", "chatml-qwen3/1", ...
     std::string why;   // the resolution's reason
     std::vector<int> eos_ids, turn_ids;
+    int tool_call_id = -1;
 
     // The record with its stop strings mapped to ids; chat::Error when one is not a single token.
     static ChatFormat of(const chat::Template& t, const std::vector<std::string>& tokens, std::string why) {
@@ -74,6 +77,12 @@ struct ChatFormat {
         f.eos_ids = ids(t.stop_eos, "eos");
         f.turn_ids = ids(t.stop_turn, "turn");
         if (f.eos_ids.empty()) throw chat::Error("chat template " + t.id() + " has no stop.eos token");
+        if (t.has_tool) {
+            f.tool_call_id = token_id(tokens, t.tool_call_open);
+            if (f.tool_call_id < 0)
+                throw chat::Error("chat template " + t.id() + ": tool_call.open '" + t.tool_call_open +
+                                  "' is not a single token of this vocabulary");
+        }
         return f;
     }
 
@@ -253,6 +262,20 @@ struct ChatSetup {
     std::string why;
 };
 
+// A record with tool turns (paperkiln/2) is refused at load, never served as raw completion, unless
+// every reserved string is a control token of the vocabulary (chat::check_control_tokens) and the
+// chat tokenizer encodes each as that one id (control_ids_check below): its prompts and parse_reply
+// depend on both.
+inline void control_ids_check(const chat::Template& t, const ChatTokenizer& tok,
+                              const std::vector<std::pair<std::string, int>>& want) {
+    for (const auto& [text, id] : want) {
+        const std::vector<int> got = tok.encode(text);
+        if (got.size() != 1 || got[0] != id)
+            throw std::runtime_error("chat template " + t.id() + ": the " + tok.kind() + " tokenizer does not encode '" +
+                                     text + "' as its control token " + std::to_string(id) + ": the file is refused");
+    }
+}
+
 inline ChatSetup make_chat_setup(ChatVocab v) {
     ChatSetup s;
     chat::Resolution r;
@@ -267,6 +290,15 @@ inline ChatSetup make_chat_setup(ChatVocab v) {
     s.resolved = true;
     s.tmpl = r.tmpl;
     auto& g = v.g;
+    std::vector<std::pair<std::string, int>> control;  // tool-turn records: each reserved string and its id
+    if (r.tmpl.has_tool) {
+        try {
+            chat::check_control_tokens(r.tmpl, g.tokens, g.token_type);
+        } catch (const chat::Error& e) {
+            throw std::runtime_error(std::string(e.what()) + ": the file is refused");
+        }
+        for (const auto& x : r.tmpl.reserved) control.emplace_back(x, token_id(g.tokens, x));
+    }
     const bool bpe = g.model == "bpe";
     const bool l3 = g.model == "gpt2" && (g.pre == "llama-bpe" || g.pre == "qwen2");
     const bool spm = g.model == "llama";
@@ -300,6 +332,7 @@ inline ChatSetup make_chat_setup(ChatVocab v) {
             SpmTokenizer(std::move(g.tokens), std::move(v.scores), g.token_type, v.add_space_prefix), "spm",
             std::move(f));
     }
+    if (!control.empty()) control_ids_check(s.tmpl, *s.tok, control);
     return s;
 }
 

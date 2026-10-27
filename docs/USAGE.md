@@ -54,8 +54,8 @@ GPU, 0 for CPU only. Endpoints:
 | Endpoint | What it does |
 |---|---|
 | `GET /` | the chat web UI (`www/`) |
-| `POST /chat` | `{user_input, system, history, thinking, temperature, top_k, top_p, seed, max_new_tokens, repeat_penalty, repeat_last_n, stream, return_ids}` -> `{reply, stop_reason, tokens, ttft}`; `"stream": true` sends server-sent events |
-| `POST /v1/chat/completions` | OpenAI-compatible chat completions, with `stream` and `stream_options.include_usage`; `repeat_penalty` / `repeat_last_n`, `top_k`, `thinking` and `chat_template_kwargs.enable_thinking` as extension fields; `frequency_penalty` and `presence_penalty` accept only 0 |
+| `POST /chat` | `{user_input, system, history, thinking, temperature, top_k, top_p, seed, max_new_tokens, repeat_penalty, repeat_last_n, stream, return_ids}` -> `{reply, stop_reason, tokens, ttft}`; `"stream": true` sends server-sent events; under `paperkiln/2` also `tools` in, `tool_calls` out (below) |
+| `POST /v1/chat/completions` | OpenAI-compatible chat completions, with `stream` and `stream_options.include_usage`; `repeat_penalty` / `repeat_last_n`, `top_k`, `thinking` and `chat_template_kwargs.enable_thinking` as extension fields; `frequency_penalty` and `presence_penalty` accept only 0; under `paperkiln/2` also `tools`, tool messages and `message.tool_calls` (below) |
 | `GET /v1/models` | OpenAI-compatible model list |
 | `GET /health` | model, tokenizer, context length and `chat_template` (`{name, version}`, null for raw completion; `chat_template_why` says how it was resolved) |
 | `POST /score` | log-probabilities of continuations, paperkiln's `mtstudio score` on token ids (below): `{requests: [{key, prompt_ids, continuation_ids}]}` -> `{results: [{i, key, prompt_tokens, continuation_ids, over_ctx, logprobs, argmax, sum}], stats}` |
@@ -82,11 +82,61 @@ The log and `/health` say which. Generation stops at the record's stop tokens.
   user message join with a blank line into the system message (an empty one is dropped); a later
   one, or a tool message, is a 400; user and assistant messages alternate and the last is the user's.
 - Content holding one of the template's own markers is refused (400).
+- Under every template but `paperkiln/2`, a non-empty `tools`, a non-empty `tool_calls` and the
+  tool role are refused (400) on both endpoints; `"tools": []` is the same as none.
 
 Context rule (shared with paperkiln's `mtstudio chat`): the oldest whole history turns are
 dropped while prompt + `max_new_tokens` exceeds the context; the system message is never dropped
 or cut; a message that alone fills the context (with the system message) is rejected with HTTP
 400; a reply that reaches the limit ends with `stop_reason` "length".
+
+### Tool calls: conversation schema v2 (`paperkiln/2`)
+
+A GGUF whose `paperkiln.chat_template` declares the `paperkiln/2` record (never inferred) has a
+system turn of its own (`<|system|>`), tool calls and tool results. Its eight control tokens
+(`<|system|>`, `<|tool_call|>`, `<|tool|>`, `<|spare_3|>` .. `<|spare_7|>`, ids 16384-16391 on the
+16k vocabulary, GGUF token type 3) must each be one control token that the tokenizer encodes as
+itself, or the server refuses to load the file. Behaviour follows the record's fields, not a
+version switch; everything a v1 request does renders as under `paperkiln/1`, except that a
+system message is its own turn.
+- `POST /chat`: `tools` (a list of tool definitions, JSON objects, rendered in the system turn as
+  Python's `json.dumps` text in the request's member order, after the system text and a blank
+  line); a role-form `history` may hold `{"role": "assistant", "content", "tool_calls": [{"id"?,
+  "type": "function", "function": {"name", "arguments"}}]}` (arguments a string, rendered
+  verbatim) and `{"role": "tool", "content", "tool_call_id"?}`. An assistant message with k calls
+  is followed by k tool messages in call order, then an assistant message; `tool_call_id`, when
+  given, must equal its call's `id`. `user_input` may be left out when the history ends on a tool
+  message (the prompt then ends on that result).
+- `POST /v1/chat/completions`: system and developer messages join as above; tool messages and
+  assistant `tool_calls` map one to one (an assistant message's `content` may be null when it has
+  calls; a tool message's content may be text parts); `tools` passes through; `tool_choice` may be
+  absent, null or `"auto"` (anything else is a 400); the last message is the user's or a tool's.
+- The reply is split on the generated `<|tool_call|>` id, never on decoded text. When it parses
+  (every part after a call id is a non-empty name, a newline, then the arguments), the reply's
+  text is the content before the first call (stripped of leading and trailing whitespace as every
+  reply is) and the calls are returned in OpenAI's form with ids `call_0`, `call_1`, ... per reply,
+  names and arguments verbatim: `/chat` adds `"tool_calls"` (`stop_reason` is unchanged, "eos"),
+  the OpenAI endpoint adds `message.tool_calls` with `finish_reason` "tool_calls" ("length" when
+  the length limit cut the reply). Otherwise the whole decoded reply is the content, with every
+  token as its text: a spare token or an unparsed `<|tool_call|>` appears as itself. `<|tool_call|>`
+  is not a stop; the turn stops are `<|user|>`, `<|assistant|>`, `<|system|>` and `<|tool|>`.
+- Streaming: content goes out as it is generated until the first `<|tool_call|>` id, then nothing
+  until the end. There the rest of the content goes out (the content before the call, or the whole
+  reply when it does not parse), then the OpenAI endpoint sends each call as one whole
+  `delta.tool_calls` chunk (`index`, `id`, `type`, full `name` and `arguments`) before the
+  `finish_reason` chunk, and `/chat`'s final event carries `tool_calls`. Joined, the streamed
+  content and calls equal the plain reply byte for byte.
+- Context: an exchange is a user message and everything up to the next user message (replies,
+  calls and results). The oldest whole exchange is dropped while prompt + `max_new_tokens` exceeds
+  the context; the system turn with its tool definitions is pinned. When the system turn and the
+  newest exchange alone fill the context, the request is a 400 naming the token counts; an
+  exchange is never cut. `history_turns_used` counts the past exchanges kept.
+- The WebAssembly page's `ember_chat` and `ember_finish` take and return the same fields as
+  `/chat`. The Python package's `generate` takes a rendered prompt, not a conversation, so it has
+  no v2 fields; render with paperkiln's `tools/chat_template.py` and split with its `parse_reply`.
+- Test hook: `EMBER_TEST_SCRIPTED_REPLIES=FILE` (a JSON list of id lists) makes each chat request
+  take the next list in place of sampling, through the same stop rule, reply parsing and
+  streaming (`tools/chat_v2_server_check.py` uses it). The server refuses it under `EMBER_PUBLIC=1`.
 
 Repetition penalty (shared with paperkiln's `mtstudio chat`): `repeat_penalty` p (default 1.0,
 off) and `repeat_last_n` n (default 64; 0 is off). Before each token is sampled, every distinct

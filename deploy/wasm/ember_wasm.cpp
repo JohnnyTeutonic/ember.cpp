@@ -24,7 +24,11 @@
 //                            "top_p", "seed", "max_new_tokens", "repeat_penalty",
 //                            "repeat_last_n"} -> {"reply", "stop_reason",
 //                            "tokens", "prompt_tokens", "history_turns_used"}
-//                            or {"error"}
+//                            or {"error"}. A record with tool turns (paperkiln/2)
+//                            also takes the server's v2 /chat fields ("tools",
+//                            tool calls and results in a role-form history,
+//                            user_input left out after a tool message) and adds
+//                            "tool_calls" to a reply that has calls.
 //
 // Step by step, for a page that computes the logits itself (the WebGPU
 // forward pass in web/webgpu/): the same request rules, sampler and stops,
@@ -36,7 +40,8 @@
 //                            reply so far, then the session's sampler); an id in stop_ids
 //                            (the template's stop set) ends the reply and is not part of it
 //   ember_finish(stop_id)   -> {"reply", "stop_reason", "tokens", "prompt_tokens",
-//                            "history_turns_used"}; stop_id -1 means the length limit
+//                            "history_turns_used"} (and "tool_calls", as ember_chat);
+//                            stop_id -1 means the length limit
 #include <emscripten/emscripten.h>
 
 #include <cstdio>
@@ -49,6 +54,7 @@
 #include <nlohmann/json.hpp>
 
 #include "api.h"
+#include "chat_reply.h"
 #include "chat_request.h"
 #include "utf8_text.h"
 
@@ -73,19 +79,35 @@ struct Request {
 
 // A /chat request under the public page's caps (as the server's public mode) and the context
 // contract (LOCAL_LLM_STACK.md section 3): oldest turns dropped until prompt + max_new fits, a
-// prompt that alone fills the context rejected.
-Request parse_request(const json& r) {
+// prompt that alone fills the context rejected. A record with tool turns (paperkiln/2) takes the
+// server's v2 /chat fields (chat_request.h): tool calls and results in the history, "tools",
+// user_input left out after a tool message; the newest 16 past exchanges are kept.
+Request parse_request(const std::string& raw) {
+    const json r = json::parse(raw);
     Request q;
     if (!g_session->chat_format()) throw std::runtime_error("the model has no chat template (raw completion only)");
-    ember::Conversation c = ember::chat_conversation(r);
-    if (c.user.empty() || c.user.size() > 600) throw std::runtime_error("message must be 1-600 characters");
-    if (c.system.size() > 600) throw std::runtime_error("system message must be at most 600 characters");
+    const microtorch::chat::Template* t = &g_session->chat_format()->tmpl;
+    ember::Conversation c =
+        ember::chat_conversation(r, t, t->has_tool ? ember::ordered_tools(raw) : microtorch::chat::json());
+    if (c.general) {
+        std::vector<microtorch::chat::Message>& m = c.messages;
+        if (r.contains("user_input") && (m.back().content.empty() || m.back().content.size() > 600))
+            throw std::runtime_error("message must be 1-600 characters");
+        if (m[0].role == "system" && m[0].content.size() > 600)
+            throw std::runtime_error("system message must be at most 600 characters");
+        const auto ex = microtorch::chat::exchanges(m);
+        if (ex.size() > 17)
+            m.erase(m.begin() + (m[0].role == "system" ? 1 : 0), m.begin() + static_cast<long>(ex[ex.size() - 17].first));
+    } else {
+        if (c.user.empty() || c.user.size() > 600) throw std::runtime_error("message must be 1-600 characters");
+        if (c.system.size() > 600) throw std::runtime_error("system message must be at most 600 characters");
+    }
     q.max_new = std::max(1, std::min(r.value("max_new_tokens", 64), 64));
     q.temperature = std::max(0.0f, std::min(r.value("temperature", 0.7f), 1.5f));
     q.top_k = std::max(0, std::min(r.value("top_k", 40), 200));
     q.top_p = std::max(0.0f, std::min(r.value("top_p", 0.9f), 1.0f));
     // Public-page cap: the NEWEST 16 turns (the contract drops the oldest).
-    if (c.turns.size() > 16) c.turns.erase(c.turns.begin(), c.turns.end() - 16);
+    if (!c.general && c.turns.size() > 16) c.turns.erase(c.turns.begin(), c.turns.end() - 16);
     q.ctx = g_session->get_config().max_position_embeddings;
     const ember::ChatPrompt p = ember::build_chat_prompt(*g_session->chat_format(), c, q.max_new, q.ctx,
                                                          [](const std::string& t) { return g_session->bpe_token_count(t); });
@@ -110,6 +132,17 @@ std::string strip(const std::string& s) {
     const char* ws = " \t\n\v\f\r";
     const auto a = s.find_first_not_of(ws), b = s.find_last_not_of(ws);
     return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
+}
+
+// A record with tool turns: the reply split on the <|tool_call|> id (chat_reply.h), "reply" the content
+// and "tool_calls" the calls when it parses with one; nothing changes under any other record.
+void put_reply(json& out, const std::vector<int>& ids) {
+    const int call_id = g_session->chat_format()->tool_call_id;
+    if (call_id < 0) return;
+    const ember::ChatReply r =
+        ember::reply_of(ids, call_id, [](const std::vector<int>& v) { return g_session->bpe_decode(v); });
+    out["reply"] = r.content;
+    if (!r.tool_calls.empty()) out["tool_calls"] = ember::tool_calls_json<json>(r.tool_calls);
 }
 }  // namespace
 
@@ -151,11 +184,12 @@ EMSCRIPTEN_KEEPALIVE const char* ember_chat(const char* request) {
     json out;
     try {
         if (!g_session) throw std::runtime_error("no model loaded");
-        const Request q = parse_request(json::parse(request));
+        const Request q = parse_request(request);
         if (q.has_seed) g_session->set_seed(q.seed);
         g_session->set_repeat_penalty(q.repeat_penalty, q.repeat_last_n);
         out["reply"] = ember::utf8_valid(g_session->generate(q.prompt, q.max_new, q.temperature, q.top_k, q.top_p, "", false));
         g_session->set_repeat_penalty(1.0f, 64);
+        put_reply(out, g_session->last_generated_ids());
         out["stop_reason"] = g_session->last_stop_reason();
         out["tokens"] = g_session->last_generated_tokens();
         out["prompt_tokens"] = q.prompt_tokens;
@@ -171,7 +205,7 @@ EMSCRIPTEN_KEEPALIVE const char* ember_prepare(const char* request) {
     json out;
     try {
         if (!g_session || !g_session->is_bpe()) throw std::runtime_error("no chat model loaded");
-        g_req = parse_request(json::parse(request));
+        g_req = parse_request(request);
         if (g_req.has_seed) g_session->set_seed(g_req.seed);
         g_session->set_repeat_penalty(g_req.repeat_penalty, g_req.repeat_last_n);
         g_context = g_session->bpe_prompt_ids(g_req.prompt);  // the ids generate() runs (state blocks included)
@@ -203,6 +237,7 @@ EMSCRIPTEN_KEEPALIVE const char* ember_finish(int stop_id) {
         if (!g_session) throw std::runtime_error("no model loaded");
         const std::vector<int> reply(g_context.begin() + static_cast<long>(g_prompt_len), g_context.end());
         out["reply"] = ember::utf8_valid(strip(g_session->bpe_decode(reply)));
+        put_reply(out, reply);
         out["stop_reason"] = g_session->is_chat_eos(stop_id)    ? "eos"
                              : g_session->is_chat_stop(stop_id) ? "turn"
                                                                 : "length";

@@ -46,6 +46,7 @@
 #include <chrono>
 #include <atomic>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -55,6 +56,7 @@
 #include <vector>
 
 #include "api.h"
+#include "chat_reply.h"
 #include "chat_request.h"
 #include "determinism.h"
 #include "logger.h"
@@ -141,16 +143,21 @@ static BpePrompt bpe_build_prompt(tinyllama::TinyLlamaSession& sess, const BpeCh
 // (ember::ReplyStream, utf8_text.h): valid UTF-8, a character a token cut held
 // until the next token completes it, and the pieces joined equal to "reply"
 // byte for byte (its leading and trailing whitespace stripped).
+// A record with tool turns (paperkiln/2; chat_reply.h): the reply is split on
+// the <|tool_call|> id; when it parses with a call, "reply" is the content
+// before the first call and "tool_calls" the calls in OpenAI's form (ids
+// call_0, ...); streamed, nothing goes out after the first <|tool_call|> id
+// until the end, then the rest of the content (the caller sends the calls).
 static json bpe_run(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r, const BpePrompt& p,
                     std::chrono::steady_clock::time_point t_request, double waited_ms,
                     const std::function<void(const std::string&)>& on_piece) {
   if (r.has_seed) sess.set_seed(r.seed);
-  std::vector<int> ids;
-  ember::ReplyStream stream;
+  const int call_id = sess.chat_format()->tool_call_id;
+  const ember::ChatDecode decode = [&sess](const std::vector<int>& v) { return sess.bpe_decode(v); };
+  ember::ReplyBuilder builder(call_id, decode);
   if (on_piece) {
     sess.set_token_callback([&](int id) {
-      ids.push_back(id);
-      const std::string piece = stream.next(sess.bpe_decode(ids), false);
+      const std::string piece = builder.next(id);
       if (!piece.empty()) on_piece(piece);
     });
   }
@@ -158,15 +165,22 @@ static json bpe_run(tinyllama::TinyLlamaSession& sess, const BpeChatRequest& r, 
   const std::string reply = sess.generate(p.prompt, r.max_new_tokens, r.temperature, r.top_k, r.top_p, "", false);
   sess.set_repeat_penalty(1.0f, 64);
   sess.set_token_callback(nullptr);
+  ember::ChatReply streamed;
   if (on_piece) {  // the end: a character still cut, and the text before it
-    const std::string piece = stream.next(sess.bpe_decode(ids), true);
+    const std::string piece = builder.finish(streamed);
     if (!piece.empty()) on_piece(piece);
   }
   const tinyllama::TtftBreakdown& tb = sess.last_ttft();
   auto ms = [](auto a, auto b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
   json res_json;
-  // the decoded bytes can end inside a character or hold byte tokens that make none (utf8_text.h)
-  res_json["reply"] = ember::utf8_valid(reply);
+  if (call_id < 0) {
+    // the decoded bytes can end inside a character or hold byte tokens that make none (utf8_text.h)
+    res_json["reply"] = ember::utf8_valid(reply);
+  } else {
+    const ember::ChatReply cr = on_piece ? streamed : ember::reply_of(sess.last_generated_ids(), call_id, decode);
+    res_json["reply"] = cr.content;
+    if (!cr.tool_calls.empty()) res_json["tool_calls"] = ember::tool_calls_json<json>(cr.tool_calls);
+  }
   res_json["stop_reason"] = sess.last_stop_reason();
   res_json["tokens"] = sess.last_generated_tokens();
   res_json["prompt_tokens"] = p.prompt_tokens;
@@ -247,6 +261,25 @@ int main(int argc, char** argv) {
     svr.set_read_timeout(10, 0);
     svr.set_write_timeout(30, 0);
   }
+  // Test hook (TinyLlamaSession::set_scripted_replies): EMBER_TEST_SCRIPTED_REPLIES names a JSON file,
+  // a list of id lists; the chat requests take them in order in place of sampling. Refused on a public
+  // server.
+  if (const char* scripted = std::getenv("EMBER_TEST_SCRIPTED_REPLIES")) {
+    if (public_mode) {
+      Logger::error("EMBER_TEST_SCRIPTED_REPLIES is a test hook: refused under EMBER_PUBLIC=1");
+      return 1;
+    }
+    std::ifstream f(scripted);
+    const json s = json::parse(f, nullptr, false);
+    if (!session->is_bpe() || s.is_discarded() || !s.is_array()) {
+      Logger::error(std::string("EMBER_TEST_SCRIPTED_REPLIES: ") + scripted +
+                    " is not a JSON list of id lists, or the model has no chat mode");
+      return 1;
+    }
+    session->set_scripted_replies(s.get<std::vector<std::vector<int>>>());
+    Logger::warning("EMBER_TEST_SCRIPTED_REPLIES: " + std::to_string(s.size()) +
+                    " scripted replies stand in for sampling (a test server)");
+  }
   
   if (std::filesystem::exists(www_path) &&
       std::filesystem::is_directory(www_path)) {
@@ -302,11 +335,15 @@ int main(int argc, char** argv) {
     int top_k = 40;           // Default top-k value
     float top_p = 0.9f;       // Default top-p value
 
+        // A record with tool turns (paperkiln/2): user_input may be left out after a
+        // tool message, and the history may hold tool calls and results (chat_request.h).
+        const microtorch::chat::Template* chat_tmpl = session->is_bpe() ? &session->chat_format()->tmpl : nullptr;
+        const bool tool_turns = chat_tmpl && chat_tmpl->has_tool;
         try {
           json req_json = json::parse(req.body);
           if (req_json.contains("user_input")) {
             user_input_from_client = req_json["user_input"].get<std::string>();
-          } else {
+          } else if (!tool_turns) {
             throw std::runtime_error("Missing 'user_input' field in request JSON");
           }
           
@@ -339,7 +376,13 @@ int main(int argc, char** argv) {
               json& hist = req_json["history"];
               // The context holds ~5 turns anyway; a leading system entry is pinned.
               const bool lead_system = !hist.empty() && hist[0].is_object() && hist[0].value("role", "") == "system";
+              const bool capped = hist.size() > 16;
               while (hist.size() > 16) hist.erase(hist.begin() + (lead_system ? 1 : 0));
+              // Tool turns: the cap keeps whole exchanges (it drops the rest of a cut one).
+              const size_t at = lead_system ? 1 : 0;
+              while (tool_turns && capped && hist.size() > at && hist[at].is_object() && hist[at].contains("role") &&
+                     hist[at].value("role", "") != "user")
+                hist.erase(hist.begin() + static_cast<std::ptrdiff_t>(at));
               for (auto& h : hist)
                 for (const char* key : {"content", "user", "assistant"})
                   if (h.is_object() && h.contains(key) && h[key].is_string() &&
@@ -357,7 +400,8 @@ int main(int argc, char** argv) {
           if (session->is_bpe()) {
             BpeChatRequest r;
             try {
-              r.conv = ember::chat_conversation(req_json);
+              r.conv = ember::chat_conversation(req_json, chat_tmpl,
+                                                tool_turns ? ember::ordered_tools(req.body) : microtorch::chat::json());
             } catch (const ember::RequestError& e) {
               res.status = 400;
               res.set_content(json_out(json{{"error", e.what()}}), "application/json");
@@ -397,8 +441,9 @@ int main(int argc, char** argv) {
             }
             // "stream": true -> server-sent events: {"token": text} as the
             // reply is generated, then the full reply object with
-            // "done": true. The provider runs after this handler returns, so
-            // it takes the session lock itself.
+            // "done": true (with "tool_calls" when the reply has calls). The
+            // provider runs after this handler returns, so it takes the
+            // session lock itself.
             res.set_header("Cache-Control", "no-cache");
             res.set_chunked_content_provider(
                 "text/event-stream", [r, bp, t_request, sess](size_t, httplib::DataSink& sink) {
@@ -596,6 +641,10 @@ int main(int argc, char** argv) {
   // and developer messages before the first user message join with "\n\n"
   // into the system message, a later one or a tool message is a 400, user and
   // assistant messages alternate, and the last message must be from the user.
+  // Under a record with tool turns (paperkiln/2) tool messages and assistant
+  // tool_calls map one to one, "tools" passes through, the last message is the
+  // user's or a tool's, and a reply with calls carries message.tool_calls
+  // (finish_reason "tool_calls"; streamed, one whole delta per call).
   // Defaults follow OpenAI's (temperature 1, top_p 1); top_k, thinking and
   // chat_template_kwargs.enable_thinking are accepted as extensions.
   const std::string model_id = std::filesystem::path(model_dir).filename().string();
@@ -648,8 +697,12 @@ int main(int argc, char** argv) {
     try {
       // messages map one to one (chat_request.h): leading system/developer messages join into the
       // system message, a later one or a tool message is refused, the last message is the user's.
+      // A record with tool turns (paperkiln/2): tool messages and assistant tool_calls map one to one,
+      // "tools" passes through (member order kept), and the last message is the user's or a tool's.
+      const microtorch::chat::Template* tmpl = &session->chat_format()->tmpl;
       try {
-        r.conv = ember::openai_conversation(body);
+        r.conv = ember::openai_conversation(body, tmpl,
+                                            tmpl->has_tool ? ember::ordered_tools(req.body) : microtorch::chat::json());
       } catch (const ember::RequestError& e) {
         openai_error(res, 400, e.what());
         return;
@@ -689,7 +742,24 @@ int main(int argc, char** argv) {
       }
     }
     r.max_new_tokens = std::max(r.max_new_tokens, 1);
-    if (public_mode) {
+    if (public_mode && r.conv.general) {
+      // Tool turns: the same caps on the message list (600 bytes a message, the newest 8 past exchanges).
+      constexpr size_t kMaxText = 600;
+      std::vector<microtorch::chat::Message>& m = r.conv.messages;
+      if (m.back().role == "user" && m.back().content.size() > kMaxText) {
+        openai_error(res, 400, "message too long (600 characters at most)");
+        return;
+      }
+      r.max_new_tokens = std::min(r.max_new_tokens, 64);
+      r.temperature = std::min(std::max(r.temperature, 0.0f), 1.5f);
+      r.top_k = std::min(std::max(r.top_k, 0), 200);
+      r.top_p = std::min(std::max(r.top_p, 0.05f), 1.0f);
+      for (auto& x : m)
+        if (x.content.size() > kMaxText) x.content.resize(kMaxText);
+      const auto ex = microtorch::chat::exchanges(m);
+      if (ex.size() > 9)
+        m.erase(m.begin() + (m[0].role == "system" ? 1 : 0), m.begin() + static_cast<std::ptrdiff_t>(ex[ex.size() - 9].first));
+    } else if (public_mode) {
       constexpr size_t kMaxText = 600;
       if (r.conv.user.size() > kMaxText) {
         openai_error(res, 400, "message too long (600 characters at most)");
@@ -733,17 +803,22 @@ int main(int argc, char** argv) {
                   {"completion_tokens", completion},
                   {"total_tokens", bp.prompt_tokens + completion}};
     };
+    // finish_reason: "length" at the length limit; otherwise "tool_calls" when the reply has calls
+    // (a record with tool turns), else "stop".
     auto finish_of = [](const json& result) {
-      return result.value("stop_reason", std::string("eos")) == "length" ? "length" : "stop";
+      if (result.value("stop_reason", std::string("eos")) == "length") return "length";
+      return result.contains("tool_calls") ? "tool_calls" : "stop";
     };
     if (!stream) {
       const json result = bpe_run(*sess, r, bp, t_request, queue_ms, nullptr);
+      json message = {{"role", "assistant"}, {"content", result["reply"]}};
+      if (result.contains("tool_calls")) message["tool_calls"] = result["tool_calls"];
       json out = {{"id", id},
                   {"object", "chat.completion"},
                   {"created", created},
                   {"model", model_id},
                   {"choices", json::array({json{{"index", 0},
-                                                {"message", {{"role", "assistant"}, {"content", result["reply"]}}},
+                                                {"message", message},
                                                 {"logprobs", nullptr},
                                                 {"finish_reason", finish_of(result)}}})},
                   {"usage", usage_of(result)}};
@@ -771,6 +846,13 @@ int main(int argc, char** argv) {
           chunk(json{{"role", "assistant"}, {"content", ""}}, nullptr);
           const json result = bpe_run(*sess, r, bp, t_request, waited,
                                       [&](const std::string& piece) { chunk(json{{"content", piece}}, nullptr); });
+          // Tool turns: each call as one whole delta (full name and arguments), after the content.
+          if (result.contains("tool_calls"))
+            for (size_t k = 0; k < result["tool_calls"].size(); ++k) {
+              json call = result["tool_calls"][k];
+              call["index"] = k;
+              chunk(json{{"tool_calls", json::array({call})}}, nullptr);
+            }
           chunk(json::object(), finish_of(result));
           if (include_usage) {
             json u = {{"id", id},

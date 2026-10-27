@@ -1,0 +1,857 @@
+{
+ "load": {
+  "toy_v2_nocontrol.gguf": {
+   "refused": true,
+   "exit": 1,
+   "log_line": "2026-10-27 18:46:46 [ERROR] Failed to load model: chat template paperkiln/2 needs '<|system|>' as a control token of the vocabulary: the file is refused"
+  },
+  "toy_v2_badtype.gguf": {
+   "refused": true,
+   "exit": 1,
+   "log_line": "2026-10-27 18:46:47 [ERROR] Failed to load model: chat template paperkiln/2 needs '<|system|>' as a control token of the vocabulary: the file is refused"
+  }
+ },
+ "health": {
+  "chat_template": {
+   "name": "paperkiln",
+   "version": 2
+  },
+  "chat_template_why": "declared",
+  "context": 256,
+  "hidden_size": 256,
+  "layers": 4,
+  "model": "/home/jonat/cv2/models/toy_v2.gguf",
+  "status": "ok",
+  "tokenizer": "bpe",
+  "vocab_size": 16392
+ },
+ "render": {
+  "template": {
+   "kind": "llama3_bpe",
+   "resolved": true,
+   "stop_ids": [
+    1,
+    2,
+    3,
+    16384,
+    16386
+   ],
+   "template": "paperkiln/2",
+   "why": "declared"
+  },
+  "requests": [
+   {
+    "endpoint": "/chat",
+    "i": 0,
+    "status": 200,
+    "prompt_tokens": 136,
+    "history_turns_used": 0,
+    "expect": {
+     "prompt_tokens": 136,
+     "history_turns_used": 0,
+     "error": null
+    },
+    "ok": true
+   },
+   {
+    "endpoint": "/chat",
+    "i": 1,
+    "status": 200,
+    "prompt_tokens": 173,
+    "history_turns_used": 0,
+    "expect": {
+     "prompt_tokens": 173,
+     "history_turns_used": 0,
+     "error": null
+    },
+    "ok": true
+   },
+   {
+    "endpoint": "/chat",
+    "i": 2,
+    "status": 200,
+    "prompt_tokens": 181,
+    "history_turns_used": 1,
+    "expect": {
+     "prompt_tokens": 181,
+     "history_turns_used": 1,
+     "error": null
+    },
+    "ok": true
+   },
+   {
+    "endpoint": "/chat",
+    "i": 3,
+    "status": 200,
+    "prompt_tokens": 210,
+    "history_turns_used": 2,
+    "expect": {
+     "prompt_tokens": 210,
+     "history_turns_used": 2,
+     "error": null
+    },
+    "ok": true
+   },
+   {
+    "endpoint": "/chat",
+    "i": 4,
+    "status": 200,
+    "prompt_tokens": 230,
+    "history_turns_used": 1,
+    "expect": {
+     "prompt_tokens": 230,
+     "history_turns_used": 1,
+     "error": null
+    },
+    "ok": true
+   },
+   {
+    "endpoint": "/chat",
+    "i": 5,
+    "status": 200,
+    "prompt_tokens": 17,
+    "history_turns_used": 1,
+    "expect": {
+     "prompt_tokens": 17,
+     "history_turns_used": 1,
+     "error": null
+    },
+    "ok": true
+   },
+   {
+    "endpoint": "/v1/chat/completions",
+    "i": 0,
+    "status": 200,
+    "prompt_tokens": 140,
+    "expect": 140,
+    "ok": true
+   },
+   {
+    "endpoint": "/v1/chat/completions",
+    "i": 1,
+    "status": 200,
+    "prompt_tokens": 177,
+    "expect": 177,
+    "ok": true
+   },
+   {
+    "endpoint": "/v1/chat/completions",
+    "i": 2,
+    "status": 200,
+    "prompt_tokens": 4,
+    "expect": 4,
+    "ok": true
+   }
+  ],
+  "dropped": [
+   0,
+   0,
+   1,
+   2,
+   1,
+   1
+  ]
+ },
+ "refused": [
+  {
+   "endpoint": "/chat",
+   "status": 400,
+   "error": "Missing 'user_input' field in request JSON (it may be left out only when the history ends on a tool message)",
+   "rule": "Missing 'user_input'",
+   "ok": true
+  },
+  {
+   "endpoint": "/chat",
+   "status": 400,
+   "error": "message 3 is user, expected assistant (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)",
+   "rule": "expected assistant",
+   "ok": true
+  },
+  {
+   "endpoint": "/chat",
+   "status": 400,
+   "error": "tools must be a list of tool definitions (JSON objects)",
+   "rule": "tools must be a list",
+   "ok": true
+  },
+  {
+   "endpoint": "/chat",
+   "status": 400,
+   "error": "a tool definition holds a non-integer number (refused: its text is not portable)",
+   "rule": "non-integer number",
+   "ok": true
+  },
+  {
+   "endpoint": "/chat",
+   "status": 400,
+   "error": "history role 'narrator' is not allowed here (user, assistant, tool; system only first)",
+   "rule": "history role 'narrator'",
+   "ok": true
+  },
+  {
+   "endpoint": "/chat",
+   "status": 400,
+   "error": "content holds the template's reserved text '<|tool|>'",
+   "rule": "reserved text '<|tool|>'",
+   "ok": true
+  },
+  {
+   "endpoint": "/chat",
+   "status": 400,
+   "error": "the system turn and the newest exchange are 374 tokens (the system turn 2); the model's context is 256 (an exchange is never cut)",
+   "rule": "the system turn and the newest exchange are",
+   "ok": true
+  },
+  {
+   "endpoint": "/v1/chat/completions",
+   "status": 400,
+   "error": "the last message must be from the user or a tool",
+   "rule": "the last message must be from the user or a tool",
+   "ok": true
+  },
+  {
+   "endpoint": "/v1/chat/completions",
+   "status": 400,
+   "error": "tool_choice is not supported except \"auto\" (the model decides whether to call a tool)",
+   "rule": "tool_choice",
+   "ok": true
+  },
+  {
+   "endpoint": "/v1/chat/completions",
+   "status": 400,
+   "error": "message 1 is tool, expected assistant (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)",
+   "rule": "expected assistant",
+   "ok": true
+  },
+  {
+   "endpoint": "/v1/chat/completions",
+   "status": 400,
+   "error": "the newest exchange is 372 tokens; the model's context is 256 (an exchange is never cut)",
+   "rule": "the newest exchange is",
+   "ok": true
+  }
+ ],
+ "stream": [
+  {
+   "endpoint": "/chat",
+   "i": 0,
+   "reply": "That sounds really really really really. I'm sorry, I'm sorry.",
+   "stop_reason": "turn",
+   "tokens": 15,
+   "pieces": 15,
+   "tool_calls": null,
+   "ok": true
+  },
+  {
+   "endpoint": "/chat",
+   "i": 1,
+   "reply": "Hey, I'm sorry. I'm really sorry, I'm sorry.",
+   "stop_reason": "eos",
+   "tokens": 15,
+   "pieces": 15,
+   "tool_calls": null,
+   "ok": true
+  },
+  {
+   "endpoint": "/chat",
+   "i": 2,
+   "reply": "That's great! I'm sorry, I'm sorry.",
+   "stop_reason": "turn",
+   "tokens": 12,
+   "pieces": 12,
+   "tool_calls": null,
+   "ok": true
+  },
+  {
+   "endpoint": "/chat",
+   "i": 3,
+   "reply": "Yeah, I'm sorry. I'm really really sorry.",
+   "stop_reason": "turn",
+   "tokens": 12,
+   "pieces": 12,
+   "tool_calls": null,
+   "ok": true
+  },
+  {
+   "endpoint": "/v1/chat/completions",
+   "i": 0,
+   "content": "That's great! I'm sorry, I'm sorry.",
+   "finish_reason": "stop",
+   "ok": true
+  },
+  {
+   "endpoint": "/v1/chat/completions",
+   "i": 1,
+   "content": "Hey, I'm sorry. I'm really sorry, I'm sorry.",
+   "finish_reason": "stop",
+   "ok": true
+  },
+  {
+   "endpoint": "/v1/chat/completions",
+   "i": 2,
+   "content": "Hey, I'm sorry. I'm really sorry, I'm sorry.",
+   "finish_reason": "stop",
+   "ok": true
+  }
+ ],
+ "scripted": [
+  {
+   "case": "content then a call",
+   "script": [
+    5245,
+    449,
+    2392,
+    17,
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202,
+    94,
+    5,
+    70,
+    406,
+    11844,
+    617,
+    14311,
+    274,
+    5,
+    96,
+    1
+   ],
+   "max_new_tokens": 64,
+   "chat": {
+    "reply": "Let me check.",
+    "tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Paris\"}",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     }
+    ],
+    "stop_reason": "eos",
+    "ids": [
+     5245,
+     449,
+     2392,
+     17,
+     16385,
+     813,
+     66,
+     721,
+     1051,
+     202,
+     94,
+     5,
+     70,
+     406,
+     11844,
+     617,
+     14311,
+     274,
+     5,
+     96
+    ],
+    "pieces": [
+     "Let",
+     " me",
+     " check",
+     "."
+    ],
+    "final_tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Paris\"}",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     }
+    ],
+    "ok": true
+   },
+   "openai": {
+    "content": "Let me check.",
+    "tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Paris\"}",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     }
+    ],
+    "finish_reason": "tool_calls",
+    "stream_finish_reason": "tool_calls",
+    "stream_call_chunks": 1,
+    "ok": true
+   }
+  },
+  {
+   "case": "two calls",
+   "script": [
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202,
+    94,
+    5,
+    70,
+    406,
+    11844,
+    617,
+    14311,
+    274,
+    5,
+    96,
+    16385,
+    813,
+    66,
+    4634,
+    202,
+    94,
+    96,
+    1
+   ],
+   "max_new_tokens": 64,
+   "chat": {
+    "reply": "",
+    "tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Paris\"}",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     },
+     {
+      "function": {
+       "arguments": "{}",
+       "name": "get_time"
+      },
+      "id": "call_1",
+      "type": "function"
+     }
+    ],
+    "stop_reason": "eos",
+    "ids": [
+     16385,
+     813,
+     66,
+     721,
+     1051,
+     202,
+     94,
+     5,
+     70,
+     406,
+     11844,
+     617,
+     14311,
+     274,
+     5,
+     96,
+     16385,
+     813,
+     66,
+     4634,
+     202,
+     94,
+     96
+    ],
+    "pieces": [],
+    "final_tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Paris\"}",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     },
+     {
+      "function": {
+       "arguments": "{}",
+       "name": "get_time"
+      },
+      "id": "call_1",
+      "type": "function"
+     }
+    ],
+    "ok": true
+   },
+   "openai": {
+    "content": "",
+    "tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Paris\"}",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     },
+     {
+      "function": {
+       "arguments": "{}",
+       "name": "get_time"
+      },
+      "id": "call_1",
+      "type": "function"
+     }
+    ],
+    "finish_reason": "tool_calls",
+    "stream_finish_reason": "tool_calls",
+    "stream_call_chunks": 2,
+    "ok": true
+   }
+  },
+  {
+   "case": "a call without a newline is content",
+   "script": [
+    2739,
+    224,
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    1
+   ],
+   "max_new_tokens": 64,
+   "chat": {
+    "reply": "Sure <|tool_call|>get_weather",
+    "tool_calls": null,
+    "stop_reason": "eos",
+    "ids": [
+     2739,
+     224,
+     16385,
+     813,
+     66,
+     721,
+     1051
+    ],
+    "pieces": [
+     "Sure",
+     " <|tool_call|>get_weather"
+    ],
+    "final_tool_calls": null,
+    "ok": true
+   },
+   "openai": {
+    "content": "Sure <|tool_call|>get_weather",
+    "tool_calls": null,
+    "finish_reason": "stop",
+    "stream_finish_reason": "stop",
+    "stream_call_chunks": 0,
+    "ok": true
+   }
+  },
+  {
+   "case": "a spare token is content",
+   "script": [
+    91,
+    224,
+    16388,
+    312,
+    1
+   ],
+   "max_new_tokens": 64,
+   "chat": {
+    "reply": "x <|spare_4|> y",
+    "tool_calls": null,
+    "stop_reason": "eos",
+    "ids": [
+     91,
+     224,
+     16388,
+     312
+    ],
+    "pieces": [
+     "x",
+     " <|spare_4|>",
+     " y"
+    ],
+    "final_tool_calls": null,
+    "ok": true
+   },
+   "openai": {
+    "content": "x <|spare_4|> y",
+    "tool_calls": null,
+    "finish_reason": "stop",
+    "stream_finish_reason": "stop",
+    "stream_call_chunks": 0,
+    "ok": true
+   }
+  },
+  {
+   "case": "a turn stop after a call",
+   "script": [
+    38,
+    2017,
+    2689,
+    261,
+    88,
+    2342,
+    277,
+    15,
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202,
+    94,
+    5,
+    70,
+    406,
+    11844,
+    617,
+    14311,
+    274,
+    5,
+    96,
+    16386,
+    5,
+    6
+   ],
+   "max_new_tokens": 64,
+   "chat": {
+    "reply": "Café au lait,",
+    "tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Paris\"}",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     }
+    ],
+    "stop_reason": "turn",
+    "ids": [
+     38,
+     2017,
+     2689,
+     261,
+     88,
+     2342,
+     277,
+     15,
+     16385,
+     813,
+     66,
+     721,
+     1051,
+     202,
+     94,
+     5,
+     70,
+     406,
+     11844,
+     617,
+     14311,
+     274,
+     5,
+     96
+    ],
+    "pieces": [
+     "C",
+     "af",
+     "é",
+     " a",
+     "u",
+     " la",
+     "it",
+     ","
+    ],
+    "final_tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Paris\"}",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     }
+    ],
+    "ok": true
+   },
+   "openai": {
+    "content": "Café au lait,",
+    "tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Paris\"}",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     }
+    ],
+    "finish_reason": "tool_calls",
+    "stream_finish_reason": "tool_calls",
+    "stream_call_chunks": 1,
+    "ok": true
+   }
+  },
+  {
+   "case": "the length limit inside the arguments",
+   "script": [
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202,
+    94,
+    5,
+    70,
+    406,
+    11844,
+    617,
+    14311,
+    813,
+    66,
+    721,
+    1051,
+    202,
+    94,
+    5,
+    70,
+    406,
+    11844,
+    617,
+    14311,
+    274,
+    5,
+    96,
+    1
+   ],
+   "max_new_tokens": 13,
+   "chat": {
+    "reply": "",
+    "tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Par",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     }
+    ],
+    "stop_reason": "length",
+    "ids": [
+     16385,
+     813,
+     66,
+     721,
+     1051,
+     202,
+     94,
+     5,
+     70,
+     406,
+     11844,
+     617,
+     14311
+    ],
+    "pieces": [],
+    "final_tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Par",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     }
+    ],
+    "ok": true
+   },
+   "openai": {
+    "content": "",
+    "tool_calls": [
+     {
+      "function": {
+       "arguments": "{\"city\": \"Par",
+       "name": "get_weather"
+      },
+      "id": "call_0",
+      "type": "function"
+     }
+    ],
+    "finish_reason": "length",
+    "stream_finish_reason": "length",
+    "stream_call_chunks": 1,
+    "ok": true
+   }
+  }
+ ],
+ "v1": {
+  "health": {
+   "name": "paperkiln",
+   "version": 1
+  },
+  "refused": [
+   {
+    "endpoint": "/chat",
+    "status": 400,
+    "error": "tools are not supported: this model's chat template has no tool turns",
+    "rule": "tools are not supported",
+    "ok": true
+   },
+   {
+    "endpoint": "/chat",
+    "status": 400,
+    "error": "tool_calls are not supported: this model's chat template has no tool turns",
+    "rule": "tool_calls are not supported",
+    "ok": true
+   },
+   {
+    "endpoint": "/chat",
+    "status": 400,
+    "error": "history role 'tool' is not allowed here (user, assistant; system only first)",
+    "rule": "history role 'tool'",
+    "ok": true
+   },
+   {
+    "endpoint": "/v1/chat/completions",
+    "status": 400,
+    "error": "tools are not supported: this model's chat template has no tool turns",
+    "rule": "tools are not supported",
+    "ok": true
+   },
+   {
+    "endpoint": "/v1/chat/completions",
+    "status": 400,
+    "error": "tool messages are not supported: this model's chat template has no tool role",
+    "rule": "tool messages are not supported",
+    "ok": true
+   },
+   {
+    "endpoint": "/v1/chat/completions",
+    "status": 400,
+    "error": "tool_calls are not supported: this model's chat template has no tool turns",
+    "rule": "tool_calls are not supported",
+    "ok": true
+   }
+  ],
+  "empty_tools": {
+   "reply": "Yeah, I'm sorry. I'm really really sorry.",
+   "ok": true
+  }
+ },
+ "failures": [],
+ "passed": true
+}

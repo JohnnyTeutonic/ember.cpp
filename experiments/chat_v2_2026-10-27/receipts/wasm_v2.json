@@ -1,0 +1,158 @@
+{
+ "load": {
+  "toy_v2_nocontrol.gguf": -1,
+  "toy_v2_badtype.gguf": -1
+ },
+ "chat": [
+  {
+   "i": 0,
+   "ok": true,
+   "reply": "That sounds really really really really. I",
+   "native": "That sounds really really really really. I",
+   "prompt_tokens": 136,
+   "history_turns_used": 0,
+   "error": null
+  },
+  {
+   "i": 1,
+   "ok": true,
+   "reply": "Hey, I'm sorry. I'm",
+   "native": "Hey, I'm sorry. I'm",
+   "prompt_tokens": 173,
+   "history_turns_used": 0,
+   "error": null
+  },
+  {
+   "i": 2,
+   "ok": true,
+   "reply": "That's great! I'm sorry,",
+   "native": "That's great! I'm sorry,",
+   "prompt_tokens": 181,
+   "history_turns_used": 1,
+   "error": null
+  },
+  {
+   "i": 3,
+   "ok": true,
+   "reply": "That's a great idea. I'm",
+   "native": "That's a great idea. I'm",
+   "prompt_tokens": 210,
+   "history_turns_used": 2,
+   "error": null
+  },
+  {
+   "i": 4,
+   "ok": true,
+   "reply": "I'm sorry, I'm sorry.",
+   "native": "I'm sorry, I'm sorry.",
+   "prompt_tokens": 230,
+   "history_turns_used": 1,
+   "error": null
+  },
+  {
+   "i": 5,
+   "ok": true,
+   "reply": "Yeah, I'm sorry. I'm",
+   "native": "Yeah, I'm sorry. I'm",
+   "prompt_tokens": 17,
+   "history_turns_used": 1,
+   "error": null
+  }
+ ],
+ "scripted": [
+  {
+   "case": "content then a call",
+   "ok": true,
+   "reply": "Let me check.",
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": "{\"city\": \"Paris\"}",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    }
+   ],
+   "stop_reason": "eos"
+  },
+  {
+   "case": "two calls",
+   "ok": true,
+   "reply": "",
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": "{\"city\": \"Paris\"}",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    },
+    {
+     "function": {
+      "arguments": "{}",
+      "name": "get_time"
+     },
+     "id": "call_1",
+     "type": "function"
+    }
+   ],
+   "stop_reason": "eos"
+  },
+  {
+   "case": "a call without a newline is content",
+   "ok": true,
+   "reply": "Sure <|tool_call|>get_weather",
+   "tool_calls": [],
+   "stop_reason": "eos"
+  },
+  {
+   "case": "a spare token is content",
+   "ok": true,
+   "reply": "x <|spare_4|> y",
+   "tool_calls": [],
+   "stop_reason": "eos"
+  },
+  {
+   "case": "a turn stop after a call",
+   "ok": true,
+   "reply": "Café au lait,",
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": "{\"city\": \"Paris\"}",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    }
+   ],
+   "stop_reason": "turn"
+  },
+  {
+   "case": "the length limit inside the arguments",
+   "ok": true,
+   "reply": "",
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": "{\"city\": \"Par",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    }
+   ],
+   "stop_reason": "length"
+  }
+ ],
+ "summary": {
+  "chat": 6,
+  "chat_equal": 6,
+  "scripted": 6,
+  "scripted_equal": 6,
+  "load_refused": 2,
+  "failures": 0
+ }
+}

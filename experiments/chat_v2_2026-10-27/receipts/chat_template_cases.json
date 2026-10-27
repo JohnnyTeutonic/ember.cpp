@@ -1,0 +1,4110 @@
+{
+ "header": {
+  "cases_refused": 39,
+  "cases_rendered": 35,
+  "failures": 0,
+  "jinja_modelfile": 6,
+  "legacy_prompts": 30,
+  "parse_reply": 12,
+  "records": 6,
+  "resolutions": 7,
+  "sha256": 2
+ },
+ "history_strict": {
+  "role_equals_pair": true,
+  "role_text": {
+   "text": "<|user|>hi<|assistant|>hello there<|endoftext|><|user|>hello<|assistant|>"
+  },
+  "violations": [
+   {
+    "history": [
+     {
+      "content": "hello there",
+      "role": "assistant"
+     },
+     {
+      "content": "hi",
+      "role": "user"
+     }
+    ],
+    "ok": true,
+    "result": {
+     "refused": "history has an assistant message without a user message before it: user and assistant messages must alternate, starting with user (section 3 point 3a)"
+    },
+    "rule": "without a user message before it"
+   },
+   {
+    "history": [
+     {
+      "content": "hi",
+      "role": "user"
+     },
+     {
+      "content": "hi",
+      "role": "user"
+     },
+     {
+      "content": "hello there",
+      "role": "assistant"
+     }
+    ],
+    "ok": true,
+    "result": {
+     "refused": "history has two user messages in a row: user and assistant messages must alternate (section 3 point 3a)"
+    },
+    "rule": "two user messages"
+   },
+   {
+    "history": [
+     {
+      "content": "hi",
+      "role": "user"
+     },
+     {
+      "content": "hello there",
+      "role": "assistant"
+     },
+     {
+      "content": "hi",
+      "role": "user"
+     }
+    ],
+    "ok": true,
+    "result": {
+     "refused": "history ends with a user message: it must end with an assistant reply (the new message goes in user_input)"
+    },
+    "rule": "ends with a user message"
+   },
+   {
+    "history": [
+     {
+      "content": "hi",
+      "role": "user"
+     },
+     {
+      "content": "x",
+      "role": "narrator"
+     }
+    ],
+    "ok": true,
+    "result": {
+     "refused": "history role 'narrator' is not allowed here (user, assistant; system only first)"
+    },
+    "rule": "role"
+   }
+  ],
+  "violations_refused": 4
+ },
+ "paths": [
+  {
+   "expect": "<|user|>Hi<|assistant|>",
+   "name": "one user prompt",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>Be brief.\n\nHi<|assistant|>",
+   "name": "system folds into the first user turn",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Be brief.\n\nHi<|assistant|>"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": "Be brief.",
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Be brief.\n\nHi<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Be brief.\n\nHi<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "a lone system message",
+   "paths": {
+    "chat_note": "not a /chat request: the last message is not the user's or a tool's",
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       }
+      ]
+     },
+     "result": {
+      "refused": "the last message must be from the user"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "a system message with no user message",
+   "not_a_request": "a training conversation (requests are prompts)",
+   "paths": {},
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "two system messages",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "system"
+       },
+       {
+        "content": "b",
+        "role": "system"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "a system message is allowed only as the first history entry"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [
+       {
+        "content": "b",
+        "role": "system"
+       }
+      ],
+      "system": "a",
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "give the system message once: the 'system' field or a leading history entry"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "a",
+        "role": "system"
+       },
+       {
+        "content": "b",
+        "role": "system"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>a\n\nb\n\nHi<|assistant|>"
+     },
+     "same": false
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "a system message mid-conversation",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "Hello",
+        "role": "assistant"
+       },
+       {
+        "content": "Now be rude.",
+        "role": "system"
+       }
+      ],
+      "user_input": "Bye"
+     },
+     "result": {
+      "refused": "a system message is allowed only as the first history entry"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "Hello",
+        "role": "assistant"
+       },
+       {
+        "content": "Now be rude.",
+        "role": "system"
+       },
+       {
+        "content": "Bye",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a system message is allowed only before the first user message (this model's chat template has one system message, first)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "the assistant first",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Hello",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "history has an assistant message without a user message before it: user and assistant messages must alternate, starting with user (section 3 point 3a)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hello",
+        "role": "assistant"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "messages must alternate user and assistant, starting from the user (message 0 is assistant)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "two user messages in a row",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "user"
+       }
+      ],
+      "user_input": "b"
+     },
+     "result": {
+      "refused": "history ends with a user message: it must end with an assistant reply (the new message goes in user_input)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "messages must alternate user and assistant, starting from the user (message 1 is user)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "a training conversation ending on a user message",
+   "not_a_request": "a training conversation (requests are prompts)",
+   "paths": {},
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "a prompt ending on an assistant message",
+   "paths": {
+    "chat_note": "not a /chat request: the last message is not the user's or a tool's",
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "Hello",
+        "role": "assistant"
+       }
+      ]
+     },
+     "result": {
+      "refused": "the last message must be from the user"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "user content holding a role marker",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "say <|user|> now"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|user|>'"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "say <|user|> now",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|user|>'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "system content holding end-of-text",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "stop at <|endoftext|>",
+        "role": "system"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|endoftext|>'"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": "stop at <|endoftext|>",
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|endoftext|>'"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "stop at <|endoftext|>",
+        "role": "system"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|endoftext|>'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "assistant content holding a marker",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "<|assistant|>x",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "y"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|assistant|>'"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "<|assistant|>x",
+        "role": "assistant"
+       },
+       {
+        "content": "y",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|assistant|>'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>the <unk> token<|assistant|>",
+   "name": "<unk> text is ordinary content",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "the <unk> token"
+     },
+     "result": {
+      "text": "<|user|>the <unk> token<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "the <unk> token",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>the <unk> token<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>\n<|assistant|>",
+   "name": "newline-only user content",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "\n"
+     },
+     "result": {
+      "text": "<|user|>\n<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "\n",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>\n<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>a<|assistant|>\n<|endoftext|><|user|>b<|assistant|><|endoftext|><|user|>c<|assistant|>",
+   "name": "newline-only and empty replies in the history",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "\n",
+        "role": "assistant"
+       },
+       {
+        "content": "b",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "c"
+     },
+     "result": {
+      "text": "<|user|>a<|assistant|>\n<|endoftext|><|user|>b<|assistant|><|endoftext|><|user|>c<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "\n",
+        "role": "assistant"
+       },
+       {
+        "content": "b",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>a<|assistant|>\n<|endoftext|><|user|>b<|assistant|><|endoftext|><|user|>c<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "the tool role is reserved",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "42",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "Missing 'user_input' field in request JSON"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       },
+       {
+        "content": "42",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "tool messages are not supported: this model's chat template has no tool role"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "an unknown role",
+   "paths": {
+    "chat_note": "not a /chat request: the last message is not the user's or a tool's",
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Once",
+        "role": "narrator"
+       }
+      ]
+     },
+     "result": {
+      "refused": "messages[0] has unknown role 'narrator'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>",
+   "name": "three exchanges with a system message",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Be kind.",
+        "role": "system"
+       },
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       },
+       {
+        "content": "d",
+        "role": "assistant"
+       },
+       {
+        "content": "e",
+        "role": "user"
+       },
+       {
+        "content": "f",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "g"
+     },
+     "result": {
+      "text": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       },
+       {
+        "content": "d",
+        "role": "assistant"
+       },
+       {
+        "content": "e",
+        "role": "user"
+       },
+       {
+        "content": "f",
+        "role": "assistant"
+       }
+      ],
+      "system": "Be kind.",
+      "user_input": "g"
+     },
+     "result": {
+      "text": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Be kind.",
+        "role": "system"
+       },
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       },
+       {
+        "content": "d",
+        "role": "assistant"
+       },
+       {
+        "content": "e",
+        "role": "user"
+       },
+       {
+        "content": "f",
+        "role": "assistant"
+       },
+       {
+        "content": "g",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>S\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|>",
+   "name": "a training conversation with a system message",
+   "not_a_request": "a training conversation (requests are prompts)",
+   "paths": {},
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "loss on a user message",
+   "not_a_request": "a loss flag (no request field carries one)",
+   "paths": {},
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>Grüße, 東京, 🙂<|assistant|>",
+   "name": "unicode content",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "Grüße, 東京, 🙂"
+     },
+     "result": {
+      "text": "<|user|>Grüße, 東京, 🙂<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Grüße, 東京, 🙂",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Grüße, 東京, 🙂<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "system mode none refuses a system message",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "S",
+        "role": "system"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "this model's template has no system role"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": "S",
+      "user_input": "Hi"
+     },
+     "result": {
+      "refused": "this model's template has no system role"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "S",
+        "role": "system"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "this model's template has no system role"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "<|user|>Hi<|assistant|>",
+   "name": "system mode none without one",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": "user: hi assistant: hello user: how are you assistant:",
+   "name": "legacy word-level prompt",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "hi",
+        "role": "user"
+       },
+       {
+        "content": "hello",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "how are you"
+     },
+     "result": {
+      "text": "user: hi assistant: hello user: how are you assistant:"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "hi",
+        "role": "user"
+       },
+       {
+        "content": "hello",
+        "role": "assistant"
+       },
+       {
+        "content": "how are you",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "user: hi assistant: hello user: how are you assistant:"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/legacy-word"
+  },
+  {
+   "expect": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n",
+   "name": "gemma3 trims and folds",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": " Be brief. ",
+        "role": "system"
+       }
+      ],
+      "user_input": "  Hi \n"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": " Be brief. ",
+      "user_input": "  Hi \n"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": " Be brief. ",
+        "role": "system"
+       },
+       {
+        "content": "  Hi \n",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    }
+   },
+   "template": "gemma3/1"
+  },
+  {
+   "expect": "<bos><start_of_turn>user\nHi there<end_of_turn>\n<start_of_turn>model\n",
+   "name": "gemma3 trims unicode edge whitespace",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": " 　Hi there \n"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\nHi there<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": " 　Hi there \n",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\nHi there<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    }
+   },
+   "template": "gemma3/1"
+  },
+  {
+   "expect": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n",
+   "name": "gemma3 trims unicode whitespace in system and history",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": " Be brief. ",
+        "role": "system"
+       },
+       {
+        "content": " Q1",
+        "role": "user"
+       },
+       {
+        "content": " A1 ",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "\u001cQ2\u001f"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [
+       {
+        "content": " Q1",
+        "role": "user"
+       },
+       {
+        "content": " A1 ",
+        "role": "assistant"
+       }
+      ],
+      "system": " Be brief. ",
+      "user_input": "\u001cQ2\u001f"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": " Be brief. ",
+        "role": "system"
+       },
+       {
+        "content": " Q1",
+        "role": "user"
+       },
+       {
+        "content": " A1 ",
+        "role": "assistant"
+       },
+       {
+        "content": "\u001cQ2\u001f",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    }
+   },
+   "template": "gemma3/1"
+  },
+  {
+   "expect": "<bos><start_of_turn>user\n​A B​<end_of_turn>\n<start_of_turn>model\n",
+   "name": "gemma3 keeps inner unicode whitespace and zero-width space",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "​A B​"
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n​A B​<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "​A B​",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<bos><start_of_turn>user\n​A B​<end_of_turn>\n<start_of_turn>model\n"
+     },
+     "same": true
+    }
+   },
+   "template": "gemma3/1"
+  },
+  {
+   "expect": "<|im_start|>user\na<|im_end|>\n<|im_start|>assistant\nb<|im_end|>\n<|im_start|>user\nc<|im_end|>\n<|im_start|>assistant\n",
+   "name": "qwen3 strips past reasoning",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "<think>\nr\n</think>\n\nb",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "c"
+     },
+     "result": {
+      "text": "<|im_start|>user\na<|im_end|>\n<|im_start|>assistant\nb<|im_end|>\n<|im_start|>user\nc<|im_end|>\n<|im_start|>assistant\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "<think>\nr\n</think>\n\nb",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|im_start|>user\na<|im_end|>\n<|im_start|>assistant\nb<|im_end|>\n<|im_start|>user\nc<|im_end|>\n<|im_start|>assistant\n"
+     },
+     "same": true
+    }
+   },
+   "template": "chatml-qwen3/1"
+  },
+  {
+   "expect": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n",
+   "name": "qwen2.5 writes its default system turn",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n"
+     },
+     "same": true
+    }
+   },
+   "template": "chatml-qwen2.5/1"
+  },
+  {
+   "expect": "<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+   "name": "qwen3 thinking off",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "thinking": false,
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ],
+      "thinking": false
+     },
+     "result": {
+      "text": "<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+     },
+     "same": true
+    }
+   },
+   "template": "chatml-qwen3/1"
+  },
+  {
+   "expect": "<|user|>Hi<|assistant|>",
+   "name": "v2 one user prompt (v1's text)",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|user|>a<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>",
+   "name": "v2 user and assistant only (v1's text)",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       },
+       {
+        "content": "d",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "e"
+     },
+     "result": {
+      "text": "<|user|>a<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       },
+       {
+        "content": "d",
+        "role": "assistant"
+       },
+       {
+        "content": "e",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>a<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|system|>Be brief.<|user|>Hi<|assistant|>",
+   "name": "v2 system turn",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|system|>Be brief.<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": "Be brief.",
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|system|>Be brief.<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|system|>Be brief.<|user|>Hi<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|system|><|user|>Hi<|assistant|>",
+   "name": "v2 empty system message",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "",
+        "role": "system"
+       }
+      ],
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": false
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": "",
+      "user_input": "Hi"
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": false
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "",
+        "role": "system"
+       },
+       {
+        "content": "Hi",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>Hi<|assistant|>"
+     },
+     "same": false
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|system|>Be brief.<|user|>a<|assistant|>b<|endoftext|><|user|>c<|assistant|>",
+   "name": "v2 system turn and history",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       },
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "c"
+     },
+     "result": {
+      "text": "<|system|>Be brief.<|user|>a<|assistant|>b<|endoftext|><|user|>c<|assistant|>"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "assistant"
+       }
+      ],
+      "system": "Be brief.",
+      "user_input": "c"
+     },
+     "result": {
+      "text": "<|system|>Be brief.<|user|>a<|assistant|>b<|endoftext|><|user|>c<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       },
+       {
+        "content": "a",
+        "role": "user"
+       },
+       {
+        "content": "b",
+        "role": "assistant"
+       },
+       {
+        "content": "c",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|system|>Be brief.<|user|>a<|assistant|>b<|endoftext|><|user|>c<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|system|>Be brief.<|user|>a<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|>",
+   "name": "v2 training conversation with a system turn",
+   "not_a_request": "a training conversation (requests are prompts)",
+   "paths": {},
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|system|>Be brief.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"get_time\", \"parameters\": {\"type\": \"object\", \"properties\": {}}}}<|user|>What is the weather in Paris?<|assistant|>",
+   "name": "v2 system and tool definitions",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       },
+       {
+        "function": {
+         "name": "get_time",
+         "parameters": {
+          "properties": {},
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "text": "<|system|>Be brief.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"get_time\", \"parameters\": {\"type\": \"object\", \"properties\": {}}}}<|user|>What is the weather in Paris?<|assistant|>"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": "Be brief.",
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       },
+       {
+        "function": {
+         "name": "get_time",
+         "parameters": {
+          "properties": {},
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "text": "<|system|>Be brief.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"get_time\", \"parameters\": {\"type\": \"object\", \"properties\": {}}}}<|user|>What is the weather in Paris?<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       },
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       },
+       {
+        "function": {
+         "name": "get_time",
+         "parameters": {
+          "properties": {},
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|system|>Be brief.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"get_time\", \"parameters\": {\"type\": \"object\", \"properties\": {}}}}<|user|>What is the weather in Paris?<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|>",
+   "name": "v2 tool definitions without a system message",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "text": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|>",
+   "name": "v2 tool definitions with an empty system message",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "",
+        "role": "system"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "text": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|>"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": "",
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "text": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "",
+        "role": "system"
+       },
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"météo\", \"description\": \"東京 \\\"q\\\" a\\\\b\\n\\t\\u0001\"}}<|user|>What is the weather in Paris?<|assistant|>",
+   "name": "v2 unicode tool definition",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "tools": [
+       {
+        "function": {
+         "description": "東京 \"q\" a\\b\n\t\u0001",
+         "name": "météo"
+        },
+        "type": "function"
+       }
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "text": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"météo\", \"description\": \"東京 \\\"q\\\" a\\\\b\\n\\t\\u0001\"}}<|user|>What is the weather in Paris?<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "東京 \"q\" a\\b\n\t\u0001",
+         "name": "météo"
+        },
+        "type": "function"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"météo\", \"description\": \"東京 \\\"q\\\" a\\\\b\\n\\t\\u0001\"}}<|user|>What is the weather in Paris?<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|system|>Be brief.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>",
+   "name": "v2 a call answered: the prompt ends on the tool message",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       },
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|system|>Be brief.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ],
+      "system": "Be brief.",
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|system|>Be brief.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "Be brief.",
+        "role": "system"
+       },
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|system|>Be brief.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>It is 18 C in Paris.<|endoftext|>",
+   "name": "v2 a call, its result and the reply",
+   "not_a_request": "a training conversation (requests are prompts)",
+   "paths": {},
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|user|>What is the weather in Paris?<|assistant|>Let me check.<|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>",
+   "name": "v2 content before a call",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "Let me check.",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>What is the weather in Paris?<|assistant|>Let me check.<|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "Let me check.",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>What is the weather in Paris?<|assistant|>Let me check.<|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"get_time\", \"parameters\": {\"type\": \"object\", \"properties\": {}}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|tool_call|>get_time\n{}<|endoftext|><|tool|>{\"temp_c\": 18}<|tool|>\"09:00\"<|assistant|>18 C at 09:00.<|endoftext|><|user|>Thanks<|assistant|>",
+   "name": "v2 two calls, two results, a reply, then a user message",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         },
+         {
+          "function": {
+           "arguments": "{}",
+           "name": "get_time"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       },
+       {
+        "content": "\"09:00\"",
+        "role": "tool"
+       },
+       {
+        "content": "18 C at 09:00.",
+        "role": "assistant"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       },
+       {
+        "function": {
+         "name": "get_time",
+         "parameters": {
+          "properties": {},
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ],
+      "user_input": "Thanks"
+     },
+     "result": {
+      "text": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"get_time\", \"parameters\": {\"type\": \"object\", \"properties\": {}}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|tool_call|>get_time\n{}<|endoftext|><|tool|>{\"temp_c\": 18}<|tool|>\"09:00\"<|assistant|>18 C at 09:00.<|endoftext|><|user|>Thanks<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         },
+         {
+          "function": {
+           "arguments": "{}",
+           "name": "get_time"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       },
+       {
+        "content": "\"09:00\"",
+        "role": "tool"
+       },
+       {
+        "content": "18 C at 09:00.",
+        "role": "assistant"
+       },
+       {
+        "content": "Thanks",
+        "role": "user"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       },
+       {
+        "function": {
+         "name": "get_time",
+         "parameters": {
+          "properties": {},
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"get_time\", \"parameters\": {\"type\": \"object\", \"properties\": {}}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|tool_call|>get_time\n{}<|endoftext|><|tool|>{\"temp_c\": 18}<|tool|>\"09:00\"<|assistant|>18 C at 09:00.<|endoftext|><|user|>Thanks<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>",
+   "name": "v2 tool_call_id matching the call's id",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "id": "c1",
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool",
+        "tool_call_id": "c1"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "id": "c1",
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool",
+        "tool_call_id": "c1"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|>",
+   "name": "v2 a training conversation ending on a call",
+   "not_a_request": "a training conversation (requests are prompts)",
+   "paths": {},
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_time\n<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>",
+   "name": "v2 empty arguments",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "",
+           "name": "get_time"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_time\n<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "",
+           "name": "get_time"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_time\n<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": "<|user|>\n<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|><|assistant|>\n<|endoftext|><|user|><|assistant|>",
+   "name": "v2 newline-only and empty contents",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "\n",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "",
+        "role": "tool"
+       },
+       {
+        "content": "\n",
+        "role": "assistant"
+       }
+      ],
+      "user_input": ""
+     },
+     "result": {
+      "text": "<|user|>\n<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|><|assistant|>\n<|endoftext|><|user|><|assistant|>"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "\n",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "",
+        "role": "tool"
+       },
+       {
+        "content": "\n",
+        "role": "assistant"
+       },
+       {
+        "content": "",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "text": "<|user|>\n<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|><|assistant|>\n<|endoftext|><|user|><|assistant|>"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 a tool message without a call",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "Hello",
+        "role": "assistant"
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "message 2 is tool, expected user (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "Hello",
+        "role": "assistant"
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "message 2 is tool, expected user (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 a tool message first",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "refused": "message 0 is tool, expected user (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       },
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "message 0 is tool, expected user (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 fewer results than calls",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         },
+         {
+          "function": {
+           "arguments": "{}",
+           "name": "get_time"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       },
+       {
+        "content": "x",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "y"
+     },
+     "result": {
+      "refused": "message 3 is assistant, expected tool (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         },
+         {
+          "function": {
+           "arguments": "{}",
+           "name": "get_time"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       },
+       {
+        "content": "x",
+        "role": "assistant"
+       },
+       {
+        "content": "y",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "message 3 is assistant, expected tool (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 a prompt ending while a call has no result",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         },
+         {
+          "function": {
+           "arguments": "{}",
+           "name": "get_time"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a prompt conversation ends on a user message or on the last tool message of a call"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         },
+         {
+          "function": {
+           "arguments": "{}",
+           "name": "get_time"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a prompt conversation ends on a user message or on the last tool message of a call"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 a reply without its results",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "x",
+        "role": "assistant"
+       }
+      ],
+      "user_input": "y"
+     },
+     "result": {
+      "refused": "message 2 is assistant, expected tool (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "x",
+        "role": "assistant"
+       },
+       {
+        "content": "y",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "message 2 is assistant, expected tool (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 tool_call_id not the call's id",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "id": "c1",
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool",
+        "tool_call_id": "c2"
+       }
+      ]
+     },
+     "result": {
+      "refused": "tool_call_id 'c2' is not the call's id (tool messages answer the calls in order)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "id": "c1",
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool",
+        "tool_call_id": "c2"
+       }
+      ]
+     },
+     "result": {
+      "refused": "tool_call_id 'c2' is not the call's id (tool messages answer the calls in order)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 tool_call_id when the call has no id",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool",
+        "tool_call_id": "c1"
+       }
+      ]
+     },
+     "result": {
+      "refused": "tool_call_id 'c1' is not the call's id (tool messages answer the calls in order)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool",
+        "tool_call_id": "c1"
+       }
+      ]
+     },
+     "result": {
+      "refused": "tool_call_id 'c1' is not the call's id (tool messages answer the calls in order)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 a call name with a newline",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get\nweather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a tool call's name is a non-empty string without a newline"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get\nweather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a tool call's name is a non-empty string without a newline"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 an empty call name",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": ""
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a tool call's name is a non-empty string without a newline"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": ""
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a tool call's name is a non-empty string without a newline"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 arguments holding a control token",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "<|tool_call|>x",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|tool_call|>'"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "<|tool_call|>x",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|tool_call|>'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 arguments that are not a string",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": {
+            "a": 1
+           },
+           "name": "f"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a tool call's arguments are a string (rendered verbatim)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": {
+            "a": 1
+           },
+           "name": "f"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a tool call's arguments are a string (rendered verbatim)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 a call type other than function",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{}",
+           "name": "f"
+          },
+          "type": "code"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "tool call type is not implemented (function)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{}",
+           "name": "f"
+          },
+          "type": "code"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "tool call type is not implemented (function)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 an empty tool_calls list",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "x",
+        "role": "assistant",
+        "tool_calls": []
+       }
+      ],
+      "user_input": "y"
+     },
+     "result": {
+      "refused": "tool_calls is a non-empty list"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "x",
+        "role": "assistant",
+        "tool_calls": []
+       },
+       {
+        "content": "y",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "tool_calls is a non-empty list"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 tool_calls on a user message",
+   "paths": {
+    "chat_note": "not a /chat request: the last user message carries more than content",
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "x",
+        "role": "user",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       }
+      ]
+     },
+     "result": {
+      "refused": "tool_calls belong on assistant messages of a template with tool turns"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 user content holding <|system|>",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "user_input": "a <|system|> b"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|system|>'"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "a <|system|> b",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|system|>'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 tool content holding a spare token",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "x<|spare_5|>",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|spare_5|>'"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "x<|spare_5|>",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|spare_5|>'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 system content holding <|tool|>",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "<|tool|>",
+        "role": "system"
+       }
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|tool|>'"
+     },
+     "same": true
+    },
+    "chat_system_field": {
+     "request": {
+      "history": [],
+      "system": "<|tool|>",
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|tool|>'"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "<|tool|>",
+        "role": "system"
+       },
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|tool|>'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 a tool definition holding a control token",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "tools": [
+       {
+        "function": {
+         "description": "<|user|>",
+         "name": "f"
+        },
+        "type": "function"
+       }
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|user|>'"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "<|user|>",
+         "name": "f"
+        },
+        "type": "function"
+       }
+      ]
+     },
+     "result": {
+      "refused": "content holds the template's reserved text '<|user|>'"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 a tool definition with a non-integer number",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "tools": [
+       {
+        "function": {
+         "name": "f",
+         "parameters": {
+          "maximum": 1.5
+         }
+        },
+        "type": "function"
+       }
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "refused": "a tool definition holds a non-integer number (refused: its text is not portable)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "name": "f",
+         "parameters": {
+          "maximum": 1.5
+         }
+        },
+        "type": "function"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a tool definition holds a non-integer number (refused: its text is not portable)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 a tool definition that is not an object",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "tools": [
+       "get_weather"
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "refused": "tools must be a list of tool definitions (JSON objects)"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       }
+      ],
+      "tools": [
+       "get_weather"
+      ]
+     },
+     "result": {
+      "refused": "tools must be a list of tool definitions (JSON objects)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 a system message mid-conversation",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "x",
+        "role": "assistant"
+       },
+       {
+        "content": "Be brief.",
+        "role": "system"
+       }
+      ],
+      "user_input": "y"
+     },
+     "result": {
+      "refused": "a system message is allowed only as the first history entry"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "x",
+        "role": "assistant"
+       },
+       {
+        "content": "Be brief.",
+        "role": "system"
+       },
+       {
+        "content": "y",
+        "role": "user"
+       }
+      ]
+     },
+     "result": {
+      "refused": "a system message is allowed only before the first user message (this model's chat template has one system message, first)"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v2 loss on a tool message",
+   "not_a_request": "a loss flag (no request field carries one)",
+   "paths": {},
+   "template": "paperkiln/2"
+  },
+  {
+   "expect": null,
+   "name": "v1 refuses tool definitions",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ],
+      "user_input": "What is the weather in Paris?"
+     },
+     "result": {
+      "refused": "tools are not supported: this model's chat template has no tool turns"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       }
+      ],
+      "tools": [
+       {
+        "function": {
+         "description": "Current weather in a city",
+         "name": "get_weather",
+         "parameters": {
+          "properties": {
+           "city": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "city"
+          ],
+          "type": "object"
+         }
+        },
+        "type": "function"
+       }
+      ]
+     },
+     "result": {
+      "refused": "tools are not supported: this model's chat template has no tool turns"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  },
+  {
+   "expect": null,
+   "name": "v1 refuses tool_calls",
+   "paths": {
+    "chat_history_system": {
+     "request": {
+      "history": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "Missing 'user_input' field in request JSON"
+     },
+     "same": true
+    },
+    "openai": {
+     "request": {
+      "messages": [
+       {
+        "content": "What is the weather in Paris?",
+        "role": "user"
+       },
+       {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"city\": \"Paris\"}",
+           "name": "get_weather"
+          },
+          "type": "function"
+         }
+        ]
+       },
+       {
+        "content": "{\"temp_c\": 18}",
+        "role": "tool"
+       }
+      ]
+     },
+     "result": {
+      "refused": "tool_calls are not supported: this model's chat template has no tool turns"
+     },
+     "same": true
+    }
+   },
+   "template": "paperkiln/1"
+  }
+ ],
+ "paths_summary": {
+  "cases_not_a_request": 8,
+  "differ": 4,
+  "same": 138
+ },
+ "resolutions": [
+  {
+   "expect": "paperkiln/1",
+   "got": "paperkiln/1",
+   "why": "paperkiln specials at ids 0-3"
+  },
+  {
+   "expect": "paperkiln/1",
+   "got": "paperkiln/1",
+   "why": "declared"
+  },
+  {
+   "expect": "paperkiln/legacy-word",
+   "got": "paperkiln/legacy-word",
+   "why": "word-level vocabulary"
+  },
+  {
+   "expect": "gemma3/1",
+   "got": "gemma3/1",
+   "why": "markers and architecture gemma3"
+  },
+  {
+   "expect": "(none)",
+   "got": "(none)",
+   "why": "no declared template, no paperkiln specials, and no known tokenizer.chat_template or markers: raw completion only"
+  },
+  {
+   "expect": "(none)",
+   "got": "(none)",
+   "why": "no declared template, no paperkiln specials, and no known tokenizer.chat_template or markers: raw completion only"
+  },
+  {
+   "expect": "chatml-qwen2.5/1",
+   "got": "chatml-qwen2.5/1",
+   "why": "tokenizer.chat_template sha256 d5495a1e5db0"
+  }
+ ]
+}

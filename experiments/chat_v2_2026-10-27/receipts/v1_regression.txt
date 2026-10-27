@@ -1,0 +1,18 @@
+v1 regression of the schema v2 change: the CPU build of ember bb472bf plus this change (~/cv2/ember/build_cpu), the WebAssembly build of the same sources (~/cv2/wasm, EMBER_WASM_MAX_MEMORY=4gb). Committed receipts as `git show HEAD:<path>` gives them; gates rerun unchanged (cuda_state_2026-10-25/cpu_regress.sh, rungate.py).
+
+chat_template_2026-10-24/regress_parity.json: byte-identical
+chat_template_2026-10-24/g5_thirdparty.json: byte-identical
+  chat_2026-10-18/parity_cpu_greedy_n40.jsonl: 40 records, byte_identical True
+  pk_base_v1_2026-10-24/gate_llama3_parity.jsonl: 40 records, byte_identical True
+  pk_base_v1_2026-10-24/arxiv_2302_13971_parity.jsonl: 40 records, byte_identical True
+  pk_base_v1_2026-10-24/arxiv_2302_13971_demo.jsonl: 5 records, byte_identical True
+  pk_base_v1_2026-10-24/arxiv_2304_03208_parity.jsonl: 40 records, byte_identical True
+  pk_base_v1_2026-10-24/arxiv_2304_03208_demo.jsonl: 5 records, byte_identical True
+  repeat_2026-10-21/p1.1_cpu.jsonl: 40 records, byte_identical True
+  repeat_2026-10-21/p1.3_cpu.jsonl: 40 records, byte_identical True
+  pk_base_v1_2026-10-24/pk_base_v1_q8_0_all_parity.jsonl: 40 records, byte_identical True
+  pk_base_v1_2026-10-24/pk_base_v1_parity.jsonl: 40 records, byte_identical True
+IR adapter self-test (ir_adapter_2026-10-25/adapter_selftest.py): 189/189 checks pass, 3072 requests
+tools/utf8_server_check.py on pick_e1_60m_L32 (k 1-80, 320 requests) against utf8_2026-10-27/receipts/server_check.json: 80 records equal True (0 differing); the summary differs in ['bindings'] only (the committed run also checked the Python bindings, untouched here), besides the server path and the seconds
+WebAssembly tools/wasm_parity.mjs on chat_sftfinal_v3, frozen40: 40/40 replies equal to mtstudio's, the receipt equal to chat_template_2026-10-24/wasm_frozen40.json but ms_per_reply: True
+WebAssembly tools/wasm_parity.mjs on chat_sftfinal_v3, system_set_v1: 60/60 replies equal to mtstudio's, the receipt equal to chat_template_2026-10-24/wasm_system_set_v1.json but ms_per_reply: True
