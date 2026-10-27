@@ -1,0 +1,413 @@
+{
+ "summary": {
+  "file": "/mnt/c/ml_artifacts/chat_v2/run/mtstudio_greedy_v2_pksft2.jsonl",
+  "file_sha256": "79105a054c1cd07d176ab056c285f7e6103336352193b145cd4871f38286fab0",
+  "file_rows": 40,
+  "ember_equal_file": 40,
+  "live_mtstudio_equal_file": 0,
+  "mtstudio_sources_disagree": [],
+  "ember_differs": []
+ },
+ "rows": [
+  {
+   "id": "v2/system/0",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/system/1",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/system/2",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/system/3",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/system/4",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "length"
+  },
+  {
+   "id": "v2/system/5",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "length"
+  },
+  {
+   "id": "v2/system/6",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/system/7",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "length"
+  },
+  {
+   "id": "v2/system/8",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/system/9",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "length"
+  },
+  {
+   "id": "v2/history/0",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/history/1",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/history/2",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/history/3",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/history/4",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/history/5",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/history/6",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/history/7",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/history/8",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/history/9",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "length"
+  },
+  {
+   "id": "v2/tool_user/0",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/tool_user/1",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/tool_user/2",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/tool_user/3",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/tool_user/4",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/tool_user/5",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/tool_user/6",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/tool_user/7",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/tool_user/8",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/tool_user/9",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/after_tool/0",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/after_tool/1",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/after_tool/2",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/after_tool/3",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/after_tool/4",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "length"
+  },
+  {
+   "id": "v2/after_tool/5",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    400,
+    null
+   ],
+   "file": "error"
+  },
+  {
+   "id": "v2/after_tool/6",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/after_tool/7",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/after_tool/8",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  },
+  {
+   "id": "v2/after_tool/9",
+   "ember_equal_file": true,
+   "live_mtstudio_equal_file": null,
+   "status": [
+    200,
+    null
+   ],
+   "file": "eos"
+  }
+ ]
+}
