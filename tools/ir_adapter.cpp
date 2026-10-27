@@ -37,7 +37,7 @@
 //     tensors after the last row. An expr node (graph_ir_expr.h): the interpreter's expression over its inputs
 //     [T, w], their shapes checked as the interpreter checks them (rule 37); state {}. An attention node with section
 //     11.2's defaults (its own slot, rows at positions 0 .. T-1, mask causal) through the interpreter's kernels,
-//     position_bias included; state {} (a kv slot is not reported).
+//     position_bias and relative_kv included; state {} (a kv slot is not reported).
 // Reports: logits and depth (forward only), kv_rows, kv_positions, recurrent; depth is [] for a document
 // without depth_route, kv_rows / kv_positions {} without a kv slot, recurrent {} without one. ember keeps one kv
 // slot per block; kv_rows and kv_positions give, per application, the rows its cache holds after
@@ -265,7 +265,7 @@ class Adapter {
  private:
   static json hello() {
     return {{"engine", "ember.cpp"},
-            {"version", "ir_adapter 4 (IR versions 0 and 1; spec revision 1.3)"},
+            {"version", "ir_adapter 4 (IR versions 0 and 1; spec revision 1.4)"},
             {"backend", "cpu"},
             {"exact", true},
             {"profiles", {"core", "state", "recursion", "thirdparty", "recurrence", "chat"}},
@@ -308,7 +308,8 @@ class Adapter {
   // An expr node alone (IR_SPEC 5.19): the interpreter's evaluation (graph_ir_expr.h) and its shape checks.
   // An attention node alone (IR_SPEC 5.15; section 11.2's defaults): a kv slot of its own heads, kv_heads, head_dim,
   // window and sinks, empty at the start, its rows at positions 0 .. T-1, mask causal; the interpreter's kernels
-  // (cpu_attention.h), position_bias through attention_bias_batch_cpu. The kv slot is not reported (state {}).
+  // (cpu_attention.h), position_bias through attention_bias_batch_cpu, relative_kv through attention_relkv_batch_cpu.
+  // The kv slot is not reported (state {}).
   static json run_attention(const json& node, const json& inputs, const json& weights) {
     auto attr = [&](const char* k, const json& dflt) {  // application 0's value
       const json& v = node.contains(k) ? node.at(k) : dflt;
@@ -349,6 +350,37 @@ class Adapter {
       for (int t = 0; t < T; ++t) qpos[t] = t;
       attention_bias_batch_cpu(q, cache, out, T, attention_visible_rows(T, 0, window, sinks), nullptr, qpos, H, KV, hd,
                                scale, W.data(), buckets);
+    } else if (node.contains("relative_kv")) {  // revision 1.4
+      const json& rk = node.at("relative_kv");
+      if (node.contains("position_bias"))
+        throw std::runtime_error("IR_SPEC 5.15 (rule 40): relative_kv and position_bias on one node");
+      if (!rk.is_object() || !rk.contains("key") || !rk.at("key").is_string() || !rk.contains("max_distance") ||
+          !rk.at("max_distance").is_number_integer() || rk.at("max_distance").get<int64_t>() < 0)
+        throw std::runtime_error("IR_SPEC 5.15 (rule 40): relative_kv is {key, max_distance} with an optional value");
+      const int K = rk.at("max_distance").get<int>();
+      std::vector<std::vector<float>> tables(2);
+      int widths[2] = {0, 0};
+      const char* members[2] = {"key", "value"};
+      for (int m = 0; m < 2; ++m) {
+        if (!rk.contains(members[m]) || rk.at(members[m]).is_null()) continue;
+        if (!rk.at(members[m]).is_string())
+          throw std::runtime_error("IR_SPEC 5.15 (rule 40): relative_kv value is a name or null");
+        std::string wn = rk.at(members[m]).get<std::string>();
+        const auto at = wn.find("{i}");
+        if (at != std::string::npos) wn.replace(at, 3, "0");
+        if (!weights.contains(wn)) throw std::runtime_error("run_node: no weight '" + wn + "'");
+        std::vector<int64_t> sw;
+        tables[m] = floats(weights.at(wn), &sw);
+        if (sw.size() != 2 || sw[0] != K + 1 || (sw[1] != hd && sw[1] != static_cast<int64_t>(H) * hd))
+          throw std::runtime_error(std::string("IR_SPEC 5.15 (rule 40): relative_kv ") + members[m] +
+                                   " must be [max_distance + 1, head_dim or heads x head_dim]");
+        widths[m] = static_cast<int>(sw[1]);
+      }
+      std::vector<int> qpos(static_cast<size_t>(T));
+      for (int t = 0; t < T; ++t) qpos[t] = t;
+      attention_relkv_batch_cpu(q, cache, out, T, attention_visible_rows(T, 0, window, sinks), nullptr, qpos, H, KV, hd,
+                                scale, tables[0].data(), widths[0], tables[1].empty() ? nullptr : tables[1].data(),
+                                widths[1], K);
     } else {
       attention_window_batch_cpu(q, cache, out, T, 0, H, KV, hd, scale, window, sinks);
     }

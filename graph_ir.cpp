@@ -464,6 +464,7 @@ bool device_supported(const std::string& ir_json) {
         block_pos_embedding = block_pos_embedding || op == "pos_embedding";
       }
       if (op == "attention" && n.contains("position_bias")) return false;  // CPU only (IR_SPEC 5.15, revision 1.3)
+      if (op == "attention" && n.contains("relative_kv")) return false;    // CPU only (IR_SPEC 5.15, revision 1.4)
       if (op == "expr") {  // the CUDA form's limits (graph_ir_expr.h lower)
         try {
           expr::lower(expr::cached(n.at("expr").get<std::string>(), n.at("in").size()));
@@ -1115,6 +1116,8 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
     for (const auto& n : block_)
       if (n.op == "attention" && has(n.attrs, "position_bias"))
         throw std::runtime_error("IR depth_route with attention position_bias is not implemented in ember");
+      else if (n.op == "attention" && has(n.attrs, "relative_kv"))
+        throw std::runtime_error("IR depth_route with attention relative_kv is not implemented in ember");
     mor_rows_.assign(n_layers_, {});
   }
   // Per-turn state tokens (paperkiln IR_SPEC_DRAFT.md 1.1, 1.3, 1.4): the extended embedding
@@ -1550,6 +1553,10 @@ void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData
     if (n.op == "attention" && has(n.attrs, "position_bias") && n.attrs.at("position_bias").is_object() &&
         n.attrs.at("position_bias").contains("weight") && n.attrs.at("position_bias").at("weight").is_string())
       bind_tensor(layer_name(n.attrs.at("position_bias").at("weight").get<std::string>(), layer), gguf);
+    if (n.op == "attention" && has(n.attrs, "relative_kv") && n.attrs.at("relative_kv").is_object())
+      for (const char* member : {"key", "value"})
+        if (n.attrs.at("relative_kv").contains(member) && n.attrs.at("relative_kv").at(member).is_string())
+          bind_tensor(layer_name(n.attrs.at("relative_kv").at(member).get<std::string>(), layer), gguf);
     // rmsnorm weight_offset c: the weight is read as w + c, rounded to f32 once at load (Gemma's (1 + w)
     // for a file holding HF's raw w; llama.cpp's convert already stores 1 + w).
     if (n.op == "rmsnorm" && has(n.attrs, "weight_offset") && n.attrs.at("weight_offset").get<float>() != 0.0f) {
@@ -2101,6 +2108,29 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
         const std::vector<std::vector<int>> rows = ts ? ts_vis_ : attention_visible_rows(T, start_pos, window, sinks);
         attention_bias_batch_cpu(q.v, cache, out.v, T, rows, ts ? &kv_pos_ : nullptr, qpos, hq, hkv, hd, scale, W.data(),
                                  buckets);
+      } else if (has(n.attrs, "relative_kv")) {  // Shaw's relative key and value vectors (IR_SPEC 5.15, revision 1.4)
+        const json& rk = n.attrs.at("relative_kv");
+        const int K = rk.at("max_distance").get<int>();
+        // a table [K + 1, w], ne {w, K + 1}, w head_dim or heads * head_dim (rule 40, checked at load)
+        auto table = [&](const char* member, int& w) -> const float* {
+          w = 0;
+          if (!rk.contains(member) || !rk.at(member).is_string()) return nullptr;
+          const std::string name = layer_name(rk.at(member).get<std::string>(), layer);
+          const auto& s = shapes_.at(name);
+          if (s.size() != 2 || s[1] != K + 1 || (s[0] != hd && s[0] != static_cast<int64_t>(hq) * hd))
+            throw std::runtime_error("IR_SPEC 5.15 (rule 40): relative_kv " + std::string(member) + " '" + name +
+                                     "' is not of ne {head_dim or heads * head_dim, max_distance + 1}");
+          w = static_cast<int>(s[0]);
+          return weight(name).data();
+        };
+        int rk_w = 0, rv_w = 0;
+        const float* RK = table("key", rk_w);
+        const float* RV = table("value", rv_w);
+        std::vector<int> qpos(static_cast<size_t>(T));
+        for (int t = 0; t < T; ++t) qpos[t] = start_pos + t;
+        const std::vector<std::vector<int>> rows = ts ? ts_vis_ : attention_visible_rows(T, start_pos, window, sinks);
+        attention_relkv_batch_cpu(q.v, cache, out.v, T, rows, ts ? &kv_pos_ : nullptr, qpos, hq, hkv, hd, scale, RK, rk_w,
+                                  RV, rv_w, K);
       } else if (ts)
         attention_rows_batch_cpu(q.v, cache, out.v, T, ts_vis_, hq, hkv, hd, scale);
       else if (window > 0)
