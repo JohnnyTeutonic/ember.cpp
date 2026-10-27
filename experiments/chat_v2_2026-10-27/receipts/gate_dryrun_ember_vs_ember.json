@@ -1,0 +1,304 @@
+{
+ "summary": {
+  "n": 4,
+  "gguf": "/home/jonat/cv2/models/toy_v2.gguf",
+  "prompts": "/mnt/c/Users/jonat/AppData/Local/Temp/claude/c--Users-jonat-OneDrive-Documents-research-portfolio-complete/1aba05f9-b164-4547-9536-e677c2310edf/scratchpad/cv2/dryrun_prompts.jsonl",
+  "ember": "/home/jonat/cv2/ember/build_cpu/tinyllama_server",
+  "mts": "/home/jonat/cv2/ember/build_cpu/tinyllama_server /home/jonat/cv2/models/toy_v2.gguf {port} 127.0.0.1 - 0",
+  "counts": {
+   "reply": 4,
+   "tool_calls": 4,
+   "stop_reason": 4,
+   "tokens": 4,
+   "history_turns_used": 4,
+   "prompt_tokens": 4,
+   "chat_stream": 4,
+   "openai_plain": 4,
+   "openai_stream": 4,
+   "finish_reason": 4
+  },
+  "mtstudio_reports_prompt_tokens": 4,
+  "passed": true
+ },
+ "records": [
+  {
+   "i": 0,
+   "request": {
+    "user_input": "Hello there!",
+    "system": "You are a weather assistant.",
+    "tools": [
+     {
+      "type": "function",
+      "function": {
+       "name": "get_weather",
+       "parameters": {
+        "type": "object",
+        "properties": {
+         "city": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    ]
+   },
+   "status": [
+    200,
+    200
+   ],
+   "ember": {
+    "history_turns_used": 0,
+    "prompt_tokens": 70,
+    "reply": "Hey, I'm sorry. I'm really sorry, I'm sorry.",
+    "stop_reason": "turn",
+    "tokens": 15,
+    "ttft": {
+     "batch_prefill": true,
+     "first_token": true,
+     "num_prompt_tokens": 70,
+     "prefill_gpu_span_ms": -1.0,
+     "prefill_wall_ms": 736.804437,
+     "prefix_reused_tokens": 0,
+     "queue_ms": 0.000201,
+     "request_to_first_token_ms": 737.521904,
+     "spec_accepted": 0,
+     "spec_drafted": 0,
+     "spec_passes": 0,
+     "ttft_ms": 737.292566
+    }
+   },
+   "mtstudio": {
+    "history_turns_used": 0,
+    "prompt_tokens": 70,
+    "reply": "Hey, I'm sorry. I'm really sorry, I'm sorry.",
+    "stop_reason": "turn",
+    "tokens": 15,
+    "ttft": {
+     "batch_prefill": true,
+     "first_token": true,
+     "num_prompt_tokens": 70,
+     "prefill_gpu_span_ms": -1.0,
+     "prefill_wall_ms": 719.378137,
+     "prefix_reused_tokens": 0,
+     "queue_ms": 0.000435,
+     "request_to_first_token_ms": 720.092768,
+     "spec_accepted": 0,
+     "spec_drafted": 0,
+     "spec_passes": 0,
+     "ttft_ms": 719.881163
+    }
+   },
+   "chat_stream_equal": true,
+   "openai_equal": true,
+   "finish_reason": "stop"
+  },
+  {
+   "i": 1,
+   "request": {
+    "history": [
+     {
+      "role": "user",
+      "content": "What is the weather in Paris?"
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+       {
+        "id": "call_0",
+        "type": "function",
+        "function": {
+         "name": "get_weather",
+         "arguments": "{\"city\": \"Paris\"}"
+        }
+       }
+      ]
+     },
+     {
+      "role": "tool",
+      "tool_call_id": "call_0",
+      "content": "{\"temp_c\": 18}"
+     }
+    ],
+    "tools": [
+     {
+      "type": "function",
+      "function": {
+       "name": "get_weather",
+       "parameters": {
+        "type": "object"
+       }
+      }
+     }
+    ]
+   },
+   "status": [
+    200,
+    200
+   ],
+   "ember": {
+    "history_turns_used": 0,
+    "prompt_tokens": 76,
+    "reply": "I'm sorry, I'm sorry.",
+    "stop_reason": "eos",
+    "tokens": 8,
+    "ttft": {
+     "batch_prefill": true,
+     "first_token": true,
+     "num_prompt_tokens": 76,
+     "prefill_gpu_span_ms": -1.0,
+     "prefill_wall_ms": 327.666269,
+     "prefix_reused_tokens": 1,
+     "queue_ms": 0.000218,
+     "request_to_first_token_ms": 328.281693,
+     "spec_accepted": 0,
+     "spec_drafted": 0,
+     "spec_passes": 0,
+     "ttft_ms": 327.995913
+    }
+   },
+   "mtstudio": {
+    "history_turns_used": 0,
+    "prompt_tokens": 76,
+    "reply": "I'm sorry, I'm sorry.",
+    "stop_reason": "eos",
+    "tokens": 8,
+    "ttft": {
+     "batch_prefill": true,
+     "first_token": true,
+     "num_prompt_tokens": 76,
+     "prefill_gpu_span_ms": -1.0,
+     "prefill_wall_ms": 350.770555,
+     "prefix_reused_tokens": 1,
+     "queue_ms": 0.000167,
+     "request_to_first_token_ms": 351.44215,
+     "spec_accepted": 0,
+     "spec_drafted": 0,
+     "spec_passes": 0,
+     "ttft_ms": 351.172071
+    }
+   },
+   "chat_stream_equal": true,
+   "openai_equal": true,
+   "finish_reason": "stop"
+  },
+  {
+   "i": 2,
+   "request": {
+    "user_input": "Tell me a story.",
+    "system": "Be brief."
+   },
+   "status": [
+    200,
+    200
+   ],
+   "ember": {
+    "history_turns_used": 0,
+    "prompt_tokens": 12,
+    "reply": "Yeah, I'm sorry. I'm really really sorry.",
+    "stop_reason": "turn",
+    "tokens": 12,
+    "ttft": {
+     "batch_prefill": true,
+     "first_token": true,
+     "num_prompt_tokens": 12,
+     "prefill_gpu_span_ms": -1.0,
+     "prefill_wall_ms": 95.475355,
+     "prefix_reused_tokens": 1,
+     "queue_ms": 0.000369,
+     "request_to_first_token_ms": 96.114285,
+     "spec_accepted": 0,
+     "spec_drafted": 0,
+     "spec_passes": 0,
+     "ttft_ms": 95.921731
+    }
+   },
+   "mtstudio": {
+    "history_turns_used": 0,
+    "prompt_tokens": 12,
+    "reply": "Yeah, I'm sorry. I'm really really sorry.",
+    "stop_reason": "turn",
+    "tokens": 12,
+    "ttft": {
+     "batch_prefill": true,
+     "first_token": true,
+     "num_prompt_tokens": 12,
+     "prefill_gpu_span_ms": -1.0,
+     "prefill_wall_ms": 99.580318,
+     "prefix_reused_tokens": 1,
+     "queue_ms": 0.000234,
+     "request_to_first_token_ms": 100.022832,
+     "spec_accepted": 0,
+     "spec_drafted": 0,
+     "spec_passes": 0,
+     "ttft_ms": 99.896233
+    }
+   },
+   "chat_stream_equal": true,
+   "openai_equal": true,
+   "finish_reason": "stop"
+  },
+  {
+   "i": 3,
+   "request": {
+    "user_input": "And then?",
+    "history": [
+     {
+      "user": "hi",
+      "assistant": "hello"
+     }
+    ]
+   },
+   "status": [
+    200,
+    200
+   ],
+   "ember": {
+    "history_turns_used": 1,
+    "prompt_tokens": 11,
+    "reply": "Yeah, I'm sorry. I'm really sorry, I'm sorry.",
+    "stop_reason": "turn",
+    "tokens": 15,
+    "ttft": {
+     "batch_prefill": true,
+     "first_token": true,
+     "num_prompt_tokens": 11,
+     "prefill_gpu_span_ms": -1.0,
+     "prefill_wall_ms": 51.857839,
+     "prefix_reused_tokens": 0,
+     "queue_ms": 0.000194,
+     "request_to_first_token_ms": 52.550898,
+     "spec_accepted": 0,
+     "spec_drafted": 0,
+     "spec_passes": 0,
+     "ttft_ms": 52.405207
+    }
+   },
+   "mtstudio": {
+    "history_turns_used": 1,
+    "prompt_tokens": 11,
+    "reply": "Yeah, I'm sorry. I'm really sorry, I'm sorry.",
+    "stop_reason": "turn",
+    "tokens": 15,
+    "ttft": {
+     "batch_prefill": true,
+     "first_token": true,
+     "num_prompt_tokens": 11,
+     "prefill_gpu_span_ms": -1.0,
+     "prefill_wall_ms": 87.813524,
+     "prefix_reused_tokens": 0,
+     "queue_ms": 0.000432,
+     "request_to_first_token_ms": 88.425945,
+     "spec_accepted": 0,
+     "spec_drafted": 0,
+     "spec_passes": 0,
+     "ttft_ms": 88.263111
+    }
+   },
+   "chat_stream_equal": true,
+   "openai_equal": true,
+   "finish_reason": "stop"
+  }
+ ]
+}

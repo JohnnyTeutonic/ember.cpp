@@ -880,6 +880,32 @@ std::string TinyLlamaSession::generate(const std::string& user_prompt, int steps
   if (ir_ && (ir_->has_recurrent() || ir_->evicts())) reuse = ir_->resume_point(reuse);
   kv_token_history_.clear();  // refilled only if this request completes
 
+  // Test hook (set_scripted_replies): the next scripted ids stand in for sampling, through the same
+  // callback, stop rule and reply decoding as sampled ids; kv_token_history_ stays empty.
+  if (bpe_ && !scripted_replies_.empty()) {
+    const std::vector<int> script = scripted_replies_.front();
+    scripted_replies_.erase(scripted_replies_.begin());
+    std::vector<int> out;
+    for (int id : script) {
+      if (static_cast<int>(out.size()) >= steps) break;
+      out.push_back(id);
+      emit_token(id);
+      if (is_stop(id)) break;
+    }
+    if (!out.empty() && is_stop(out.back())) {
+      last_stop_reason_ = bpe_->format().is_eos(out.back()) ? "eos" : "turn";
+      last_stop_id_ = out.back();
+      out.pop_back();
+    }
+    last_generated_tokens_ = static_cast<int>(out.size());
+    last_generated_ids_ = out;
+    const std::string text = bpe_->decode(out);
+    const char* ws = " \t\n\v\f\r";
+    const auto first = text.find_first_not_of(ws);
+    const auto last = text.find_last_not_of(ws);
+    return first == std::string::npos ? std::string() : text.substr(first, last - first + 1);
+  }
+
   int total_steps = num_prompt_tokens + steps -1; // Max total tokens including prompt
   int generated_count = 0;
   int next_token_id = -1;

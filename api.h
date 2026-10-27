@@ -238,6 +238,13 @@ class TinyLlamaSession {
   // Called with each generated token id (stop markers excluded) as
   // generate() produces it; empty to stop streaming.
   void set_token_callback(std::function<void(int)> cb) { token_callback_ = std::move(cb); }
+  // Test hook (chat mode): each of the next generate() calls takes the next of these id sequences in
+  // place of the model's samples, after tokenising its prompt as usual: the ids go to the token
+  // callback in order up to max_new tokens or a stop id, and the reply, stop reason and ids are set
+  // from them exactly as from sampled ids; the KV cache is left out of it (the next real request
+  // prefills from position 0). The server sets it from EMBER_TEST_SCRIPTED_REPLIES (never under
+  // EMBER_PUBLIC=1), for tools/chat_v2_server_check.py's tool-call replies.
+  void set_scripted_replies(std::vector<std::vector<int>> r) { scripted_replies_ = std::move(r); }
   // BPE detokenization of ids (BPE chat models only; empty otherwise).
   std::string bpe_decode(const std::vector<int>& ids) const { return bpe_ ? bpe_->decode(ids) : std::string(); }
   std::vector<int> bpe_encode(const std::string& text) const { return bpe_ ? bpe_->encode(text) : std::vector<int>(); }
@@ -305,6 +312,7 @@ class TinyLlamaSession {
   std::vector<int> last_prompt_ids_, last_generated_ids_;
   int last_stop_id_ = -1;
   std::function<void(int)> token_callback_;
+  std::vector<std::vector<int>> scripted_replies_;  // see set_scripted_replies()
   int state_k_ = 0, state_vocab_ = 0;  // see state_k(); the state ids are state_vocab_ + j
   std::vector<int> score_ids_;  // the ids the last score_rows() left in the cache
 

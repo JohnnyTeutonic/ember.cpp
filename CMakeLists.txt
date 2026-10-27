@@ -459,6 +459,10 @@ if(NOT SKBUILD)
     # Chat templates: paperkiln's conformance file and ember's rendering paths (tools/chat_template_check.cpp).
     add_executable(chat_template_check tools/chat_template_check.cpp)
     target_link_libraries(chat_template_check PRIVATE tinyllama_core)
+    # Conversation schema v2 (paperkiln/2): requests, the exchange context rule, replies split on the
+    # <|tool_call|> id and streamed replies, on a v2 vocabulary (tools/chat_v2_test.cpp).
+    add_executable(chat_v2_test tools/chat_v2_test.cpp)
+    target_link_libraries(chat_v2_test PRIVATE tinyllama_core)
     # Valid UTF-8 for JSON replies, as Python's decode(errors="replace"), and streamed replies
     # (tools/utf8_text_test.cpp, utf8_text_check.py).
     add_executable(utf8_text_test tools/utf8_text_test.cpp)

@@ -1,0 +1,741 @@
+{
+ "checks": 73,
+ "context": {
+  "counts": [
+   198,
+   141,
+   124
+  ],
+  "max_new": 8,
+  "runs": [
+   {
+    "ctx": 206,
+    "error": "",
+    "history_turns_used": 2,
+    "ok": true,
+    "prompt_tokens": 198
+   },
+   {
+    "ctx": 205,
+    "error": "",
+    "history_turns_used": 1,
+    "ok": true,
+    "prompt_tokens": 141
+   },
+   {
+    "ctx": 149,
+    "error": "",
+    "history_turns_used": 1,
+    "ok": true,
+    "prompt_tokens": 141
+   },
+   {
+    "ctx": 148,
+    "error": "",
+    "history_turns_used": 0,
+    "ok": true,
+    "prompt_tokens": 124
+   },
+   {
+    "ctx": 125,
+    "error": "",
+    "history_turns_used": 0,
+    "ok": true,
+    "prompt_tokens": 124
+   },
+   {
+    "ctx": 124,
+    "error": "the system turn and the newest exchange are 124 tokens (the system turn 86); the model's context is 124 (an exchange is never cut)",
+    "history_turns_used": 0,
+    "ok": true,
+    "prompt_tokens": 124
+   }
+  ],
+  "v1_equal_ctx_4_63": true
+ },
+ "failed": 0,
+ "fuzz": {
+  "call_id_but_not_parsed": 10616,
+  "replies": 20000,
+  "stream_equals_plain": 20000,
+  "v1_stream_equals_v1_reply": 20000,
+  "with_calls": 1547
+ },
+ "load": {
+  "base": {
+   "template": "paperkiln/1",
+   "why": "paperkiln specials at ids 0-3"
+  },
+  "eos_ids": [
+   1
+  ],
+  "kind": "llama3_bpe",
+  "refusals": {
+   "toy_v2_badtype.gguf": "chat template paperkiln/2 needs '<|system|>' as a control token of the vocabulary: the file is refused",
+   "toy_v2_nocontrol.gguf": "chat template paperkiln/2 needs '<|system|>' as a control token of the vocabulary: the file is refused"
+  },
+  "template": "paperkiln/2",
+  "tool_call_id": 16385,
+  "turn_ids": [
+   2,
+   3,
+   16384,
+   16386
+  ],
+  "vocab": 16392,
+  "why": "declared"
+ },
+ "replies": [
+  {
+   "content": "Hello there.",
+   "ids": [
+    409,
+    3400,
+    629,
+    316
+   ],
+   "name": "no call",
+   "ok": true,
+   "pieces": [
+    "H",
+    "ello",
+    " there",
+    ".",
+    ""
+   ],
+   "tool_calls": []
+  },
+  {
+   "content": "Let me check.",
+   "ids": [
+    5245,
+    449,
+    2392,
+    17,
+    15691,
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202,
+    94,
+    5,
+    70,
+    406,
+    11844,
+    617,
+    14311,
+    274,
+    5,
+    96
+   ],
+   "name": "content then a call",
+   "ok": true,
+   "pieces": [
+    "Let",
+    " me",
+    " check",
+    ".",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": "{\"city\": \"Paris\"}",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    }
+   ]
+  },
+  {
+   "content": "",
+   "ids": [
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202,
+    94,
+    5,
+    70,
+    406,
+    11844,
+    617,
+    14311,
+    274,
+    5,
+    96
+   ],
+   "name": "a call alone",
+   "ok": true,
+   "pieces": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": "{\"city\": \"Paris\"}",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    }
+   ]
+  },
+  {
+   "content": "",
+   "ids": [
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202,
+    94,
+    5,
+    70,
+    406,
+    11844,
+    617,
+    14311,
+    274,
+    5,
+    96,
+    16385,
+    813,
+    66,
+    4634,
+    202
+   ],
+   "name": "two calls",
+   "ok": true,
+   "pieces": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": "{\"city\": \"Paris\"}",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    },
+    {
+     "function": {
+      "arguments": "",
+      "name": "get_time"
+     },
+     "id": "call_1",
+     "type": "function"
+    }
+   ]
+  },
+  {
+   "content": "",
+   "ids": [
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202,
+    3587,
+    96,
+    2895
+   ],
+   "name": "arguments keep their whitespace",
+   "ok": true,
+   "pieces": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": " {} \n",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    }
+   ]
+  },
+  {
+   "content": "Sure <|tool_call|>get_weather",
+   "ids": [
+    2739,
+    224,
+    16385,
+    813,
+    66,
+    721,
+    1051
+   ],
+   "name": "a call without a newline: the whole reply is content",
+   "ok": true,
+   "pieces": [
+    "Sure",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    " <|tool_call|>get_weather"
+   ],
+   "tool_calls": []
+  },
+  {
+   "content": "a<|tool_call|>\n{\"city\": \"Paris\"}",
+   "ids": [
+    68,
+    16385,
+    202,
+    94,
+    5,
+    70,
+    406,
+    11844,
+    617,
+    14311,
+    274,
+    5,
+    96
+   ],
+   "name": "an empty name: content",
+   "ok": true,
+   "pieces": [
+    "a",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "<|tool_call|>\n{\"city\": \"Paris\"}"
+   ],
+   "tool_calls": []
+  },
+  {
+   "content": "x <|spare_3|> y",
+   "ids": [
+    91,
+    224,
+    16387,
+    312
+   ],
+   "name": "a spare token in the content",
+   "ok": true,
+   "pieces": [
+    "x",
+    "",
+    " <|spare_3|>",
+    " y",
+    ""
+   ],
+   "tool_calls": []
+  },
+  {
+   "content": "",
+   "ids": [
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202,
+    16391
+   ],
+   "name": "a spare token in a call's arguments",
+   "ok": true,
+   "pieces": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": "<|spare_7|>",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    }
+   ]
+  },
+  {
+   "content": "Caf�",
+   "ids": [
+    38,
+    2017,
+    131,
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202
+   ],
+   "name": "a character cut by the call",
+   "ok": true,
+   "pieces": [
+    "C",
+    "af",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "�"
+   ],
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": "",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    }
+   ]
+  },
+  {
+   "content": "Café",
+   "ids": [
+    38,
+    2017,
+    131,
+    106,
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202
+   ],
+   "name": "a character split across tokens before the call",
+   "ok": true,
+   "pieces": [
+    "C",
+    "af",
+    "",
+    "é",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": "",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    }
+   ]
+  },
+  {
+   "content": "😀",
+   "ids": [
+    176,
+    257,
+    250,
+    226
+   ],
+   "name": "a four-byte character over four tokens",
+   "ok": true,
+   "pieces": [
+    "",
+    "",
+    "",
+    "😀",
+    ""
+   ],
+   "tool_calls": []
+  },
+  {
+   "content": "",
+   "ids": [
+    16385,
+    813,
+    66,
+    721,
+    1051,
+    202,
+    176,
+    257
+   ],
+   "name": "arguments ending inside a character",
+   "ok": true,
+   "pieces": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "tool_calls": [
+    {
+     "function": {
+      "arguments": "�",
+      "name": "get_weather"
+     },
+     "id": "call_0",
+     "type": "function"
+    }
+   ]
+  },
+  {
+   "content": "",
+   "ids": [],
+   "name": "no ids",
+   "ok": true,
+   "pieces": [
+    ""
+   ],
+   "tool_calls": []
+  }
+ ],
+ "requests": [
+  {
+   "error": null,
+   "got": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Weather now.\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>Weather?<|assistant|>",
+   "name": "/chat tools in the request's member order",
+   "ok": true
+  },
+  {
+   "error": null,
+   "got": "<|system|>Be brief.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Weather now.\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>Weather?<|assistant|>",
+   "name": "/chat system and tools",
+   "ok": true
+  },
+  {
+   "error": null,
+   "got": "<|user|>Weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>",
+   "name": "/chat user_input left out after a tool message",
+   "ok": true
+  },
+  {
+   "error": null,
+   "got": "<|user|>hi<|assistant|>hello<|endoftext|><|user|>Weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>",
+   "name": "/chat a pair-form entry, then a call",
+   "ok": true
+  },
+  {
+   "error": null,
+   "got": "<|user|>a<|assistant|>x<|endoftext|><|user|>b<|assistant|>",
+   "name": "/chat v2 without system or tools renders as v1",
+   "ok": true
+  },
+  {
+   "error": null,
+   "got": "<|user|>a<|assistant|>",
+   "name": "/chat empty system and tools: [] under v1 are none",
+   "ok": true
+  },
+  {
+   "error": "Missing 'user_input' field in request JSON (it may be left out only when the history ends on a tool message)",
+   "name": "/chat user_input missing, history ends on an assistant",
+   "ok": true,
+   "rule": "Missing 'user_input'"
+  },
+  {
+   "error": "message 3 is user, expected assistant (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)",
+   "name": "/chat a user message after a tool result (the reply is owed)",
+   "ok": true,
+   "rule": "expected assistant"
+  },
+  {
+   "error": "tools must be a list of tool definitions (JSON objects)",
+   "name": "/chat tools not a list",
+   "ok": true,
+   "rule": "tools must be a list"
+  },
+  {
+   "error": "a tool definition holds a non-integer number (refused: its text is not portable)",
+   "name": "/chat a tool definition with a float",
+   "ok": true,
+   "rule": "non-integer number"
+  },
+  {
+   "error": "a tool call's name is a non-empty string without a newline",
+   "name": "/chat a call name with a newline",
+   "ok": true,
+   "rule": "without a newline"
+  },
+  {
+   "error": "tools are not supported: this model's chat template has no tool turns",
+   "name": "/chat v1: tools",
+   "ok": true,
+   "rule": "tools are not supported"
+  },
+  {
+   "error": "tool_calls are not supported: this model's chat template has no tool turns",
+   "name": "/chat v1: tool_calls in the history",
+   "ok": true,
+   "rule": "tool_calls are not supported"
+  },
+  {
+   "error": "history role 'tool' is not allowed here (user, assistant; system only first)",
+   "name": "/chat v1: a tool message",
+   "ok": true,
+   "rule": "history role 'tool' is not allowed"
+  },
+  {
+   "error": null,
+   "got": "<|system|>Be brief.\n\nUse tools.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Weather now.\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>Weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>",
+   "name": "OpenAI: system + developer joined, null content with tool_calls, a tool message's text parts",
+   "ok": true
+  },
+  {
+   "error": null,
+   "got": "<|user|>a<|assistant|>",
+   "name": "OpenAI: tool_choice auto",
+   "ok": true
+  },
+  {
+   "error": "the last message must be from the user or a tool",
+   "name": "OpenAI: the last message an assistant's",
+   "ok": true,
+   "rule": "the last message must be from the user or a tool"
+  },
+  {
+   "error": "tool_choice is not supported except \"auto\" (the model decides whether to call a tool)",
+   "name": "OpenAI: tool_choice required",
+   "ok": true,
+   "rule": "tool_choice is not supported"
+  },
+  {
+   "error": "a system message is allowed only before the first user message (this model's chat template has one system message, first)",
+   "name": "OpenAI: a system message after the user's",
+   "ok": true,
+   "rule": "allowed only before the first user message"
+  },
+  {
+   "error": "message 1 is tool, expected assistant (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)",
+   "name": "OpenAI: a tool result for a call that does not exist",
+   "ok": true,
+   "rule": "expected assistant"
+  },
+  {
+   "error": "message 0 is tool, expected user (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)",
+   "name": "OpenAI: a tool message before the first user message (never dropped as an exchange)",
+   "ok": true,
+   "rule": "message 0 is tool, expected user"
+  },
+  {
+   "error": "message 0 is tool, expected user (user, then assistant; an assistant message with k tool calls, then k tool messages, then assistant)",
+   "name": "/chat: a tool message before the first user message",
+   "ok": true,
+   "rule": "message 0 is tool, expected user"
+  },
+  {
+   "error": "tool messages are not supported: this model's chat template has no tool role",
+   "name": "OpenAI v1: a tool message",
+   "ok": true,
+   "rule": "tool messages are not supported"
+  },
+  {
+   "error": "tools are not supported: this model's chat template has no tool turns",
+   "name": "OpenAI v1: tools",
+   "ok": true,
+   "rule": "tools are not supported"
+  },
+  {
+   "error": "tool_calls are not supported: this model's chat template has no tool turns",
+   "name": "OpenAI v1: assistant tool_calls",
+   "ok": true,
+   "rule": "tool_calls are not supported"
+  }
+ ]
+}

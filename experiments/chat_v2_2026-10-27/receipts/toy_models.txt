@@ -1,0 +1,5 @@
+/mnt/c/ml_artifacts/next_base/gate/gate_llama3.gguf f365148a8f9ea22fe67106ad85fc3c94f014a2acf71c699b248acb4b9b6a921a
+/home/jonat/cv2/models/toy_v2.gguf 36b6fdc9905e449175c8e12f0a676238cda26c30bf2c5e81b2bd5a2763f242ce
+/home/jonat/cv2/models/toy_v2_nocontrol.gguf ca8a2bb96b33b8871ed9c5dcc4a828108702883a8a10f654540ac86a42c54752
+/home/jonat/cv2/models/toy_v2_badtype.gguf 0a9e9da270b38ce9de6a657c802500fcdc4c05d3538fa2c31c544737492d62e0
+{"paperkiln_vocab": "/mnt/c/ml_artifacts/chat_v2/vocab_llama3_bpe_v2.gguf", "sha256": "d44f27b2bae9a549240e370ea7a6f52aec47385bf20842fd5b3524ae2612f541", "appended_tokens_and_types_equal": true, "base_tokens_equal": true, "paperkiln_tokens": 16392, "toy_tokens": 16392}

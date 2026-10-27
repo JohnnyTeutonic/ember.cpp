@@ -12,6 +12,11 @@
 //     user's, a loss flag) is reported as such. The report holds every request it built, so a
 //     driver can post the same ones to a live server.
 //
+//     Schema v2 (paperkiln/2): the cases' tool definitions in their file order, the v2 Jinja and
+//     Modelfile, the parse_reply cases and check_control_tokens, as the C++ test does; the request
+//     paths carry tool calls, tool results and "tools", and a case ending on a tool message goes to
+//     /chat without user_input.
+//
 //   chat_template_check render MODEL.gguf < requests.jsonl > out.jsonl
 //     the GGUF's chat setup as the session loads it (chat_gguf.h, make_chat_setup), then per input
 //     line {"chat": /chat body} or {"openai": /v1/chat/completions body} (optional "ctx", default
@@ -54,14 +59,16 @@ std::string legacy_prompt(const std::vector<std::pair<std::string, std::string>>
     return p + "<|user|>" + user + "<|assistant|>";
 }
 
-// One request through ember's path: {"text"} or {"refused": message}.
+// One request through ember's path (the record t passed to the parser, as the server and the
+// WebAssembly build pass the model's; tools: the request's "tools" with member order kept, or null):
+// {"text"} or {"refused": message}.
 template <class Parse>
-json through(const chat::Template& t, const json& req, Parse parse) {
+json through(const chat::Template& t, const json& req, Parse parse, const chat::json& tools = chat::json()) {
     ember::ChatFormat f;
     f.tmpl = t;
     f.name = t.id();
     try {
-        const ember::Conversation c = parse(req);
+        const ember::Conversation c = parse(req, &t, tools);
         const ember::ChatPrompt p = ember::build_chat_prompt(f, c, 1, 1 << 30, [](const std::string& s) {
             return static_cast<int>(s.size());
         });
@@ -74,7 +81,9 @@ json through(const chat::Template& t, const json& req, Parse parse) {
 }
 
 int cases_cmd(const std::string& path) {
-    const json fx = json::parse(slurp(path));
+    const std::string text = slurp(path);
+    const json fx = json::parse(text);
+    const chat::json fxo = chat::json::parse(text);  // member order kept (tool definitions)
     json report;
     size_t fails = 0;
     auto check = [&](bool ok, const std::string& what) {
@@ -83,17 +92,26 @@ int cases_cmd(const std::string& path) {
             report["header_failures"].push_back(what);
         }
     };
+    auto case_tools = [&](size_t ci) {
+        const chat::json& c = fxo["cases"][ci];
+        return c.contains("tools") ? c["tools"] : chat::json();
+    };
 
     // 1. The vendored header, as paperkiln's tests/test_chat_template.cpp checks it.
     size_t rendered = 0, refused = 0;
-    for (const auto& c : fx["cases"]) {
+    for (size_t ci = 0; ci < fx["cases"].size(); ++ci) {
+        const auto& c = fx["cases"][ci];
         const chat::Template t = c["template"].is_string() ? chat::get(c["template"].get<std::string>())
                                                            : chat::Template::from_json(c["template"]);
         const int thinking = c.contains("thinking") ? (c["thinking"].get<bool>() ? 1 : 0) : -1;
         std::string got;
         bool threw = false;
         try {
-            got = chat::render(chat::messages_from_json(c["messages"]), t, c["generation_prompt"].get<bool>(), thinking);
+            std::vector<chat::json> tools;
+            if (c.contains("tools"))
+                for (const auto& d : case_tools(ci)) tools.push_back(d);
+            got = chat::render(chat::messages_from_json(c["messages"]), t, c["generation_prompt"].get<bool>(), thinking,
+                               tools);
         } catch (const chat::Error&) {
             threw = true;
         }
@@ -130,6 +148,59 @@ int cases_cmd(const std::string& path) {
     check(chat::jinja(none) == fx["jinja"]["paperkiln/1 none"].get<std::string>(), "jinja paperkiln/1 none");
     check(chat::jinja(chat::legacy_word()) == fx["jinja"]["paperkiln/legacy-word"].get<std::string>(), "jinja legacy-word");
     check(chat::modelfile("model.gguf", chat::v1()) == fx["modelfile"]["paperkiln/1"].get<std::string>(), "modelfile");
+    check(chat::jinja(chat::v2()) == fx["jinja"]["paperkiln/2"].get<std::string>(), "jinja paperkiln/2");
+    check(chat::modelfile("model.gguf", chat::v2()) == fx["modelfile"]["paperkiln/2"].get<std::string>(),
+          "modelfile paperkiln/2");
+    // parse_reply (v2): split on the call id over the cases file's toy vocabulary, as in Python.
+    size_t parsed = 0;
+    {
+        const auto& pr = fx["parse_reply"];
+        auto decode = [&](const std::vector<int>& ids) {
+            std::string s;
+            for (int i : ids) s += pr["tokens"][std::to_string(i)].get<std::string>();
+            return s;
+        };
+        for (const auto& c : pr["cases"]) {
+            const auto r = chat::parse_reply(c["ids"].get<std::vector<int>>(), c["call_id"].get<int>(), decode);
+            bool ok;
+            if (c["expect"].is_null()) {
+                ok = !r.parsed;
+            } else {
+                ok = r.parsed && r.content == c["expect"]["content"].get<std::string>() &&
+                     r.tool_calls.size() == c["expect"]["tool_calls"].size();
+                for (size_t k = 0; ok && k < r.tool_calls.size(); ++k) {
+                    const auto& e = c["expect"]["tool_calls"][k];
+                    ok = r.tool_calls[k].id == e["id"].get<std::string>() &&
+                         r.tool_calls[k].name == e["function"]["name"].get<std::string>() &&
+                         r.tool_calls[k].arguments == e["function"]["arguments"].get<std::string>();
+                }
+            }
+            check(ok, "parse_reply case '" + c["name"].get<std::string>() + "'");
+            ++parsed;
+        }
+    }
+    // check_control_tokens: a v2 file needs its control tokens as control tokens (v1 needs none).
+    {
+        std::vector<std::string> toks(chat::kV1Specials.begin(), chat::kV1Specials.end());
+        std::vector<int32_t> types = {2, 3, 3, 3};
+        bool refused_v2 = false, ok_v2 = true, ok_v1 = true;
+        try {
+            chat::check_control_tokens(chat::v2(), toks, types);
+        } catch (const chat::Error&) {
+            refused_v2 = true;
+        }
+        for (const char* c : chat::kV2Control) {
+            toks.push_back(c);
+            types.push_back(3);
+        }
+        try {
+            chat::check_control_tokens(chat::v2(), toks, types);
+            chat::check_control_tokens(chat::v1(), {}, {});
+        } catch (const chat::Error&) {
+            ok_v2 = ok_v1 = false;
+        }
+        check(refused_v2 && ok_v2 && ok_v1, "check_control_tokens");
+    }
     size_t shas = 0;
     for (const auto& [k, v] : fx["sha256"].items()) {
         check(chat::detail::sha256_hex(k) == v.get<std::string>(), "sha256 of '" + k + "'");
@@ -170,15 +241,17 @@ int cases_cmd(const std::string& path) {
             ++legacy;
         }
     report["header"] = {{"cases_rendered", rendered}, {"cases_refused", refused}, {"records", records},
-                        {"jinja_modelfile", 4}, {"sha256", shas}, {"resolutions", resolved},
-                        {"legacy_prompts", legacy}, {"failures", fails}};
+                        {"jinja_modelfile", 6}, {"sha256", shas}, {"resolutions", resolved},
+                        {"legacy_prompts", legacy}, {"parse_reply", parsed}, {"failures", fails}};
 
     // 2. Each edge case through ember's request paths.
     size_t same = 0, differ = 0, inexpressible = 0;
-    for (const auto& c : fx["cases"]) {
+    for (size_t ci = 0; ci < fx["cases"].size(); ++ci) {
+        const auto& c = fx["cases"][ci];
         const chat::Template t = c["template"].is_string() ? chat::get(c["template"].get<std::string>())
                                                            : chat::Template::from_json(c["template"]);
         const json& msgs = c["messages"];
+        const chat::json tools = case_tools(ci);
         json row = {{"name", c["name"]}, {"template", t.id()}, {"expect", c["expect"]}};
         std::string why_not;
         bool has_loss = false;
@@ -192,13 +265,21 @@ int cases_cmd(const std::string& path) {
         };
         json paths = json::object();
         if (why_not.empty()) {
-            // /chat: the last message is user_input; a leading system message goes as "system" or as
-            // the first history entry; every other message is a {"role", "content"} history entry.
-            if (msgs.back().value("role", "") == "user") {
+            // /chat: the last message is user_input (it is left out when the last message is a tool's);
+            // a leading system message goes as "system" or as the first history entry; every other
+            // message is a role-form history entry with its fields (content, tool_calls, tool_call_id).
+            const std::string last = msgs.back().value("role", "");
+            const bool user_last = last == "user", tool_last = last == "tool";
+            bool plain_user = user_last;  // user_input carries content only
+            for (auto it = msgs.back().begin(); plain_user && it != msgs.back().end(); ++it)
+                plain_user = it.key() == "role" || it.key() == "content";
+            if (plain_user || tool_last) {
                 json hist = json::array();
-                for (size_t i = 0; i + 1 < msgs.size(); ++i) hist.push_back({{"role", msgs[i]["role"]}, {"content", msgs[i]["content"]}});
-                json base = {{"user_input", msgs.back()["content"]}};
+                for (size_t i = 0; i + (plain_user ? 1 : 0) < msgs.size(); ++i) hist.push_back(msgs[i]);
+                json base = json::object();
+                if (plain_user) base["user_input"] = msgs.back()["content"];
                 if (c.contains("thinking")) base["thinking"] = c["thinking"];
+                if (c.contains("tools")) base["tools"] = c["tools"];
                 json in_history = base;
                 in_history["history"] = hist;
                 paths["chat_history_system"] = {{"request", in_history}};
@@ -209,15 +290,17 @@ int cases_cmd(const std::string& path) {
                     paths["chat_system_field"] = {{"request", field}};
                 }
             } else {
-                paths["chat_note"] = "not a /chat request: the last message is not the user's";
+                paths["chat_note"] = user_last ? "not a /chat request: the last user message carries more than content"
+                                               : "not a /chat request: the last message is not the user's or a tool's";
             }
             json oa = {{"messages", msgs}};
             if (c.contains("thinking")) oa["thinking"] = c["thinking"];
+            if (c.contains("tools")) oa["tools"] = c["tools"];
             paths["openai"] = {{"request", oa}};
             for (auto& [k, v] : paths.items()) {
                 if (!v.is_object()) continue;
-                const json out = k == "openai" ? through(t, v["request"], ember::openai_conversation)
-                                               : through(t, v["request"], ember::chat_conversation);
+                const json out = k == "openai" ? through(t, v["request"], ember::openai_conversation, tools)
+                                               : through(t, v["request"], ember::chat_conversation, tools);
                 v["result"] = out;
                 v["same"] = verdict(out);
                 (verdict(out) ? same : differ) += 1;
@@ -289,10 +372,14 @@ int render_cmd(const std::string& gguf) {
     while (std::getline(std::cin, line)) {
         if (line.find_first_not_of(" \t\r") == std::string::npos) continue;
         const json in = json::parse(line);
+        const chat::json ino = chat::json::parse(line);  // the request's tools in its own member order
         json out;
         try {
             const bool oa = in.contains("openai");
-            const ember::Conversation c = oa ? ember::openai_conversation(in["openai"]) : ember::chat_conversation(in["chat"]);
+            const chat::json& req = ino[oa ? "openai" : "chat"];
+            const chat::json tools = req.is_object() && req.contains("tools") ? req["tools"] : chat::json();
+            const ember::Conversation c = oa ? ember::openai_conversation(in["openai"], &f.tmpl, tools)
+                                             : ember::chat_conversation(in["chat"], &f.tmpl, tools);
             const ember::ChatPrompt p = ember::build_chat_prompt(
                 f, c, in.value("max_new_tokens", 1), in.value("ctx", 1 << 30),
                 [&](const std::string& text) { return static_cast<int>(s.tok->encode(text).size()); });

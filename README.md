@@ -178,7 +178,9 @@ curl http://127.0.0.1:8080/v1/chat/completions -H "Content-Type: application/jso
 `"stream": true` streams the reply token by token, and `GET /v1/models` lists the model. The
 native `POST /chat` takes `{user_input, history, system, thinking, temperature, top_k, top_p,
 seed, max_new_tokens, repeat_penalty, repeat_last_n}`, the same contract as paperkiln's
-`mtstudio chat`.
+`mtstudio chat`. A model with paperkiln's conversation schema v2 (`paperkiln/2`) also takes
+`tools`, tool calls and tool results on both endpoints, and returns the calls it makes as
+OpenAI-form `tool_calls`, streamed whole ([docs/USAGE.md](docs/USAGE.md)).
 
 **One conversation schema.** The chat template is data in the GGUF (`paperkiln.chat_template`,
 plus the standard `tokenizer.chat_template` for llama.cpp, Ollama and LM Studio), shared with
