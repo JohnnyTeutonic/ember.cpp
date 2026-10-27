@@ -167,7 +167,8 @@ Operational logs go to `debugging.log` in the working directory.
 | `EMBER_VERIFY_LINEAR=rows` | with `EMBER_SPEC`: the verification rows through the decode step's own GEMV, bit-identical to decode under `EMBER_DETERMINISTIC=1` (slower). Unset, the mode decides: `rows` under `EMBER_DETERMINISTIC=1`, `smallm` otherwise; `smallm`, `gemm` or `gemvb` set explicitly override the mode |
 | `EMBER_VERIFY=legacy` | with `EMBER_SPEC`: the per-launch verification pass of 20 Oct 2026 |
 | `EMBER_DECODE_GRAPH=0` | disable the CUDA-graph decode on the llama path |
-| `EMBER_DECODE_ATTN=legacy` | the one-block-per-head decode attention kernel instead of split-K |
+| `EMBER_DECODE_ATTN=split` | the split-K decode attention with 256-key chunks for the cache's capacity (the default until `experiments/decode_occupancy_2026-10-27`); `legacy`: the one-block-per-head kernel. Unset: the tiled split-K kernel, chunks of 32 keys chosen by the current length (at most 64 per head), 1.5x (20M) and 1.8x (60M) the decode tokens per second of `split` at 256-500 cached tokens on an L4 |
+| `EMBER_DECODE_ATTN_TILE=m,x` | the tiled kernel's chunking: at least m keys per chunk, at most x chunks per head (x <= 64; default 32,64) |
 | `EMBER_GEMM_TF32=0` | FP32 instead of TF32 GEMMs in the CUDA prefill |
 | `EMBER_DETERMINISTIC=1` | deterministic CUDA mode: prefill and decode logits bit-identical run to run on the same GPU and build (below); `/health` then reports `"deterministic": true`. Off by default |
 | `EMBER_DEQUANT_AT_LOAD=0` | keep small quantised models in their blocks (default: dequantise under 64M parameters) |

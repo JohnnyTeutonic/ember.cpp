@@ -1,0 +1,50 @@
+{
+ "a": "/content/plain/m60_new_det",
+ "b": "/content/plain/m60_new_det2",
+ "a_bin": "/content/b_new/tinyllama_server",
+ "b_bin": "/content/b_new/tinyllama_server",
+ "gguf": "/content/big/pick_60m_L32.gguf",
+ "gpu_layers": [
+  "-1",
+  "-1"
+ ],
+ "sets": {
+  "tinychat": {
+   "n": 40,
+   "replies_identical": 40,
+   "ids_identical": 40,
+   "prompt_ids_identical": 40,
+   "all_positions_logits_bit_equal": 40,
+   "positions": 709,
+   "first_token_logits_bit_equal": 40,
+   "first_token_logits_worst_abs": 0.0,
+   "divergent": [],
+   "every_position": {
+    "rows": 709,
+    "bit_equal_rows": 709,
+    "worst_abs": 0.0,
+    "worst_rel_to_range": 0.0,
+    "top1_agree": "709/709"
+   }
+  },
+  "carry5": {
+   "n": 320,
+   "replies_identical": 320,
+   "ids_identical": 320,
+   "prompt_ids_identical": 320,
+   "all_positions_logits_bit_equal": 320,
+   "positions": 4436,
+   "first_token_logits_bit_equal": 320,
+   "first_token_logits_worst_abs": 0.0,
+   "divergent": [],
+   "every_position": {
+    "rows": 4436,
+    "bit_equal_rows": 4436,
+    "worst_abs": 0.0,
+    "worst_rel_to_range": 0.0,
+    "top1_agree": "4436/4436"
+   }
+  }
+ },
+ "bit_identical": true
+}

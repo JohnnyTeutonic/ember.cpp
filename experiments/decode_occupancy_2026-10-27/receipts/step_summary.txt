@@ -1,0 +1,34 @@
+
+m60: pick_60m_L32.gguf, d 384, 32 layers x 6 heads, cache 512, NVIDIA L4
+  keys      split     split2      tiled     tiled2  det_split  det_tiled   tiled/split  tok/s split -> tiled  argmax same
+    33     2.3386     2.3397     2.2271     2.2252     2.3389     2.2262        1.051x    427.6 ->   449.4  True
+   129     3.0060     3.0016     2.2690     2.2691     2.9448     2.2529        1.323x    333.2 ->   440.7  True
+   257     4.3026     4.3024     2.3960     2.3936     4.2880     2.3948        1.797x    232.4 ->   417.8  True
+   385     4.4313     4.4314     2.4835     2.4822     4.4332     2.4839        1.785x    225.7 ->   402.9  True
+   501     4.4354     4.4358     2.5255     2.5251     4.4373     2.5270        1.757x    225.5 ->   396.0  True
+
+pick: pick_L16.gguf, d 320, 16 layers x 5 heads, cache 512, NVIDIA L4
+  keys      split     split2      tiled     tiled2  det_split  det_tiled   tiled/split  tok/s split -> tiled  argmax same
+    33     1.0150     1.0147     0.9575     0.9573     1.0150     0.9575        1.060x    985.5 ->  1044.6  True
+   129     1.2114     1.2113     0.9574     0.9576     1.2124     0.9576        1.265x    825.6 ->  1044.5  True
+   257     1.4737     1.4737     0.9575     0.9593     1.4824     0.9656        1.539x    678.6 ->  1044.4  True
+   385     1.4737     1.4745     0.9657     0.9668     1.4827     0.9688        1.526x    678.6 ->  1035.5  True
+   501     1.5472     1.5483     0.9748     0.9740     1.5544     0.9767        1.589x    646.3 ->  1026.7  True
+
+second session (other tilings):
+
+m60: pick_60m_L32.gguf, d 384, 32 layers x 6 heads, cache 512, NVIDIA L4
+  keys      tiled        t16        t64   tiled/split  tok/s split -> tiled  argmax same
+    33     2.2246     2.2256     2.2370                                       True
+   129     2.2708     2.2613     2.3185                                       True
+   257     2.3967     2.3883     2.4462                                       True
+   385     2.4835     2.4806     2.5119                                       True
+   501     2.5249     2.5276     2.5385                                       True
+
+pick: pick_L16.gguf, d 320, 16 layers x 5 heads, cache 512, NVIDIA L4
+  keys      tiled        t16        t64   tiled/split  tok/s split -> tiled  argmax same
+    33     0.9574     0.9564     0.9655                                       True
+   129     0.9577     0.9574     0.9737                                       True
+   257     0.9577     0.9650     0.9736                                       True
+   385     0.9657     0.9665     0.9787                                       True
+   501     0.9738     0.9746     0.9829                                       True

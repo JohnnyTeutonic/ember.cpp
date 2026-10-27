@@ -1,0 +1,100 @@
+=== vm Tue Oct 27 03:49:08 AM UTC 2026 new=7526469+occupancy head=7526469 ===
+gpu NVIDIA L4, compute capability 89, nproc 12
+nsys: /usr/local/bin/nsys
+--- deps 03:49:08
+--- builds 03:49:23
+built new in 91 s
+built head in 81 s
+--- (a) decode_attention_test 03:52:34
+dat tiled rc=0 all ok
+dat split rc=0 all ok
+dat legacy rc=1 FAILED 25
+dat det rc=0 all ok
+--- (b) occ_bench 03:52:39
+occ_bench rc=0 all ok
+nsys bench rc=0 /content/out/bench/nsys_bench_cuda_gpu_kern_sum.csv /content/out/bench/nsys_bench.log /content/out/bench/nsys_bench_nvtx_kern_sum.csv 
+--- (c) SASS 03:53:20
+sass: {"arches": ["sm_89"], "head_functions": 104, "new_functions": 108, "identical": 104, "differ": 0, "only_in_head": 0, "only_in_new": 4}
+packed out1 60K
+--- waiting for the models 03:53:25
+--- (d) occ_step 03:59:57
+step pick split rc=0 P 32 decode p50 1.014996 ms, argmax 79 P 128 decode p50 1.211386 ms, argmax 79 P 256 decode p50 1.47373 ms, argmax 79 P 384 decode p50 1.473684 ms, argmax 79 P 500 decode p50 1.547208 ms, argmax 79 
+step pick tiled rc=0 P 32 decode p50 0.957479 ms, argmax 79 P 128 decode p50 0.957437 ms, argmax 79 P 256 decode p50 0.957454 ms, argmax 79 P 384 decode p50 0.965737 ms, argmax 79 P 500 decode p50 0.974754 ms, argmax 79 
+step pick t16 rc=127 env: ‘64’: No such file or directory 
+step pick t64 rc=127 env: ‘64’: No such file or directory 
+step pick det_split rc=0 P 32 decode p50 1.015038 ms, argmax 79 P 128 decode p50 1.212434 ms, argmax 79 P 256 decode p50 1.482438 ms, argmax 79 P 384 decode p50 1.482705 ms, argmax 79 P 500 decode p50 1.554384 ms, argmax 79 
+step pick det_tiled rc=0 P 32 decode p50 0.957465 ms, argmax 79 P 128 decode p50 0.957634 ms, argmax 79 P 256 decode p50 0.965626 ms, argmax 79 P 384 decode p50 0.968782 ms, argmax 79 P 500 decode p50 0.976665 ms, argmax 79 
+step pick split2 rc=0 P 32 decode p50 1.014732 ms, argmax 79 P 128 decode p50 1.211282 ms, argmax 79 P 256 decode p50 1.473663 ms, argmax 79 P 384 decode p50 1.474491 ms, argmax 79 P 500 decode p50 1.54829 ms, argmax 79 
+step pick tiled2 rc=0 P 32 decode p50 0.95731 ms, argmax 79 P 128 decode p50 0.957617 ms, argmax 79 P 256 decode p50 0.959331 ms, argmax 79 P 384 decode p50 0.966833 ms, argmax 79 P 500 decode p50 0.974005 ms, argmax 79 
+nsys step pick split rc=0
+nsys step pick tiled rc=0
+step m60 split rc=0 P 32 decode p50 2.338585 ms, argmax 79 P 128 decode p50 3.006012 ms, argmax 79 P 256 decode p50 4.302631 ms, argmax 13075 P 384 decode p50 4.431284 ms, argmax 79 P 500 decode p50 4.435408 ms, argmax 938 
+step m60 tiled rc=0 P 32 decode p50 2.227118 ms, argmax 79 P 128 decode p50 2.268971 ms, argmax 79 P 256 decode p50 2.395952 ms, argmax 13075 P 384 decode p50 2.483475 ms, argmax 79 P 500 decode p50 2.525514 ms, argmax 938 
+step m60 t16 rc=127 env: ‘64’: No such file or directory 
+step m60 t64 rc=127 env: ‘64’: No such file or directory 
+step m60 det_split rc=0 P 32 decode p50 2.338871 ms, argmax 79 P 128 decode p50 2.94484 ms, argmax 79 P 256 decode p50 4.288048 ms, argmax 13075 P 384 decode p50 4.433234 ms, argmax 79 P 500 decode p50 4.437273 ms, argmax 938 
+step m60 det_tiled rc=0 P 32 decode p50 2.226165 ms, argmax 79 P 128 decode p50 2.252879 ms, argmax 79 P 256 decode p50 2.394816 ms, argmax 13075 P 384 decode p50 2.483868 ms, argmax 79 P 500 decode p50 2.52704 ms, argmax 938 
+step m60 split2 rc=0 P 32 decode p50 2.339703 ms, argmax 79 P 128 decode p50 3.001604 ms, argmax 79 P 256 decode p50 4.302357 ms, argmax 13075 P 384 decode p50 4.431406 ms, argmax 79 P 500 decode p50 4.435756 ms, argmax 938 
+step m60 tiled2 rc=0 P 32 decode p50 2.225231 ms, argmax 79 P 128 decode p50 2.269141 ms, argmax 79 P 256 decode p50 2.393626 ms, argmax 13075 P 384 decode p50 2.482206 ms, argmax 79 P 500 decode p50 2.525121 ms, argmax 938 
+nsys step m60 split rc=0
+nsys step m60 tiled rc=0
+packed out2 84K
+--- (e) x5_plain_collect: HEAD against this build 04:01:14
+collect pick head_off rc=0 {"requests": 360, "seconds": 49.6}
+collect pick new_off rc=0 {"requests": 360, "seconds": 49.1}
+collect pick head_det rc=0 {"requests": 360, "seconds": 49.7}
+collect pick new_det rc=0 {"requests": 360, "seconds": 49.1}
+collect pick new_det2 rc=0 {"requests": 360, "seconds": 49.0}
+collect pick new_det_split rc=0 {"requests": 360, "seconds": 49.5}
+collect pick head_off2 rc=0 {"requests": 360, "seconds": 49.4}
+compare pick head_off vs new_off rc=1: False {"tinychat": [40, 40, 40, 0, 40, 658, 7.62939453125e-06, 2.7631552042962483e-07], "carry5": [320, 320, 147, 0, 147, 3941, 8.821487426757812e-06, 3.5020806144883155e-07]}
+compare pick head_det vs new_det rc=1: False {"tinychat": [40, 40, 40, 0, 40, 658, 6.67572021484375e-06, 2.6741375762324627e-07], "carry5": [320, 320, 147, 0, 147, 3941, 8.225440979003906e-06, 3.260943660761441e-07]}
+compare pick new_det vs new_det2 rc=0: True {"tinychat": [40, 40, 40, 40, 658, 658, 0.0, 0.0], "carry5": [320, 320, 320, 320, 3941, 3941, 0.0, 0.0]}
+compare pick head_det vs new_det_split rc=0: True {"tinychat": [40, 40, 40, 40, 658, 658, 0.0, 0.0], "carry5": [320, 320, 320, 320, 3941, 3941, 0.0, 0.0]}
+compare pick head_off vs head_off2 rc=1: False {"tinychat": [40, 40, 40, 0, 40, 658, 5.7220458984375e-06, 2.4506914748530873e-07], "carry5": [320, 320, 147, 0, 147, 3941, 1.0013580322265625e-05, 4.29108655092966e-07]}
+collect m60 head_off rc=0 {"requests": 360, "seconds": 63.1}
+collect m60 new_off rc=0 {"requests": 360, "seconds": 61.7}
+collect m60 head_det rc=0 {"requests": 360, "seconds": 63.0}
+collect m60 new_det rc=0 {"requests": 360, "seconds": 61.7}
+collect m60 new_det2 rc=0 {"requests": 360, "seconds": 61.8}
+collect m60 new_det_split rc=0 {"requests": 360, "seconds": 63.5}
+compare m60 head_off vs new_off rc=1: False {"tinychat": [40, 40, 40, 0, 40, 709, 8.821487426757812e-06, 3.7470121122875426e-07], "carry5": [320, 320, 148, 0, 148, 4436, 1.2218952178955078e-05, 5.883701955010081e-07]}
+compare m60 head_det vs new_det rc=1: False {"tinychat": [40, 40, 40, 0, 40, 709, 9.417533874511719e-06, 4.885181416839149e-07], "carry5": [320, 320, 148, 0, 148, 4436, 1.5735626220703125e-05, 6.084608851034816e-07]}
+compare m60 new_det vs new_det2 rc=0: True {"tinychat": [40, 40, 40, 40, 709, 709, 0.0, 0.0], "carry5": [320, 320, 320, 320, 4436, 4436, 0.0, 0.0]}
+compare m60 head_det vs new_det_split rc=0: True {"tinychat": [40, 40, 40, 40, 709, 709, 0.0, 0.0], "carry5": [320, 320, 320, 320, 4436, 4436, 0.0, 0.0]}
+packed out3 612K
+--- (f) speculative verification under the mode 04:13:45
+vd pick det_plain rc=0 {"requests": 60, "rows": 1409, "vocab": 16384, "drafted": 0, "accepted": 0, "passes": 0, "warm_pass_same": 60, "seconds": 25.1}
+vd pick det_k2 rc=0 {"requests": 60, "rows": 1409, "vocab": 16384, "drafted": 537, "accepted": 358, "passes": 269, "warm_pass_same": 60, "seconds": 24.6}
+vd pick det_k4 rc=0 {"requests": 60, "rows": 1409, "vocab": 16384, "drafted": 781, "accepted": 423, "passes": 204, "warm_pass_same": 60, "seconds": 24.7}
+vd pick det_k8 rc=0 {"requests": 60, "rows": 1409, "vocab": 16384, "drafted": 1196, "accepted": 457, "passes": 169, "warm_pass_same": 60, "seconds": 25.1}
+vd pick det_k4_rows rc=0 {"requests": 60, "rows": 1409, "vocab": 16384, "drafted": 781, "accepted": 423, "passes": 204, "warm_pass_same": 60, "seconds": 24.7}
+vd pick off_plain rc=0 {"requests": 60, "rows": 1409, "vocab": 16384, "drafted": 0, "accepted": 0, "passes": 0, "warm_pass_same": 60, "seconds": 25.1}
+vd pick off_k4 rc=0 {"requests": 60, "rows": 1409, "vocab": 16384, "drafted": 781, "accepted": 423, "passes": 204, "warm_pass_same": 60, "seconds": 24.0}
+vd compare pick det_plain vs det_k2 rc=0: {'bit_identical': True, 'requests': 60, 'ids_identical': 60, 'replies_identical': 60, 'rows_compared': 1409, 'rows_bit_identical': 1409, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 537, 'accepted': 358, 'passes': 269}}
+vd compare pick det_plain vs det_k4 rc=0: {'bit_identical': True, 'requests': 60, 'ids_identical': 60, 'replies_identical': 60, 'rows_compared': 1409, 'rows_bit_identical': 1409, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 781, 'accepted': 423, 'passes': 204}}
+vd compare pick det_plain vs det_k8 rc=0: {'bit_identical': True, 'requests': 60, 'ids_identical': 60, 'replies_identical': 60, 'rows_compared': 1409, 'rows_bit_identical': 1409, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 1196, 'accepted': 457, 'passes': 169}}
+vd compare pick det_plain vs det_k4_rows rc=0: {'bit_identical': True, 'requests': 60, 'ids_identical': 60, 'replies_identical': 60, 'rows_compared': 1409, 'rows_bit_identical': 1409, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 781, 'accepted': 423, 'passes': 204}}
+vd compare pick off_plain vs off_k4 rc=0: {'bit_identical': False, 'requests': 60, 'ids_identical': 60, 'replies_identical': 60, 'rows_compared': 1409, 'rows_bit_identical': 60, 'max_abs_diff': 7.3909759521484375e-06, 'other_spec': {'drafted': 781, 'accepted': 423, 'passes': 204}}
+vd m60 det_plain rc=0 {"requests": 60, "rows": 1283, "vocab": 16384, "drafted": 0, "accepted": 0, "passes": 0, "warm_pass_same": 59, "seconds": 27.7}
+vd m60 det_k2 rc=0 {"requests": 60, "rows": 1283, "vocab": 16384, "drafted": 379, "accepted": 254, "passes": 190, "warm_pass_same": 59, "seconds": 27.2}
+vd m60 det_k4 rc=0 {"requests": 60, "rows": 1283, "vocab": 16384, "drafted": 549, "accepted": 307, "passes": 140, "warm_pass_same": 59, "seconds": 27.4}
+vd m60 det_k8 rc=0 {"requests": 60, "rows": 1283, "vocab": 16384, "drafted": 870, "accepted": 331, "passes": 117, "warm_pass_same": 59, "seconds": 28.1}
+vd m60 det_k4_rows rc=0 {"requests": 60, "rows": 1283, "vocab": 16384, "drafted": 549, "accepted": 307, "passes": 140, "warm_pass_same": 59, "seconds": 27.3}
+vd m60 off_plain rc=0 {"requests": 60, "rows": 1283, "vocab": 16384, "drafted": 0, "accepted": 0, "passes": 0, "warm_pass_same": 59, "seconds": 27.7}
+vd m60 off_k4 rc=0 {"requests": 60, "rows": 1283, "vocab": 16384, "drafted": 549, "accepted": 307, "passes": 140, "warm_pass_same": 59, "seconds": 26.1}
+vd compare m60 det_plain vs det_k2 rc=0: {'bit_identical': True, 'requests': 60, 'ids_identical': 60, 'replies_identical': 60, 'rows_compared': 1283, 'rows_bit_identical': 1283, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 379, 'accepted': 254, 'passes': 190}}
+vd compare m60 det_plain vs det_k4 rc=0: {'bit_identical': True, 'requests': 60, 'ids_identical': 60, 'replies_identical': 60, 'rows_compared': 1283, 'rows_bit_identical': 1283, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 549, 'accepted': 307, 'passes': 140}}
+vd compare m60 det_plain vs det_k8 rc=0: {'bit_identical': True, 'requests': 60, 'ids_identical': 60, 'replies_identical': 60, 'rows_compared': 1283, 'rows_bit_identical': 1283, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 870, 'accepted': 331, 'passes': 117}}
+vd compare m60 det_plain vs det_k4_rows rc=0: {'bit_identical': True, 'requests': 60, 'ids_identical': 60, 'replies_identical': 60, 'rows_compared': 1283, 'rows_bit_identical': 1283, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 549, 'accepted': 307, 'passes': 140}}
+vd compare m60 off_plain vs off_k4 rc=0: {'bit_identical': False, 'requests': 60, 'ids_identical': 60, 'replies_identical': 60, 'rows_compared': 1283, 'rows_bit_identical': 60, 'max_abs_diff': 9.5367431640625e-06, 'other_spec': {'drafted': 549, 'accepted': 307, 'passes': 140}}
+packed out4 732K
+--- (g) end to end 04:19:56
+e2e pick split rc=0 {"requests": 140, "tokens": 1874, "wall_ms": 3429.901490001612, "decode_tokens": 1734, "decode_ms": 2839.566885001612, "decode_tok_per_s": 610.6565086242072, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "warm_pass_same
+e2e pick tiled rc=0 {"requests": 140, "tokens": 1874, "wall_ms": 2922.7261149990227, "decode_tokens": 1734, "decode_ms": 2342.7596109990227, "decode_tok_per_s": 740.1527633731788, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "warm_pass_sa
+e2e pick split2 rc=0 {"requests": 140, "tokens": 1874, "wall_ms": 3437.0593260018723, "decode_tokens": 1734, "decode_ms": 2846.0455340018725, "decode_tok_per_s": 609.2664292555409, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "warm_pass_sa
+e2e pick tiled2 rc=0 {"requests": 140, "tokens": 1874, "wall_ms": 2925.439436999568, "decode_tokens": 1734, "decode_ms": 2343.379014999568, "decode_tok_per_s": 739.957125544337, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "warm_pass_same"
+e2e pick det_split rc=0 {"requests": 140, "tokens": 1874, "wall_ms": 3437.2678810013895, "decode_tokens": 1734, "decode_ms": 2853.8154180013894, "decode_tok_per_s": 607.6076220845323, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "warm_pass_sa
+e2e pick det_tiled rc=0 {"requests": 140, "tokens": 1874, "wall_ms": 2935.067925999647, "decode_tokens": 1734, "decode_ms": 2349.314692999647, "decode_tok_per_s": 738.0875815261675, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "warm_pass_same
+e2e m60 split rc=0 {"requests": 140, "tokens": 1802, "wall_ms": 7359.165325005051, "decode_tokens": 1662, "decode_ms": 6341.525967005051, "decode_tok_per_s": 262.0820302002047, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "warm_pass_same
+e2e m60 tiled rc=0 {"requests": 140, "tokens": 1802, "wall_ms": 5725.719959003527, "decode_tokens": 1662, "decode_ms": 4708.1160550035265, "decode_tok_per_s": 353.0074408921415, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "warm_pass_sam

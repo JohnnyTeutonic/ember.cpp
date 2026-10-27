@@ -1,0 +1,15 @@
+NVTX Range,Style,PID,TID,NVTX Inst,Kern Inst,Total Time (ns),Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Kernel Name
+,,6959,6959,0,160,8798662,54991.6,54767.5,11775,100256,31196.1,"void attention_prefill_flash2_kernel<(int)64>(float *, const float *, const float *, const float *, int, int, int, int, float)"
+,,6959,6959,0,640,4507564,7043.1,6880.0,4864,14367,1986.6,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(T1::Params)
+,,6959,6959,0,256,2771287,10825.3,9056.0,7423,18240,3878.2,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_32x6_tn_align4>(T1::Params)
+,,6959,6959,0,325,2237105,6883.4,6144.0,3455,11264,2869.3,"rmsnorm_batch_kernel_final_optimized(float *, const float *, const float *, int, int, float)"
+,,6959,6959,0,128,1530073,11953.7,11904.0,11072,13600,490.2,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x64_16x6_tn_align4>(T1::Params)
+,,6959,6959,0,8,1456537,182067.1,113887.0,2208,343583,135568.9,"convert_fp32_to_bf16_kernel(const float *, unsigned short *, unsigned long)"
+,,6959,6959,0,64,1239482,19366.9,19408.0,18303,20448,536.5,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_256x64_16x4_tn_align4>(T1::Params)
+,,6959,6959,0,320,722269,2257.1,2304.0,1279,3456,698.5,"rope_batch_kernel_cuda(float *, int, int, int, const float *, int, bool)"
+,,6959,6959,0,320,710654,2220.8,2272.0,1280,3328,670.3,"update_kv_cache_batch_kernel(float *, const float *, int, int, int, int, int)"
+,,6959,6959,0,352,657885,1869.0,1824.0,1695,2848,285.4,"void cublasLt::splitKreduce_kernel<(int)32, (int)16, int, float, float, float, float, (bool)0, float, float, float, (bool)1, (bool)0, (bool)0, (bool)0>(cublasLt::cublasSplitKParams<T6>, const T4 *, const T10 *, T9 *, T5 *, const T6 *, const T6 *, const T11 *, const T4 *, T11 *, void *, long, T6 *, int *, T6 *, T6 *, const T6 *, const T6 *, const T6 *, const T6 *, const T6 *)"
+,,6959,6959,0,160,630334,3939.6,3296.0,2752,5696,1155.5,"swiglu_batch_cuda_kernel(float *, const float *, const float *, int, int)"
+,,6959,6959,0,320,584832,1827.6,1696.0,1312,2496,398.3,"add_residual_batch_cuda_kernel(float *, const float *, const float *, int, int)"
+,,6959,6959,0,5,562462,112492.4,113248.0,103968,119808,6546.3,"void gemv2T_kernel_val<long, long, float, float, float, float, (int)128, (int)16, (int)2, (int)2, (bool)0, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13, T6, T6)"
+,,6959,6959,0,32,383903,11997.0,11984.0,11200,13344,480.9,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x128_32x3_tn_align4>(T1::Params)

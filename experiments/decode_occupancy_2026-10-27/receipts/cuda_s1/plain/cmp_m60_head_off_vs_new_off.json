@@ -1,0 +1,152 @@
+{
+ "a": "/content/plain/m60_head_off",
+ "b": "/content/plain/m60_new_off",
+ "a_bin": "/content/b_head/tinyllama_server",
+ "b_bin": "/content/b_new/tinyllama_server",
+ "gguf": "/content/big/pick_60m_L32.gguf",
+ "gpu_layers": [
+  "-1",
+  "-1"
+ ],
+ "sets": {
+  "tinychat": {
+   "n": 40,
+   "replies_identical": 40,
+   "ids_identical": 40,
+   "prompt_ids_identical": 40,
+   "all_positions_logits_bit_equal": 0,
+   "positions": 709,
+   "first_token_logits_bit_equal": 40,
+   "first_token_logits_worst_abs": 0.0,
+   "divergent": [
+    {
+     "key": "tinychat:0",
+     "a": "I am very sorry to hear that. I am sorry for your loss and are you feeling a lit",
+     "b": "I am very sorry to hear that. I am sorry for your loss and are you feeling a lit"
+    },
+    {
+     "key": "tinychat:1",
+     "a": "I agree, I would be happy to help.",
+     "b": "I agree, I would be happy to help."
+    },
+    {
+     "key": "tinychat:2",
+     "a": "Oh no, what happened?",
+     "b": "Oh no, what happened?"
+    },
+    {
+     "key": "tinychat:3",
+     "a": "I think it is a good idea, since it is so much safer than a car, so I think it i",
+     "b": "I think it is a good idea, since it is so much safer than a car, so I think it i"
+    },
+    {
+     "key": "tinychat:4",
+     "a": "I do, I have been in the water for a long time. I've been watching the water cyc",
+     "b": "I do, I have been in the water for a long time. I've been watching the water cyc"
+    },
+    {
+     "key": "tinychat:5",
+     "a": "I am not too familiar with that but I do know some people who have trouble with ",
+     "b": "I am not too familiar with that but I do know some people who have trouble with "
+    },
+    {
+     "key": "tinychat:6",
+     "a": "I don't think so.",
+     "b": "I don't think so."
+    },
+    {
+     "key": "tinychat:7",
+     "a": "I'm sorry to hear that. I'm sorry to hear that.",
+     "b": "I'm sorry to hear that. I'm sorry to hear that."
+    },
+    {
+     "key": "tinychat:8",
+     "a": "I am so sorry to hear that. I am having a hard time believing a friend of mine i",
+     "b": "I am so sorry to hear that. I am having a hard time believing a friend of mine i"
+    },
+    {
+     "key": "tinychat:9",
+     "a": "Yes, I do. I have to admit, I don't like it.",
+     "b": "Yes, I do. I have to admit, I don't like it."
+    }
+   ],
+   "every_position": {
+    "rows": 709,
+    "bit_equal_rows": 40,
+    "worst_abs": 8.821487426757812e-06,
+    "worst_rel_to_range": 3.7470121122875426e-07,
+    "top1_agree": "709/709"
+   }
+  },
+  "carry5": {
+   "n": 320,
+   "replies_identical": 320,
+   "ids_identical": 320,
+   "prompt_ids_identical": 320,
+   "all_positions_logits_bit_equal": 0,
+   "positions": 4436,
+   "first_token_logits_bit_equal": 148,
+   "first_token_logits_worst_abs": 1.2218952178955078e-05,
+   "divergent": [
+    {
+     "key": "carry5_v1:recall:0001|self|1",
+     "a": "Hi, Yuki is a singer and songwriter.",
+     "b": "Hi, Yuki is a singer and songwriter."
+    },
+    {
+     "key": "carry5_v1:recall:0001|self|2",
+     "a": "You should take a look at Yuki's music videos.",
+     "b": "You should take a look at Yuki's music videos."
+    },
+    {
+     "key": "carry5_v1:recall:0001|self|3",
+     "a": "Sure. I'll cook it for dinner.",
+     "b": "Sure. I'll cook it for dinner."
+    },
+    {
+     "key": "carry5_v1:recall:0001|self|4",
+     "a": "My name is Yuki.",
+     "b": "My name is Yuki."
+    },
+    {
+     "key": "carry5_v1:recall:0001|self|5",
+     "a": "You're welcome.",
+     "b": "You're welcome."
+    },
+    {
+     "key": "carry5_v1:recall:0001|gold",
+     "a": "My name is Yuki.",
+     "b": "My name is Yuki."
+    },
+    {
+     "key": "carry5_v1:recall:0001|twin",
+     "a": "I am a dancer. I am a dancer.",
+     "b": "I am a dancer. I am a dancer."
+    },
+    {
+     "key": "carry5_v1:recall:0001|noctx",
+     "a": "My name is ok, how can I help you?",
+     "b": "My name is ok, how can I help you?"
+    },
+    {
+     "key": "carry5_v1:recall:0027|self|1",
+     "a": "That is a bummer.  I have never heard of that.  Is it a fish?",
+     "b": "That is a bummer.  I have never heard of that.  Is it a fish?"
+    },
+    {
+     "key": "carry5_v1:recall:0027|self|2",
+     "a": "That is a fish.  I have never heard of gizmo.  Is it a fish?",
+     "b": "That is a fish.  I have never heard of gizmo.  Is it a fish?"
+    }
+   ],
+   "every_position": {
+    "rows": 4436,
+    "bit_equal_rows": 148,
+    "worst_abs": 1.2218952178955078e-05,
+    "worst_rel_to_range": 5.883701955010081e-07,
+    "top1_agree": "4436/4436"
+   }
+  }
+ },
+ "bit_identical": false
+}

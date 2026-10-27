@@ -1,0 +1,63 @@
+x5_plain_collect comparisons (360 requests: tinychat 40 + carry5 320)
+  m60_head_det_vs_new_det          bit_identical=False tinychat: replies 40/40, ids 40, rows bit-equal 40/709, worst |d| 9.417533874511719e-06, rel 4.885181416839149e-07; carry5: replies 320/320, ids 320, rows bit-equal 148/4436, worst |d| 1.5735626220703125e-05, rel 6.084608851034816e-07
+  m60_head_det_vs_new_det_split    bit_identical=True tinychat: replies 40/40, ids 40, rows bit-equal 709/709, worst |d| 0.0, rel 0.0; carry5: replies 320/320, ids 320, rows bit-equal 4436/4436, worst |d| 0.0, rel 0.0
+  m60_head_off_vs_new_off          bit_identical=False tinychat: replies 40/40, ids 40, rows bit-equal 40/709, worst |d| 8.821487426757812e-06, rel 3.7470121122875426e-07; carry5: replies 320/320, ids 320, rows bit-equal 148/4436, worst |d| 1.2218952178955078e-05, rel 5.883701955010081e-07
+  m60_new_det_vs_new_det2          bit_identical=True tinychat: replies 40/40, ids 40, rows bit-equal 709/709, worst |d| 0.0, rel 0.0; carry5: replies 320/320, ids 320, rows bit-equal 4436/4436, worst |d| 0.0, rel 0.0
+  pick_head_det_vs_new_det         bit_identical=False tinychat: replies 40/40, ids 40, rows bit-equal 40/658, worst |d| 6.67572021484375e-06, rel 2.6741375762324627e-07; carry5: replies 320/320, ids 320, rows bit-equal 147/3941, worst |d| 8.225440979003906e-06, rel 3.260943660761441e-07
+  pick_head_det_vs_new_det_split   bit_identical=True tinychat: replies 40/40, ids 40, rows bit-equal 658/658, worst |d| 0.0, rel 0.0; carry5: replies 320/320, ids 320, rows bit-equal 3941/3941, worst |d| 0.0, rel 0.0
+  pick_head_off_vs_head_off2       bit_identical=False tinychat: replies 40/40, ids 40, rows bit-equal 40/658, worst |d| 5.7220458984375e-06, rel 2.4506914748530873e-07; carry5: replies 320/320, ids 320, rows bit-equal 147/3941, worst |d| 1.0013580322265625e-05, rel 4.29108655092966e-07
+  pick_head_off_vs_new_off         bit_identical=False tinychat: replies 40/40, ids 40, rows bit-equal 40/658, worst |d| 7.62939453125e-06, rel 2.7631552042962483e-07; carry5: replies 320/320, ids 320, rows bit-equal 147/3941, worst |d| 8.821487426757812e-06, rel 3.5020806144883155e-07
+  pick_new_det_vs_new_det2         bit_identical=True tinychat: replies 40/40, ids 40, rows bit-equal 658/658, worst |d| 0.0, rel 0.0; carry5: replies 320/320, ids 320, rows bit-equal 3941/3941, worst |d| 0.0, rel 0.0
+
+speculative verification (vd_compare, all60)
+  m60_det_plain_vs_det_k2      {"bit_identical": true, "requests": 60, "ids_identical": 60, "replies_identical": 60, "rows_compared": 1283, "rows_bit_identical": 1283, "max_abs_diff": 0.0}
+  m60_det_plain_vs_det_k4      {"bit_identical": true, "requests": 60, "ids_identical": 60, "replies_identical": 60, "rows_compared": 1283, "rows_bit_identical": 1283, "max_abs_diff": 0.0}
+  m60_det_plain_vs_det_k4_rows {"bit_identical": true, "requests": 60, "ids_identical": 60, "replies_identical": 60, "rows_compared": 1283, "rows_bit_identical": 1283, "max_abs_diff": 0.0}
+  m60_det_plain_vs_det_k8      {"bit_identical": true, "requests": 60, "ids_identical": 60, "replies_identical": 60, "rows_compared": 1283, "rows_bit_identical": 1283, "max_abs_diff": 0.0}
+  m60_off_plain_vs_off_k4      {"bit_identical": false, "requests": 60, "ids_identical": 60, "replies_identical": 60, "rows_compared": 1283, "rows_bit_identical": 60, "max_abs_diff": 9.5367431640625e-06}
+  pick_det_plain_vs_det_k2     {"bit_identical": true, "requests": 60, "ids_identical": 60, "replies_identical": 60, "rows_compared": 1409, "rows_bit_identical": 1409, "max_abs_diff": 0.0}
+  pick_det_plain_vs_det_k4     {"bit_identical": true, "requests": 60, "ids_identical": 60, "replies_identical": 60, "rows_compared": 1409, "rows_bit_identical": 1409, "max_abs_diff": 0.0}
+  pick_det_plain_vs_det_k4_rows {"bit_identical": true, "requests": 60, "ids_identical": 60, "replies_identical": 60, "rows_compared": 1409, "rows_bit_identical": 1409, "max_abs_diff": 0.0}
+  pick_det_plain_vs_det_k8     {"bit_identical": true, "requests": 60, "ids_identical": 60, "replies_identical": 60, "rows_compared": 1409, "rows_bit_identical": 1409, "max_abs_diff": 0.0}
+  pick_off_plain_vs_off_k4     {"bit_identical": false, "requests": 60, "ids_identical": 60, "replies_identical": 60, "rows_compared": 1409, "rows_bit_identical": 60, "max_abs_diff": 7.3909759521484375e-06}
+
+end to end (vf_e2e.py, all140: all60 + c12_40 + long40), decode tokens per second by set
+
+interpreter dumps (HEAD build vs this build)
+
+=== second session
+x5_plain_collect comparisons (360 requests: tinychat 40 + carry5 320)
+
+speculative verification (vd_compare, all60)
+
+end to end (vf_e2e.py, all140: all60 + c12_40 + long40), decode tokens per second by set
+  m60_det_split    chat40   361.9 copy20   291.5 c12_40   177.5 long40   183.0  ids = CPU's 139/140 {'chat40': 40, 'copy20': 19, 'c12_40': 40, 'long40': 40}
+  m60_det_tiled    chat40   376.3 copy20   382.6 c12_40   300.8 long40   309.4  ids = split's 140/140  ids = CPU's 139/140 {'chat40': 40, 'copy20': 19, 'c12_40': 40, 'long40': 40}
+  m60_split        chat40   360.3 copy20   286.7 c12_40   177.4 long40   182.9  ids = CPU's 139/140 {'chat40': 40, 'copy20': 19, 'c12_40': 40, 'long40': 40}
+  m60_split2       chat40   360.9 copy20   286.9 c12_40   177.6 long40   183.3  ids = split's 140/140  ids = CPU's 139/140 {'chat40': 40, 'copy20': 19, 'c12_40': 40, 'long40': 40}
+  m60_tiled        chat40   377.2 copy20   380.3 c12_40   301.9 long40   310.1  ids = split's 140/140  ids = CPU's 139/140 {'chat40': 40, 'copy20': 19, 'c12_40': 40, 'long40': 40}
+  m60_tiled2       chat40   376.7 copy20   380.6 c12_40   301.0 long40   310.0  ids = split's 140/140  ids = CPU's 139/140 {'chat40': 40, 'copy20': 19, 'c12_40': 40, 'long40': 40}
+  pick_det_split   chat40   722.1 copy20   649.3 c12_40   443.9 long40   460.7  ids = CPU's 140/140 {'chat40': 40, 'copy20': 20, 'c12_40': 40, 'long40': 40}
+  pick_det_tiled   chat40   758.5 copy20   800.9 c12_40   618.9 long40   650.5  ids = split's 140/140  ids = CPU's 140/140 {'chat40': 40, 'copy20': 20, 'c12_40': 40, 'long40': 40}
+  pick_split       chat40   724.1 copy20   651.9 c12_40   444.5 long40   470.5  ids = CPU's 140/140 {'chat40': 40, 'copy20': 20, 'c12_40': 40, 'long40': 40}
+  pick_split2      chat40   724.4 copy20   653.3 c12_40   446.2 long40   463.7  ids = split's 140/140  ids = CPU's 140/140 {'chat40': 40, 'copy20': 20, 'c12_40': 40, 'long40': 40}
+  pick_tiled       chat40   743.6 copy20   799.7 c12_40   606.8 long40   639.1  ids = split's 140/140  ids = CPU's 140/140 {'chat40': 40, 'copy20': 20, 'c12_40': 40, 'long40': 40}
+  pick_tiled2      chat40   752.1 copy20   801.5 c12_40   627.0 long40   652.5  ids = split's 140/140  ids = CPU's 140/140 {'chat40': 40, 'copy20': 20, 'c12_40': 40, 'long40': 40}
+
+interpreter dumps (HEAD build vs this build)
+  ar3                      prefill bit-identical True, decode rows bit-identical 43/320, head vs new 9.54e-07, argmax 320/320, greedy 40/40; decode vs prefill: head 9.54e-07 (2.91e-07), new 9.54e-07 (2.99e-07)
+  ar_x5_q8_0               prefill bit-identical True, decode rows bit-identical 83/320, head vs new 1.91e-06, argmax 320/320, greedy 40/40; decode vs prefill: head 1.91e-06 (2.42e-07), new 1.91e-06 (2.42e-07)
+  gpt2_tiny                prefill bit-identical True, decode rows bit-identical 40/960, head vs new 2.86e-06, argmax 960/960, greedy 40/40; decode vs prefill: head 5.72e-06 (6.78e-07), new 5.25e-06 (6.86e-07)
+  mor2p0                   prefill bit-identical True, decode rows bit-identical 45/320, head vs new 7.15e-07, argmax 320/320, greedy 40/40; decode vs prefill: head 7.15e-07 (3.00e-07), new 7.15e-07 (2.77e-07)
+  mor3                     prefill bit-identical True, decode rows bit-identical 46/320, head vs new 4.77e-07, argmax 320/320, greedy 40/40; decode vs prefill: head 9.54e-07 (3.75e-07), new 7.15e-07 (3.13e-07)
+  mor3_q8_0                prefill bit-identical True, decode rows bit-identical 45/320, head vs new 5.96e-07, argmax 320/320, greedy 40/40; decode vs prefill: head 7.15e-07 (3.30e-07), new 9.54e-07 (2.94e-07)
+  rec_b2x4                 prefill bit-identical True, decode rows bit-identical 42/320, head vs new 4.77e-07, argmax 320/320, greedy 40/40; decode vs prefill: head 7.15e-07 (3.13e-07), new 7.15e-07 (3.13e-07)
+  rec_p1_b2x3_c1           prefill bit-identical True, decode rows bit-identical 41/320, head vs new 4.77e-07, argmax 320/320, greedy 40/40; decode vs prefill: head 7.15e-07 (4.23e-07), new 9.54e-07 (7.05e-07)
+  rec_p1_b2x3_c1_inject    prefill bit-identical True, decode rows bit-identical 43/320, head vs new 4.77e-07, argmax 320/320, greedy 40/40; decode vs prefill: head 7.15e-07 (2.27e-07), new 7.15e-07 (2.27e-07)
+  state4                   prefill bit-identical True, decode rows bit-identical 960/960, head vs new 0.00e+00, argmax 960/960, greedy 40/40; decode vs prefill: head 5.25e-06 (1.05e-06), new 5.25e-06 (1.05e-06)
+  state4_q8_0              prefill bit-identical True, decode rows bit-identical 960/960, head vs new 0.00e+00, argmax 960/960, greedy 40/40; decode vs prefill: head 7.15e-06 (1.03e-06), new 7.15e-06 (1.03e-06)
+  syn_gemma3               prefill bit-identical True, decode rows bit-identical 46/960, head vs new 1.91e-06, argmax 960/960, greedy 40/40; decode vs prefill: head 7.51e-06 (1.53e-06), new 7.51e-06 (1.61e-06)
+  syn_gpt2                 prefill bit-identical True, decode rows bit-identical 40/960, head vs new 3.34e-06, argmax 960/960, greedy 40/40; decode vs prefill: head 6.10e-06 (1.21e-06), new 6.09e-06 (1.22e-06)
+  syn_gptneox              prefill bit-identical True, decode rows bit-identical 40/960, head vs new 2.09e-06, argmax 960/960, greedy 40/40; decode vs prefill: head 4.53e-06 (8.70e-07), new 4.29e-06 (8.25e-07)
+  syn_mamba                prefill bit-identical True, decode rows bit-identical 960/960, head vs new 0.00e+00, argmax 960/960, greedy 40/40; decode vs prefill: head 7.63e-06 (1.45e-06), new 7.63e-06 (1.45e-06)
+  syn_mistral_swa          prefill bit-identical True, decode rows bit-identical 960/960, head vs new 0.00e+00, argmax 960/960, greedy 40/40; decode vs prefill: head 1.76e-05 (3.85e-06), new 1.76e-05 (3.85e-06)

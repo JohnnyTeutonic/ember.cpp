@@ -1,0 +1,1 @@
+{"requests": 60, "rows": 1409, "vocab": 16384, "drafted": 781, "accepted": 423, "passes": 204, "warm_pass_same": 60, "seconds": 24.0}

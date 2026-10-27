@@ -1,0 +1,5 @@
+P 32 decode p50 0.957465 ms, argmax 79
+P 128 decode p50 0.957634 ms, argmax 79
+P 256 decode p50 0.965626 ms, argmax 79
+P 384 decode p50 0.968782 ms, argmax 79
+P 500 decode p50 0.976665 ms, argmax 79
