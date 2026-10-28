@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat model — Jonathan Reich</title>
+<meta name="description" content="A chat model trained from scratch in a self-written C++/CUDA framework and served by a self-written inference engine. Talk to it, and see how it was made.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◆</text></svg>">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-head">
+  <nav class="wrap nav">
+    <a class="brand" href="index.html">Jonathan&nbsp;Reich</a>
+    <ul class="nav-links">
+      <li><a href="index.html#systems">Systems</a></li>
+      <li><a href="chat.html">Chat</a></li>
+      <li><a href="research.html">Research</a></li>
+      <li><a href="poetry.html">Poetry</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
+    </ul>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle colour theme">
+      <span aria-hidden="true">◐</span>
+    </button>
+  </nav>
+</header>
+
+<main id="main">
+
+  <section class="hero wrap">
+    <p class="eyebrow">Live demo</p>
+    <h1>A chat model,<br><span class="muted">built end to end.</span></h1>
+    <p class="lede">
+      Every stage of this model ran on code I wrote: the tokeniser, the training
+      framework and its GPU kernels, fine-tuning, evaluation, export, and the
+      inference engine answering you below. It is small (97.5 million
+      parameters): it chats and answers some simple questions, and it gets
+      many facts wrong.
+    </p>
+    <div class="cta-row">
+      <a class="btn primary" href="#talk">Talk to it</a>
+      <a class="btn" href="#how">How it was made</a>
+    </div>
+  </section>
+
+  <section id="talk" class="wrap section">
+    <h2 class="section-title">Talk to it</h2>
+    <p class="section-lede">
+      It runs in your browser: ember.cpp is compiled to WebAssembly, the model
+      (221&nbsp;MB, 16-bit) downloads once, and nothing you type leaves your machine.
+    </p>
+    <div class="chat-frame">
+      <iframe src="https://johnnyteutonic-ember-chat.static.hf.space" title="ember chat" loading="lazy"></iframe>
+    </div>
+    <p class="field-note">
+      If the window stays blank, open it directly:
+      <a href="https://huggingface.co/spaces/johnnyteutonic/ember-chat" rel="noopener">huggingface.co/spaces/johnnyteutonic/ember-chat</a>.
+    </p>
+  </section>
+
+  <section id="how" class="wrap section">
+    <h2 class="section-title">How it was made</h2>
+
+    <div class="grid">
+      <article class="card">
+        <div class="card-head">
+          <h3>Model and tokeniser</h3>
+          <span class="tag">paperkiln</span>
+        </div>
+        <p>
+          A Llama-style decoder: 12 layers, width 768, 12 heads, rotary position
+          embeddings, SwiGLU and RMSNorm, 97.5M parameters and a 512-token
+          context. The tokeniser is byte-level BPE in the Llama 3 scheme (16,384
+          tokens, with chat role markers); paperkiln's encoder is ported from
+          llama.cpp's, and the trainer and the engine share it.
+        </p>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h3>Pretraining</h3>
+          <span class="tag">C++ · CUDA</span>
+        </div>
+        <p>
+          120,000 steps (0.98 billion tokens) on a cloud L4 GPU, on a mix of
+          FineWeb-Edu educational web text and dialogue (SODA, UltraChat,
+          OpenAssistant, everyday conversations): 27% dialogue for most of the
+          run and 47% over the last 15%. Validation loss reached 2.68. The run
+          survived a reclaimed machine by resuming from a checkpoint with its
+          optimiser state.
+        </p>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h3>Post-training</h3>
+          <span class="tag">SFT</span>
+        </div>
+        <p>
+          Supervised fine-tuning on 313,606 conversations in the chat template
+          (463,695 replies, every assistant turn in the loss), from
+          smol-smoltalk, TinyChat and everyday conversations, each checked
+          against the evaluation sets first: 18,620 steps in BF16, one pass over
+          the data, held-out loss 1.51. I chose it over three other fine-tuned
+          models and the previous model here for its question answering.
+        </p>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h3>Evaluation</h3>
+          <span class="tag">frozen prompts</span>
+        </div>
+        <p>
+          On a 60-question probe of facts, science, arithmetic and follow-up
+          turns it answers 21: 44% of the facts and a third of the science
+          questions, no arithmetic. The previous model here, trained on
+          conversation alone, answered 2. The full-precision file runs unchanged
+          in llama.cpp and Ollama, with the same greedy replies on the frozen
+          prompts.
+        </p>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h3>Serving</h3>
+          <span class="tag">ember.cpp</span>
+        </div>
+        <p>
+          The trained weights are exported to GGUF and loaded by ember.cpp, an
+          inference engine written separately from the trainer. Greedy output
+          is checked token for token against the trainer's own sampler. On a
+          GPU each decoding step is replayed as a captured CUDA graph. Here the
+          same engine runs as WebAssembly in your browser (with the forward pass
+          on your GPU through WebGPU where the browser has it) and gives the same
+          greedy replies as the native build; the 16-bit file gives the same
+          greedy replies as the full-precision one.
+        </p>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h3>What comes next</h3>
+          <span class="tag">roadmap</span>
+        </div>
+        <p>
+          Preference training: replies sampled from this model, ranked by a
+          judge model, then DPO, gated on the same probes. Alongside it, a
+          research programme on how small a model can be and still hold a
+          conversation across many turns, trained on human-written text only.
+        </p>
+      </article>
+    </div>
+
+    <p class="field-note">
+      Code: <a href="https://github.com/JohnnyTeutonic/paperkiln" rel="noopener">paperkiln</a>
+      (training) and <a href="https://github.com/JohnnyTeutonic/ember.cpp" rel="noopener">ember.cpp</a>
+      (inference). Built with the help of AI coding assistants. Training data:
+      <a href="https://huggingface.co/datasets/starhopp3r/TinyChat" rel="noopener">TinyChat</a>
+      by starhopp3r, CC BY-NC 4.0, which the model inherits;
+      <a href="https://huggingface.co/datasets/HuggingFaceTB/smol-smoltalk" rel="noopener">smol-smoltalk</a>
+      and everyday-conversations (Apache-2.0);
+      <a href="https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu" rel="noopener">FineWeb-Edu</a>
+      (ODC-By 1.0); <a href="https://huggingface.co/datasets/allenai/soda" rel="noopener">SODA</a>
+      (Kim et al., 2023; CC BY 4.0); UltraChat 200k (MIT); OpenAssistant (Apache-2.0).
+    </p>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <p>© <span id="year">2026</span> Jonathan Reich · Melbourne, Australia</p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

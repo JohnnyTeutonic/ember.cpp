@@ -1,0 +1,54 @@
+{
+ "tag": "q8_head",
+ "file": "pk_sft_v1_q8_head.gguf",
+ "bytes": 154662016,
+ "sha256": "22e9907feed9595ce800d738f1f209c57b6cad3e477325cf7e76fa4fbb260753",
+ "n": 40,
+ "greedy_reply": 37,
+ "greedy_tokens": 38,
+ "greedy_stop_reason": 40,
+ "greedy_prompt_ids": 40,
+ "greedy_ids": 37,
+ "differing_rows": [
+  7,
+  14,
+  31
+ ],
+ "positions": 733,
+ "max_abs_dlogit": 0.16540586948394775,
+ "mean_abs_dlogit": 0.014411492351546509,
+ "max_abs_over_row_range": 0.004659700809813535,
+ "mean_abs_over_row_range": 0.0004805378395301949,
+ "top1_agree": "730/733",
+ "top1_disagree_at": [
+  7,
+  14,
+  31
+ ],
+ "flip_rows": {
+  "7": {
+   "same_reply_as_f32": false,
+   "token": 10,
+   "f32_pick": 321,
+   "variant_pick": 3446,
+   "f32_margin": 0.031932830810546875,
+   "variant_margin_f32pick_minus_best_other": -0.01153564453125
+  },
+  "10": {
+   "same_reply_as_f32": true,
+   "token": 11,
+   "f32_pick": 15,
+   "variant_pick": 15,
+   "f32_margin": 0.025760650634765625,
+   "variant_margin_f32pick_minus_best_other": 0.008833885192871094
+  },
+  "14": {
+   "same_reply_as_f32": false,
+   "token": 13,
+   "f32_pick": 689,
+   "variant_pick": 2556,
+   "f32_margin": 0.012869834899902344,
+   "variant_margin_f32pick_minus_best_other": -0.03403186798095703
+  }
+ }
+}

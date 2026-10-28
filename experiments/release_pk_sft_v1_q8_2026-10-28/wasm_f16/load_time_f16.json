@@ -1,0 +1,15 @@
+{
+ "model": "pk_sft_v1_f16.gguf",
+ "bytes": 220919008,
+ "ember_load_ok": 1,
+ "heap_bytes_after_load": 1483341824,
+ "ms_instantiate_wasm": 95.188265,
+ "ms_fs_write_and_ember_load": 26540.378075,
+ "ms_first_reply": 3966.0990439999987,
+ "first_reply_tokens": 12,
+ "download_s_at": {
+  "0.4 MB/s": 552.29752,
+  "2.5 MB/s (20 Mbit/s)": 88.36760319999999,
+  "12.5 MB/s (100 Mbit/s)": 17.67352064
+ }
+}
