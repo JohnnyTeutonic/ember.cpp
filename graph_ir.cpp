@@ -1281,6 +1281,11 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
                                            (n.op == "depth_route" && kv.key() == "step") ||
                                            (n.op == "moe_ffn" && kv.key() == "scoring") ||
                                            kv.key() == "apply");  // revision 1.6 (IR_SPEC 3.8): any stateless node
+        if (ok && kv.key() == "apply")  // its entries are true or false (IR_SPEC 3.8, rule 43, revision 1.6)
+          for (const auto& e : kv.value().at("per_layer"))
+            if (!e.is_boolean())
+              throw std::runtime_error("IR_SPEC 3.8 (rule 43): block " + n.op + ": apply entry " + e.dump() +
+                                       " is not true or false");
         if (!ok && n.op == "rope" && kv.key() == "freq_factors")  // structural (IR_SPEC 3.8, revision 1.5)
           throw std::runtime_error("IR_SPEC 3.8 (rule 6): rope freq_factors is structural and cannot be per-layer");
         if (!ok)
