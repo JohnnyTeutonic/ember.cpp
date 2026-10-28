@@ -752,6 +752,93 @@ void moe_ffn_f32_cpu(const float* x, int d, int d_ff, int E, int k, const float*
   }
 }
 
+// moe_ffn_f32_cpu with DeepSeek-V3's router (keramos IR_SPEC 5.16, revision 1.6): scores s_e, the E-way softmax of
+// the logits or (sigmoid) sigmoid(logit_e), each in f32 (the softmax's maximum, its exp and its sum ascending);
+// selection scores c_e = s_e + bias_e (bias null: c = s); with groups_n > 1 the E experts form groups_n consecutive
+// groups, each scored by the sum of its two largest c (its one c when a group holds one expert), and only the experts
+// of the groups_top best groups (ties to the lower group) are candidates; the k selected experts are the k candidates
+// of the largest c, ties to the lower index; the gates are their s_e, divided by the f32 sum of those k scores (in
+// ascending expert index) under renorm. The experts are then summed as moe_ffn_f32_cpu sums them. Softmax scores
+// without a bias or groups take moe_ffn_f32_cpu itself.
+void moe_ffn_routed_f32_cpu(const float* x, int d, int d_ff, int E, int k, const float* router, const float* gate_exps,
+                            const float* up_exps, const float* down_exps, float* out, bool renorm, bool sigmoid,
+                            const float* bias, int groups_n, int groups_top) {
+  if (!sigmoid && !bias && groups_n <= 1) {
+    moe_ffn_f32_cpu(x, d, d_ff, E, k, router, gate_exps, up_exps, down_exps, out, renorm);
+    return;
+  }
+  std::vector<float> r(E), sc(E), c(E);
+  for (int e = 0; e < E; ++e) r[e] = static_cast<float>(dot_f32_as_f64(router + static_cast<size_t>(e) * d, x, d));
+  if (sigmoid) {
+    for (int e = 0; e < E; ++e) sc[e] = 1.0f / (1.0f + std::exp(-r[e]));
+  } else {
+    float mx = -std::numeric_limits<float>::infinity();
+    for (int e = 0; e < E; ++e) mx = std::max(mx, r[e]);
+    float z = 0.0f;
+    for (int e = 0; e < E; ++e) {
+      sc[e] = std::exp(r[e] - mx);
+      z += sc[e];
+    }
+    for (int e = 0; e < E; ++e) sc[e] = sc[e] / z;
+  }
+  for (int e = 0; e < E; ++e) c[e] = bias ? sc[e] + bias[e] : sc[e];
+  std::vector<char> cand(E, 1);
+  if (groups_n > 1) {
+    const int per = E / groups_n;
+    std::vector<float> gs(groups_n);
+    for (int g = 0; g < groups_n; ++g) {
+      float a = -std::numeric_limits<float>::infinity(), b = -std::numeric_limits<float>::infinity();
+      for (int e = g * per; e < (g + 1) * per; ++e) {
+        if (c[e] > a) {
+          b = a;
+          a = c[e];
+        } else if (c[e] > b) {
+          b = c[e];
+        }
+      }
+      gs[g] = per == 1 ? a : a + b;
+    }
+    std::vector<char> keep(groups_n, 0);
+    for (int j = 0; j < groups_top && j < groups_n; ++j) {
+      int best = -1;
+      for (int g = 0; g < groups_n; ++g)
+        if (!keep[g] && (best < 0 || gs[g] > gs[best])) best = g;  // strict >: ties keep the lower group
+      keep[best] = 1;
+    }
+    for (int e = 0; e < E; ++e) cand[e] = keep[e / per];
+  }
+  std::vector<int> sel;
+  std::vector<char> taken(E, 0);
+  for (int j = 0; j < k; ++j) {
+    int best = -1;
+    for (int e = 0; e < E; ++e)
+      if (cand[e] && !taken[e] && (best < 0 || c[e] > c[best])) best = e;  // strict >: ties keep the lower index
+    if (best < 0) break;
+    taken[best] = 1;
+    sel.push_back(best);
+  }
+  std::sort(sel.begin(), sel.end());  // accumulate in ascending expert index
+  std::vector<float> gate(E, 0.0f);
+  float z = 0.0f;
+  for (int e : sel) z += sc[e];
+  for (int e : sel) gate[e] = renorm ? sc[e] / z : sc[e];
+  std::fill(out, out + d, 0.0f);
+  std::vector<float> h(d_ff);
+  for (int e : sel) {
+    const float w = gate[e];
+    const float* g = gate_exps + static_cast<size_t>(e) * d_ff * d;
+    const float* u = up_exps + static_cast<size_t>(e) * d_ff * d;
+    const float* dn = down_exps + static_cast<size_t>(e) * d * d_ff;
+    for (int i = 0; i < d_ff; ++i) {
+      const float gv = static_cast<float>(dot_f32_as_f64(g + static_cast<size_t>(i) * d, x, d));
+      const float uv = static_cast<float>(dot_f32_as_f64(u + static_cast<size_t>(i) * d, x, d));
+      h[i] = gv * (1.0f / (1.0f + std::exp(-gv))) * uv;
+    }
+    for (int o = 0; o < d; ++o)
+      out[o] += w * static_cast<float>(dot_f32_as_f64(dn + static_cast<size_t>(o) * d_ff, h.data(), d_ff));
+  }
+}
+
 void silu_cpu(const std::vector<float>& x, std::vector<float>& out) {
   if (x.size() != out.size()) out.resize(x.size());
 #pragma omp parallel for

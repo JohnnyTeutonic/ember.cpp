@@ -1378,6 +1378,10 @@ export function irSupport(doc) {
       if (n.op === 'attention' && n.softcap !== undefined) return { ok: false, reason: 'attention softcap' };
       if (n.op === 'rope' && n.freq_factors !== undefined) return { ok: false, reason: 'rope freq_factors' };
       if (n.op === 'rope' && n.attn_factor !== undefined && n.attn_factor !== 1) return { ok: false, reason: 'rope attn_factor' };
+      // Revision 1.6 (IR_SPEC 3.8, 5.16): apply and DeepSeek-V3's router have no WGSL path either.
+      if (n.apply !== undefined && n.apply !== true) return { ok: false, reason: 'apply' };
+      if (n.op === 'moe_ffn' && (n.scoring !== undefined || n.selection_bias !== undefined || n.groups !== undefined))
+        return { ok: false, reason: 'moe_ffn scoring / selection_bias / groups' };
       // T5's relative position bias (IR_SPEC 5.15, revision 1.3) has no WGSL kernel: the CPU interpreter runs it.
       if (n.op === 'attention' && n.position_bias !== undefined) return { ok: false, reason: 'attention position_bias' };
       // Shaw's relative vectors (revision 1.4) on positions: not under depth_route (compact rows), as the CPU refuses.

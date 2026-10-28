@@ -95,6 +95,17 @@ bool has(const json& n, const char* key) { return n.contains(key) && !n.at(key).
 bool is_per_layer(const json& v) { return v.is_object() && v.contains("per_layer"); }
 const json& at_layer(const json& v, int layer) { return is_per_layer(v) ? v.at("per_layer").at(layer) : v; }
 
+// A block node runs in application `layer` unless its apply (IR_SPEC 3.8, revision 1.6) is false there; outside
+// the block (layer < 0) every node runs (apply there is rule 43's).
+bool applies(const Node& n, int layer) {
+  if (layer < 0 || !n.attrs.contains("apply")) return true;
+  const json& a = n.attrs.at("apply");
+  const json& v = is_per_layer(a) && a.at("per_layer").is_array() && layer < static_cast<int>(a.at("per_layer").size())
+                      ? a.at("per_layer").at(layer)
+                      : a;
+  return !v.is_boolean() || v.get<bool>();
+}
+
 // IR_SPEC 10.1 rule 37, checked when the rows arrive (section 10.1.1): the widths a node reads must fit it.
 [[noreturn]] void binary_shapes(const std::string& op, int a, int b) {
   throw std::runtime_error("IR_SPEC 5.10 (rule 37): " + op + " operands of two shapes, [T, " + std::to_string(a) +
@@ -471,6 +482,9 @@ bool device_supported(const std::string& ir_json) {
       }
       if (op == "attention" && n.contains("position_bias")) return false;  // CPU only (IR_SPEC 5.15, revision 1.3)
       if (op == "attention" && n.contains("relative_kv")) return false;    // CPU only (IR_SPEC 5.15, revision 1.4)
+      // revision 1.6's apply and DeepSeek-V3's router have no device path: a CUDA build serves the document on the CPU
+      if (n.contains("apply")) return false;
+      if (op == "moe_ffn" && (n.contains("scoring") || n.contains("selection_bias") || n.contains("groups"))) return false;
       // softcap (revision 1.5) runs in the window kernel; with turn_state or depth_route it stays on the CPU
       if (op == "attention" && n.contains("softcap")) softcap = true;
       if (op == "attention" && n.contains("mask") && n.at("mask") != "causal") turn_state = true;
@@ -798,26 +812,31 @@ std::string build_ir_from_gguf(const GGUFData& g, bool log) {
               ", sandwich RMSNorms, GeGLU, window " + std::to_string(win) + " on 5 of every 6 layers" +
               (factor != 1.0 ? ", global RoPE scaled 1/" + std::to_string(factor) : "");
   } else if (arch == "deepseek2") {
-    // DeepSeek-V2 in llama.cpp's MLA layout (IR_SPEC D.11, revision 1.5): the query from attn_q (V2-Lite) or the
-    // low-rank attn_q_a / attn_q_b; attn_kv_a_mqa h split into the latent c and the shared rotary key kr;
-    // mla_attention over a kv slot holding [c | kr]; moe_ffn (times expert_weights_scale) plus ungated shared
-    // experts. Leading dense blocks (Q17), DeepSeek-V3's sigmoid router and selection bias, YaRN and files
-    // converted before llama.cpp's MLA keys build no graph.
+    // DeepSeek-V2 and V3 in llama.cpp's MLA layout (IR_SPEC Appendix D.11; revision 1.6's leading dense blocks, V3's
+    // router and YaRN): the query from attn_q (V2-Lite) or the low-rank attn_q_a / attn_q_b; attn_kv_a_mqa h split
+    // into the latent c and the shared rotary key kr; mla_attention over a kv slot holding [c | kr]; the first
+    // leading_dense_block_count applications a dense SwiGLU, the rest moe_ffn (times expert_weights_scale) plus
+    // ungated shared experts, the two branches selected by apply. Files converted before llama.cpp's MLA keys,
+    // other gating functions and other RoPE scaling build no graph.
     const int H = static_cast<int>(get("attention.head_count"));
     ctx = static_cast<int>(get("context_length"));
     const double eps = get("attention.layer_norm_rms_epsilon");
     if (!shape_has("blk.0.attn_k_b.weight") || !meta_number(g, p + "attention.key_length_mla"))
       throw std::runtime_error("IR builder: deepseek2 file without attn_k_b / attention.key_length_mla (converted "
                                "before llama.cpp's MLA layout) builds no graph");
-    if (get("leading_dense_block_count", 0.0) > 0)
-      throw std::runtime_error("IR builder: deepseek2 with leading dense blocks (leading_dense_block_count > 0) builds no "
-                               "graph: a block is one node list (IR_SPEC Q17)");
     double gating = get("expert_gating_func", 1.0);
     if (gating == 0.0) gating = 1.0;
-    if (gating != 1.0 || shape_has("blk.0.exp_probs_b.bias"))
-      throw std::runtime_error("IR builder: deepseek2 with DeepSeek-V3's sigmoid router or selection bias "
-                               "(expert_gating_func != 1, exp_probs_b) builds no graph");
-    no_rope_scaling();  // YaRN among them
+    if (gating != 1.0 && gating != 2.0)
+      throw std::runtime_error("IR builder: deepseek2 with expert_gating_func " + std::to_string(gating) +
+                               " (neither softmax 1 nor sigmoid 2) builds no graph");
+    const auto stype = meta_string(g, p + "rope.scaling.type");
+    if (shape_has("rope_freqs.weight") || (stype && *stype != "none" && *stype != "yarn"))
+      throw std::runtime_error("IR builder: deepseek2 with RoPE scaling other than YaRN builds no graph");
+    const bool yarn = stype && *stype == "yarn";
+    const int k = static_cast<int>(get("leading_dense_block_count", 0.0));
+    if (k < 0 || k > n_layers)
+      throw std::runtime_error("IR builder: deepseek2 leading_dense_block_count " + std::to_string(k) + " exceeds block_count");
+    const std::string M = "blk." + std::to_string(k) + ".";  // the first mixture application's tensors
     const int dr = static_cast<int>(get("rope.dimension_count"));
     const int dn = static_cast<int>(get("attention.key_length_mla")) - dr;
     const int dv = static_cast<int>(get("attention.value_length_mla"));
@@ -826,6 +845,26 @@ std::string build_ir_from_gguf(const GGUFData& g, bool log) {
     const std::string gate_norm = truth("expert_weights_norm", false) ? "renorm" : "raw";
     double s = get("expert_weights_scale", 1.0);
     if (s == 0.0) s = 1.0;
+    // YaRN (IR_SPEC 5.14, revision 1.6): pair j's divisor f_j = 1 / ((1 - e_j) / c + e_j), e_j = 1 - ramp(j), the
+    // ramp linear from the correction dimension of beta_fast = 32 rotations over the original context (floor) to
+    // that of beta_slow = 1 (ceiling), within 0 .. dr - 1; in binary64, each value rounded to f32. The softmax
+    // temperature m = 1 + yarn_log_multiplier ln(c) enters the attention scale as m^2.
+    json yarn_f = nullptr;
+    double mscale = 1.0;
+    if (yarn) {
+      const double c = get("rope.scaling.factor"), o = get("rope.scaling.original_context_length");
+      const double pi = 3.14159265358979323846;
+      auto corr = [&](double beta) { return dr * std::log(o / (beta * 2.0 * pi)) / (2.0 * std::log(theta)); };
+      double lo = std::max(std::floor(corr(32.0)), 0.0), hi = std::min(std::ceil(corr(1.0)), static_cast<double>(dr - 1));
+      if (lo == hi) hi += 0.001;
+      yarn_f = json::array();
+      for (int j = 0; j < dr / 2; ++j) {
+        const double ramp = std::min(std::max((j - lo) / (hi - lo), 0.0), 1.0);
+        const double e = 1.0 - ramp;
+        yarn_f.push_back(f32_value(1.0 / ((1.0 - e) / c + e)));
+      }
+      mscale = 1.0 + get("rope.scaling.yarn_log_multiplier", 0.0) * std::log(c);
+    }
     nodes = json::array({rmsnorm("x", B + "attn_norm.weight", eps, "h")});
     const bool q_lora = shape_has("blk.0.attn_q_a.weight");
     if (q_lora) {
@@ -835,25 +874,54 @@ std::string build_ir_from_gguf(const GGUFData& g, bool log) {
     } else {
       nodes.push_back(linear("h", B + "attn_q.weight", "q"));
     }
+    json rope_node = json{{"op", "rope"}, {"in", {"qr", "kr", "pos"}}, {"heads", H}, {"kv_heads", 1}, {"head_dim", dr},
+                          {"n_rot", dr}, {"theta", f32_value(theta)}, {"rope_heads", "all"}, {"pairing", "interleaved"},
+                          {"out", {"qr", "kr"}}};
+    if (yarn) rope_node["freq_factors"] = yarn_f;
     for (json n : {op("split", {"q"}, {"qn", "qr"}, {{"sizes", {dn, dr}}, {"groups", H}}),
                    linear("h", B + "attn_kv_a_mqa.weight", "ckr"), op("split", {"ckr"}, {"c", "kr"}, {{"sizes", {r, dr}}}),
-                   rmsnorm("c", B + "attn_kv_a_norm.weight", eps, "c"),
-                   json{{"op", "rope"}, {"in", {"qr", "kr", "pos"}}, {"heads", H}, {"kv_heads", 1}, {"head_dim", dr},
-                        {"n_rot", dr}, {"theta", f32_value(theta)}, {"rope_heads", "all"}, {"pairing", "interleaved"},
-                        {"out", {"qr", "kr"}}},
+                   rmsnorm("c", B + "attn_kv_a_norm.weight", eps, "c"), rope_node,
                    json{{"op", "mla_attention"}, {"in", {"qn", "qr", "c", "kr"}}, {"state", "kv"}, {"heads", H},
                         {"kv_rank", r}, {"qk_nope", dn}, {"qk_rope", dr}, {"v_head_dim", dv},
                         {"k_b", B + "attn_k_b.weight"}, {"v_b", B + "attn_v_b.weight"},
-                        {"scale", f32_value(1.0 / std::sqrt(static_cast<double>(dn + dr)))}, {"causal", true},
-                        {"window", 0}, {"sinks", 0}, {"out", "a"}},
+                        {"scale", f32_value(mscale * mscale / std::sqrt(static_cast<double>(dn + dr)))},
+                        {"causal", true}, {"window", 0}, {"sinks", 0}, {"out", "a"}},
                    linear("a", B + "attn_output.weight", "o"), op("add", {"x", "o"}, "x"),
-                   rmsnorm("x", B + "ffn_norm.weight", eps, "h2"), moe_node(gate_norm)})
+                   rmsnorm("x", B + "ffn_norm.weight", eps, "h2")})
       nodes.push_back(n);
-    if (s != 1.0) nodes.push_back(op("affine", {"f"}, "f", {{"scale", f32_value(s)}, {"shift", 0.0}}));
-    const bool shexp = shape_has("blk.0.ffn_gate_shexp.weight");
-    if (shexp) {
-      shared_expert(nodes);
-      nodes.push_back(op("add", {"f", "sf"}, "f"));
+    // apply (IR_SPEC 3.8): with 0 < k < L the dense branch runs in applications i < k, the mixture in i >= k.
+    const bool split_layers = k > 0 && k < n_layers;
+    auto applied = [&](json n, bool dense) {
+      if (split_layers) {
+        json pl = json::array();
+        for (int i = 0; i < n_layers; ++i) pl.push_back(dense ? i < k : i >= k);
+        n["apply"] = {{"per_layer", pl}};
+      }
+      return n;
+    };
+    if (k > 0)
+      for (json n : {linear("h2", B + "ffn_gate.weight", "g"), linear("h2", B + "ffn_up.weight", "u"),
+                     op("silu", {"g"}, "g"), op("mul", {"g", "u"}, "gu"), linear("gu", B + "ffn_down.weight", "f")})
+        nodes.push_back(applied(n, true));
+    const bool shexp = k < n_layers && shape_has(M + "ffn_gate_shexp.weight");
+    std::string router_note;
+    if (k < n_layers) {
+      json moe = moe_node(gate_norm);
+      if (gating == 2.0) moe["scoring"] = "sigmoid";
+      if (shape_has(M + "exp_probs_b.bias")) moe["selection_bias"] = B + "exp_probs_b.bias";
+      const int gcount = static_cast<int>(get("expert_group_count", 1.0));
+      if (gcount > 1) moe["groups"] = {{"n", gcount}, {"top", static_cast<int>(get("expert_group_used_count", 1.0))}};
+      router_note = (moe.contains("scoring") ? ", sigmoid scores" : "") +
+                    std::string(moe.contains("selection_bias") ? ", selection bias" : "") +
+                    (moe.contains("groups") ? ", " + std::to_string(gcount) + " groups" : std::string());
+      nodes.push_back(applied(moe, false));
+      if (s != 1.0) nodes.push_back(applied(op("affine", {"f"}, "f", {{"scale", f32_value(s)}, {"shift", 0.0}}), false));
+      if (shexp) {
+        json sh = json::array();
+        shared_expert(sh);
+        for (const auto& n : sh) nodes.push_back(applied(n, false));
+        nodes.push_back(applied(op("add", {"f", "sf"}, "f"), false));
+      }
     }
     nodes.push_back(op("add", {"x", "f"}, "x"));
     head = tied_head(json::array({rmsnorm("x", "output_norm.weight", eps, "h")}));
@@ -861,9 +929,12 @@ std::string build_ir_from_gguf(const GGUFData& g, bool log) {
                           {"max_len", ctx}, {"window", 0}, {"sinks", 0}, {"dtype", "f32"}}});
     summary = "MLA: heads " + std::to_string(H) + ", kv_rank " + std::to_string(r) + ", qk_nope " + std::to_string(dn) +
               ", qk_rope " + std::to_string(dr) + ", v_head_dim " + std::to_string(dv) +
-              (q_lora ? ", low-rank query" : "") + ", moe_ffn " + std::to_string(static_cast<int>(get("expert_count"))) +
-              " experts (" + gate_norm + (s != 1.0 ? ", x " + json(f32_value(s)).dump() : std::string()) + ")" +
-              (shexp ? " + shared experts" : "");
+              (q_lora ? ", low-rank query" : "") + (yarn ? ", YaRN" : "") +
+              (k > 0 ? ", " + std::to_string(k) + " leading dense blocks" : std::string()) +
+              (k < n_layers ? ", moe_ffn " + std::to_string(static_cast<int>(get("expert_count"))) + " experts (" +
+                                  gate_norm + router_note + (s != 1.0 ? ", x " + json(f32_value(s)).dump() : std::string()) +
+                                  ")" + (shexp ? " + shared experts" : "")
+                            : std::string());
   } else if (arch == "phi3") {
     // IR_SPEC Appendix D.8 (revision 1.5): pre-RMSNorm, fused (or separate) q/k/v, NEOX RoPE over
     // rope.dimension_count dims with LongRoPE's factor sets when the file has them, HF's sliding window, SwiGLU
@@ -1207,7 +1278,9 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
                                            (n.op == "rope" && (kv.key() == "theta" || kv.key() == "freq_scale" ||
                                                                kv.key() == "attn_factor")) ||
                                            (n.op == "affine" && (kv.key() == "scale" || kv.key() == "shift")) ||
-                                           (n.op == "depth_route" && kv.key() == "step"));
+                                           (n.op == "depth_route" && kv.key() == "step") ||
+                                           (n.op == "moe_ffn" && kv.key() == "scoring") ||
+                                           kv.key() == "apply");  // revision 1.6 (IR_SPEC 3.8): any stateless node
         if (!ok && n.op == "rope" && kv.key() == "freq_factors")  // structural (IR_SPEC 3.8, revision 1.5)
           throw std::runtime_error("IR_SPEC 3.8 (rule 6): rope freq_factors is structural and cannot be per-layer");
         if (!ok)
@@ -1699,7 +1772,14 @@ void Interpreter::build_rope_tables(const GGUFData& gguf) {
   if (rope_theta_layer_.empty()) return;
   const int half = rope_dim_ / 2;
   std::string short_name, long_name;  // tensor names as written ({i} allowed)
-  if (rope_ff_.is_string()) {
+  std::vector<float> values;           // freq_factors given by value (revision 1.6: YaRN's divisors), each as f32
+  if (rope_ff_.is_array()) {           // n_rot / 2 positive numbers (rule 41, validate_ir)
+    for (const auto& v : rope_ff_) values.push_back(v.get<float>());
+    if (values.size() != static_cast<size_t>(half))
+      throw std::runtime_error("IR_SPEC 5.14 (rule 41): rope freq_factors holds " + std::to_string(values.size()) +
+                               " values, not n_rot / 2 = " + std::to_string(half));
+    short_name = "=values";  // the table's key; no tensor is read
+  } else if (rope_ff_.is_string()) {
     short_name = rope_ff_.get<std::string>();
   } else if (rope_ff_.is_object()) {  // {short, long, original_ctx}: rule 41 holds (validate_ir)
     short_name = rope_ff_.at("short").get<std::string>();
@@ -1710,11 +1790,13 @@ void Interpreter::build_rope_tables(const GGUFData& gguf) {
   auto table = [&](int l, const std::string& pattern) -> int {
     const float theta = rope_theta_layer_[l], fs = rope_scale_layer_[l], m = rope_attn_layer_.empty() ? 1.0f : rope_attn_layer_[l];
     if (!(theta > 0.0f)) return -1;
-    const std::string name = pattern.empty() ? std::string() : layer_name(pattern, l);
+    const std::string name = pattern.empty() || pattern == "=values" ? pattern : layer_name(pattern, l);
     const auto key = std::make_tuple(theta, fs, m, name);
     if (const auto it = index.find(key); it != index.end()) return it->second;
     std::vector<float> f;
-    if (!name.empty()) {
+    if (pattern == "=values") {
+      f = values;
+    } else if (!name.empty()) {
       bind_tensor(name, gguf);
       f = weight(name);
       if (f.size() != static_cast<size_t>(half))
@@ -1830,6 +1912,7 @@ void Interpreter::bind_tensor(const std::string& name, const GGUFData& gguf, boo
 
 void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData& gguf) {
   for (const auto& n : nodes) {
+    if (!applies(n, layer)) continue;  // its tensors are needed only where it runs (IR_SPEC 3.8, revision 1.6)
     AppIndex ti(app_index_, n);
     // depth_attend over one source never reads its pseudo-query (IR_SPEC 5.18), so a file may leave it
     // out; with S >= 2 sources a missing one is refused here, at load (rule 25).
@@ -1874,6 +1957,14 @@ void Interpreter::bind(const std::vector<Node>& nodes, int layer, const GGUFData
       bind_tensor(layer_name(n.attrs.at("router").get<std::string>(), layer), gguf);
       for (const char* part : {"gate", "up", "down"})
         bind_tensor(layer_name(n.attrs.at("experts").at(part).get<std::string>(), layer), gguf);
+      if (has(n.attrs, "selection_bias")) {  // ne {n_experts} (IR_SPEC 5.16, rule 44, revision 1.6)
+        const std::string b = layer_name(n.attrs.at("selection_bias").get<std::string>(), layer);
+        bind_tensor(b, gguf);
+        const int E = at_layer(n.attrs.at("n_experts"), std::max(layer, 0)).get<int>();
+        if (bound(b).numel != static_cast<size_t>(E) || shapes_.at(b).size() != 1)
+          throw std::runtime_error("IR_SPEC 5.16 (rule 44): moe_ffn selection_bias '" + b + "' is not of ne {n_experts} = {" +
+                                   std::to_string(E) + "}");
+      }
     }
     if (n.op == "mla_attention") {  // k_b ne {dn, r, H}, v_b ne {r, dv, H} (IR_SPEC 5.20, rule 42)
       const auto at = [&](const char* k) { return static_cast<int64_t>(at_layer(n.attrs.at(k), std::max(layer, 0)).get<int>()); };
@@ -2246,6 +2337,7 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
     return w;
   };
   for (const auto& n : nodes) {
+    if (!applies(n, layer)) continue;  // apply false in this application: reads, names and writes nothing
     AppIndex ti(app_index_, n);
     if (n.op == "embedding") {
       const auto& tokens = in(n, 0);  // token ids carried as floats (exact below 2^24)
@@ -2541,11 +2633,25 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
         throw std::runtime_error("IR moe_ffn '" + gn + "': expert stack shape does not match d and n_experts");
       const int d = x.width, d_ff = static_cast<int>(gs[1]);
       const bool renorm = n.attrs.value("gate_norm", "renorm") == "renorm";
+      // DeepSeek-V3's router (IR_SPEC 5.16, revision 1.6): sigmoid scores, a selection bias, group-limited routing.
+      const bool sigmoid = has(n.attrs, "scoring") && at_layer(n.attrs.at("scoring"), std::max(layer, 0)) == "sigmoid";
+      const float* bias =
+          has(n.attrs, "selection_bias") ? weight(layer_name(n.attrs.at("selection_bias").get<std::string>(), layer)).data()
+                                         : nullptr;
+      int groups_n = 1, groups_top = 1;
+      if (has(n.attrs, "groups")) {
+        groups_n = n.attrs.at("groups").at("n").get<int>();
+        groups_top = n.attrs.at("groups").at("top").get<int>();
+        if (groups_n < 1 || E % groups_n != 0 || groups_top < 1 || groups_top > groups_n || groups_top * (E / groups_n) < k)
+          throw std::runtime_error("IR_SPEC 5.16 (rule 10): moe_ffn groups {n " + std::to_string(groups_n) + ", top " +
+                                   std::to_string(groups_top) + "} do not fit n_experts " + std::to_string(E) + " and top_k " +
+                                   std::to_string(k));
+      }
       Buf out{std::vector<float>(static_cast<size_t>(T) * d), d};
 #pragma omp parallel for schedule(static)
       for (int t = 0; t < T; ++t)
-        moe_ffn_f32_cpu(x.v.data() + static_cast<size_t>(t) * d, d, d_ff, E, k, R.data(), G.data(), U.data(), D.data(),
-                        out.v.data() + static_cast<size_t>(t) * d, renorm);
+        moe_ffn_routed_f32_cpu(x.v.data() + static_cast<size_t>(t) * d, d, d_ff, E, k, R.data(), G.data(), U.data(),
+                               D.data(), out.v.data() + static_cast<size_t>(t) * d, renorm, sigmoid, bias, groups_n, groups_top);
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "silu") {
       const Buf& x = in(n, 0);

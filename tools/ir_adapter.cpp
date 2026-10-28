@@ -10,7 +10,7 @@
 // "exact": true).
 //
 // Methods: hello, check, open, forward, truncate, snapshot, restore, close, digest, dequantize, render_chat,
-// parse_reply, and run_node for recurrence, expr, attention, mla_attention, split and rope nodes (other ops and
+// parse_reply, and run_node for recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes (other ops and
 // run_node_grad reply skip). A session owns one GGUF, one
 // interpreter and the ids it has seen.
 //   check / open: "ir" names a document that replaces the file's (ember's EMBER_IR); null reads the
@@ -78,6 +78,7 @@
 #include "ir_digest.h"
 #include "logger.h"
 #include "quantization.h"
+#include "utils.h"
 #include "weight_management.h"
 
 #ifdef _WIN32
@@ -276,7 +277,7 @@ class Adapter {
  private:
   static json hello() {
     return {{"engine", "ember.cpp"},
-            {"version", "ir_adapter 5 (IR versions 0 and 1; spec revision 1.4.2)"},
+            {"version", "ir_adapter 6 (IR versions 0 and 1; spec revision 1.6)"},
             {"backend", "cpu"},
             {"exact", true},
             {"profiles", {"core", "state", "recursion", "thirdparty", "recurrence", "chat"}},
@@ -576,7 +577,16 @@ class Adapter {
     if (node.contains("freq_factors")) {
       const json& ff = node.at("freq_factors");
       std::string name;
-      if (ff.is_string()) {
+      if (ff.is_array()) {  // revision 1.6: the n_rot / 2 values themselves (YaRN's divisors), each read as f32
+        for (const auto& v : ff) {
+          if (!v.is_number() || !(v.get<double>() > 0))
+            throw std::runtime_error("IR_SPEC 5.14 (rule 41): a freq_factors value is not a positive number");
+          f.push_back(v.get<float>());
+        }
+        if (static_cast<int>(f.size()) != half)
+          throw std::runtime_error("IR_SPEC 5.14 (rule 41): freq_factors holds " + std::to_string(f.size()) +
+                                   " values, not n_rot / 2");
+      } else if (ff.is_string()) {
         name = ff.get<std::string>();
       } else if (ff.is_object() && ff.contains("short") && ff.contains("long") && ff.contains("original_ctx") &&
                  ff.at("short").is_string() && ff.at("long").is_string() && ff.at("original_ctx").is_number_integer() &&
@@ -585,13 +595,15 @@ class Adapter {
       } else {
         throw std::runtime_error("IR_SPEC 5.14 (rule 41): freq_factors is a name or {short, long, original_ctx}");
       }
-      const auto at = name.find("{i}");
-      if (at != std::string::npos) name.replace(at, 3, "0");
-      if (!weights.contains(name)) throw std::runtime_error("run_node: no weight '" + name + "'");
-      std::vector<int64_t> sw;
-      f = floats(weights.at(name), &sw);
-      if (sw.size() != 1 || sw[0] != half)
-        throw std::runtime_error("IR_SPEC 5.14 (rule 41): freq_factors '" + name + "' is not of ne {n_rot / 2}");
+      if (!ff.is_array()) {
+        const auto at = name.find("{i}");
+        if (at != std::string::npos) name.replace(at, 3, "0");
+        if (!weights.contains(name)) throw std::runtime_error("run_node: no weight '" + name + "'");
+        std::vector<int64_t> sw;
+        f = floats(weights.at(name), &sw);
+        if (sw.size() != 1 || sw[0] != half)
+          throw std::runtime_error("IR_SPEC 5.14 (rule 41): freq_factors '" + name + "' is not of ne {n_rot / 2}");
+      }
     }
     const bool neox = pairing == "neox";
     auto rotate = [&](std::vector<float>& x, int heads) {
@@ -619,6 +631,66 @@ class Adapter {
     r["outputs"][outs[1]] = tensor(sk, k.data(), k.size());
     r["state"] = json::object();
     return r;
+  }
+
+  // A moe_ffn node alone (IR_SPEC 5.16; revision 1.6's scoring, selection_bias and groups): x [T, d], the router
+  // [E, d] and the expert stacks [E, d_ff, d] / [E, d, d_ff] row-major, token by token through the interpreter's
+  // kernel (utils.cpp moe_ffn_routed_f32_cpu).
+  static json run_moe(const json& node, const json& inputs, const json& weights) {
+    auto attr = [&](const char* k, const json& dflt) {  // application 0's value
+      const json& v = node.contains(k) ? node.at(k) : dflt;
+      return v.is_object() && v.contains("per_layer") ? v.at("per_layer").at(0) : v;
+    };
+    const std::vector<std::string> ins = node.at("in").get<std::vector<std::string>>();
+    if (ins.size() != 1) throw std::runtime_error("IR_SPEC 10.1 rule 7: moe_ffn reads one value");
+    if (attr("activation", json("silu")) != "silu") throw std::runtime_error("IR_SPEC 5.16 (rule 5): activation");
+    const std::string norm = attr("gate_norm", nullptr).get<std::string>(), scoring = attr("scoring", json("softmax")).get<std::string>();
+    if ((norm != "renorm" && norm != "raw") || (scoring != "softmax" && scoring != "sigmoid"))
+      throw std::runtime_error("IR_SPEC 5.16 (rule 5): gate_norm or scoring outside its set");
+    const int E = attr("n_experts", nullptr).get<int>(), k = attr("top_k", nullptr).get<int>();
+    if (k < 1 || k > E) throw std::runtime_error("IR_SPEC 5.16 (rule 10): top_k is not in 1 .. n_experts");
+    int gn = 1, gtop = 1;
+    if (node.contains("groups")) {
+      gn = node.at("groups").at("n").get<int>();
+      gtop = node.at("groups").at("top").get<int>();
+      if (gn < 1 || E % gn != 0 || gtop < 1 || gtop > gn || gtop * (E / gn) < k)
+        throw std::runtime_error("IR_SPEC 5.16 (rule 10): groups do not fit n_experts and top_k");
+    }
+    std::vector<int64_t> sx;
+    const std::vector<float> x = floats(inputs.at(ins[0]), &sx);
+    if (sx.size() != 2) throw std::runtime_error("run_node: moe_ffn input is not [T, d]");
+    const int T = static_cast<int>(sx[0]), d = static_cast<int>(sx[1]);
+    auto tensor_of = [&](const std::string& name0, std::vector<int64_t>& shape) {
+      std::string wn = name0;
+      const auto at = wn.find("{i}");
+      if (at != std::string::npos) wn.replace(at, 3, "0");
+      if (!weights.contains(wn)) throw std::runtime_error("run_node: no weight '" + wn + "'");
+      return floats(weights.at(wn), &shape);
+    };
+    std::vector<int64_t> sr, sg, su, sd, sb;
+    const std::vector<float> R = tensor_of(node.at("router").get<std::string>(), sr);
+    const std::vector<float> G = tensor_of(node.at("experts").at("gate").get<std::string>(), sg);
+    const std::vector<float> U = tensor_of(node.at("experts").at("up").get<std::string>(), su);
+    const std::vector<float> D = tensor_of(node.at("experts").at("down").get<std::string>(), sd);
+    if (sr != std::vector<int64_t>{E, d} || sg.size() != 3 || sg[0] != E || sg[2] != d || su != sg ||
+        sd != std::vector<int64_t>{E, d, sg[1]})
+      throw std::runtime_error("run_node: moe_ffn tensors do not fit n_experts and the input width");
+    const int d_ff = static_cast<int>(sg[1]);
+    std::vector<float> bias;
+    if (node.contains("selection_bias")) {
+      bias = tensor_of(node.at("selection_bias").get<std::string>(), sb);
+      if (sb != std::vector<int64_t>{E}) throw std::runtime_error("IR_SPEC 5.16 (rule 44): selection_bias is not of ne {n_experts}");
+    }
+    std::vector<float> out(static_cast<size_t>(T) * d);
+    for (int t = 0; t < T; ++t)
+      moe_ffn_routed_f32_cpu(x.data() + static_cast<size_t>(t) * d, d, d_ff, E, k, R.data(), G.data(), U.data(), D.data(),
+                             out.data() + static_cast<size_t>(t) * d, norm == "renorm", scoring == "sigmoid",
+                             bias.empty() ? nullptr : bias.data(), gn, gtop);
+    json res;
+    res["outputs"] = json::object();
+    res["outputs"][node.at("out").get<std::string>()] = tensor({T, d}, out.data(), out.size());
+    res["state"] = json::object();
+    return res;
   }
 
   static json run_expr(const json& node, const json& inputs) {
@@ -677,8 +749,9 @@ class Adapter {
     if (node.value("op", "") == "mla_attention") return run_mla(node, p.at("inputs"), p.value("weights", json::object()));
     if (node.value("op", "") == "split") return run_split(node, p.at("inputs"));
     if (node.value("op", "") == "rope") return run_rope(node, p.at("inputs"), p.value("weights", json::object()));
+    if (node.value("op", "") == "moe_ffn") return run_moe(node, p.at("inputs"), p.value("weights", json::object()));
     if (node.value("op", "") != "recurrence")
-      throw Skip{"run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split and rope nodes only "
+      throw Skip{"run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only "
                  "(whole-model methods for the other ops)"};
     const ember_ir::rec::Recurrence prog = ember_ir::rec::Recurrence::compile(node);
     std::vector<std::string> ins;

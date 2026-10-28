@@ -45,6 +45,10 @@ void matvec_q8k_f32_vector_cpu(const std::vector<block_q8_K>& mat_q8k,
 // Mixture-of-experts FFN for one token; see utils.cpp.
 void moe_ffn_f32_cpu(const float* x, int d, int d_ff, int E, int k, const float* router, const float* gate_exps,
                      const float* up_exps, const float* down_exps, float* out, bool renorm = true);
+// The same with DeepSeek-V3's router (sigmoid scores, a selection bias, group-limited routing); see utils.cpp.
+void moe_ffn_routed_f32_cpu(const float* x, int d, int d_ff, int E, int k, const float* router, const float* gate_exps,
+                            const float* up_exps, const float* down_exps, float* out, bool renorm, bool sigmoid,
+                            const float* bias, int groups_n, int groups_top);
 
 void matvec_f32_f32_vector_cpu(const std::vector<float>& mat_f32,
                                const std::vector<float>& vec_f32,

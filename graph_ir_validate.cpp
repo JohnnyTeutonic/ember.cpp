@@ -238,6 +238,7 @@ const std::set<std::string> kNotPerLayer = {"op", "in", "out", "state", "tensor_
                                             "position_bias",  // attention's (IR_SPEC 5.15, revision 1.3)
                                             "relative_kv",    // attention's (IR_SPEC 5.15, revision 1.4)
                                             "freq_factors",   // rope's (IR_SPEC 5.14, revision 1.5)
+                                            "selection_bias", "groups",  // moe_ffn's (IR_SPEC 5.16, revision 1.6)
                                             "router", "experts", "state_weight", "tied_to", "a", "b", "c", "d",
                                             // mla_attention's tensors and split's groups (revision 1.5)
                                             "k_b", "v_b", "groups",
@@ -371,6 +372,15 @@ void node_errors(const json& doc, Errs& errs) {
     if (op == "rope" && n.contains("freq_factors") && !is_pl(n.at("freq_factors"))) {
       const json& ff = n.at("freq_factors");
       bool ok = ff.is_string() && !ff.get<std::string>().empty();
+      if (ff.is_array()) {  // revision 1.6: the n_rot / 2 values themselves, each positive, in every application
+        ok = !ff.empty();
+        for (const auto& v : ff) ok = ok && v.is_number() && v.get<double>() > 0;
+        const auto hd = layers(get(n, "head_dim"), std::max(L, 1)), nr = layers(get(n, "n_rot"), std::max(L, 1));
+        for (int i = 0; ok && hd && nr && i < std::max(L, 1); ++i) {
+          const json& r = (*nr)[i].is_null() ? (*hd)[i] : (*nr)[i];
+          if (is_int(r) && static_cast<int64_t>(ff.size()) != r.get<int64_t>() / 2) ok = false;
+        }
+      }
       if (ff.is_object()) {
         ok = get(ff, "short").is_string() && get(ff, "long").is_string() && is_int(get(ff, "original_ctx")) &&
              ff.at("original_ctx").get<int64_t>() >= 1;
@@ -380,8 +390,37 @@ void node_errors(const json& doc, Errs& errs) {
       }
       if (!ok)
         errs.push_back(E("5.14 (rule 41)", where + ": freq_factors " + short_dump(ff) +
-                                               " is neither a tensor name nor {short, long, original_ctx} with two "
-                                               "names and an integer original_ctx >= 1"));
+                                               " is neither a tensor name, {short, long, original_ctx} with two "
+                                               "names and an integer original_ctx >= 1, nor a list of n_rot / 2 "
+                                               "positive numbers"));
+    }
+    // Rule 10 (revision 1.6): moe_ffn groups {n, top}: n divides n_experts, top in 1 .. n, top * (E / n) >= top_k.
+    if (op == "moe_ffn" && get(n, "groups").is_object() && is_int(get(n.at("groups"), "n")) &&
+        is_int(get(n.at("groups"), "top")) && is_int(get(n, "n_experts")) && is_int(get(n, "top_k"))) {
+      const int64_t G = n.at("groups").at("n").get<int64_t>(), g = n.at("groups").at("top").get<int64_t>();
+      const int64_t nE = n.at("n_experts").get<int64_t>(), k = n.at("top_k").get<int64_t>();
+      if (G < 1 || nE % G != 0 || g < 1 || g > G || g * (nE / G) < k)
+        errs.push_back(E("5.16 (rule 10)", where + ": groups {n " + std::to_string(G) + ", top " + std::to_string(g) +
+                                               "} do not divide n_experts " + std::to_string(nE) +
+                                               " into groups keeping at least top_k " + std::to_string(k) + " experts"));
+    }
+    // Rule 43 (revision 1.6): apply only in the block, entries true or false, never beside depth_route.
+    if (n.contains("apply")) {
+      const json& a = n.at("apply");
+      bool route = false;
+      if (get(blk, "nodes").is_array())
+        for (const auto& b : blk.at("nodes")) route = route || op_of(b) == "depth_route";
+      if (sect != "block")
+        errs.push_back(E("3.8 (rule 43)", where + ": apply outside the block"));
+      else if (route)
+        errs.push_back(E("3.8 (rule 43)", where + ": apply in a block with depth_route"));
+      if (is_pl(a) && a.at("per_layer").is_array()) {
+        for (const auto& v : a.at("per_layer"))
+          if (!v.is_boolean()) {
+            errs.push_back(E("3.8 (rule 43)", where + ": apply entry " + show(v) + " is not true or false"));
+            break;
+          }
+      }
     }
     // Rule 10 (revision 1.5): softcap c > 0 (Gemma 2's attention soft cap).
     if (op == "attention" && L)
@@ -852,7 +891,25 @@ void read_errors(const json& doc, Errs& errs) {
   size_t route = block.is_array() ? block.size() : 0;
   if (block.is_array() && !block.empty() && op_of(block[0]) == "depth_route") route = 0;  // else rule 20
   std::set<std::string> step = {"x", "pos"};  // what a recursion step sees (7.4(b))
-  for (size_t j = 0; block.is_array() && j < block.size(); ++j) {
+  // apply (revision 1.6, 3.8): without depth_route, every application is checked with the nodes it runs, a value
+  // written in an earlier application staying readable.
+  bool any_apply = false;
+  for (size_t j = 0; block.is_array() && j < block.size(); ++j) any_apply = any_apply || block[j].contains("apply");
+  const int L = is_int(get(get(doc, "block"), "repeat")) ? get(doc, "block").at("repeat").get<int>() : 0;
+  if (any_apply && route == block.size() && L > 0) {
+    for (int i = 0; i < L; ++i)
+      for (size_t j = 0; j < block.size(); ++j) {
+        const json& a = get(block[j], "apply");
+        const json& v = is_pl(a) && a.at("per_layer").is_array() && i < static_cast<int>(a.at("per_layer").size())
+                            ? a.at("per_layer")[i]
+                            : a;
+        if (v.is_boolean() && !v.get<bool>()) continue;
+        check("block", j, block[j], written, true, "3.5",
+              "which no node before it writes (application " + std::to_string(i) + ")");
+        for (const auto& o : names(get(block[j], "out"))) written.insert(o);
+      }
+  }
+  for (size_t j = 0; block.is_array() && j < block.size() && !(any_apply && route == block.size() && L > 0); ++j) {
     if (j <= route) {
       check("block", j, block[j], written, true, "3.5", "which no node before it writes (application 0)");
       if (j == route)  // depth_route's out is written before the step's nodes (reading it is rule 17a's)
@@ -1136,6 +1193,30 @@ void container_errors(const json& doc, const GGUFData& g, Errs& errs) {
         }
       }
   }
+  // Rule 44 (container, revision 1.6): a moe_ffn's selection_bias is ne {n_experts} in each application that runs it.
+  for (const auto& [sect, j, np] : sections(doc)) {
+    const json& n = *np;
+    if (op_of(n) != "moe_ffn" || !get(n, "selection_bias").is_string()) continue;
+    const auto nE = layers(get(n, "n_experts"), std::max(L, 1));
+    const auto ap = layers(get(n, "apply"), std::max(L, 1));
+    for (int i = 0; i < (sect == "block" ? L : 1); ++i) {
+      if (ap && (*ap)[i].is_boolean() && !(*ap)[i].get<bool>()) continue;  // not run there (3.8)
+      std::string w = n.at("selection_bias").get<std::string>();
+      const size_t at = w.find("{i}");
+      if (at != std::string::npos) {
+        const bool mapped = wmi.is_array() && i < static_cast<int>(wmi.size()) && is_int(wmi[i]) && !n.contains("tensor_index");
+        w.replace(at, 3, std::to_string(mapped ? wmi[i].get<int64_t>() : i));
+      }
+      const auto* got = ne(w);
+      if (!got || !nE || !is_int((*nE)[i])) continue;  // a missing tensor is rule 25's
+      if (!(got->size() == 1 && static_cast<int64_t>((*got)[0]) == (*nE)[i].get<int64_t>())) {
+        errs.push_back(E("5.16 (rule 44)", sect + "[" + std::to_string(j) + "] moe_ffn selection_bias " + q(w) +
+                                               (sect == "block" ? " (application " + std::to_string(i) + ")" : "") +
+                                               " has ne " + ne_str(*got) + ", not {n_experts} = {" + show((*nE)[i]) + "}"));
+        break;
+      }
+    }
+  }
 }
 
 // Rule 42 (container, revision 1.5): each application's mla_attention k_b is ne {qk_nope, kv_rank, heads} and its v_b
@@ -1254,6 +1335,8 @@ json rule38_form(const json& doc, const GGUFData& g) {
       if (n.contains("freq_scale") && num_is(n.at("freq_scale"), 1.0)) n.erase("freq_scale");
       if (n.contains("attn_factor") && num_is(n.at("attn_factor"), 1.0)) n.erase("attn_factor");  // revision 1.5
     }
+    if (n.contains("apply") && n.at("apply") == json(true)) n.erase("apply");  // revision 1.6: absent is true
+    if (op == "moe_ffn" && n.contains("scoring") && n.at("scoring") == "softmax") n.erase("scoring");
     if (op == "depth_attend" && n.contains("eps") && num_is(n.at("eps"), 1e-5)) n.erase("eps");
     if (op == "split" && n.contains("groups") && num_is(n.at("groups"), 1.0)) n.erase("groups");  // revision 1.5
     if (op == "embedding" && n.contains("state_weight") && n.at("state_weight").is_null()) n.erase("state_weight");
@@ -1427,7 +1510,8 @@ std::string schema_rule(const json& doc, const std::string& path, const std::str
   static const std::regex kNode(R"(^doc\.(embed|block|head)\.nodes\[(\d+)\](?: \([A-Za-z0-9_]+\))?(.*)$)");
   static const std::regex kSlot(R"(^doc\.block\.state\[(\d+)\](.*)$)");
   static const std::set<std::string> kClosed = {"gelu.approx", "rope.pairing", "rope.rope_heads", "attention.mask",
-                                                "moe_ffn.gate_norm", "moe_ffn.activation", "linear_attention.feature_map",
+                                                "moe_ffn.gate_norm", "moe_ffn.activation", "moe_ffn.scoring",
+                                                "linear_attention.feature_map",
                                                 "depth_route.route", "depth_route.gate"};
   static const std::set<std::string> kRecDecl = {"index", "inputs", "weights", "init", "let", "update", "readout"};
   const bool unknown_key = msg.rfind("has the key '", 0) == 0;
@@ -1449,6 +1533,8 @@ std::string schema_rule(const json& doc, const std::string& path, const std::str
     if (key == "relative_kv")  // attention's (5.15, revision 1.4); a per-layer one breaks rule 6
       return nodes.is_array() && j < nodes.size() && is_pl(get(nodes[j], "relative_kv")) ? "3.8 (rule 6)"
                                                                                          : "5.15 (rule 40)";
+    if (key == "apply")  // revision 1.6 (3.8): not true, false or a per_layer object; on a stateful op rule 4 (unknown_key)
+      return unknown_key ? "3.5 (rule 4)" : "3.8 (rule 43)";
     if (key == "freq_factors")  // rope's (5.14, revision 1.5); a per-layer one breaks rule 6
       return nodes.is_array() && j < nodes.size() && is_pl(get(nodes[j], "freq_factors")) ? "3.8 (rule 6)"
                                                                                           : "5.14 (rule 41)";
