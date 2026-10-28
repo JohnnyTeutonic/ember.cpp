@@ -1,0 +1,4 @@
+ember.cpp commit: 9d993f48de2cd976a7708d90767df3a58107baf8 (deploy/wasm/build.sh with EMBER_WASM_MAX_MEMORY=2gb; README.md and index.html from experiments/release_pk_sft_v1_q8_2026-10-28/staged)
+model: pk_sft_v1_f16.gguf (F16; llama.cpp b6000 llama-quantize from pk_sft_v1.gguf 4d53c7ff) sha256 3916b3ae617f01b6610e8c6a8ebfab301227c83cad2d40b33d90d548a639b957
+ember.wasm sha256 23f8d86ebaeffb21b6400dc8bba26a01c5647c3fe720ffddf51cd5241d582477
+gate: greedy F16 = F32 40/40 (ids), WebAssembly = native 40/40 (ids), WebGPU (SwiftShader, llama_webgpu.js) = WebAssembly = native 40/40

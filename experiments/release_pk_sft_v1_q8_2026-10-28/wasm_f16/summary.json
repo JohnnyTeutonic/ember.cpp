@@ -1,0 +1,36 @@
+{
+ "wasm_vs_native_page_gate": {
+  "reply": 40,
+  "tokens": 40,
+  "stop_reason": 40,
+  "prompt_ids": 40,
+  "ids": 40,
+  "stop_id": 40,
+  "n": 40,
+  "differing_rows": []
+ },
+ "native_page_gate_vs_server": {
+  "reply": 40,
+  "tokens": 40,
+  "stop_reason": 40,
+  "prompt_ids": 40,
+  "ids": 40,
+  "stop_id": 40,
+  "n": 40,
+  "differing_rows": []
+ },
+ "decode_logits_wasm_vs_native": {
+  "rows": 733,
+  "rows_expected": 733,
+  "rows_bit_equal": 0,
+  "max_abs_where_different": 5.7220458984375e-06,
+  "max_over_row_range_where_different": 1.9627907220191098e-07
+ },
+ "space_ember_js_vs_native_server": {
+  "n": 40,
+  "identical": 40,
+  "tokens_identical": 40,
+  "stop_identical": 40,
+  "ms_per_reply": 4455.525
+ }
+}
