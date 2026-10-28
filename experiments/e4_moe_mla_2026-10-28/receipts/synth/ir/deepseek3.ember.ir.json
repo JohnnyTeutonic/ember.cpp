@@ -1,0 +1,469 @@
+{
+ "_comment": "built by ember's build_ir_from_gguf (graph_ir.cpp; paperkiln tools/gguf_ir.py's rules) from general.architecture = deepseek2 and its metadata",
+ "block": {
+  "nodes": [
+   {
+    "eps": 1e-06,
+    "in": [
+     "x"
+    ],
+    "op": "rmsnorm",
+    "out": "h",
+    "weight": "blk.{i}.attn_norm.weight"
+   },
+   {
+    "bias": null,
+    "in": [
+     "h"
+    ],
+    "op": "linear",
+    "out": "qa",
+    "weight": "blk.{i}.attn_q_a.weight"
+   },
+   {
+    "eps": 1e-06,
+    "in": [
+     "qa"
+    ],
+    "op": "rmsnorm",
+    "out": "qa",
+    "weight": "blk.{i}.attn_q_a_norm.weight"
+   },
+   {
+    "bias": null,
+    "in": [
+     "qa"
+    ],
+    "op": "linear",
+    "out": "q",
+    "weight": "blk.{i}.attn_q_b.weight"
+   },
+   {
+    "groups": 4,
+    "in": [
+     "q"
+    ],
+    "op": "split",
+    "out": [
+     "qn",
+     "qr"
+    ],
+    "sizes": [
+     16,
+     8
+    ]
+   },
+   {
+    "bias": null,
+    "in": [
+     "h"
+    ],
+    "op": "linear",
+    "out": "ckr",
+    "weight": "blk.{i}.attn_kv_a_mqa.weight"
+   },
+   {
+    "in": [
+     "ckr"
+    ],
+    "op": "split",
+    "out": [
+     "c",
+     "kr"
+    ],
+    "sizes": [
+     20,
+     8
+    ]
+   },
+   {
+    "eps": 1e-06,
+    "in": [
+     "c"
+    ],
+    "op": "rmsnorm",
+    "out": "c",
+    "weight": "blk.{i}.attn_kv_a_norm.weight"
+   },
+   {
+    "freq_factors": [
+     1.0,
+     4.0,
+     4.0,
+     4.0
+    ],
+    "head_dim": 8,
+    "heads": 4,
+    "in": [
+     "qr",
+     "kr",
+     "pos"
+    ],
+    "kv_heads": 1,
+    "n_rot": 8,
+    "op": "rope",
+    "out": [
+     "qr",
+     "kr"
+    ],
+    "pairing": "interleaved",
+    "rope_heads": "all",
+    "theta": 10000.0
+   },
+   {
+    "causal": true,
+    "heads": 4,
+    "in": [
+     "qn",
+     "qr",
+     "c",
+     "kr"
+    ],
+    "k_b": "blk.{i}.attn_k_b.weight",
+    "kv_rank": 20,
+    "op": "mla_attention",
+    "out": "a",
+    "qk_nope": 16,
+    "qk_rope": 8,
+    "scale": 0.26464227,
+    "sinks": 0,
+    "state": "kv",
+    "v_b": "blk.{i}.attn_v_b.weight",
+    "v_head_dim": 12,
+    "window": 0
+   },
+   {
+    "bias": null,
+    "in": [
+     "a"
+    ],
+    "op": "linear",
+    "out": "o",
+    "weight": "blk.{i}.attn_output.weight"
+   },
+   {
+    "in": [
+     "x",
+     "o"
+    ],
+    "op": "add",
+    "out": "x"
+   },
+   {
+    "eps": 1e-06,
+    "in": [
+     "x"
+    ],
+    "op": "rmsnorm",
+    "out": "h2",
+    "weight": "blk.{i}.ffn_norm.weight"
+   },
+   {
+    "apply": {
+     "per_layer": [
+      true,
+      false,
+      false
+     ]
+    },
+    "bias": null,
+    "in": [
+     "h2"
+    ],
+    "op": "linear",
+    "out": "g",
+    "weight": "blk.{i}.ffn_gate.weight"
+   },
+   {
+    "apply": {
+     "per_layer": [
+      true,
+      false,
+      false
+     ]
+    },
+    "bias": null,
+    "in": [
+     "h2"
+    ],
+    "op": "linear",
+    "out": "u",
+    "weight": "blk.{i}.ffn_up.weight"
+   },
+   {
+    "apply": {
+     "per_layer": [
+      true,
+      false,
+      false
+     ]
+    },
+    "in": [
+     "g"
+    ],
+    "op": "silu",
+    "out": "g"
+   },
+   {
+    "apply": {
+     "per_layer": [
+      true,
+      false,
+      false
+     ]
+    },
+    "in": [
+     "g",
+     "u"
+    ],
+    "op": "mul",
+    "out": "gu"
+   },
+   {
+    "apply": {
+     "per_layer": [
+      true,
+      false,
+      false
+     ]
+    },
+    "bias": null,
+    "in": [
+     "gu"
+    ],
+    "op": "linear",
+    "out": "f",
+    "weight": "blk.{i}.ffn_down.weight"
+   },
+   {
+    "activation": "silu",
+    "apply": {
+     "per_layer": [
+      false,
+      true,
+      true
+     ]
+    },
+    "experts": {
+     "down": "blk.{i}.ffn_down_exps.weight",
+     "gate": "blk.{i}.ffn_gate_exps.weight",
+     "up": "blk.{i}.ffn_up_exps.weight"
+    },
+    "gate_norm": "renorm",
+    "groups": {
+     "n": 2,
+     "top": 1
+    },
+    "in": [
+     "h2"
+    ],
+    "n_experts": 8,
+    "op": "moe_ffn",
+    "out": "f",
+    "router": "blk.{i}.ffn_gate_inp.weight",
+    "scoring": "sigmoid",
+    "selection_bias": "blk.{i}.exp_probs_b.bias",
+    "top_k": 2
+   },
+   {
+    "apply": {
+     "per_layer": [
+      false,
+      true,
+      true
+     ]
+    },
+    "in": [
+     "f"
+    ],
+    "op": "affine",
+    "out": "f",
+    "scale": 2.5,
+    "shift": 0.0
+   },
+   {
+    "apply": {
+     "per_layer": [
+      false,
+      true,
+      true
+     ]
+    },
+    "bias": null,
+    "in": [
+     "h2"
+    ],
+    "op": "linear",
+    "out": "sg",
+    "weight": "blk.{i}.ffn_gate_shexp.weight"
+   },
+   {
+    "apply": {
+     "per_layer": [
+      false,
+      true,
+      true
+     ]
+    },
+    "bias": null,
+    "in": [
+     "h2"
+    ],
+    "op": "linear",
+    "out": "su",
+    "weight": "blk.{i}.ffn_up_shexp.weight"
+   },
+   {
+    "apply": {
+     "per_layer": [
+      false,
+      true,
+      true
+     ]
+    },
+    "in": [
+     "sg"
+    ],
+    "op": "silu",
+    "out": "sg"
+   },
+   {
+    "apply": {
+     "per_layer": [
+      false,
+      true,
+      true
+     ]
+    },
+    "in": [
+     "sg",
+     "su"
+    ],
+    "op": "mul",
+    "out": "sgu"
+   },
+   {
+    "apply": {
+     "per_layer": [
+      false,
+      true,
+      true
+     ]
+    },
+    "bias": null,
+    "in": [
+     "sgu"
+    ],
+    "op": "linear",
+    "out": "sf",
+    "weight": "blk.{i}.ffn_down_shexp.weight"
+   },
+   {
+    "apply": {
+     "per_layer": [
+      false,
+      true,
+      true
+     ]
+    },
+    "in": [
+     "f",
+     "sf"
+    ],
+    "op": "add",
+    "out": "f"
+   },
+   {
+    "in": [
+     "x",
+     "f"
+    ],
+    "op": "add",
+    "out": "x"
+   }
+  ],
+  "repeat": 3,
+  "state": [
+   {
+    "dtype": "f32",
+    "head_dim": 28,
+    "heads": 4,
+    "kind": "kv",
+    "kv_heads": 1,
+    "max_len": 256,
+    "name": "kv",
+    "sinks": 0,
+    "window": 0
+   }
+  ]
+ },
+ "embed": {
+  "nodes": [
+   {
+    "in": [
+     "tokens"
+    ],
+    "op": "embedding",
+    "out": "x",
+    "weight": "token_embd.weight"
+   }
+  ]
+ },
+ "family_hint": "deepseek2",
+ "head": {
+  "nodes": [
+   {
+    "eps": 1e-06,
+    "in": [
+     "x"
+    ],
+    "op": "rmsnorm",
+    "out": "h",
+    "weight": "output_norm.weight"
+   },
+   {
+    "bias": null,
+    "in": [
+     "h"
+    ],
+    "op": "linear",
+    "out": "logits",
+    "weight": "output.weight"
+   }
+  ]
+ },
+ "inputs": [
+  {
+   "kind": "token_ids",
+   "name": "tokens"
+  },
+  {
+   "kind": "positions",
+   "name": "pos"
+  }
+ ],
+ "ir_version": 1,
+ "model": {
+  "ctx": 256,
+  "d": 64,
+  "dtype": "f32",
+  "n_layers": 3,
+  "vocab": 512
+ },
+ "modes": {
+  "decode": "the same graph with T = 1, attention reads and appends to the kv state, a recurrent op reads and replaces its recurrent state",
+  "prefill": "all nodes over T tokens"
+ },
+ "outputs": [
+  {
+   "kind": "logits",
+   "name": "logits"
+  }
+ ],
+ "tokenizer": {
+  "bos": null,
+  "source": "gguf",
+  "specials": {},
+  "type": "gguf"
+ }
+}

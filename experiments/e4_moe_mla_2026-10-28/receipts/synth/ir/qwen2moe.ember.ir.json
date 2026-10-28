@@ -1,0 +1,288 @@
+{
+ "_comment": "built by ember's build_ir_from_gguf (graph_ir.cpp; paperkiln tools/gguf_ir.py's rules) from general.architecture = qwen2moe and its metadata",
+ "block": {
+  "nodes": [
+   {
+    "eps": 1e-06,
+    "in": [
+     "x"
+    ],
+    "op": "rmsnorm",
+    "out": "h",
+    "weight": "blk.{i}.attn_norm.weight"
+   },
+   {
+    "bias": "blk.{i}.attn_q.bias",
+    "in": [
+     "h"
+    ],
+    "op": "linear",
+    "out": "q",
+    "weight": "blk.{i}.attn_q.weight"
+   },
+   {
+    "bias": "blk.{i}.attn_k.bias",
+    "in": [
+     "h"
+    ],
+    "op": "linear",
+    "out": "k",
+    "weight": "blk.{i}.attn_k.weight"
+   },
+   {
+    "bias": "blk.{i}.attn_v.bias",
+    "in": [
+     "h"
+    ],
+    "op": "linear",
+    "out": "v",
+    "weight": "blk.{i}.attn_v.weight"
+   },
+   {
+    "head_dim": 16,
+    "heads": 4,
+    "in": [
+     "q",
+     "k",
+     "pos"
+    ],
+    "kv_heads": 2,
+    "n_rot": 16,
+    "op": "rope",
+    "out": [
+     "q",
+     "k"
+    ],
+    "pairing": "neox",
+    "rope_heads": "all",
+    "theta": 1000000.0
+   },
+   {
+    "causal": true,
+    "head_dim": 16,
+    "heads": 4,
+    "in": [
+     "q",
+     "k",
+     "v"
+    ],
+    "kv_heads": 2,
+    "op": "attention",
+    "out": "a",
+    "scale": 0.25,
+    "sinks": 0,
+    "softmax": "max-shifted, masked entries exactly zero",
+    "state": "kv",
+    "window": 0
+   },
+   {
+    "bias": null,
+    "in": [
+     "a"
+    ],
+    "op": "linear",
+    "out": "o",
+    "weight": "blk.{i}.attn_output.weight"
+   },
+   {
+    "in": [
+     "x",
+     "o"
+    ],
+    "op": "add",
+    "out": "x"
+   },
+   {
+    "eps": 1e-06,
+    "in": [
+     "x"
+    ],
+    "op": "rmsnorm",
+    "out": "h2",
+    "weight": "blk.{i}.ffn_norm.weight"
+   },
+   {
+    "activation": "silu",
+    "experts": {
+     "down": "blk.{i}.ffn_down_exps.weight",
+     "gate": "blk.{i}.ffn_gate_exps.weight",
+     "up": "blk.{i}.ffn_up_exps.weight"
+    },
+    "gate_norm": "raw",
+    "in": [
+     "h2"
+    ],
+    "n_experts": 6,
+    "op": "moe_ffn",
+    "out": "f",
+    "router": "blk.{i}.ffn_gate_inp.weight",
+    "top_k": 2
+   },
+   {
+    "bias": null,
+    "in": [
+     "h2"
+    ],
+    "op": "linear",
+    "out": "sg",
+    "weight": "blk.{i}.ffn_gate_shexp.weight"
+   },
+   {
+    "bias": null,
+    "in": [
+     "h2"
+    ],
+    "op": "linear",
+    "out": "su",
+    "weight": "blk.{i}.ffn_up_shexp.weight"
+   },
+   {
+    "in": [
+     "sg"
+    ],
+    "op": "silu",
+    "out": "sg"
+   },
+   {
+    "in": [
+     "sg",
+     "su"
+    ],
+    "op": "mul",
+    "out": "sgu"
+   },
+   {
+    "bias": null,
+    "in": [
+     "sgu"
+    ],
+    "op": "linear",
+    "out": "sf",
+    "weight": "blk.{i}.ffn_down_shexp.weight"
+   },
+   {
+    "bias": null,
+    "in": [
+     "h2"
+    ],
+    "op": "linear",
+    "out": "sgate",
+    "weight": "blk.{i}.ffn_gate_inp_shexp.weight"
+   },
+   {
+    "in": [
+     "sgate"
+    ],
+    "op": "sigmoid",
+    "out": "sgate"
+   },
+   {
+    "in": [
+     "sf",
+     "sgate"
+    ],
+    "op": "mul_col",
+    "out": "sf"
+   },
+   {
+    "in": [
+     "f",
+     "sf"
+    ],
+    "op": "add",
+    "out": "f"
+   },
+   {
+    "in": [
+     "x",
+     "f"
+    ],
+    "op": "add",
+    "out": "x"
+   }
+  ],
+  "repeat": 3,
+  "state": [
+   {
+    "dtype": "f32",
+    "head_dim": 16,
+    "heads": 4,
+    "kind": "kv",
+    "kv_heads": 2,
+    "max_len": 256,
+    "name": "kv",
+    "sinks": 0,
+    "window": 0
+   }
+  ]
+ },
+ "embed": {
+  "nodes": [
+   {
+    "in": [
+     "tokens"
+    ],
+    "op": "embedding",
+    "out": "x",
+    "weight": "token_embd.weight"
+   }
+  ]
+ },
+ "family_hint": "qwen2moe",
+ "head": {
+  "nodes": [
+   {
+    "eps": 1e-06,
+    "in": [
+     "x"
+    ],
+    "op": "rmsnorm",
+    "out": "h",
+    "weight": "output_norm.weight"
+   },
+   {
+    "bias": null,
+    "in": [
+     "h"
+    ],
+    "op": "linear",
+    "out": "logits",
+    "weight": "output.weight"
+   }
+  ]
+ },
+ "inputs": [
+  {
+   "kind": "token_ids",
+   "name": "tokens"
+  },
+  {
+   "kind": "positions",
+   "name": "pos"
+  }
+ ],
+ "ir_version": 1,
+ "model": {
+  "ctx": 256,
+  "d": 64,
+  "dtype": "f32",
+  "n_layers": 3,
+  "vocab": 512
+ },
+ "modes": {
+  "decode": "the same graph with T = 1, attention reads and appends to the kv state, a recurrent op reads and replaces its recurrent state",
+  "prefill": "all nodes over T tokens"
+ },
+ "outputs": [
+  {
+   "kind": "logits",
+   "name": "logits"
+  }
+ ],
+ "tokenizer": {
+  "bos": null,
+  "source": "gguf",
+  "specials": {},
+  "type": "gguf"
+ }
+}

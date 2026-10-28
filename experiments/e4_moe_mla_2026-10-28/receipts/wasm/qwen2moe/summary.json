@@ -1,0 +1,16 @@
+{
+ "gen": 32,
+ "gguf": "/mnt/c/ml_artifacts/thirdparty/e4_synth/qwen2moe.gguf",
+ "greedy_identical": "40/40",
+ "len": 24,
+ "load_ms": 382.094024,
+ "ms_per_prompt": 26.746988400000003,
+ "of": 40,
+ "pass": true,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "960/960",
+ "vocab": 512,
+ "worst_decode_rel": 0.0,
+ "worst_prefill_rel": 0.0
+}
