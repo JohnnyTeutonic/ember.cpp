@@ -1,0 +1,23 @@
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+51.1,153509281,50400,3045.8,2080.0,1951,7648,1243.9,"std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)"
+22.6,67812230,50400,1345.5,1344.0,1279,2112,65.9,"void cublasLt::splitKreduce_kernel<(int)32, (int)16, int, float, float, float, float, (bool)0, float, float, float, (bool)1, (bool)0, (bool)0, (bool)0>(cublasLt::cublasSplitKParams<T6>, const T4 *, const T10 *, T9 *, T5 *, const T6 *, const T6 *, const T11 *, const T4 *, T11 *, void *, long, T6 *, int *, T6 *, T6 *, const T6 *, const T6 *, const T6 *, const T6 *, const T6 *)"
+11.5,34522997,8400,4109.9,3264.0,3168,7583,1409.6,"std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)9, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)"
+3.2,9522961,1680,5668.4,5600.0,5152,7520,314.5,"ember_verify::<unnamed>::attn_tiled_rows_kernel(const float *, const float *, const float *, int, float, int, int, int, int, const int *, int, float *)"
+2.7,8189647,526,15569.7,13632.0,12832,99584,5373.7,"void gemv2T_kernel_val<long, long, float, float, float, float, (int)128, (int)16, (int)2, (int)2, (bool)0, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13, T6, T6)"
+2.3,6825173,3465,1969.7,1952.0,1919,2656,96.5,"ember_verify::<unnamed>::rmsnorm_rows_det_kernel(const float *, const float *, float *, int, float)"
+1.3,3984951,3360,1186.0,1184.0,1152,1407,14.0,"ember_verify::<unnamed>::rope_rows_kernel(float *, int, int, const float *, const int *, bool)"
+1.2,3716823,1680,2212.4,2208.0,2175,2560,18.4,"ember_verify::<unnamed>::attn_tiled_merge_rows_kernel(float *, int, int, int, int, int, const int *, int, const float *)"
+1.2,3464155,3360,1031.0,1024.0,992,1312,15.7,"add_residual_kernel(const float *, const float *, float *, int)"
+0.7,2093305,1680,1246.0,1248.0,1215,1280,14.7,"swiglu_kernel(const float *, const float *, float *, int)"
+0.6,1816475,1680,1081.2,1088.0,1056,1312,17.4,"ember_verify::<unnamed>::kv_write_rows_kernel(float *, float *, const float *, const float *, const int *, int)"
+0.6,1685593,105,16053.3,16064.0,15968,16160,32.2,"ember_verify::<unnamed>::select_rows_kernel(const float *, int, ember_verify::RowPick *)"
+0.4,1233053,16,77065.8,77024.0,76831,77664,197.2,"void attention_prefill_flash2_kernel<(int)64>(float *, const float *, const float *, const float *, int, int, int, int, float)"
+0.2,619230,80,7740.4,6432.0,6208,13280,2577.9,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(T1::Params)
+0.2,451680,8,56460.0,36000.0,4416,103392,38638.4,"convert_fp32_to_bf16_kernel(const float *, unsigned short *, unsigned long)"
+0.1,327104,32,10222.0,10064.0,9760,12064,477.7,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x64_16x6_tn_align4>(T1::Params)
+0.1,302752,33,9174.3,9088.0,8960,9728,209.5,"rmsnorm_batch_kernel_final_optimized(float *, const float *, const float *, int, int, float)"
+0.1,181823,105,1731.6,1728.0,1696,1920,38.0,"ember_verify::<unnamed>::embed_rows_kernel(const float *, float *, const int *, int, int)"
+0.0,80960,32,2530.0,2496.0,2464,3168,119.2,"rope_batch_kernel_cuda(float *, int, int, int, const float *, int, bool)"
+0.0,79391,32,2481.0,2496.0,2368,2528,26.9,"update_kv_cache_batch_kernel(float *, const float *, int, int, int, int, int)"
+0.0,73376,32,2293.0,2160.0,2080,5312,558.6,"add_residual_batch_cuda_kernel(float *, const float *, const float *, int, int)"
+0.0,69280,16,4330.0,4320.0,4256,4416,47.8,"swiglu_batch_cuda_kernel(float *, const float *, const float *, int, int)"

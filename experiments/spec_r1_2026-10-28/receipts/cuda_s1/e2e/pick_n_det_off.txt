@@ -1,0 +1,1 @@
+{"requests": 260, "tokens": 3587, "wall_ms": 5254.546714000526, "decode_tokens": 3327, "decode_ms": 4244.106968000526, "decode_tok_per_s": 783.9104963858648, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "draft_ms": 0.0, "draft_calls": 0, "draft_us_per_call": null, "warm_pass_same": 260}

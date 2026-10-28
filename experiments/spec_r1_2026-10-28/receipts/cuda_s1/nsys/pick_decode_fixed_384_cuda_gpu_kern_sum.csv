@@ -1,0 +1,20 @@
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+61.0,59395366,11865,5005.9,3328.0,2976,83744,7516.8,"void ember_verify::<unnamed>::linear_smallm_kernel<(int)1>(const float *, const float *, float *, int, int)"
+11.3,11000192,1680,6547.7,6528.0,6240,8992,144.2,"<unnamed>::decode_attn_tiled_kernel(const float *, const float *, const float *, int, int, float, int, int, int, int, const int *)"
+8.4,8157647,3465,2354.3,2336.0,2240,3104,68.2,"rmsnorm_optimized_det_kernel(const float *, const float *, float *, int, float)"
+4.1,4008631,1680,2386.1,2400.0,2367,2784,18.8,"<unnamed>::decode_attn_tiled_merge_kernel(float *, int, int, int, int, int, const int *)"
+4.1,3947764,3360,1174.9,1184.0,1151,1504,16.0,"rope_devpos_kernel(float *, int, int, const float *, const int *, bool)"
+3.6,3480568,3360,1035.9,1024.0,992,1088,15.9,"add_residual_kernel(const float *, const float *, float *, int)"
+2.1,2035002,1680,1211.3,1216.0,1183,1248,13.8,"swiglu_kernel(const float *, const float *, float *, int)"
+1.9,1813819,1680,1079.7,1088.0,1055,1504,21.2,"kv_write_devpos_kernel(float *, float *, const float *, const float *, const int *, int)"
+1.3,1233662,16,77103.9,77056.0,76704,77856,248.0,"void attention_prefill_flash2_kernel<(int)64>(float *, const float *, const float *, const float *, int, int, int, int, float)"
+0.6,620287,80,7753.6,6416.0,6112,14048,2631.5,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(T1::Params)
+0.5,453631,8,56703.9,36416.0,4256,104736,38791.6,"convert_fp32_to_bf16_kernel(const float *, unsigned short *, unsigned long)"
+0.3,326270,32,10195.9,10080.0,9600,11968,493.8,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x64_16x6_tn_align4>(T1::Params)
+0.3,302110,33,9154.8,9088.0,8992,9888,224.9,"rmsnorm_batch_kernel_final_optimized(float *, const float *, const float *, int, int, float)"
+0.2,179200,105,1706.7,1696.0,1664,2144,54.7,"decode_embed_kernel(const float *, float *, const int *, int, int)"
+0.1,99583,1,99583.0,99583.0,99583,99583,0.0,"void gemv2T_kernel_val<long, long, float, float, float, float, (int)128, (int)16, (int)2, (int)2, (bool)0, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13, T6, T6)"
+0.1,80896,32,2528.0,2496.0,2464,3136,114.9,"rope_batch_kernel_cuda(float *, int, int, int, const float *, int, bool)"
+0.1,79616,32,2488.0,2496.0,2464,2528,23.0,"update_kv_cache_batch_kernel(float *, const float *, int, int, int, int, int)"
+0.1,73440,32,2295.0,2144.0,2112,5376,570.0,"add_residual_batch_cuda_kernel(float *, const float *, const float *, int, int)"
+0.1,69344,16,4334.0,4320.0,4224,4576,85.0,"swiglu_batch_cuda_kernel(float *, const float *, const float *, int, int)"

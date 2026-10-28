@@ -426,7 +426,8 @@ class TinyLlamaModel {
   // Logits of row r of the last forward_device_verify_graph pass (one device-to-host copy).
   std::vector<float> verify_row_logits(int r);
   // Measurement knobs of forward_device_verify_graph, read from the environment on first use
-  // (EMBER_VERIFY_LINEAR = smallm | gemm | gemvb | rows; unset, rows under EMBER_DETERMINISTIC=1, else smallm;
+  // (EMBER_VERIFY_LINEAR = smallm | gemm | gemvb | rows | fixed; unset, under EMBER_DETERMINISTIC=1 the decode
+  // step's own linear (rows, or fixed with EMBER_DECODE_LINEAR=fixed), else smallm;
   // EMBER_VERIFY_GRAPH=0, EMBER_VERIFY_ATTN=perrow,
   // EMBER_VERIFY_TIMING=1: per-stage synchronised timing, graph off). Changing them drops the captured graphs.
   struct VerifyOptions {
@@ -437,6 +438,12 @@ class TinyLlamaModel {
   };
   VerifyOptions& verify_options();
   std::map<std::string, double>& verify_stage_ms() { return verify_stage_ms_; }
+  // The FP32 linear layers of the decode step (forward_device and forward_device_graph, dense llama path):
+  // cuBLAS's Sgemm with one column, or ember_verify::fixed_linear with n = 1, whose rows the verification pass
+  // computes for n rows at once with the same arithmetic (experiments/spec_r1_2026-10-28). EMBER_DECODE_LINEAR =
+  // cublas | fixed, read on first use; unset (or empty), cublas (fixed is opt-in until its on-device ROUNDING gate).
+  bool decode_linear_fixed();
+  void decode_matvec(const float* W, const float* x, float* y, int O, int I, cudaStream_t st);
   // Per-op GPU time of the last batched prefill, filled only when
   // EMBER_OP_TIMING=1 (docs/TTFT.md); empty otherwise.
   const std::map<std::string, double>& last_prefill_op_ms() const { return last_prefill_op_ms_; }
@@ -615,6 +622,7 @@ class TinyLlamaModel {
   // forward_device_verify_graph state (speculative_verify.cpp; allocated on first use, kept for the session).
   VerifyOptions verify_opts_;
   bool verify_opts_read_ = false;
+  int decode_linear_ = -1;  // decode_linear_fixed(): -1 not read yet, 0 cublas, 1 fixed
   bool verify_graph_disabled_ = false;
   std::map<int, cudaGraphExec_t> verify_graphs_;  // per row count
   const void* verify_graph_key_ = nullptr;        // KV cache base the graphs were captured for

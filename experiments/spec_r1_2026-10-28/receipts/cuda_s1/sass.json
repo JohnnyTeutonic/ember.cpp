@@ -1,0 +1,35 @@
+{
+ "head": "/content/sass_head.txt",
+ "new": "/content/sass_new.txt",
+ "arches": [
+  "sm_89"
+ ],
+ "head_functions": 108,
+ "new_functions": 124,
+ "identical": 108,
+ "differ": 0,
+ "only_in_head": 0,
+ "only_in_new": 16,
+ "differing": [],
+ "only_in_head_names": [],
+ "only_in_new_names": [
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi16EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi15EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi14EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi13EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi12EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi11EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi10EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi9EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi8EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi7EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi6EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi5EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi4EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi3EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi2EEEvPKfS3_Pfii",
+  "sm_89 _ZN12ember_verify50_GLOBAL__N__H_17_verify_kernels_cu_H26linear_fixed_scalar_kernelILi1EEEvPKfS3_Pfii"
+ ],
+ "head_instructions": 18544,
+ "every_head_kernel_identical": true
+}

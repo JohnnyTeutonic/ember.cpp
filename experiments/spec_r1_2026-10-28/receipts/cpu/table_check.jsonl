@@ -1,0 +1,4 @@
+{"table": "/home/jonat/r1/work/tables/pick_merge_o6.bin", "orders": 6, "positions": 5015, "equal": 5015, "nonempty": 4987, "drafted_tokens": 23412, "first_differences": [], "stderr": "orders 6, entries 982969"}
+{"table": "/home/jonat/r1/work/tables/pick_merge_o4.bin", "orders": 4, "positions": 5015, "equal": 5015, "nonempty": 4987, "drafted_tokens": 15225, "first_differences": [], "stderr": "orders 4, entries 959445"}
+{"table": "/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin", "orders": 4, "positions": 3105, "equal": 3105, "nonempty": 2903, "drafted_tokens": 7697, "first_differences": [], "stderr": "orders 4, entries 935869"}
+{"table": "/mnt/c/ml_artifacts/ember_draft/tables/s_c8_p10.bin", "orders": 4, "positions": 3723, "equal": 3723, "nonempty": 3674, "drafted_tokens": 14680, "first_differences": [], "stderr": "orders 4, entries 761129"}

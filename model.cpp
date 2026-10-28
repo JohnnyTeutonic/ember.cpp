@@ -964,11 +964,11 @@ std::vector<float> TinyLlamaModel::forward_device(
       const float* w_k_layer_ptr = w_k_f32_dev_ + (size_t)l_gpu_idx * n_kv_heads * head_dim * hs;
       const float* w_v_layer_ptr = w_v_f32_dev_ + (size_t)l_gpu_idx * n_kv_heads * head_dim * hs;
       
-      matvec_f32_f32_cuda(cublas_handle_, w_q_layer_ptr, x_norm_dev_,
+      decode_matvec(w_q_layer_ptr, x_norm_dev_,
                           q_dev_, hs, hs, stream);
-      matvec_f32_f32_cuda(cublas_handle_, w_k_layer_ptr, x_norm_dev_,
+      decode_matvec(w_k_layer_ptr, x_norm_dev_,
                           k_dev_, n_kv_heads * head_dim, hs, stream);
-      matvec_f32_f32_cuda(cublas_handle_, w_v_layer_ptr, x_norm_dev_,
+      decode_matvec(w_v_layer_ptr, x_norm_dev_,
                            v_dev_, n_kv_heads * head_dim, hs, stream);
     } else {
       Logger::error("GPU L" + std::to_string(l_model_idx) + " (gpu_idx " + std::to_string(l_gpu_idx) + "): No valid concatenated QKV weights."); return {};
@@ -1100,7 +1100,7 @@ std::vector<float> TinyLlamaModel::forward_device(
 
     if (w_o_f32_dev_) {
       const float* lw_o_proj_f32_dev = w_o_f32_dev_ + (size_t)l_gpu_idx * hs * hs;
-      matvec_f32_f32_cuda(cublas_handle_, lw_o_proj_f32_dev, attn_out_dev_, attn_proj_dev_, hs, hs, stream);
+      decode_matvec(lw_o_proj_f32_dev, attn_out_dev_, attn_proj_dev_, hs, hs, stream);
     } else {
       Logger::error("GPU L" + std::to_string(l_model_idx) + " (gpu_idx " + std::to_string(l_gpu_idx) + "): No valid O proj weights (FP32/BF16)."); return {};
     }
@@ -1128,9 +1128,9 @@ std::vector<float> TinyLlamaModel::forward_device(
       const float* w_gate_layer_ptr = w_gate_f32_dev_ + (size_t)l_gpu_idx * is * hs;
       const float* w_up_layer_ptr = w_up_f32_dev_ + (size_t)l_gpu_idx * is * hs;
       
-      matvec_f32_f32_cuda(cublas_handle_, w_gate_layer_ptr, x_norm_dev_,
+      decode_matvec(w_gate_layer_ptr, x_norm_dev_,
                           gate_vec_dev_, is, hs, stream);
-      matvec_f32_f32_cuda(cublas_handle_, w_up_layer_ptr, x_norm_dev_,
+      decode_matvec(w_up_layer_ptr, x_norm_dev_,
                            up_vec_dev_, is, hs, stream);
     } else {
       Logger::error("GPU L" + std::to_string(l_model_idx) + ": No valid Gate/Up projection weights.");
@@ -1141,7 +1141,7 @@ std::vector<float> TinyLlamaModel::forward_device(
 
     if (w_down_f32_dev_) {
       const float* w_down_layer_ptr = w_down_f32_dev_ + (size_t)l_gpu_idx * hs * is;
-      matvec_f32_f32_cuda(cublas_handle_, w_down_layer_ptr, swiglu_vec_dev_,
+      decode_matvec(w_down_layer_ptr, swiglu_vec_dev_,
                           mlp_down_dev_, hs, is, stream);
     } else {
       Logger::error("GPU L" + std::to_string(l_model_idx) + ": No valid Down projection weights.");
@@ -1170,7 +1170,7 @@ std::vector<float> TinyLlamaModel::forward_device(
     // allocated, converted and freed a full FP32 copy of the head on every
     // decode step (a 12.6 MB cudaMalloc/cudaFree pair at vocab 8192, d384),
     // and its logits came from BF16-rounded weights.
-    matvec_f32_f32_cuda(cublas_handle_, lm_head_f32_dev_, x_norm_dev_, logits_dev_, vs, hs, stream);
+    decode_matvec(lm_head_f32_dev_, x_norm_dev_, logits_dev_, vs, hs, stream);
   } else if (lm_head_dev_) {
     matvec_bf16_f32_cuda(cublas_handle_, lm_head_dev_, x_norm_dev_, logits_dev_,
                          vs, hs, this->use_bf16_tensor_cores_, stream);
@@ -1272,30 +1272,30 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
       KVCacheLayer& kvl = kv_cache->layers[l];
       cudaMemcpyAsync(x_resid1_dev_, x_dev_, hs * sizeof(float), cudaMemcpyDeviceToDevice, st);
       rmsnorm_vector_cuda_optimized(x_dev_, layers[l].input_layernorm_dev, x_norm_dev_, hs, eps, st);
-      matvec_f32_f32_cuda(cublas_handle_, w_q_f32_dev_ + (size_t)l * hs * hs, x_norm_dev_, q_dev_, hs, hs, st);
-      matvec_f32_f32_cuda(cublas_handle_, w_k_f32_dev_ + (size_t)l * kv_row * hs, x_norm_dev_, k_dev_, kv_row, hs, st);
-      matvec_f32_f32_cuda(cublas_handle_, w_v_f32_dev_ + (size_t)l * kv_row * hs, x_norm_dev_, v_dev_, kv_row, hs, st);
+      decode_matvec(w_q_f32_dev_ + (size_t)l * hs * hs, x_norm_dev_, q_dev_, hs, hs, st);
+      decode_matvec(w_k_f32_dev_ + (size_t)l * kv_row * hs, x_norm_dev_, k_dev_, kv_row, hs, st);
+      decode_matvec(w_v_f32_dev_ + (size_t)l * kv_row * hs, x_norm_dev_, v_dev_, kv_row, hs, st);
       rope_devpos_cuda(q_dev_, n_heads, head_dim, all_freqs_cis_dev, decode_step_dev_, config_.is_gguf_file_loaded, st);
       rope_devpos_cuda(k_dev_, n_kv, head_dim, all_freqs_cis_dev, decode_step_dev_, config_.is_gguf_file_loaded, st);
       kv_write_devpos_cuda(kvl.k_dev_fp32, kvl.v_dev_fp32, k_dev_, v_dev_, decode_step_dev_, kv_row, st);
       attention_devpos_cuda(q_dev_, kvl.k_dev_fp32, kvl.v_dev_fp32, attn_out_dev_, n_heads, head_dim, scale,
                             kv_cache->allocated_max_seq_len, n_kv, decode_step_dev_, st);
-      matvec_f32_f32_cuda(cublas_handle_, w_o_f32_dev_ + (size_t)l * hs * hs, attn_out_dev_, attn_proj_dev_, hs, hs, st);
+      decode_matvec(w_o_f32_dev_ + (size_t)l * hs * hs, attn_out_dev_, attn_proj_dev_, hs, hs, st);
       add_residual_cuda(attn_proj_dev_, x_resid1_dev_, x_dev_, hs, st);
       cudaMemcpyAsync(x_resid2_dev_, x_dev_, hs * sizeof(float), cudaMemcpyDeviceToDevice, st);
       rmsnorm_vector_cuda_optimized(x_dev_, layers[l].post_attention_layernorm_dev, x_norm_dev_, hs, eps, st);
       if (config_.num_experts > 0) {
         moe_ffn_layer_cuda(l, x_norm_dev_, 1, mlp_down_dev_, st);
       } else {
-        matvec_f32_f32_cuda(cublas_handle_, w_gate_f32_dev_ + (size_t)l * is * hs, x_norm_dev_, gate_vec_dev_, is, hs, st);
-        matvec_f32_f32_cuda(cublas_handle_, w_up_f32_dev_ + (size_t)l * is * hs, x_norm_dev_, up_vec_dev_, is, hs, st);
+        decode_matvec(w_gate_f32_dev_ + (size_t)l * is * hs, x_norm_dev_, gate_vec_dev_, is, hs, st);
+        decode_matvec(w_up_f32_dev_ + (size_t)l * is * hs, x_norm_dev_, up_vec_dev_, is, hs, st);
         swiglu_cuda(gate_vec_dev_, up_vec_dev_, swiglu_vec_dev_, is, st);
-        matvec_f32_f32_cuda(cublas_handle_, w_down_f32_dev_ + (size_t)l * hs * is, swiglu_vec_dev_, mlp_down_dev_, hs, is, st);
+        decode_matvec(w_down_f32_dev_ + (size_t)l * hs * is, swiglu_vec_dev_, mlp_down_dev_, hs, is, st);
       }
       add_residual_cuda(mlp_down_dev_, x_resid2_dev_, x_dev_, hs, st);
     }
     rmsnorm_vector_cuda_optimized(x_dev_, final_norm_dev, x_norm_dev_, hs, eps, st);
-    matvec_f32_f32_cuda(cublas_handle_, lm_head_f32_dev_, x_norm_dev_, logits_dev_, vs, hs, st);
+    decode_matvec(lm_head_f32_dev_, x_norm_dev_, logits_dev_, vs, hs, st);
     cudaGraph_t graph = nullptr;
     cudaError_t e = cudaStreamEndCapture(st, &graph);
     cublasSetStream(cublas_handle_, 0);

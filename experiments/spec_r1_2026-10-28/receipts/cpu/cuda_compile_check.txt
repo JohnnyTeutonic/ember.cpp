@@ -1,0 +1,22 @@
+build.sh cuda (WSL, Cuda compilation tools, release 12.6, V12.6.85, sm_75, Release, make -j1 tinyllama_server r1_bench): built
+tree: ember main 2fbf454 (git archive) with files.txt from the working tree; sha256 of those files (line endings as staged):
+01e9e4976647b8399e6ee5230339f916b002aa356fd46cebe191e407385fe2f7  draft_table.h
+d23aa19adb40dc8f19159a10f14ee09ff6103b3367b1b04049d747f72411acdb  model.cpp
+fdd9caf89269e9687478e212daa64c45257695c5d8dd9fe789e265dff9c2fab5  model.h
+3023e0b19316f658907799b66bf582dfa7ff9a7d4c0d70bfa3f6de6282a2f3fe  speculative_verify.cpp
+174d92710317ef2f24567f5606f8b5c47b4d3dc6976ad4c921cd5716c2249c8b  verify_kernels.cu
+b03cab664fea334fc46093c6605ddf97be8c7f630d9ebc8ccbdd17c3cee94579  verify_kernels.h
+sha256 with CR removed (to compare with the commit):
+01e9e4976647b8399e6ee5230339f916b002aa356fd46cebe191e407385fe2f7  draft_table.h
+e2985af0b7e53a5de41013af4ec67aae32461f95f16b92aba51f209d7c89c4e3  model.cpp
+fdd9caf89269e9687478e212daa64c45257695c5d8dd9fe789e265dff9c2fab5  model.h
+3023e0b19316f658907799b66bf582dfa7ff9a7d4c0d70bfa3f6de6282a2f3fe  speculative_verify.cpp
+174d92710317ef2f24567f5606f8b5c47b4d3dc6976ad4c921cd5716c2249c8b  verify_kernels.cu
+b03cab664fea334fc46093c6605ddf97be8c7f630d9ebc8ccbdd17c3cee94579  verify_kernels.h
+binaries:
+ec1b0e02e8a2b5e8b663fa8f0eace2553b4d9ec9f3c6cbfad0d178ad9182c698  tinyllama_server
+cf9206c0ddee32832a4c710b06765d46bda3c21ec1c2a992e5aed20a15c4a398  r1_bench
+build log tail:
+[ 96%] Building CXX object CMakeFiles/r1_bench.dir/tools/r1_bench.cpp.o
+[100%] Linking CXX executable r1_bench
+[100%] Built target r1_bench

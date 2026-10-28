@@ -1,0 +1,27 @@
+{
+ "deterministic": "1",
+ "ffn": 864,
+ "gpu": "NVIDIA L4",
+ "heads": 5,
+ "hidden": 320,
+ "kv_heads": 5,
+ "layers": 16,
+ "max_seq": 512,
+ "model": "/content/big/pick_L16.gguf",
+ "pass_ms": {
+  "n": 100,
+  "p10": 1.341071,
+  "p50": 1.35558,
+  "p90": 1.403156
+ },
+ "profile": {
+  "calls": 105,
+  "linear": "fixed",
+  "n": 9,
+  "prefix": 32,
+  "what": "pass"
+ },
+ "reps": 100,
+ "sm": 89,
+ "vocab": 16384
+}

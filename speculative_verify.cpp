@@ -28,14 +28,18 @@ using ember_verify::VerifyLinear;
 TinyLlamaModel::VerifyOptions& TinyLlamaModel::verify_options() {
   if (!verify_opts_read_) {
     verify_opts_read_ = true;
-    // Unset (or empty), the linear option follows the mode: EMBER_DETERMINISTIC=1 takes `rows`, the decode step's
-    // own GEMV per row, so every verification row is the decode step's bits and speculation's ids are plain
-    // decode's; otherwise `smallm`. An explicit EMBER_VERIFY_LINEAR always wins.
+    // Unset (or empty), the linear option follows the mode: EMBER_DETERMINISTIC=1 takes the decode step's own
+    // linear arithmetic, `fixed` (fixed_linear over the n rows at once) when the decode step runs on fixed_linear
+    // (EMBER_DECODE_LINEAR=fixed, opt-in) and `rows` (its cuBLAS GEMV once per row) when it runs on
+    // cuBLAS, so every verification row is the decode step's bits and speculation's ids are plain decode's;
+    // otherwise `smallm`. An explicit EMBER_VERIFY_LINEAR always wins.
     const char* lin = std::getenv("EMBER_VERIFY_LINEAR");
-    const std::string l = lin && *lin ? lin : (ember::deterministic() ? "rows" : "");
+    const std::string l =
+        lin && *lin ? lin : (ember::deterministic() ? (decode_linear_fixed() ? "fixed" : "rows") : "");
     verify_opts_.linear = l == "gemm"    ? static_cast<int>(VerifyLinear::kGemm)
                           : l == "gemvb" ? static_cast<int>(VerifyLinear::kGemvBatched)
                           : l == "rows"  ? static_cast<int>(VerifyLinear::kRows)
+                          : l == "fixed" ? static_cast<int>(VerifyLinear::kFixed)
                                          : static_cast<int>(VerifyLinear::kSmallM);
     const char* g = std::getenv("EMBER_VERIFY_GRAPH");
     verify_opts_.graph = !(g && std::string(g) == "0");
@@ -44,6 +48,28 @@ TinyLlamaModel::VerifyOptions& TinyLlamaModel::verify_options() {
     verify_opts_.timing = std::getenv("EMBER_VERIFY_TIMING") != nullptr;
   }
   return verify_opts_;
+}
+
+// Opt-in (EMBER_DECODE_LINEAR=fixed) until its on-device ROUNDING gate against the CPU reference has run
+// (experiments/spec_r1_2026-10-28: bit-exact speculation and run-to-run bits on an L4, the reference leg pending).
+bool TinyLlamaModel::decode_linear_fixed() {
+  if (decode_linear_ < 0) {
+    const char* e = std::getenv("EMBER_DECODE_LINEAR");
+    const std::string v = e ? e : "";
+    if (!v.empty() && v != "cublas" && v != "fixed")
+      Logger::warning("EMBER_DECODE_LINEAR=" + v + " is not an option (cublas, fixed); cuBLAS.");
+    decode_linear_ = v == "fixed" ? 1 : 0;
+    if (decode_linear_ == 1) Logger::info("Decode linear layers: fixed_linear (EMBER_DECODE_LINEAR).");
+  }
+  return decode_linear_ == 1;
+}
+
+void TinyLlamaModel::decode_matvec(const float* W, const float* x, float* y, int O, int I, cudaStream_t st) {
+  if (decode_linear_fixed()) {
+    ember_verify::fixed_linear(x, W, y, 1, O, I, st);
+    return;
+  }
+  matvec_f32_f32_cuda(cublas_handle_, W, x, y, O, I, st);
 }
 
 // The buffers forward_device_graph allocates on its first call (the decode stream, the step and logit staging and

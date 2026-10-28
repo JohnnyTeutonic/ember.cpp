@@ -213,8 +213,9 @@ Operational logs go to `debugging.log` in the working directory.
 | `EMBER_SCORE_REUSE=0` | `/score`: no prefix reuse between a call's requests (the bits do not change) |
 | `EMBER_SCORE_FULL=1` | `/score`: every request a fresh prefill computing every row's logits (the reference the default path is checked against) |
 | `EMBER_SPEC=k` | speculative decoding with prompt-lookup drafts of up to k tokens (greedy only); on CUDA a verification pass is one captured graph costing about one decode step (`experiments/verify_2026-10-27`) |
-| `EMBER_DRAFT=table` | with `EMBER_SPEC`: where prompt lookup finds no draft, draft from the corpus table `EMBER_DRAFT_TABLE` (an n-gram table of the most frequent next token, built offline by `experiments/draft_2026-10-27/dr_table.py` from chat text in the model's vocabulary), cut where the product of the entries' shares falls below `EMBER_DRAFT_THETA` (default 0.02). Verification decides every token, so replies are plain decode's. Unset or `pld`: prompt lookup alone |
-| `EMBER_VERIFY_LINEAR=rows` | with `EMBER_SPEC`: the verification rows through the decode step's own GEMV, bit-identical to decode under `EMBER_DETERMINISTIC=1` (slower). Unset, the mode decides: `rows` under `EMBER_DETERMINISTIC=1`, `smallm` otherwise; `smallm`, `gemm` or `gemvb` set explicitly override the mode |
+| `EMBER_DRAFT=table` | with `EMBER_SPEC`: where prompt lookup finds no draft, draft from the corpus table `EMBER_DRAFT_TABLE` (an n-gram table of the most frequent next token, built offline by `experiments/draft_2026-10-27/dr_table.py` from chat text in the model's vocabulary; orders 1-4, or up to 8 with `experiments/spec_r1_2026-10-28/r1_sim.py merge`), cut where the product of the entries' shares falls below `EMBER_DRAFT_THETA` (default 0.02). Verification decides every token, so replies are plain decode's. Unset or `pld`: prompt lookup alone |
+| `EMBER_VERIFY_LINEAR=rows` | with `EMBER_SPEC`: the verification rows through the decode step's own GEMV, bit-identical to decode under `EMBER_DETERMINISTIC=1` (slower). Unset, the mode decides: under `EMBER_DETERMINISTIC=1` the decode step's own linear arithmetic (`rows`, or `fixed` with `EMBER_DECODE_LINEAR=fixed`), `smallm` otherwise; `smallm`, `gemm`, `gemvb` or `fixed` set explicitly override the mode |
+| `EMBER_DECODE_LINEAR=fixed` | opt-in: the CUDA decode step's FP32 linear layers on ember's fixed-order GEMV (`fixed_linear`, verify_kernels.h) instead of cuBLAS. With `EMBER_DETERMINISTIC=1` the verification pass then computes all n rows in one launch per layer with the decode step's arithmetic: speculation bit-identical to plain decode in the mode at about one decode step per pass, 2.2x / 2.4x the mode's plain decode on chat (pick_e1_L16 / pk_base_v1, table drafts, k = 8, L4; `experiments/spec_r1_2026-10-28`). The mode's plain logits then differ from the cuBLAS mode's (ids equal on the measured requests); the ROUNDING gate against the CPU is pending, so it is not the default. Unset or `cublas`: cuBLAS |
 | `EMBER_VERIFY=legacy` | with `EMBER_SPEC`: the per-launch verification pass of 20 Oct 2026 |
 | `EMBER_DECODE_GRAPH=0` | disable the CUDA-graph decode on the llama path |
 | `EMBER_DECODE_ATTN=split` | the split-K decode attention with 256-key chunks for the cache's capacity (the default until `experiments/decode_occupancy_2026-10-27`); `legacy`: the one-block-per-head kernel. Unset: the tiled split-K kernel, chunks of 32 keys chosen by the current length (at most 64 per head), 1.5x (20M) and 1.8x (60M) the decode tokens per second of `split` at 256-500 cached tokens on an L4 |
@@ -255,7 +256,11 @@ every row of every generated token, `experiments/verify_det_2026-10-27/`). The `
 per layer, so speculation gains less in the mode: 1.10-1.22x plain decode on pick_e1_L16 and 1.30-1.34x on
 pk_base_v1 over those requests, against 1.40-1.55x for pick_e1_L16 with `smallm`
 (`experiments/verify_2026-10-27/`). Setting `EMBER_VERIFY_LINEAR` explicitly overrides the mode, and gives up the
-guarantee for any value but `rows`.
+guarantee for any value but `rows` (or `fixed` with `EMBER_DECODE_LINEAR=fixed`). On ember 2fbf454 the `rows` pass
+costs 4.6-4.7 decode steps at k = 8 on pick_e1_L16 (96% of it the n GEMV launches per layer), and table drafts lose
+in the mode (0.90x and 0.82x plain decode at k = 8). `EMBER_DECODE_LINEAR=fixed` (opt-in, above) moves the mode's
+decode step and pass onto one fixed-order GEMV: the pass is 1.0-1.15 steps and speculation keeps its bits
+(`experiments/spec_r1_2026-10-28/`).
 
 ## The browser page (`deploy/wasm/`)
 

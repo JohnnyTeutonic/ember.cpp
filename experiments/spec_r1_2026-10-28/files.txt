@@ -1,0 +1,6 @@
+draft_table.h
+model.cpp
+model.h
+speculative_verify.cpp
+verify_kernels.cu
+verify_kernels.h
