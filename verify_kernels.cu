@@ -357,6 +357,55 @@ bool smallm(const float* X, const float* W, float* Y, int n, int O, int I, cudaS
   }
 }
 
+// linear_smallm_kernel's arithmetic with scalar loads, for shapes its float4 loads refuse: lane l takes the same
+// groups of four inputs, 4 (l + 32 j) .. +3 (the last group cut at I), in the same order, then the same butterfly.
+template <int M>
+__global__ void __launch_bounds__(256) linear_fixed_scalar_kernel(const float* __restrict__ X,
+                                                                  const float* __restrict__ W, float* __restrict__ Y,
+                                                                  int O, int I) {
+  const int o = blockIdx.x * (blockDim.x >> 5) + (threadIdx.x >> 5);
+  const int lane = threadIdx.x & 31;
+  if (o >= O) return;
+  const float* w = W + (size_t)o * I;
+  float acc[M];
+#pragma unroll
+  for (int m = 0; m < M; ++m) acc[m] = 0.0f;
+  for (int i = 4 * lane; i < I; i += 128) {
+    const int e = min(I, i + 4);
+#pragma unroll
+    for (int m = 0; m < M; ++m) {
+      const float* x = X + (size_t)m * I;
+      float t = acc[m];
+      for (int j = i; j < e; ++j) t = fmaf(__ldg(w + j), __ldg(x + j), t);
+      acc[m] = t;
+    }
+  }
+#pragma unroll
+  for (int m = 0; m < M; ++m) {
+    float v = acc[m];
+    for (int off = 16; off > 0; off >>= 1) v += __shfl_xor_sync(0xffffffff, v, off);
+    if (lane == 0) Y[(size_t)m * O + o] = v;
+  }
+}
+
+void fixed_scalar(const float* X, const float* W, float* Y, int n, int O, int I, cudaStream_t st) {
+  constexpr int kWarps = 8;
+  const int blocks = (O + kWarps - 1) / kWarps;
+  switch (n) {
+#define EMBER_VERIFY_CASE(m) \
+  case m:                    \
+    linear_fixed_scalar_kernel<m><<<blocks, kWarps * 32, 0, st>>>(X, W, Y, O, I); \
+    return;
+    EMBER_VERIFY_CASE(1) EMBER_VERIFY_CASE(2) EMBER_VERIFY_CASE(3) EMBER_VERIFY_CASE(4)
+    EMBER_VERIFY_CASE(5) EMBER_VERIFY_CASE(6) EMBER_VERIFY_CASE(7) EMBER_VERIFY_CASE(8)
+    EMBER_VERIFY_CASE(9) EMBER_VERIFY_CASE(10) EMBER_VERIFY_CASE(11) EMBER_VERIFY_CASE(12)
+    EMBER_VERIFY_CASE(13) EMBER_VERIFY_CASE(14) EMBER_VERIFY_CASE(15) EMBER_VERIFY_CASE(16)
+#undef EMBER_VERIFY_CASE
+    default:
+      throw std::runtime_error("fixed_linear: n out of range");
+  }
+}
+
 // ---- greedy pick per row ---------------------------------------------------------------------------------------
 constexpr int kSelThreads = 256;
 
@@ -485,11 +534,20 @@ bool attention_rows(const float* q, const float* k_cache, const float* v_cache, 
   return true;
 }
 
+void fixed_linear(const float* X, const float* W, float* Y, int n, int O, int I, cudaStream_t st) {
+  if (n < 1 || n > kMaxRows) throw std::runtime_error("fixed_linear: n out of range");
+  if (!smallm(X, W, Y, n, O, I, st)) fixed_scalar(X, W, Y, n, O, I, st);
+  check_launch("fixed_linear");
+}
+
 void linear_rows(cublasHandle_t h, VerifyLinear mode, const float* X, const float* W, float* Y, int n, int O, int I,
                  cudaStream_t st) {
   cublasSetStream(h, st);
   const float one = 1.0f, zero = 0.0f;
   switch (mode) {
+    case VerifyLinear::kFixed:
+      fixed_linear(X, W, Y, n, O, I, st);
+      return;
     case VerifyLinear::kSmallM:
       if (n <= kMaxRows && smallm(X, W, Y, n, O, I, st)) {
         check_launch("linear_smallm");

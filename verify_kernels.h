@@ -3,8 +3,10 @@
 // A verification pass runs n = 1 + draft rows (positions pos .. pos + n - 1) through every layer in one CUDA graph,
 // built like the graph decode (model.cpp forward_device_graph). Every kernel here computes each row with the decode
 // step's arithmetic: the same statements, the same reduction order, the same attention chunking. Only the linear
-// layers have a choice (VerifyLinear), and VerifyLinear::kRows is the decode step's own cuBLAS call per row. These
-// are new kernels; the decode path's kernels are not touched. pos lives in device memory (pos_dev[0]) and the n
+// layers have a choice (VerifyLinear): kRows is the decode step's own cuBLAS call per row, and kFixed is
+// fixed_linear, the decode step's linear kernel when the decode runs on it (EMBER_DECODE_LINEAR=fixed, opt-in;
+// experiments/spec_r1_2026-10-28). Apart from fixed_linear these kernels serve only
+// the pass. pos lives in device memory (pos_dev[0]) and the n
 // token ids after it (pos_dev[1 .. n]), so one captured graph per n serves every position.
 #ifndef EMBER_VERIFY_KERNELS_H
 #define EMBER_VERIFY_KERNELS_H
@@ -23,7 +25,16 @@ enum class VerifyLinear {
   kGemm = 1,    // cublasSgemm with n columns (the batched prefill's call; not the decode's order)
   kGemvBatched = 2,  // cublasSgemvStridedBatched, the weight shared (stride 0)
   kRows = 3,    // the decode step's cublasSgemm(n = 1), once per row: the decode's arithmetic exactly
+  kFixed = 4,   // fixed_linear: kSmallM's kernel with a scalar twin for any shape; each row's arithmetic is the
+                // same for every n, so with the decode step on fixed_linear (n = 1) a row is the decode's bits
 };
+
+// Y[n][O] = X[n][I] W[O][I]^T, one warp per output and every row at once, each row's dot product a fixed fma chain
+// (lane l takes the inputs 4 (l + 32 j) .. 4 (l + 32 j) + 3, j = 0, 1, ..., in order) and a fixed butterfly over
+// the warp. A row's result depends only on its own X row and W, never on n, the other rows, the alignment or the
+// stream: the float4 kernel (I % 4 == 0, X and W 16-byte aligned) and its scalar twin (any other shape) compute the
+// same chain. 1 <= n <= kMaxRows.
+void fixed_linear(const float* X, const float* W, float* Y, int n, int O, int I, cudaStream_t st);
 
 // Per row of the last pass: the largest logit, the first and last index holding it, the largest logit below it
 // (-inf if none), and whether the row holds a NaN. Enough to reproduce api.cpp's greedy sampler without the row.

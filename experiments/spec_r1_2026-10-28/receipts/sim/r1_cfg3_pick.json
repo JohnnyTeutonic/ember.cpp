@@ -1,0 +1,436 @@
+[
+{
+"name": "current",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "self c1 o4 only",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c1.npz",
+4
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "self c1 o4 > corpus",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c1.npz",
+4
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "merge c1 o4 self 1st",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c1.npz",
+4
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "merge c1 o4 corp 1st",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+],
+[
+"/home/jonat/r1/work/tables/pickself_o6_c1.npz",
+4
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "self c1 o6 only",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c1.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "self c1 o6 > corpus",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c1.npz",
+6
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "merge c1 o6 self 1st",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c1.npz",
+6
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "merge c1 o6 corp 1st",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+],
+[
+"/home/jonat/r1/work/tables/pickself_o6_c1.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "self c2 o4 only",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c2.npz",
+4
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "self c2 o4 > corpus",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c2.npz",
+4
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "merge c2 o4 self 1st",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c2.npz",
+4
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "merge c2 o4 corp 1st",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+],
+[
+"/home/jonat/r1/work/tables/pickself_o6_c2.npz",
+4
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "self c2 o6 only",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c2.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "self c2 o6 > corpus",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c2.npz",
+6
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "merge c2 o6 self 1st",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c2.npz",
+6
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "merge c2 o6 corp 1st",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+],
+[
+"/home/jonat/r1/work/tables/pickself_o6_c2.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "self c4 o4 only",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c4.npz",
+4
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "self c4 o4 > corpus",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c4.npz",
+4
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "merge c4 o4 self 1st",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c4.npz",
+4
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "merge c4 o4 corp 1st",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+],
+[
+"/home/jonat/r1/work/tables/pickself_o6_c4.npz",
+4
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "self c4 o6 only",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c4.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "self c4 o6 > corpus",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c4.npz",
+6
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "merge c4 o6 self 1st",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c4.npz",
+6
+],
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "merge c4 o6 corp 1st",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+],
+[
+"/home/jonat/r1/work/tables/pickself_o6_c4.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+}
+]

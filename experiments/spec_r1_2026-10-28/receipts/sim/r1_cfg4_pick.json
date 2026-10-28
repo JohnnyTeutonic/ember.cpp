@@ -1,0 +1,101 @@
+[
+{
+"name": "n1000 self only",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_n1000_o6_c2.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "n1000 merge corp 1st",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+],
+[
+"/home/jonat/r1/work/tables/pickself_n1000_o6_c2.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "n2000 self only",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_n2000_o6_c2.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "n2000 merge corp 1st",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+],
+[
+"/home/jonat/r1/work/tables/pickself_n2000_o6_c2.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+},
+{
+"name": "n3991 self only",
+"tables": [
+[
+"/home/jonat/r1/work/tables/pickself_o6_c2.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "n3991 merge corp 1st",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+],
+[
+"/home/jonat/r1/work/tables/pickself_o6_c2.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"chain": "order",
+"k": [
+8
+]
+}
+]

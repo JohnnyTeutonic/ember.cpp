@@ -1,0 +1,222 @@
+[
+{
+"name": "pld",
+"pld": true,
+"tables": [],
+"k": [
+8
+]
+},
+{
+"name": "fill th0.0",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.0,
+"mode": "fill",
+"k": [
+8,
+15
+]
+},
+{
+"name": "fill th0.01",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.01,
+"mode": "fill",
+"k": [
+8,
+15
+]
+},
+{
+"name": "fill th0.02",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8,
+15
+]
+},
+{
+"name": "fill th0.05",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.05,
+"mode": "fill",
+"k": [
+8,
+15
+]
+},
+{
+"name": "first th0.02",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "first",
+"k": [
+8
+]
+},
+{
+"name": "extend th0.02",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "extend",
+"k": [
+8
+]
+},
+{
+"name": "conf0.3",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "conf",
+"conf_min": 0.3,
+"k": [
+8
+]
+},
+{
+"name": "conf0.5",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "conf",
+"conf_min": 0.5,
+"k": [
+8
+]
+},
+{
+"name": "conf0.7",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "conf",
+"conf_min": 0.7,
+"k": [
+8
+]
+},
+{
+"name": "fill adapt1.0",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"adapt": {
+"c": 1.0
+},
+"k": [
+8
+]
+},
+{
+"name": "fill adapt2.0",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"adapt": {
+"c": 2.0
+},
+"k": [
+8
+]
+},
+{
+"name": "fill adapt4.0",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"adapt": {
+"c": 4.0
+},
+"k": [
+8
+]
+},
+{
+"name": "fill orders2",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+2
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "fill orders3",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+3
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+}
+]

@@ -1,0 +1,106 @@
+=== vm Tue Oct 27 02:47:59 PM UTC 2026 new=934393f+r1 head=934393f ===
+gpu NVIDIA L4, compute capability 89, nproc 12
+nsys: /usr/local/bin/nsys
+tables: pick h_c8_p10.bin, pk s_c8_p10.bin
+--- deps 14:48:00
+--- build 14:48:16
+built in 125 s
+sass: {'head': '/content/sass_head.txt', 'new': '/content/sass_new.txt', 'head_functions': 108, 'new_functions': 124, 'identical': 108, 'differ': 0, 'only_in_head': 0, 'only_in_new': 16, 'head_instructions': 18544, 'every_head_kernel_identical': True}
+--- waiting for the models 14:50:28
+--- (a) pick bench 15:02:30
+bench pick default rc=0
+bench pick det rc=0
+--- (b) pick nsys 15:03:11
+nsys pick decode_cublas_384 rc=0
+nsys pick decode_fixed_384 rc=0
+nsys pick pass_rows_5_384 rc=0
+nsys pick pass_rows_9_384 rc=0
+nsys pick pass_fixed_5_384 rc=0
+nsys pick pass_fixed_9_384 rc=0
+nsys pick pass_smallm_9_384 rc=0
+nsys pick decode_cublas_32 rc=0
+nsys pick decode_fixed_32 rc=0
+nsys pick pass_rows_5_32 rc=0
+nsys pick pass_rows_9_32 rc=0
+nsys pick pass_fixed_5_32 rc=0
+nsys pick pass_fixed_9_32 rc=0
+nsys pick pass_smallm_9_32 rc=0
+--- (c) pick end to end 15:04:22
+e2e pick h_off rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 5476.678884999728, "decode_tokens": 3327, "decode_ms": 4470.937158999728, "decode_tok_per_s": 744.1392892993248, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "draft_ms": 0.0
+e2e pick h_pld_k8 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 4026.9265479989826, "decode_tokens": 3327, "decode_ms": 3031.9739569989824, "decode_tok_per_s": 1097.3049396812867, "drafted": 3695, "accepted": 1101, "passes": 504, "acceptance": 0.2979702300405954, "tokens_from_pa
+e2e pick h_table_k8 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 2903.953383000953, "decode_tokens": 3327, "decode_ms": 1903.0360840009532, "decode_tok_per_s": 1748.259020399286, "drafted": 6663, "accepted": 1762, "passes": 1721, "acceptance": 0.2644454449947471, "tokens_from_pas
+e2e pick h_det_off rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 5459.3929810000645, "decode_tokens": 3327, "decode_ms": 4462.176648000064, "decode_tok_per_s": 745.6002445557938, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "draft_ms": 0.
+e2e pick h_det_pld_k4 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 5122.3540550004145, "decode_tokens": 3327, "decode_ms": 4127.614534000414, "decode_tok_per_s": 806.0345685369821, "drafted": 2286, "accepted": 1022, "passes": 585, "acceptance": 0.44706911636045493, "tokens_from_pas
+e2e pick h_det_table_k4 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 5382.126760001029, "decode_tokens": 3327, "decode_ms": 4371.691586001029, "decode_tok_per_s": 761.032642525304, "drafted": 5235, "accepted": 1685, "passes": 1800, "acceptance": 0.3218720152817574, "tokens_from_passe
+e2e pick h_det_pld_k8 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 5683.346038001446, "decode_tokens": 3327, "decode_ms": 4672.757852001446, "decode_tok_per_s": 711.9992315833298, "drafted": 3695, "accepted": 1101, "passes": 504, "acceptance": 0.2979702300405954, "tokens_from_passe
+e2e pick h_det_table_k8 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 5957.498083001838, "decode_tokens": 3327, "decode_ms": 4945.531887001837, "decode_tok_per_s": 672.7284498446434, "drafted": 6663, "accepted": 1762, "passes": 1721, "acceptance": 0.2644454449947471, "tokens_from_pass
+e2e pick n_det_off rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 5254.546714000526, "decode_tokens": 3327, "decode_ms": 4244.106968000526, "decode_tok_per_s": 783.9104963858648, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "draft_ms": 0.0
+e2e pick n_det_pld_k4 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 3976.663881999002, "decode_tokens": 3327, "decode_ms": 2964.5921729990023, "decode_tok_per_s": 1122.2454239411902, "drafted": 2286, "accepted": 1022, "passes": 585, "acceptance": 0.44706911636045493, "tokens_from_pa
+e2e pick n_det_table_k4 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 2961.523772000646, "decode_tokens": 3327, "decode_ms": 1944.0577820006463, "decode_tok_per_s": 1711.36888563886, "drafted": 5235, "accepted": 1685, "passes": 1800, "acceptance": 0.3218720152817574, "tokens_from_pass
+e2e pick n_det_pld_k8 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 3951.6992259989365, "decode_tokens": 3327, "decode_ms": 2927.9552399989366, "decode_tok_per_s": 1136.2878621058458, "drafted": 3695, "accepted": 1101, "passes": 504, "acceptance": 0.2979702300405954, "tokens_from_pa
+e2e pick n_det_table_k8 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 2916.1219410004833, "decode_tokens": 3327, "decode_ms": 1904.7410020004834, "decode_tok_per_s": 1746.6941681340231, "drafted": 6663, "accepted": 1762, "passes": 1721, "acceptance": 0.2644454449947471, "tokens_from_p
+e2e pick n_off rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 5531.215100000509, "decode_tokens": 3327, "decode_ms": 4516.817288000509, "decode_tok_per_s": 736.5806026377451, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "draft_ms": 0.0
+e2e pick n_table_k8 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 2920.1039320000746, "decode_tokens": 3327, "decode_ms": 1911.5481910000747, "decode_tok_per_s": 1740.4740386165186, "drafted": 6663, "accepted": 1762, "passes": 1721, "acceptance": 0.2644454449947471, "tokens_from_p
+e2e pick h_off2 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 5486.210130000927, "decode_tokens": 3327, "decode_ms": 4481.3556670009275, "decode_tok_per_s": 742.4092723768429, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "draft_ms": 0.
+e2e pick n_det_off2 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 5293.726399000207, "decode_tokens": 3327, "decode_ms": 4251.028216000206, "decode_tok_per_s": 782.6341842375198, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "draft_ms": 0.0
+compare pick h_off vs h_pld_k8: {"base": "/content/out/e2e/pick_h_off.jsonl", "other": "/content/out/e2e/pick_h_pld_k8.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [744.1392892993248, 1097.3049396812867], "decode_speedup"
+compare pick h_off vs h_table_k8: {"base": "/content/out/e2e/pick_h_off.jsonl", "other": "/content/out/e2e/pick_h_table_k8.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [744.1392892993248, 1748.259020399286], "decode_speedup
+compare pick h_off vs n_off: {"base": "/content/out/e2e/pick_h_off.jsonl", "other": "/content/out/e2e/pick_n_off.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [744.1392892993248, 736.5806026377451], "decode_speedup": 0.
+compare pick h_off vs n_table_k8: {"base": "/content/out/e2e/pick_h_off.jsonl", "other": "/content/out/e2e/pick_n_table_k8.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [744.1392892993248, 1740.4740386165186], "decode_speedu
+compare pick h_off vs h_off2: {"base": "/content/out/e2e/pick_h_off.jsonl", "other": "/content/out/e2e/pick_h_off2.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [744.1392892993248, 742.4092723768429], "decode_speedup": 0
+compare pick h_det_off vs h_det_pld_k4: {"base": "/content/out/e2e/pick_h_det_off.jsonl", "other": "/content/out/e2e/pick_h_det_pld_k4.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [745.6002445557938, 806.0345685369821], "decode_s
+compare pick h_det_off vs h_det_pld_k8: {"base": "/content/out/e2e/pick_h_det_off.jsonl", "other": "/content/out/e2e/pick_h_det_pld_k8.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [745.6002445557938, 711.9992315833298], "decode_s
+compare pick h_det_off vs h_det_table_k4: {"base": "/content/out/e2e/pick_h_det_off.jsonl", "other": "/content/out/e2e/pick_h_det_table_k4.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [745.6002445557938, 761.032642525304], "decode_
+compare pick h_det_off vs h_det_table_k8: {"base": "/content/out/e2e/pick_h_det_off.jsonl", "other": "/content/out/e2e/pick_h_det_table_k8.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [745.6002445557938, 672.7284498446434], "decode
+compare pick h_det_off vs n_det_off: {"base": "/content/out/e2e/pick_h_det_off.jsonl", "other": "/content/out/e2e/pick_n_det_off.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [745.6002445557938, 783.9104963858648], "decode_spee
+compare pick n_det_off vs n_det_pld_k4: {"base": "/content/out/e2e/pick_n_det_off.jsonl", "other": "/content/out/e2e/pick_n_det_pld_k4.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [783.9104963858648, 1122.2454239411902], "decode_
+compare pick n_det_off vs n_det_pld_k8: {"base": "/content/out/e2e/pick_n_det_off.jsonl", "other": "/content/out/e2e/pick_n_det_pld_k8.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [783.9104963858648, 1136.2878621058458], "decode_
+compare pick n_det_off vs n_det_table_k4: {"base": "/content/out/e2e/pick_n_det_off.jsonl", "other": "/content/out/e2e/pick_n_det_table_k4.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [783.9104963858648, 1711.36888563886], "decode_
+compare pick n_det_off vs n_det_table_k8: {"base": "/content/out/e2e/pick_n_det_off.jsonl", "other": "/content/out/e2e/pick_n_det_table_k8.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [783.9104963858648, 1746.6941681340231], "decod
+compare pick n_det_off vs n_det_off2: {"base": "/content/out/e2e/pick_n_det_off.jsonl", "other": "/content/out/e2e/pick_n_det_off2.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [783.9104963858648, 782.6341842375198], "decode_spe
+compare pick h_off vs n_det_off: {"base": "/content/out/e2e/pick_h_off.jsonl", "other": "/content/out/e2e/pick_n_det_off.jsonl", "n": 260, "n_other": 260, "replies_identical": 260, "ids_identical": 260, "differ": [], "decode_tok_per_s": [744.1392892993248, 783.9104963858648], "decode_speedup"
+--- (d) pick deterministic rows 15:07:27
+dump pick n_det_plain rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 25524.471652000557, "decode_tokens": 3327, "decode_ms": 23086.143152000557, "decode_tok_per_s": 144.11242181488834, "drafted": 0, "accepted": 0, "passes": 
+dump pick n_det_plain2 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 25486.838833003276, "decode_tokens": 3327, "decode_ms": 23055.872836003276, "decode_tok_per_s": 144.30162864208154, "drafted": 0, "accepted": 0, "passes": 
+bits pick n_det_plain vs n_det_plain2 rc=0: {'bit_identical': True, 'requests': 260, 'ids_identical': 260, 'requests_all_rows_bit_identical': 260, 'rows_compared': 3829, 'rows_bit_identical': 3829, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 0, 'accepted': 0, 'passes': 0}}
+dump pick n_det_pld_k8 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 24268.139733003864, "decode_tokens": 3327, "decode_ms": 21817.762359003864, "decode_tok_per_s": 152.4904316609259, "drafted": 3695, "accepted": 1101, "pass
+bits pick n_det_plain vs n_det_pld_k8 rc=0: {'bit_identical': True, 'requests': 260, 'ids_identical': 260, 'requests_all_rows_bit_identical': 260, 'rows_compared': 3829, 'rows_bit_identical': 3829, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 3695, 'accepted': 1101, 'passes': 504}}
+dump pick n_det_table_k4 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 23352.93615999967, "decode_tokens": 3327, "decode_ms": 20896.018642999672, "decode_tok_per_s": 159.21693298807284, "drafted": 5235, "accepted": 1685, "pass
+bits pick n_det_plain vs n_det_table_k4 rc=0: {'bit_identical': True, 'requests': 260, 'ids_identical': 260, 'requests_all_rows_bit_identical': 260, 'rows_compared': 3829, 'rows_bit_identical': 3829, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 5235, 'accepted': 1685, 'passes': 1800}}
+dump pick n_det_table_k8 rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 23349.56441900158, "decode_tokens": 3327, "decode_ms": 20910.85196500158, "decode_tok_per_s": 159.1039908640924, "drafted": 6663, "accepted": 1762, "passes
+bits pick n_det_plain vs n_det_table_k8 rc=0: {'bit_identical': True, 'requests': 260, 'ids_identical': 260, 'requests_all_rows_bit_identical': 260, 'rows_compared': 3829, 'rows_bit_identical': 3829, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 6663, 'accepted': 1762, 'passes': 1721}}
+dump pick h_det_plain rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 25675.45867300214, "decode_tokens": 3327, "decode_ms": 23261.56531900214, "decode_tok_per_s": 143.02562851530058, "drafted": 0, "accepted": 0, "passes": 0,
+dump pick n_det_plain_cublas rc=0 {"requests": 260, "tokens": 3587, "wall_ms": 25807.679315000314, "decode_tokens": 3327, "decode_ms": 23365.028787000316, "decode_tok_per_s": 142.39229193036795, "drafted": 0, "accepted": 0, "passes": 
+bits pick h_det_plain vs n_det_plain_cublas rc=0: {'bit_identical': True, 'requests': 260, 'ids_identical': 260, 'requests_all_rows_bit_identical': 260, 'rows_compared': 3829, 'rows_bit_identical': 3829, 'max_abs_diff': 0.0, 'other_spec': {'drafted': 0, 'accepted': 0, 'passes': 0}}
+bits pick h_det_plain vs n_det_plain rc=0: {'bit_identical': False, 'requests': 260, 'ids_identical': 260, 'requests_all_rows_bit_identical': 0, 'rows_compared': 3829, 'rows_bit_identical': 100, 'max_abs_diff': 0.004616260528564453, 'other_spec': {'drafted': 0, 'accepted': 0, 'passes': 0}}
+--- (e) pick self-output pool 15:15:11
+pool pick rc=0 {"requests": 3991, "tokens": 92656, "wall_ms": 63939.62485601014, "decode_tokens": 88665, "decode_ms": 47665.96317501014, "decode_tok_per_s": 1860.1323479913326, "drafted": 155773, "accepted": 45457, 
+packed out1 1.4M
+--- (a) pk bench 15:16:17
+bench pk default rc=0
+bench pk det rc=0
+--- (b) pk nsys 15:17:43
+nsys pk decode_cublas_384 rc=0
+nsys pk decode_fixed_384 rc=0
+nsys pk pass_rows_5_384 rc=0
+nsys pk pass_rows_9_384 rc=0
+nsys pk pass_fixed_5_384 rc=0
+nsys pk pass_fixed_9_384 rc=0
+nsys pk pass_smallm_9_384 rc=0
+nsys pk decode_cublas_32 rc=0
+nsys pk decode_fixed_32 rc=0
+nsys pk pass_rows_5_32 rc=0
+nsys pk pass_rows_9_32 rc=0
+nsys pk pass_fixed_5_32 rc=0
+nsys pk pass_fixed_9_32 rc=0
+nsys pk pass_smallm_9_32 rc=0
+--- (c) pk end to end 15:19:10
+e2e pk h_off rc=0 {"requests": 260, "tokens": 4487, "wall_ms": 11955.68442900094, "decode_tokens": 4227, "decode_ms": 11074.95971200094, "decode_tok_per_s": 381.67181731772615, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "draft_ms": 0.
+e2e pk h_pld_k8 rc=0 {"requests": 260, "tokens": 4487, "wall_ms": 8678.60949299893, "decode_tokens": 4227, "decode_ms": 7792.58717599893, "decode_tok_per_s": 542.4385899742138, "drafted": 2996, "accepted": 1292, "passes": 397, "acceptance": 0.43124165554072097, "tokens_from_passes
+e2e pk h_table_k8 rc=0 {"requests": 260, "tokens": 4487, "wall_ms": 4976.263655000366, "decode_tokens": 4227, "decode_ms": 4091.244740000366, "decode_tok_per_s": 1033.1818966175124, "drafted": 8561, "accepted": 2538, "passes": 1883, "acceptance": 0.29646069384417706, "tokens_from_pa
+e2e pk h_det_off rc=0 {"requests": 260, "tokens": 4487, "wall_ms": 11954.026453996903, "decode_tokens": 4227, "decode_ms": 11077.021704996903, "decode_tok_per_s": 381.60076892267693, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "draft_ms": 
+e2e pk h_det_pld_k4 rc=0 {"requests": 260, "tokens": 4487, "wall_ms": 11032.844431999365, "decode_tokens": 4227, "decode_ms": 10153.650018999366, "decode_tok_per_s": 416.3034959931156, "drafted": 2026, "accepted": 1175, "passes": 514, "acceptance": 0.5799605133267522, "tokens_from_pas
+e2e pk h_det_table_k4 rc=0 {"requests": 260, "tokens": 4487, "wall_ms": 12767.660835005245, "decode_tokens": 4227, "decode_ms": 11879.392847005245, "decode_tok_per_s": 355.8262660760152, "drafted": 6886, "accepted": 2406, "passes": 2014, "acceptance": 0.3494045890212024, "tokens_from_pa
+e2e pk h_det_pld_k8 rc=0 {"requests": 260, "tokens": 4487, "wall_ms": 11800.821689005716, "decode_tokens": 4227, "decode_ms": 10916.011316005715, "decode_tok_per_s": 387.22935306984493, "drafted": 2996, "accepted": 1292, "passes": 397, "acceptance": 0.43124165554072097, "tokens_from_p
+e2e pk h_det_table_k8 rc=0 {"requests": 260, "tokens": 4487, "wall_ms": 14261.685632997342, "decode_tokens": 4227, "decode_ms": 13371.913446997341, "decode_tok_per_s": 316.1103320594085, "drafted": 8561, "accepted": 2538, "passes": 1883, "acceptance": 0.29646069384417706, "tokens_from_p
+e2e pk n_det_off rc=0 {"requests": 260, "tokens": 4487, "wall_ms": 10703.135124007986, "decode_tokens": 4227, "decode_ms": 9805.614767007986, "decode_tok_per_s": 431.0795498740357, "drafted": 0, "accepted": 0, "passes": 0, "acceptance": null, "tokens_from_passes": 0, "draft_ms": 0.

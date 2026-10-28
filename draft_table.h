@@ -9,7 +9,9 @@
 // verification pass decides every token, so the replies are plain decode's whatever the table holds.
 //
 // Keys (dr_table.py has the same): t0 is the most recent token; for o <= 3 the key is t0 | t1 << 16 | t2 << 32;
-// for o = 4 it is mix64(t0 | t1 << 16 | t2 << 32 | t3 << 48) >> 16 (splitmix64's finaliser).
+// for o = 4 it is mix64(t0 | t1 << 16 | t2 << 32 | t3 << 48) >> 16 (splitmix64's finaliser); for o = 5..8
+// (experiments/spec_r1_2026-10-28, r1_sim.py) the order-4 hash continued: h = mix64(t0 | ... | t3 << 48), then
+// h = mix64(h ^ (t_j + 1) * 0x9E3779B97F4A7C15) for j = 4..o-1, the key h >> 16.
 // File (little-endian): "EMBERDT1", u32 vocab_size, u32 orders, u64 entries[orders]; then per order ascending
 // keys u64[n], next u16[n], conf u8[n], each array zero-padded to 8 bytes.
 
@@ -34,7 +36,7 @@ class DraftTable {
     uint32_t vocab = 0, orders = 0;
     std::memcpy(&vocab, buf_.data() + 8, 4);
     std::memcpy(&orders, buf_.data() + 12, 4);
-    if (orders < 1 || orders > 4) return fail(why, "orders must be 1..4");
+    if (orders < 1 || orders > 8) return fail(why, "orders must be 1..8");
     if (static_cast<int>(vocab) != vocab_size)
       return fail(why, "built for vocabulary size " + std::to_string(vocab) + ", the model has " +
                            std::to_string(vocab_size));
@@ -124,10 +126,15 @@ class DraftTable {
       for (int j = 0; j < o; ++j) {
         const int v = ctx[len - 1 - j];
         if (v < 0 || v > 0xFFFF) { ok = false; break; }
-        key |= static_cast<uint64_t>(v) << (16 * j);
+        if (j < 4) key |= static_cast<uint64_t>(v) << (16 * j);
       }
       if (!ok) continue;
-      if (o == 4) key = mix64(key) >> 16;
+      if (o >= 4) {
+        key = mix64(key);
+        for (int j = 4; j < o; ++j)
+          key = mix64(key ^ ((static_cast<uint64_t>(ctx[len - 1 - j]) + 1) * 0x9E3779B97F4A7C15ULL));
+        key >>= 16;
+      }
       const auto it = std::lower_bound(t.keys.begin(), t.keys.end(), key);
       if (it != t.keys.end() && *it == key) {
         const size_t i = static_cast<size_t>(it - t.keys.begin());

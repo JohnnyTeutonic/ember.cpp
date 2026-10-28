@@ -1,0 +1,184 @@
+[
+{
+"name": "current (EMBERDT1 c8)",
+"tables": [
+[
+"/mnt/c/ml_artifacts/ember_draft/tables/s_c8_p10.bin",
+null
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c8 orders4 th0.02",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c8_p10.npz",
+4
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c8 orders4 th0.05",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c8_p10.npz",
+4
+]
+],
+"theta": 0.05,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c8 orders5 th0.02",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c8_p10.npz",
+5
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c8 orders5 th0.05",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c8_p10.npz",
+5
+]
+],
+"theta": 0.05,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c8 orders6 th0.02",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c8_p10.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c8 orders6 th0.05",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c8_p10.npz",
+6
+]
+],
+"theta": 0.05,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c4 orders4 th0.02",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c4_p10.npz",
+4
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c4 orders4 th0.05",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c4_p10.npz",
+4
+]
+],
+"theta": 0.05,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c4 orders5 th0.02",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c4_p10.npz",
+5
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c4 orders5 th0.05",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c4_p10.npz",
+5
+]
+],
+"theta": 0.05,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c4 orders6 th0.02",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c4_p10.npz",
+6
+]
+],
+"theta": 0.02,
+"mode": "fill",
+"k": [
+8
+]
+},
+{
+"name": "c4 orders6 th0.05",
+"tables": [
+[
+"/home/jonat/r1/work/tables/s_o6_c4_p10.npz",
+6
+]
+],
+"theta": 0.05,
+"mode": "fill",
+"k": [
+8
+]
+}
+]

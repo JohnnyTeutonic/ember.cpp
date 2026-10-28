@@ -1,0 +1,21 @@
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+61.1,62216089,11865,5243.7,3520.0,3168,84384,7543.6,"void ember_verify::<unnamed>::linear_smallm_kernel<(int)5>(const float *, const float *, float *, int, int)"
+11.4,11607335,1680,6909.1,6912.0,6560,10240,183.4,"ember_verify::<unnamed>::attn_tiled_rows_kernel(const float *, const float *, const float *, int, float, int, int, int, int, const int *, int, float *)"
+7.7,7845457,3465,2264.2,2240.0,2144,2688,61.0,"ember_verify::<unnamed>::rmsnorm_rows_det_kernel(const float *, const float *, float *, int, float)"
+3.9,3983221,3360,1185.5,1184.0,1152,1664,15.4,"ember_verify::<unnamed>::rope_rows_kernel(float *, int, int, const float *, const int *, bool)"
+3.6,3715674,1680,2211.7,2208.0,2175,2816,22.0,"ember_verify::<unnamed>::attn_tiled_merge_rows_kernel(float *, int, int, int, int, int, const int *, int, const float *)"
+3.4,3463032,3360,1030.7,1024.0,992,1184,15.9,"add_residual_kernel(const float *, const float *, float *, int)"
+2.0,2040473,1680,1214.6,1216.0,1184,1280,14.1,"swiglu_kernel(const float *, const float *, float *, int)"
+1.8,1816666,1680,1081.3,1088.0,1055,1344,17.8,"ember_verify::<unnamed>::kv_write_rows_kernel(float *, float *, const float *, const float *, const int *, int)"
+1.6,1679965,105,15999.7,16000.0,15904,16192,35.3,"ember_verify::<unnamed>::select_rows_kernel(const float *, int, ember_verify::RowPick *)"
+1.2,1233373,16,77085.8,77040.0,76736,77696,238.2,"void attention_prefill_flash2_kernel<(int)64>(float *, const float *, const float *, const float *, int, int, int, int, float)"
+0.6,619934,80,7749.2,6464.0,6176,13408,2571.6,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(T1::Params)
+0.4,450015,8,56251.9,36128.0,4320,101567,38158.8,"convert_fp32_to_bf16_kernel(const float *, unsigned short *, unsigned long)"
+0.3,325087,32,10159.0,10112.0,9568,12032,488.8,void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x64_16x6_tn_align4>(T1::Params)
+0.3,304575,33,9229.5,9120.0,8640,10208,316.3,"rmsnorm_batch_kernel_final_optimized(float *, const float *, const float *, int, int, float)"
+0.2,184735,105,1759.4,1760.0,1632,1888,34.1,"ember_verify::<unnamed>::embed_rows_kernel(const float *, float *, const int *, int, int)"
+0.1,99648,1,99648.0,99648.0,99648,99648,0.0,"void gemv2T_kernel_val<long, long, float, float, float, float, (int)128, (int)16, (int)2, (int)2, (bool)0, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13, T6, T6)"
+0.1,80895,32,2528.0,2496.0,2464,3040,97.2,"rope_batch_kernel_cuda(float *, int, int, int, const float *, int, bool)"
+0.1,79552,32,2486.0,2496.0,2464,2528,19.0,"update_kv_cache_batch_kernel(float *, const float *, int, int, int, int, int)"
+0.1,73632,32,2301.0,2144.0,2112,5120,524.4,"add_residual_batch_cuda_kernel(float *, const float *, const float *, int, int)"
+0.1,68960,16,4310.0,4288.0,4224,4416,50.6,"swiglu_batch_cuda_kernel(float *, const float *, const float *, int, int)"
