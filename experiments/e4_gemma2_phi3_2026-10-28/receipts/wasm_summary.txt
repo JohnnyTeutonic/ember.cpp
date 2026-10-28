@@ -1,0 +1,6 @@
+gemma2 {'prompts': 40, 'top1_agree': '960/960', 'greedy_identical': '40/40', 'worst_prefill_rel': 8.709395435271047e-07, 'worst_decode_rel': 8.709395435271047e-07, 'pass': True}
+phi3_longrope {'prompts': 40, 'top1_agree': '960/960', 'greedy_identical': '40/40', 'worst_prefill_rel': 3.3573303095385294e-07, 'worst_decode_rel': 3.3573303095385294e-07, 'pass': True}
+phi3_swa {'prompts': 40, 'top1_agree': '960/960', 'greedy_identical': '40/40', 'worst_prefill_rel': 0.0, 'worst_decode_rel': 0.0, 'pass': True}
+phi3_longrope_len40 {'prompts': 40, 'top1_agree': '1600/1600', 'greedy_identical': '40/40', 'worst_prefill_rel': 4.833022596485618e-07, 'worst_decode_rel': 1.0369393193689722, 'pass': False}
+tp_gemma2 {'prompts': 40, 'top1_agree': '480/480', 'greedy_identical': '40/40', 'worst_prefill_rel': 1.2412006364876865e-06, 'worst_decode_rel': 1.2412006364876865e-06, 'pass': True}
+tp_phi3 {'prompts': 40, 'top1_agree': '480/480', 'greedy_identical': '40/40', 'worst_prefill_rel': 0.0, 'worst_decode_rel': 0.45656130351734214, 'pass': False}

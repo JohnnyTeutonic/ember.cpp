@@ -1,0 +1,5 @@
+[100%] Built target ir_logits
+[100%] Built target tinyllama_core
+1
+8eae3a1d84482c229eed4b14f9733440a208798fed716ad04c655d779e7d2aac  /home/jonat/ember_adapter_5cc541d/build/ir_adapter
+/home/jonat/ember_adapter_5cc541d/build/ir_adapter at 5cc541db7e251cc4ec8648405ce08e3039ed4cd9

@@ -1,0 +1,1 @@
+summary ember.cpp: 554 pass, 0 fail, 44 skip, 0 xfail, 0 xpass; by kind model 33/0/0, trace 99/0/0, op 51/0/33, refuse 129/0/0, digest 96/0/0, dequant 10/0/0, grad 0/0/11, accept 50/0/0, chat 86/0/0 (pass/fail/skip)

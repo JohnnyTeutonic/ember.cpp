@@ -1,0 +1,16 @@
+{
+ "gen": 32,
+ "gguf": "/mnt/c/ml_artifacts/thirdparty/e4_synth/phi3_longrope.gguf",
+ "greedy_identical": "40/40",
+ "len": 24,
+ "load_ms": 238.587704,
+ "ms_per_prompt": 32.474785624999996,
+ "of": 40,
+ "pass": true,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "960/960",
+ "vocab": 512,
+ "worst_decode_rel": 3.3573303095385294e-07,
+ "worst_prefill_rel": 3.3573303095385294e-07
+}

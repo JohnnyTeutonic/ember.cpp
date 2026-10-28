@@ -1,0 +1,6 @@
+{"doc":"tp_gemma2.ir.json","ok":false,"reason":"attention softcap"}
+{"doc":"tp_phi3.ir.json","ok":false,"reason":"rope freq_factors"}
+{"doc":"tp_deepseek3.ir.json","ok":false,"reason":"split groups (revision 1.5) has no WGSL kernel"}
+{"doc":"gemma2_synth.ir.json","ok":false,"reason":"attention softcap"}
+{"doc":"phi3_longrope_synth.ir.json","ok":false,"reason":"rope freq_factors"}
+{"doc":"tp_gemma3.ir.json","ok":true}

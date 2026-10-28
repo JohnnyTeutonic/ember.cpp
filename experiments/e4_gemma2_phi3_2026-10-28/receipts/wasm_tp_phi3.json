@@ -1,0 +1,16 @@
+{
+ "gen": 16,
+ "gguf": "/home/jonat/keramos_v1.5.0/conformance/models/tp_phi3/tp_phi3.gguf",
+ "greedy_identical": "40/40",
+ "len": 12,
+ "load_ms": 95.528918,
+ "ms_per_prompt": 8.885396325,
+ "of": 40,
+ "pass": false,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "480/480",
+ "vocab": 24,
+ "worst_decode_rel": 0.45656130351734214,
+ "worst_prefill_rel": 0.0
+}

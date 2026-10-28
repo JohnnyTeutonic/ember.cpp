@@ -1,0 +1,16 @@
+{
+ "gen": 16,
+ "gguf": "/home/jonat/keramos_v1.5.0/conformance/models/tp_gemma2/tp_gemma2.gguf",
+ "greedy_identical": "40/40",
+ "len": 12,
+ "load_ms": 82.803927,
+ "ms_per_prompt": 9.032048375000002,
+ "of": 40,
+ "pass": true,
+ "prompts": 40,
+ "tol": 0.0001,
+ "top1_agree": "480/480",
+ "vocab": 24,
+ "worst_decode_rel": 1.2412006364876865e-06,
+ "worst_prefill_rel": 1.2412006364876865e-06
+}
