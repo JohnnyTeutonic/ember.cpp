@@ -257,9 +257,9 @@ if(HAS_CUDA)
         # Set CUDA sources based on compilation method
         if(WIN32)
             message(STATUS "Windows detected: Using standard CUDA compilation")
-            set(CUDA_SOURCES cuda_kernels.cu graph_ir_cuda.cu verify_kernels.cu) # Include CUDA source for standard compilation
+            set(CUDA_SOURCES cuda_kernels.cu graph_ir_cuda.cu verify_kernels.cu kv_quant.cu) # Include CUDA source for standard compilation
         else()
-            set(CUDA_SOURCES cuda_kernels.cu graph_ir_cuda.cu verify_kernels.cu) # Include CUDA source for standard compilation
+            set(CUDA_SOURCES cuda_kernels.cu graph_ir_cuda.cu verify_kernels.cu kv_quant.cu) # Include CUDA source for standard compilation
         endif()
     else()
         message(WARNING "HAS_CUDA option is ON, but CUDA Toolkit or cuBLAS not found. Disabling CUDA support.")
@@ -481,6 +481,9 @@ if(NOT SKBUILD)
         # Mixture-of-Recursions on the device against the CPU: depths, rows held, rewinds (tools/mor_device_gate.cpp).
         add_executable(mor_device_gate tools/mor_device_gate.cpp)
         target_link_libraries(mor_device_gate PRIVATE tinyllama_core)
+        # The quantised KV cache formats (EMBER_KV) against f32 on the device (tools/kv_quant_eval.cpp, R2).
+        add_executable(kv_quant_eval tools/kv_quant_eval.cpp)
+        target_link_libraries(kv_quant_eval PRIVATE tinyllama_core)
     endif()
 
     add_executable(tinyllama_server

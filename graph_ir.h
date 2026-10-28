@@ -145,6 +145,13 @@ class Interpreter {
   // kv slot. kv_positions() below is the CPU-only conformance hook.
   std::vector<int> held_positions(int application) const;
   bool on_gpu() const { return gpu_; }
+  // EMBER_KV (kv_quant.h): the kv cache's storage format, "f32" (the default), "f16", "q8" or "q4".
+  // On the CPU a quantised format keeps the f32 cache and stores each row's dequantised value.
+  const char* kv_format() const;
+  // Device bytes of the kv cache (every block's codes and scales) and of a quantised format's prefill
+  // scratch (the dequantised rows of one block); 0 on the CPU.
+  size_t kv_cache_bytes() const;
+  size_t kv_scratch_bytes() const;
 
   // Per-turn state tokens (paperkiln IR_SPEC_DRAFT.md section 1, tiny_chat_long_2026-10).
   // state_k(): the k state slots of the extended embedding ("state_weight", [k, d]); ids vocab ..
@@ -302,6 +309,7 @@ class Interpreter {
   std::unordered_map<std::string, std::vector<int64_t>> shapes_;  // ggml order (ne0 first)
   std::vector<KVCacheLayer> kv_;  // per block: [max_len][kv_heads][head_dim]
   int kv_heads_ = 0, head_dim_ = 0;
+  int kv_fmt_ = 0;  // ember_kvq::Format from EMBER_KV (kv_quant.h); 0 = f32, every path as before
   int window_ = 0, sinks_ = 0;  // kv state's sliding window (0 = unbounded) and sinks
   float rope_theta_ = 0.0f;
   int rope_dim_ = 0;         // n_rot (head_dim_ when the rope node names none)
@@ -452,6 +460,12 @@ class Interpreter {
   std::vector<std::vector<DStep>> plan_block_;  // per block
   int logits_slot_ = -1;
   std::vector<float*> dk_, dv_;  // per block: [max_len][kv_heads][head_dim]
+  // kv_fmt_ != f32: per block the codes and scales (kv_quant.h) in place of dk_/dv_ (left null), the
+  // prefill's dequantised rows [2][max_len][row] (one block at a time) and the decode kernel's scratch.
+  std::vector<void*> dkq_, dks_, dvq_, dvs_;
+  float* dkv_f32_ = nullptr;
+  float* dkv_part_ = nullptr;
+  size_t kv_dev_bytes_ = 0, kv_scratch_dev_bytes_ = 0;
   std::vector<float*> drope_tabs_;  // rope_tabs_ on the device
   DBuf dexpr_;  // expr scratch (a reduction's argument and its columns)
   int* dtokens_ = nullptr;

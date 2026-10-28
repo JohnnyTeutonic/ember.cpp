@@ -1,0 +1,31 @@
+{
+ "deterministic_env": "",
+ "device": "cuda",
+ "family_hint": "qwen2",
+ "gguf": "/content/models/qwen25/qwen2.5-0.5b-instruct-fp16.gguf",
+ "kv": {
+  "f16": {
+   "bytes_per_position": 12288.0,
+   "cache_bytes": 100663296,
+   "scratch_bytes": 8625152
+  },
+  "f32": {
+   "bytes_per_position": 24576.0,
+   "cache_bytes": 201326592,
+   "scratch_bytes": 0
+  },
+  "q4": {
+   "bytes_per_position": 3840.0,
+   "cache_bytes": 31457280,
+   "scratch_bytes": 8625152
+  },
+  "q8": {
+   "bytes_per_position": 6528.0,
+   "cache_bytes": 53477376,
+   "scratch_bytes": 8625152
+  }
+ },
+ "layers": 24,
+ "max_len": 8192,
+ "vocab": 151936
+}

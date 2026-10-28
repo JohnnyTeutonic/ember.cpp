@@ -1,0 +1,78 @@
+[
+ {
+  "ctx": 2048,
+  "formats": {
+   "f16": {
+    "decode_ms_median": 9.3028139998205,
+    "decode_ms_min": 9.271074999589473,
+    "decode_ms_p90": 9.379272000398487,
+    "decode_tok_s": 107.49435601091187,
+    "kv_bytes_at_ctx": 25165824.0,
+    "prefill_ms": 334.10352100012824
+   },
+   "f32": {
+    "decode_ms_median": 9.376408999785781,
+    "decode_ms_min": 9.338930000085384,
+    "decode_ms_p90": 9.435207000002265,
+    "decode_tok_s": 106.65063778924817,
+    "kv_bytes_at_ctx": 50331648.0,
+    "prefill_ms": 360.9564650002867
+   },
+   "q4": {
+    "decode_ms_median": 9.361397000029683,
+    "decode_ms_min": 9.305314999539405,
+    "decode_ms_p90": 9.422604999970645,
+    "decode_tok_s": 106.82166347574291,
+    "kv_bytes_at_ctx": 7864320.0,
+    "prefill_ms": 335.0158800003119
+   },
+   "q8": {
+    "decode_ms_median": 9.370795000344515,
+    "decode_ms_min": 9.314748000353575,
+    "decode_ms_p90": 9.424819000065327,
+    "decode_tok_s": 106.71453168735793,
+    "kv_bytes_at_ctx": 13369344.0,
+    "prefill_ms": 337.6971120000817
+   }
+  },
+  "steps": 128
+ },
+ {
+  "ctx": 4096,
+  "formats": {
+   "f16": {
+    "decode_ms_median": 9.480307000223547,
+    "decode_ms_min": 9.418855000287294,
+    "decode_ms_p90": 9.545937000308186,
+    "decode_tok_s": 105.4818161454497,
+    "kv_bytes_at_ctx": 50331648.0,
+    "prefill_ms": 941.4772080001421
+   },
+   "f32": {
+    "decode_ms_median": 9.619339000433683,
+    "decode_ms_min": 9.567582000046968,
+    "decode_ms_p90": 9.666925000026822,
+    "decode_tok_s": 103.95724695375799,
+    "kv_bytes_at_ctx": 100663296.0,
+    "prefill_ms": 950.1342290001921
+   },
+   "q4": {
+    "decode_ms_median": 9.527264000382274,
+    "decode_ms_min": 9.498303000349551,
+    "decode_ms_p90": 9.60625599976629,
+    "decode_tok_s": 104.96192820518837,
+    "kv_bytes_at_ctx": 15728640.0,
+    "prefill_ms": 948.6659229998477
+   },
+   "q8": {
+    "decode_ms_median": 9.556117000058293,
+    "decode_ms_min": 9.49397400021553,
+    "decode_ms_p90": 9.611841999925673,
+    "decode_tok_s": 104.64501428706868,
+    "kv_bytes_at_ctx": 26738688.0,
+    "prefill_ms": 940.3137080003507
+   }
+  },
+  "steps": 128
+ }
+]

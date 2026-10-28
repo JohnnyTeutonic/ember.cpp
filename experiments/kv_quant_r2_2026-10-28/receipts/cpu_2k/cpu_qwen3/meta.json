@@ -1,0 +1,31 @@
+{
+ "deterministic_env": "",
+ "device": "cpu",
+ "family_hint": "qwen3",
+ "gguf": "/mnt/c/ml_artifacts/thirdparty/qwen3-0.6b/Qwen3-0.6B-Q8_0.gguf",
+ "kv": {
+  "f16": {
+   "bytes_per_position": 0.0,
+   "cache_bytes": 0,
+   "scratch_bytes": 0
+  },
+  "f32": {
+   "bytes_per_position": 0.0,
+   "cache_bytes": 0,
+   "scratch_bytes": 0
+  },
+  "q4": {
+   "bytes_per_position": 0.0,
+   "cache_bytes": 0,
+   "scratch_bytes": 0
+  },
+  "q8": {
+   "bytes_per_position": 0.0,
+   "cache_bytes": 0,
+   "scratch_bytes": 0
+  }
+ },
+ "layers": 28,
+ "max_len": 2048,
+ "vocab": 151936
+}
