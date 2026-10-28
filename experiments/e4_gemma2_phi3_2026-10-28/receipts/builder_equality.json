@@ -1,0 +1,121 @@
+[
+ {
+  "file": "gemma2",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "gemma2.fcap0.1_cap0.3",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "gemma2.fcap30_cap50_nowindow",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "gemma2.caps_zero",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "phi3_longrope",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "phi3_longrope.attn_factor0",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "phi3_longrope.attn_factor1",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "phi3_longrope.attn_factor_absent",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "phi3_swa",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "tp_gemma2",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "tp_gemma2.fcap0.1_cap0.3",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "tp_gemma2.fcap30_cap50_nowindow",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "tp_gemma2.caps_zero",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "tp_phi3",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "tp_phi3.attn_factor0",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "tp_phi3.attn_factor1",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ },
+ {
+  "file": "tp_phi3.attn_factor_absent",
+  "json_equal": true,
+  "differing_keys": [],
+  "oracle_rule38_accepts_ember_doc": true,
+  "ember_rule38_accepts_gguf_ir_doc": true
+ }
+]

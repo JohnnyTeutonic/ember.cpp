@@ -7,7 +7,7 @@
 # 3. HF on the synthetic files (e4_hf_gate.py): OUT/hf_gate_cpu.json.
 # 4. The C++ builder against gguf_ir.py (e4_builder.py): OUT/builder_equality.json.
 # 5. Regression bits: ir_logits of BASE_BUILD (the commit before this work) and of the pinned build on the suite's
-#    earlier third-party and paperkiln models, the same seeded ids: OUT/regress_bits.txt (equal or DIFFER per file).
+#    earlier third-party models (tools/ir_logits aborts on the suite's paperkiln files in both builds; the suite covers them), the same seeded ids: OUT/regress_bits.txt (equal or DIFFER per file).
 # Every step resumes by rerunning (the build is incremental, the rest is minutes).
 set -u
 C=${1:?commit}; BASE=${2:?base build dir}; OUT=${3:?out dir}
@@ -26,7 +26,7 @@ python3 $E/e4_builder.py $K $B ~/e4a_work/builder_$C /mnt/c/ml_artifacts/thirdpa
 cp ~/e4a_work/builder_$C/builder_equality.json "$OUT/"
 : > "$OUT/regress_bits.txt"
 python3 -c "import json, random; r = random.Random(0); print(json.dumps([[r.randrange(24) for _ in range(20)] for _ in range(4)]))" > ~/e4a_work/regress_ids.json
-for m in tp_gemma3 tp_qwen3 tp_qwen3_hd16 tp_llama_hd16 tp_mistral tp_mistral_hd16 tp_gptneox tp_mamba1 pk_llama pk_gpt2_swa pk_flex_t5 pk_flex_shaw pk_mor; do
+for m in tp_gemma3 tp_qwen3 tp_qwen3_hd16 tp_llama_hd16 tp_mistral tp_mistral_hd16 tp_gptneox tp_mamba1; do
   G=$K/conformance/models/$m/$m.gguf
   env -u EMBER_IR $BASE/ir_logits $G < ~/e4a_work/regress_ids.json > ~/e4a_work/rb_base_$m.json 2> /dev/null
   env -u EMBER_IR $B/ir_logits $G < ~/e4a_work/regress_ids.json > ~/e4a_work/rb_head_$m.json 2> /dev/null
