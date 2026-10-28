@@ -1,0 +1,31 @@
+{
+ "deterministic_env": "",
+ "device": "cuda",
+ "family_hint": "qwen3",
+ "gguf": "/content/models/qwen3/Qwen3-0.6B-Q8_0.gguf",
+ "kv": {
+  "f16": {
+   "bytes_per_position": 114688.0,
+   "cache_bytes": 968884224,
+   "scratch_bytes": 69738496
+  },
+  "f32": {
+   "bytes_per_position": 229376.0,
+   "cache_bytes": 1937768448,
+   "scratch_bytes": 0
+  },
+  "q4": {
+   "bytes_per_position": 35840.0,
+   "cache_bytes": 302776320,
+   "scratch_bytes": 69738496
+  },
+  "q8": {
+   "bytes_per_position": 60928.0,
+   "cache_bytes": 514719744,
+   "scratch_bytes": 69738496
+  }
+ },
+ "layers": 28,
+ "max_len": 8448,
+ "vocab": 151936
+}

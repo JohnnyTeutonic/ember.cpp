@@ -24,6 +24,7 @@
 #include "graph_ir_recurrence.h"
 #include "graph_ir_validate.h"
 #include "ir_digest.h"
+#include "kv_quant.h"
 #include "logger.h"
 #include "quantization.h"
 #include "utils.h"
@@ -1515,6 +1516,17 @@ void Interpreter::init(const json& j, const std::string& ir_json, const GGUFData
       max_len_ = cap;
     }
   }
+  // EMBER_KV=f16|q8|q4 (kv_quant.h, R2): the kv cache's storage format; unset or f32 changes nothing.
+  kv_fmt_ = ember_kvq::parse_format(std::getenv("EMBER_KV"));
+  if (kv_fmt_ != ember_kvq::kF32 && head_dim_ > 0) {
+    const std::string why = ember_kvq::shape_error(kv_fmt_, head_dim_);
+    if (!why.empty()) throw std::runtime_error(std::string("EMBER_KV=") + ember_kvq::format_name(kv_fmt_) + ": " + why);
+    for (const auto& n : block_)  // its latent cache [c | kr] has its own write path, not quantised
+      if (n.op == "mla_attention")
+        throw std::runtime_error(std::string("EMBER_KV=") + ember_kvq::format_name(kv_fmt_) +
+                                 ": mla_attention's latent cache is not quantised");
+    Logger::info(std::string("[IR] EMBER_KV: the kv cache stores ") + ember_kvq::format_name(kv_fmt_));
+  }
   bool has_attention = false;
   for (const auto& n : block_) has_attention = has_attention || n.op == "attention" || n.op == "mla_attention";
   if ((has_kv || has_attention) && (kv_heads_ <= 0 || head_dim_ <= 0 || max_len_ <= 0))
@@ -1748,6 +1760,24 @@ Interpreter::~Interpreter() {
 #ifdef HAS_CUDA
   free_device();
 #endif
+}
+
+const char* Interpreter::kv_format() const { return ember_kvq::format_name(kv_fmt_); }
+
+size_t Interpreter::kv_cache_bytes() const {
+#ifdef HAS_CUDA
+  if (gpu_)
+    return kv_fmt_ != ember_kvq::kF32 ? kv_dev_bytes_
+                                      : static_cast<size_t>(n_layers_) * 2 * max_len_ * kv_heads_ * head_dim_ * sizeof(float);
+#endif
+  return 0;
+}
+
+size_t Interpreter::kv_scratch_bytes() const {
+#ifdef HAS_CUDA
+  if (gpu_) return kv_scratch_dev_bytes_;
+#endif
+  return 0;
 }
 
 void Interpreter::attention_window(const Node& n, int layer, int& window, int& sinks) const {
@@ -2520,6 +2550,10 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
       const size_t row = static_cast<size_t>(hkv) * hd;
       std::memcpy(cache.k.data() + kpos * row, k.v.data(), static_cast<size_t>(T) * row * sizeof(float));
       std::memcpy(cache.v.data() + kpos * row, v.v.data(), static_cast<size_t>(T) * row * sizeof(float));
+      if (kv_fmt_ != ember_kvq::kF32) {  // EMBER_KV: the rows as the quantised cache gives them back
+        ember_kvq::roundtrip_rows(kv_fmt_, cache.k.data() + kpos * row, static_cast<size_t>(T), row);
+        ember_kvq::roundtrip_rows(kv_fmt_, cache.v.data() + kpos * row, static_cast<size_t>(T), row);
+      }
       const float scale = n.attrs.contains("scale") ? n.attrs.at("scale").get<float>() : 1.0f / std::sqrt(float(hd));
       Buf out{{}, hq * hd};
       int window = 0, sinks = 0;
@@ -3193,7 +3227,39 @@ void Interpreter::init_device() {
   const size_t kv_floats = static_cast<size_t>(max_len_) * kv_heads_ * head_dim_;
   dk_.assign(n_layers_, nullptr);
   dv_.assign(n_layers_, nullptr);
-  for (int l = 0; l < n_layers_ && kv_floats > 0; ++l) {
+  if (kv_fmt_ != ember_kvq::kF32 && kv_floats > 0) {  // EMBER_KV: codes and scales in place of dk_/dv_
+    if (turn_state_ || !mor_step_.empty())
+      throw std::runtime_error(std::string("EMBER_KV=") + ember_kvq::format_name(kv_fmt_) +
+                               ": the CUDA path quantises plain causal attention only (no turn_state, depth_route)");
+    const size_t row = static_cast<size_t>(kv_heads_) * head_dim_;
+    const size_t db = static_cast<size_t>(max_len_) * ember_kvq::data_bytes(kv_fmt_, row);
+    const size_t sb = static_cast<size_t>(max_len_) * ember_kvq::scale_bytes(kv_fmt_, row);
+    for (auto* v : {&dkq_, &dks_, &dvq_, &dvs_}) v->assign(n_layers_, nullptr);
+    for (int l = 0; l < n_layers_; ++l) {
+      for (void** p : {&dkq_[l], &dvq_[l]}) {
+        gpuErrchk(cudaMalloc(p, db));
+        gpuErrchk(cudaMemset(*p, 0, db));
+      }
+      for (void** p : {&dks_[l], &dvs_[l]}) {
+        if (sb == 0) continue;
+        gpuErrchk(cudaMalloc(p, sb));
+        gpuErrchk(cudaMemset(*p, 0, sb));
+      }
+    }
+    kv_dev_bytes_ = static_cast<size_t>(n_layers_) * 2 * (db + sb);
+    int hq_max = 0;
+    for (const auto& n : block_)
+      if (n.op == "attention") hq_max = std::max(hq_max, n.attrs.at("heads").get<int>());
+    const size_t part = ember_kvq::partial_floats(std::max(hq_max, 1), head_dim_, max_len_);
+    gpuErrchk(cudaMalloc(&dkv_f32_, 2 * kv_floats * sizeof(float)));
+    gpuErrchk(cudaMalloc(&dkv_part_, part * sizeof(float)));
+    kv_scratch_dev_bytes_ = (2 * kv_floats + part) * sizeof(float);
+    Logger::info(std::string("[IR] EMBER_KV=") + ember_kvq::format_name(kv_fmt_) + ": kv cache " +
+                 std::to_string(kv_dev_bytes_ >> 20) + " MiB (f32 would be " +
+                 std::to_string((static_cast<size_t>(n_layers_) * 2 * kv_floats * sizeof(float)) >> 20) +
+                 " MiB), prefill and decode scratch " + std::to_string(kv_scratch_dev_bytes_ >> 20) + " MiB");
+  }
+  for (int l = 0; l < n_layers_ && kv_floats > 0 && kv_fmt_ == ember_kvq::kF32; ++l) {
     gpuErrchk(cudaMalloc(&dk_[l], kv_floats * sizeof(float)));
     gpuErrchk(cudaMalloc(&dv_[l], kv_floats * sizeof(float)));
     gpuErrchk(cudaMemset(dk_[l], 0, kv_floats * sizeof(float)));
@@ -3518,6 +3584,12 @@ void Interpreter::free_device() {
   for (float* p : dv_) if (p) cudaFree(p);
   dk_.clear();
   dv_.clear();
+  for (auto* v : {&dkq_, &dks_, &dvq_, &dvs_}) {
+    for (void* p : *v) if (p) cudaFree(p);
+    v->clear();
+  }
+  for (float* p : {dkv_f32_, dkv_part_}) if (p) cudaFree(p);
+  dkv_f32_ = dkv_part_ = nullptr;
   for (auto& kv : dsnaps_) cudaFree(kv.second);
   for (float* p : dsnap_pool_) cudaFree(p);
   dsnaps_.clear();
@@ -3793,6 +3865,8 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
           if (attn_row_ + T > max_len_)
             throw std::runtime_error("IR attention: " + std::to_string(attn_row_ + T) + " kv rows exceed the kv state (" +
                                      std::to_string(max_len_) + ")");
+          if (kv_fmt_ != ember_kvq::kF32)
+            throw std::runtime_error("EMBER_KV: a recursion step's compact cache is not quantised on CUDA");
           float* K = dk_[layer];
           float* V = dv_[layer];
           ir_kv_write_cuda(K, V, k.p, v.p, T, hkv * hd, attn_row_, st);
@@ -3808,6 +3882,24 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
           throw std::runtime_error("IR attention: position " + std::to_string(start_pos + T) + " exceeds the kv state (" +
                                    std::to_string(max_len_) + ")");
         const size_t row = static_cast<size_t>(hkv) * hd;
+        if (kv_fmt_ != ember_kvq::kF32) {  // EMBER_KV (kv_quant.h): codes in the cache, dequantised as read
+          if (s.ts || s.window > 0)
+            throw std::runtime_error("EMBER_KV: turn_state and windowed attention are not quantised on CUDA");
+          void *Kd = dkq_[layer], *Ks = dks_[layer], *Vd = dvq_[layer], *Vs = dvs_[layer];
+          ember_kvq::write_cuda(kv_fmt_, Kd, Ks, Vd, Vs, k.p, v.p, T, static_cast<int>(row), start_pos, st, dpos_);
+          DBuf& out = dout(s.out[0], T, hq * hd, {&q, &k, &v});
+          if (T == 1) {
+            ember_kvq::decode_cuda(kv_fmt_, q.p, Kd, Ks, Vd, Vs, out.p, hq, hkv, hd, s.scale, max_len_, start_pos + 1,
+                                   dkv_part_, st, dpos_);
+          } else {  // the rows [0, start_pos + T) dequantised, then the f32 prefill kernel over them
+            float* K = dkv_f32_;
+            float* V = dkv_f32_ + static_cast<size_t>(max_len_) * row;
+            ember_kvq::dequant_rows_cuda(kv_fmt_, Kd, Ks, Vd, Vs, K, V, start_pos + T, static_cast<int>(row), st);
+            attention_batch_prefill_cuda(q.p, nullptr, nullptr, K, V, out.p, T, start_pos, max_len_, hq, hkv, hd,
+                                         s.scale, st, nullptr);
+          }
+          break;
+        }
         float* K = dk_[layer];
         float* V = dv_[layer];
         if (s.ts) {  // the compact cache (ts_begin): this call's rows from kv_row0_, dstep_[2] in the graph

@@ -1,0 +1,29 @@
+qwen25 default: HEAD vs HEAD+R2 IDENTICAL cbfc794c5a51c1e1 cbfc794c5a51c1e1
+qwen25 EMBER_KV=f32 vs HEAD IDENTICAL cbfc794c5a51c1e1 cbfc794c5a51c1e1
+qwen25 EMBER_KV=q8: differs from f32 ()
+qwen3 default: HEAD vs HEAD+R2 IDENTICAL b996bc2e8449d734 b996bc2e8449d734
+qwen3 EMBER_KV=f32 vs HEAD IDENTICAL b996bc2e8449d734 b996bc2e8449d734
+qwen3 EMBER_KV=q8: differs from f32 ()
+gemma3 default: HEAD vs HEAD+R2 IDENTICAL 681a5081faccadd6 681a5081faccadd6
+gemma3 EMBER_KV=f32 vs HEAD IDENTICAL 681a5081faccadd6 681a5081faccadd6
+gemma3 EMBER_KV=q8: differs from f32 ()
+pythia default: HEAD vs HEAD+R2 IDENTICAL 3547885903a2148e 3547885903a2148e
+pythia EMBER_KV=f32 vs HEAD IDENTICAL 3547885903a2148e 3547885903a2148e
+pythia EMBER_KV=q8: differs from f32 ()
+mamba default: HEAD vs HEAD+R2 IDENTICAL bccdf1aa580e9267 bccdf1aa580e9267
+mamba EMBER_KV=f32 vs HEAD IDENTICAL bccdf1aa580e9267 bccdf1aa580e9267
+mamba EMBER_KV=q8: equal to f32 (no kv cache, or q8 not in force)
+--- CUDA compile check of HEAD + R2 (nvcc, no GPU use)
+nvcc kv_quant.cu OK
+g++ graph_ir.cpp (HAS_CUDA) OK
+g++ kv_quant_eval.cpp (HAS_CUDA) OK
+deepseek2 default (ids < 200): HEAD vs HEAD+R2 IDENTICAL 26d822a920666038 26d822a920666038
+deepseek2 EMBER_KV=f32 vs HEAD IDENTICAL 26d822a920666038 26d822a920666038
+qwen3moe default (ids < 200): HEAD vs HEAD+R2 IDENTICAL 85280d86de311d04 85280d86de311d04
+qwen3moe EMBER_KV=f32 vs HEAD IDENTICAL 85280d86de311d04 85280d86de311d04
+gemma2 default (ids < 200): HEAD vs HEAD+R2 IDENTICAL f75b403a829f23eb f75b403a829f23eb
+gemma2 EMBER_KV=f32 vs HEAD IDENTICAL f75b403a829f23eb f75b403a829f23eb
+phi3_longrope default (ids < 200): HEAD vs HEAD+R2 IDENTICAL 86d084ee7c0341b6 86d084ee7c0341b6
+phi3_longrope EMBER_KV=f32 vs HEAD IDENTICAL 86d084ee7c0341b6 86d084ee7c0341b6
+deepseek2 EMBER_KV=f16: EMBER_KV=f16: mla_attention's latent cache is not quantised
+qwen3moe EMBER_KV=q8: refused: EMBER_KV=q8: head_dim % 32 != 0 (q8 and q4 blocks sit inside a head)
