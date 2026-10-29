@@ -408,7 +408,12 @@ class TinyLlamaModel {
   // or an empty vector when the graph path does not apply (CPU layers,
   // quantized KV cache, no FP32 LM head, capture failure); the caller then
   // uses forward_device().
-  std::vector<float> forward_device_graph(int token_id, int pos, KVCache* kv_cache);
+  // Optional pick: empty logits and pick.first >= 0 mean a successful device selection.
+  // pick.first == -1 means unavailable; no forward was performed. Fetch a row only
+  // after success when host sampling/debugging needs it. Default path is unchanged.
+  std::vector<float> forward_device_graph(int token_id, int pos, KVCache* kv_cache,
+                                         ember_verify::RowPick* pick = nullptr);
+  std::vector<float> decode_row_logits();
   // Speculative verification: n tokens at positions pos..pos+n-1 (all layers
   // on the GPU, n <= 33), logits for every row ([n][vocab]): FP32 GEMMs and
   // the decode-attention kernel launched once per row, per launch (1.2-5.1
@@ -652,6 +657,9 @@ class TinyLlamaModel {
   float* decode_embed_f32_dev_ = nullptr;   // FP32 embedding table (host lookup values)
   void* decode_cublas_ws_ = nullptr;
   bool decode_graph_disabled_ = false;
+  bool decode_graph_has_pick_ = false;
+  ember_verify::RowPick* decode_pick_dev_ = nullptr;
+  ember_verify::RowPick* decode_pick_host_ = nullptr;  // pinned, one 20-byte record
 
   float* x_dev_ = nullptr;
   float* x_norm_dev_ = nullptr;
