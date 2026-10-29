@@ -184,3 +184,25 @@ suggests it can.
 
 Run (WSL): `bash build.sh cuda`; `bash stage.sh <ember_head.tgz> <commit> <stage> [vm2.sh]`; `bash waitlaunch.sh
 <session> 115 <stage> <log>`; `python3 r1_summary.py bench|nsys|e2e|bits <out>`; `bash cpu_checks.sh`.
+
+## E10.3 implementation started, 30 Oct 2026
+
+`EMBER_DECODE_PICK=1` opts plain greedy decoding into a captured `select_rows` after the unchanged
+LM-head kernels. The host reads one 20-byte RowPick. Greedy sampling uses the existing speculative
+record decoder, including its RNG draw. Temperature/top-k modes needing a distribution, either
+repetition penalty, and unsupported graph paths keep the existing full-row route. Near ties, NaNs,
+infinities and diagnostic dumps read the already-computed logits without replaying the forward.
+Switching between graph output modes recaptures; normal decoding remains the default.
+
+Validation: g++ C++17 syntax checks of model.cpp and api.cpp both with and without HAS_CUDA
+(CUDA 12.6 headers); `test_decode_pick.py` compares the production full sampler and record decoder
+on random, tied and near-tied rows, vocabulary sizes through 16,384, seven temperatures and three
+top-p settings: 19,830 accepted decisions have equal ids and RNG states; 5,370 conservatively
+fall back. Invalid records are rejected without advancing RNG. This is a host-side differential
+test, not a device kernel gate. No local GPU used.
+
+Still required on the remote device: compare option off/on ids and every dumped logit row
+bit-for-bit (the option with dumping fetches its selected graph's full row), compare ids without
+dumping, run both default and deterministic modes, check graph fallback and penalties, and
+measure at least 15% plain decode throughput gain on pick_e1_L16 before adopting the option.
+No CUDA execution, speed claim or default change is established by the host checks.

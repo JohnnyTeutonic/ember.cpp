@@ -1291,6 +1291,9 @@ if (prefill_enabled) {
         break; 
     }
 
+    // E10.3 is opt-in until the device parity and speed gates pass. A record
+    // can replace a full row only for unpenalised greedy sampling.
+    bool picked_on_device = false;
     // Mixed-mode forward pass logic
     if (ir_) {
       logits = ir_->forward({input_token_id}, pos);
@@ -1311,9 +1314,23 @@ if (prefill_enabled) {
 #ifdef HAS_CUDA
       // GPU-only mode: the captured decode graph when it applies, else the
       // per-launch forward.
-      logits = model_->forward_device_graph(input_token_id, pos, &kv_cache_);
+      static const bool device_pick_on = [] {
+        const char* v = std::getenv("EMBER_DECODE_PICK");
+        return v && std::string(v) == "1";
+      }();
+      const bool want_pick = device_pick_on && top_k == 1 && !repeat_on && repetition_penalty_ <= 1.0f &&
+                             (pos >= num_prompt_tokens - 1);
+      ember_verify::RowPick pick{};
+      logits = model_->forward_device_graph(input_token_id, pos, &kv_cache_, want_pick ? &pick : nullptr);
+      if (want_pick && pick.first >= 0) {
+        // A near tie, nonfinite row, or debug dump needs the same computed
+        // logits. Copy them without running the forward/KV write a second time.
+        if (!logits_debug_on()) next_token_id = greedy_from_pick(pick, temperature, rng_);
+        if (logits_debug_on() || next_token_id < 0) logits = model_->decode_row_logits();
+        else picked_on_device = true;
+      }
       host_phase("host.forward_device_graph");
-      if (logits.empty()) {
+      if (logits.empty() && !picked_on_device) {
         gpuErrchk(cudaMemcpy(model_->get_x_dev(), current_data_host.data(), current_data_host.size() * sizeof(float), cudaMemcpyHostToDevice));
         host_phase("host.embed_h2d");
         logits = model_->forward_device(model_->get_x_dev(), pos, &kv_cache_, nullptr);
@@ -1330,10 +1347,12 @@ if (prefill_enabled) {
 
     // Sampling logic: Only sample if we're at the last prompt token or generating
     if (pos == num_prompt_tokens - 1 || pos >= num_prompt_tokens) {
-      apply_repetition_penalty(logits, generated_token_ids, repetition_penalty_);
-      apply_repeat_penalty(logits);
-      debug_dump_topk(logits);
-      next_token_id = sample_top_k_top_p_temperature(logits, temperature, top_k, top_p, rng_);
+      if (!picked_on_device) {
+        apply_repetition_penalty(logits, generated_token_ids, repetition_penalty_);
+        apply_repeat_penalty(logits);
+        debug_dump_topk(logits);
+        next_token_id = sample_top_k_top_p_temperature(logits, temperature, top_k, top_p, rng_);
+      }
       host_phase("host.sample");
 
       // Only add to generated tokens if we're actually generating (not just finishing prompt)

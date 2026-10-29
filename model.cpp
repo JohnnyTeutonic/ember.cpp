@@ -385,6 +385,10 @@ TinyLlamaModel::TinyLlamaModel(const ModelConfig& config_from_session,
 
 TinyLlamaModel::~TinyLlamaModel() {
 #ifdef HAS_CUDA
+  if (decode_stream_) cudaStreamSynchronize(decode_stream_);
+  if (decode_graph_exec_) cudaGraphExecDestroy(decode_graph_exec_);
+  if (decode_pick_dev_) cudaFree(decode_pick_dev_);
+  if (decode_pick_host_) cudaFreeHost(decode_pick_host_);
   // Only perform GPU cleanup if GPU layers were actually used
   int active_num_gpu_layers = config_.num_hidden_layers - config_.num_cpu_offload_layers;
   if (active_num_gpu_layers > 0) {
@@ -1196,7 +1200,9 @@ std::vector<float> TinyLlamaModel::forward_device(
 // token id and position live in device memory (decode_step_dev_), read by
 // the device-position kernels. The kernels and their order are
 // forward_device()'s optimized path, so the arithmetic is the same.
-std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, KVCache* kv_cache) {
+std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, KVCache* kv_cache,
+                                                       ember_verify::RowPick* pick) {
+  if (pick) pick->first = -1;
   static const bool enabled = [] {
     const char* v = std::getenv("EMBER_DECODE_GRAPH");
     const char* o = std::getenv("EMBER_DECODE_OPT");  // the graph uses the optimized kernels
@@ -1250,8 +1256,13 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
     gpuErrchk(cudaMemcpy(decode_embed_f32_dev_, table.data(), table.size() * sizeof(float), cudaMemcpyHostToDevice));
   }
 
+  if (pick && !decode_pick_dev_) {
+    gpuErrchk(cudaMalloc(&decode_pick_dev_, sizeof(ember_verify::RowPick)));
+    gpuErrchk(cudaHostAlloc(reinterpret_cast<void**>(&decode_pick_host_), sizeof(ember_verify::RowPick),
+                            cudaHostAllocDefault));
+  }
   const void* key = kv_cache->layers[0].k_dev_fp32;
-  if (decode_graph_exec_ && decode_graph_key_ != key) {
+  if (decode_graph_exec_ && (decode_graph_key_ != key || decode_graph_has_pick_ != (pick != nullptr))) {
     cudaGraphExecDestroy(decode_graph_exec_);
     decode_graph_exec_ = nullptr;
   }
@@ -1296,6 +1307,7 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
     }
     rmsnorm_vector_cuda_optimized(x_dev_, final_norm_dev, x_norm_dev_, hs, eps, st);
     decode_matvec(lm_head_f32_dev_, x_norm_dev_, logits_dev_, vs, hs, st);
+    if (pick) ember_verify::select_rows(logits_dev_, 1, vs, decode_pick_dev_, st);
     cudaGraph_t graph = nullptr;
     cudaError_t e = cudaStreamEndCapture(st, &graph);
     cublasSetStream(cublas_handle_, 0);
@@ -1310,6 +1322,7 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
       return {};
     }
     decode_graph_key_ = key;
+    decode_graph_has_pick_ = pick != nullptr;
     Logger::info("[decode graph] captured the decode step (" + std::to_string(L) + " layers).");
   }
 
@@ -1318,6 +1331,18 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
   gpuErrchk(cudaMemcpyAsync(decode_step_dev_, decode_step_host_, 2 * sizeof(int), cudaMemcpyHostToDevice,
                             decode_stream_));
   gpuErrchk(cudaGraphLaunch(decode_graph_exec_, decode_stream_));
+  if (pick) {
+    gpuErrchk(cudaMemcpyAsync(decode_pick_host_, decode_pick_dev_, sizeof(ember_verify::RowPick),
+                              cudaMemcpyDeviceToHost, decode_stream_));
+    gpuErrchk(cudaStreamSynchronize(decode_stream_));
+    *pick = *decode_pick_host_;
+    return {};
+  }
+  return decode_row_logits();
+}
+
+std::vector<float> TinyLlamaModel::decode_row_logits() {
+  const int vs = config_.vocab_size;
   gpuErrchk(cudaMemcpyAsync(decode_logits_host_, logits_dev_, static_cast<size_t>(vs) * sizeof(float),
                             cudaMemcpyDeviceToHost, decode_stream_));
   gpuErrchk(cudaStreamSynchronize(decode_stream_));
