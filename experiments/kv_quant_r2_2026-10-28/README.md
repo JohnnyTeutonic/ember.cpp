@@ -270,3 +270,143 @@ validator also returns false. E9 remains open. The extra conservative comparison
 against old teacher-forcing point estimates was not reached; it is separate from
 the original registered device gate. The normal watchdog fetched diagnostics,
 terminated the pod and deleted its volume (runner ledger about $0.45, cap $3).
+
+## Versioned f16 numerical diagnosis (31 October, preparation)
+
+E9 remains open. The preserved L4 archive SHA256
+`daa7865875fcb4dc0032f9e52032dab0731646e746a7685501483a496b5ac022`
+contains aggregate Qwen3 f16 failures (prefill 0.0003446816; decode
+0.0003620141 against unchanged 1e-4), despite 288/288 argmax and 12/12 greedy
+agreement. It contains no raw logit/cache binaries and no failing-g3 prompt
+arrays: that runner removed binaries, and ir_device_gate emitted IDs only for
+argmax flips. New IDs materialize the original seed=0, n=12, len=24 recipe;
+they are not recovered historical arrays.
+
+The provisional hypothesis is amplification at binary16 rounding boundaries
+of small upstream CPU/CUDA arithmetic differences. This is not yet a causal
+finding. An independent compiler `_Float16` comparison found zero CPU helper
+conversion failures across 1,256,002 inputs and all 65,536 half expansions.
+A constructed midpoint example illustrates possible amplification only.
+No production arithmetic change or gate relaxation follows from this example.
+
+Opt-in `-DEMBER_KV_DIAGNOSTICS=ON` adds `kv_f16_trace`,
+`kv_f16_seeded_ids`, and (on actual CUDA builds) `kv_f16_component_probe`.
+Ordinary builds default OFF. CPU object, core archive, and complete executable
+are byte identical with hooks absent; the receipts record the exact compiler
+and hashes. Real tiny Qwen3MoE CPU fixture checks preserve f32/f16 logits with
+tracing active and refuse altered case payloads, partial cases, graph tracing,
+and requested-CUDA CPU fallback. This is CPU evidence, not CUDA validation.
+
+The fixed remote diagnostic separates (a) identical-input conversion,
+bulk-versus-device-position cache writes/readback and attention versus an
+independent double reference at both capacity=L and actual capacity=8448 (paired
+identical inputs, including lengths24/55), from (b) all original seeded Qwen3 model prompts.
+Uninstrumented graph0/graph1 controls retain the original all-row gate command
+(no `--ids`, whose branch checks only last rows). Model traces use graph0
+explicitly, retaining raw Q/K/V, half codes/cache rows, attention outputs, and
+full prefill/teacher-forced-decode logits for f32/f16 CPU/CUDA. Stage metrics are
+descriptive; only vocabulary-logit comparisons apply the original row-range
+normalization and 1e-4 tolerance. A diagnosis does not close the broader E9 gate.
+
+`run_f16_diagnosis.py` binds model, binaries, frozen IDs and controller hashes
+before/after execution. Completed negative controls are immutable and reusable;
+incomplete control or trace cases require operational review. The shell wrapper
+checks the exact image/runtime, canonical model bytes and ordinary CUDA object
+identity before forwards, and restores source bytes in `finally` for the
+same-path object proof. No post-result source changes are permitted.
+
+Proposed remote limit: one L4, $1.50 cumulative, 2.25h total, with an independent
+95-minute VM timeout leaving about 40 minutes for final relay. Per-case journals
+and three-minute ZIP snapshots live on retained physical storage until terminal
+fetch. They do not protect against physical-volume loss. Raw arrays have one
+canonical artifact home; public Git retains tools and small cryptographic
+receipts. No remote diagnostic result has been obtained at this preparation
+checkpoint.
+
+Offline checks:
+
+```
+python3 -m pytest -q experiments/kv_quant_r2_2026-10-28/test_f16_trace_analysis.py experiments/kv_quant_r2_2026-10-28/test_f16_diagnosis.py
+```
+Interpretation limits: macro-OFF byte identity does not establish invariance of
+active GPU tracing: trace copies/synchronizations deliberately change the
+execution schedule. Report traced observations beside uninstrumented controls.
+A midpoint between two rounded values is a single binary16 boundary only when
+the ordered half codes are adjacent; the analyzer records adjacency separately.
+Neither an amplification example nor a stage correlation alone proves causality.
+Source `#line` restoration preserves ordinary CUDA `gpuErrchk` error-location
+constants, which otherwise change when guarded lines are merely inserted.
+Offline home verification is separate from the frozen remote controller:
+`audit_f16_diagnosis.py` streams ZIP hashes/CRCs, validates source/runtime and
+all raw case/control inventories, and independently replays the frozen analyzer.
+It keeps the ZIP in its canonical artifact home and extracts only to an owned
+temporary directory. Run long audits through the one-core CPU budget wrapper.
+
+Only after that audit, `f16_attention_reference.py` reconstructs actual captured
+causal GQA attention using an independent f64 softmax reference. Its separate
+posthoc receipt binds raw archive, audit, source and helper hashes. Decode cache
+history uses recorded decode writes, never prefill rows. Earlier cache rows are
+not resnapshotted each step, so their persistence is an explicit assumption;
+a residual can reflect read/arithmetic error or unobserved past-cache mutation.
+Hand-solvable causal means, nonzero softmax/GQA and decode-history tests cover
+the reference. This tool changes neither the frozen report nor E9's gate.
+
+The current-source diagnostic does not reproduce the old whole machine/binary.
+Compared with original d147d00e, base5b96961 also has fixed-order FP64 CPU dot
+AVX2 dispatch (designed/tested to retain finite-input bits), CUDA graph API and
+header/Windows portability fixes. KV conversion/storage source is unchanged.
+The current host CPU/flags are recorded separately; the original archive lacks
+those details. Uninstrumented controls measure the current recipe explicitly.
+
+## Completed f16 diagnosis: valid negative, no arithmetic fix demonstrated
+
+The complete L4 diagnostic archive is home and independently replayed. All 2,603
+ZIP members passed CRC checks; exact model bytes, original 12-by-24 seeded IDs,
+48 model trace cases, 48 primitive cases, four uninstrumented controls, source,
+binaries and runtime are bound by the small receipts below. Raw arrays have one
+canonical home, not a duplicate copy in Git:
+`C:/ml_artifacts/kvq/ember-e9-f16-diag-1031/e9_f16_diagnosis/out.zip`
+(SHA256 `87d3bf9144589f5687cae0c84d99ef572efad120ea5dbf6e82cdd352f635a273`,
+3,211,876,723 bytes).
+
+Both graph0 and graph1 reproduce the original f16 negative exactly: prefill
+0.0003446816157 and decode 0.0003620140670 exceed unchanged 1e-4. Both f32
+controls pass (2.14648e-6 / 2.33011e-6). Every control retains 288/288 argmax
+and 12/12 greedy sequences. The failure is therefore not confined to graph
+capture. CPU teacher-forced decode and prefill are bit-identical in both formats;
+CUDA f16 decode/prefill row difference reaches 0.000401192, versus 3.05212e-6
+for f32. This is a diagnosis, not an adoption pass.
+
+No conversion, cache-store or immediate readback mismatches were found in the
+actual traces or the 48 identical-input primitive cases, including capacity8448
+and the relevant short/long and tiled length boundaries. Small CPU/CUDA Q/K/V
+differences exist before conversion. Layer0 prefill has 817 differing half codes.
+The deterministic first V example differs by 5.2154e-8 before rounding and
+7.6294e-6 afterward, crossing an adjacent binary16 boundary. Other examples do
+not necessarily amplify; this observation is not a whole-model causal proof.
+
+The separate posthoc reference reconstructs attention from each execution's own
+captured Q and cache inputs using f64 causal GQA. At layer0, f16 CPU prefill/decode
+attention residual is at most 2.503e-6 absolute, CUDA prefill 2.579e-6 and CUDA
+decode 1.048e-6. The observed CPU/CUDA prefill attention gap is 4.875e-4 absolute,
+with different rounded cache inputs. This locates a substantial stage discrepancy
+before attention accumulation rather than demonstrating a large error against
+attention's own inputs. Across all layers, residual maxima are larger (CPU
+6.370e-5, CUDA prefill 9.916e-5); do not divide unrelated maxima or compare hidden
+activation normalizers to the vocabulary-logit adoption gate.
+
+Decode reconstruction assumes previously captured cache writes persist: old
+rows are not resnapshotted at every step. Active tracing changes synchronization,
+and the current EPYC7702 host cannot be equated to the historical unrecorded CPU.
+These limits prevent a definitive whole-model causal attribution. No production
+arithmetic defect or warranted arithmetic patch was demonstrated. E9 remains
+open, with no default or tolerance change and no further favorable-result retry.
+The ordinary watchdog fetched every artifact, terminated the pod and deleted
+its volume; ledger estimate was $0.563302 against the $1.50 cap.
+
+Receipts: [strict raw replay](receipts/e9_f16_diagnosis_20261031/raw_diagnosis_audit.json),
+[independent actual-input attention reference](receipts/e9_f16_diagnosis_20261031/actual_attention_f64.json),
+[final diagnosis, hardware, individual log hashes and cleanup](receipts/e9_f16_diagnosis_20261031/final_diagnosis.json).
+Offline verification tests: 65 passed. Frozen remote source remains
+`2658afb90bcadfb812fb4169e338ef9c260a2163`; the independent auditor and posthoc
+source identities are explicitly recorded separately.

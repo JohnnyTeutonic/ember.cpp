@@ -1,0 +1,213 @@
+{
+  "archive": "C:/ml_artifacts/kvq/ember-e9-20261030/e9_device/out.zip",
+  "bytes": 231706,
+  "sha256": "daa7865875fcb4dc0032f9e52032dab0731646e746a7685501483a496b5ac022",
+  "crc_failure": null,
+  "raw_logits_present": false,
+  "historical_g3_raw_ids_present": false,
+  "g3_f16": {
+    "device_supported": true,
+    "family_hint": "qwen3",
+    "gen": 32,
+    "gguf": "/content/models/qwen3/Qwen3-0.6B-Q8_0.gguf",
+    "greedy_identical": "12/12",
+    "ids_file": null,
+    "len": 24,
+    "on_gpu": true,
+    "pass": false,
+    "prompts": 12,
+    "rows": [
+      {
+        "decode_rel": 0.00026279679308362816,
+        "greedy_first_diff": -1,
+        "i": 0,
+        "prefill_rel": 0.00017792896641861882,
+        "top1": 24
+      },
+      {
+        "decode_rel": 0.00023193688094329533,
+        "greedy_first_diff": -1,
+        "i": 1,
+        "prefill_rel": 0.00024528657763292,
+        "top1": 24
+      },
+      {
+        "decode_rel": 0.00018210538112089464,
+        "greedy_first_diff": -1,
+        "i": 2,
+        "prefill_rel": 0.0001680686511705682,
+        "top1": 24
+      },
+      {
+        "decode_rel": 0.00022413852981190423,
+        "greedy_first_diff": -1,
+        "i": 3,
+        "prefill_rel": 0.00019408369677156024,
+        "top1": 24
+      },
+      {
+        "decode_rel": 0.00020664987973281236,
+        "greedy_first_diff": -1,
+        "i": 4,
+        "prefill_rel": 0.0002760056693255879,
+        "top1": 24
+      },
+      {
+        "decode_rel": 0.0003620140669552354,
+        "greedy_first_diff": -1,
+        "i": 5,
+        "prefill_rel": 0.00029119074744437287,
+        "top1": 24
+      },
+      {
+        "decode_rel": 0.00020186612287254155,
+        "greedy_first_diff": -1,
+        "i": 6,
+        "prefill_rel": 0.00015998534973941264,
+        "top1": 24
+      },
+      {
+        "decode_rel": 0.00021108592670787866,
+        "greedy_first_diff": -1,
+        "i": 7,
+        "prefill_rel": 0.00013538953719022638,
+        "top1": 24
+      },
+      {
+        "decode_rel": 0.0001550948684604625,
+        "greedy_first_diff": -1,
+        "i": 8,
+        "prefill_rel": 0.0001812914788418984,
+        "top1": 24
+      },
+      {
+        "decode_rel": 0.00022351418961275582,
+        "greedy_first_diff": -1,
+        "i": 9,
+        "prefill_rel": 0.0003446816157433488,
+        "top1": 24
+      },
+      {
+        "decode_rel": 0.00016815767597532833,
+        "greedy_first_diff": -1,
+        "i": 10,
+        "prefill_rel": 0.00024144577009282525,
+        "top1": 24
+      },
+      {
+        "decode_rel": 0.00023766979544678296,
+        "greedy_first_diff": -1,
+        "i": 11,
+        "prefill_rel": 0.00032284078025712765,
+        "top1": 24
+      }
+    ],
+    "tol": 0.0001,
+    "top1_agree": "288/288",
+    "worst_decode_rel": 0.0003620140669552354,
+    "worst_prefill_rel": 0.0003446816157433488
+  },
+  "g3_f32": {
+    "device_supported": true,
+    "family_hint": "qwen3",
+    "gen": 32,
+    "gguf": "/content/models/qwen3/Qwen3-0.6B-Q8_0.gguf",
+    "greedy_identical": "12/12",
+    "ids_file": null,
+    "len": 24,
+    "on_gpu": true,
+    "pass": true,
+    "prompts": 12,
+    "rows": [
+      {
+        "decode_rel": 1.9983181334765835e-06,
+        "greedy_first_diff": -1,
+        "i": 0,
+        "prefill_rel": 1.8468853410684863e-06,
+        "top1": 24
+      },
+      {
+        "decode_rel": 2.330109424564053e-06,
+        "greedy_first_diff": -1,
+        "i": 1,
+        "prefill_rel": 1.4073435939314594e-06,
+        "top1": 24
+      },
+      {
+        "decode_rel": 1.9431429884438048e-06,
+        "greedy_first_diff": -1,
+        "i": 2,
+        "prefill_rel": 1.5044380923724989e-06,
+        "top1": 24
+      },
+      {
+        "decode_rel": 1.5446809809563428e-06,
+        "greedy_first_diff": -1,
+        "i": 3,
+        "prefill_rel": 1.752175441084807e-06,
+        "top1": 24
+      },
+      {
+        "decode_rel": 9.35261743286738e-07,
+        "greedy_first_diff": -1,
+        "i": 4,
+        "prefill_rel": 1.6610722982086924e-06,
+        "top1": 24
+      },
+      {
+        "decode_rel": 1.6832687681068736e-06,
+        "greedy_first_diff": -1,
+        "i": 5,
+        "prefill_rel": 2.146482987624777e-06,
+        "top1": 24
+      },
+      {
+        "decode_rel": 8.891042760462505e-07,
+        "greedy_first_diff": -1,
+        "i": 6,
+        "prefill_rel": 1.6201955310883118e-06,
+        "top1": 24
+      },
+      {
+        "decode_rel": 8.937708876911218e-07,
+        "greedy_first_diff": -1,
+        "i": 7,
+        "prefill_rel": 1.6323437376383968e-06,
+        "top1": 24
+      },
+      {
+        "decode_rel": 1.1558851413675429e-06,
+        "greedy_first_diff": -1,
+        "i": 8,
+        "prefill_rel": 1.6832876088293532e-06,
+        "top1": 24
+      },
+      {
+        "decode_rel": 1.5804246495671744e-06,
+        "greedy_first_diff": -1,
+        "i": 9,
+        "prefill_rel": 1.9547972679753384e-06,
+        "top1": 24
+      },
+      {
+        "decode_rel": 1.024391726566352e-06,
+        "greedy_first_diff": -1,
+        "i": 10,
+        "prefill_rel": 1.5855301673904339e-06,
+        "top1": 24
+      },
+      {
+        "decode_rel": 1.663064981708719e-06,
+        "greedy_first_diff": -1,
+        "i": 11,
+        "prefill_rel": 1.892794499084915e-06,
+        "top1": 24
+      }
+    ],
+    "tol": 0.0001,
+    "top1_agree": "288/288",
+    "worst_decode_rel": 2.330109424564053e-06,
+    "worst_prefill_rel": 2.146482987624777e-06
+  },
+  "interpretation": "Historical aggregate failure preserved. New explicit IDs replay the frozen seeded recipe; they are not recovered historical arrays. No arithmetic defect demonstrated and E9 remains open."
+}

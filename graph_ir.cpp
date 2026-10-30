@@ -25,6 +25,10 @@
 #include "graph_ir_validate.h"
 #include "ir_digest.h"
 #include "kv_quant.h"
+#ifdef EMBER_KV_DIAGNOSTICS
+#include "experiments/kv_quant_r2_2026-10-28/kv_trace.h"
+#endif
+#line 28
 #include "logger.h"
 #include "quantization.h"
 #include "utils.h"
@@ -2555,6 +2559,14 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
         ember_kvq::roundtrip_rows(kv_fmt_, cache.v.data() + kpos * row, static_cast<size_t>(T), row);
       }
       const float scale = n.attrs.contains("scale") ? n.attrs.at("scale").get<float>() : 1.0f / std::sqrt(float(hd));
+#ifdef EMBER_KV_DIAGNOSTICS
+      auto kv_trace = ember_kv_diag::begin("cpu", layer, kpos, T, hq, hkv, hd, kv_fmt_, scale);
+      ember_kv_diag::values(kv_trace, "q", q.v.data(), q.v.size());
+      ember_kv_diag::values(kv_trace, "k", k.v.data(), k.v.size());
+      ember_kv_diag::values(kv_trace, "v", v.v.data(), v.v.size());
+      ember_kv_diag::cache_cpu(kv_trace, cache.k.data() + kpos * row, cache.v.data() + kpos * row);
+#endif
+#line 2558
       Buf out{{}, hq * hd};
       int window = 0, sinks = 0;
       attention_window(n, layer, window, sinks);
@@ -2617,6 +2629,10 @@ void Interpreter::run_nodes(const std::vector<Node>& nodes, int layer, Env& env,
         attention_window_batch_cpu(q.v, cache, out.v, T, start_pos, hq, hkv, hd, scale, window, sinks, softcap);
       else
         attention_batch_cpu(q.v, cache, out.v, T, kpos, hq, hkv, hd, scale, softcap);
+#ifdef EMBER_KV_DIAGNOSTICS
+      ember_kv_diag::finish(kv_trace, out.v.data());
+#endif
+#line 2620
       env[n.out.at(0)] = std::move(out);
     } else if (n.op == "mla_attention") {  // multi-head latent attention (IR_SPEC 5.20). ROUNDING.
       const Buf &qn = in(n, 0), &qr = in(n, 1), &c = in(n, 2), &kr = in(n, 3);
@@ -3882,6 +3898,11 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
           throw std::runtime_error("IR attention: position " + std::to_string(start_pos + T) + " exceeds the kv state (" +
                                    std::to_string(max_len_) + ")");
         const size_t row = static_cast<size_t>(hkv) * hd;
+#ifdef EMBER_KV_DIAGNOSTICS
+        auto kv_trace = ember_kv_diag::begin_gpu(layer, start_pos, T, hq, hkv, hd, kv_fmt_, s.scale,
+                                                q.p, k.p, v.p, st);
+#endif
+#line 3885
         if (kv_fmt_ != ember_kvq::kF32) {  // EMBER_KV (kv_quant.h): codes in the cache, dequantised as read
           if (s.ts || s.window > 0)
             throw std::runtime_error("EMBER_KV: turn_state and windowed attention are not quantised on CUDA");
@@ -3898,6 +3919,10 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
             attention_batch_prefill_cuda(q.p, nullptr, nullptr, K, V, out.p, T, start_pos, max_len_, hq, hkv, hd,
                                          s.scale, st, nullptr);
           }
+#ifdef EMBER_KV_DIAGNOSTICS
+          ember_kv_diag::finish_gpu(kv_trace, Kd, Vd, out.p, st);
+#endif
+#line 3901
           break;
         }
         float* K = dk_[layer];
@@ -3922,6 +3947,10 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         else
           attention_batch_prefill_cuda(q.p, nullptr, nullptr, K, V, out.p, T, start_pos, max_len_, hq, hkv, hd, s.scale,
                                        st, nullptr);
+#ifdef EMBER_KV_DIAGNOSTICS
+        ember_kv_diag::finish_gpu(kv_trace, K, V, out.p, st);
+#endif
+#line 3925
         break;
       }
       case DOp::Add:

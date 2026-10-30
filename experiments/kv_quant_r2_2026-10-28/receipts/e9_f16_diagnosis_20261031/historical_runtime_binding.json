@@ -1,0 +1,10 @@
+{
+  "historical_runner_state": "/home/jonat/ember_e9_20261030_runner/state.json",
+  "pod_id": "eli2e6d8drzgb8",
+  "image": "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04",
+  "image_digest": "sha256:61a4aafb0094cd773f11eefa378929d5a687bd775febeb78eac62fc824141fb5",
+  "old_archived_nvcc": "12.4.131",
+  "historical_torch_version_recorded": false,
+  "new_assertion": "torch2.4.1+cu124 is the observed installed version from later executions of this same immutable image digest, not inferred from its2.4.0 tag",
+  "same_image_digest_required_before_forward": true
+}
