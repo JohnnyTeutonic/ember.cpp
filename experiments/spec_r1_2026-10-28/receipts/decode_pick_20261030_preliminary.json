@@ -1,0 +1,2927 @@
+{
+ "status": "PARTIAL_NOT_OVERALL_GATE_PASS",
+ "date": "2026-10-30",
+ "provider": "RunPod",
+ "gpu": "NVIDIA L4",
+ "pod": "n27vrqaipqbfnv",
+ "source_commit": "ef34236697fe82c0cf2a1822b99a8eeb5dc82b10",
+ "operational_vm_commit": "cce5e40",
+ "inputs_sha256": "84396d50c921b7e281a3e74ef7cc761e52e776e5eb7a5b302191ac56d34d0207  ember.tgz\n96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9  model.gguf\na25357100c3eb1e59bc94bb26c0629e72e6ae18172b2d4fbbf148ae5168d1740  eval100.jsonl\n415772f6536aaf02fad9d723763fda4d772364cd14686f5225fb7a457b66fe9d  decode_pick_vm.sh\n",
+ "handcrafted": {
+  "cases": [
+   {
+    "case": 0,
+    "first": 1,
+    "last": 1,
+    "nan": 0,
+    "pass": true
+   },
+   {
+    "case": 1,
+    "first": 0,
+    "last": 7,
+    "nan": 0,
+    "pass": true
+   },
+   {
+    "case": 2,
+    "first": 0,
+    "last": 0,
+    "nan": 0,
+    "pass": true
+   },
+   {
+    "case": 3,
+    "first": 2,
+    "last": 2,
+    "nan": 1,
+    "pass": true
+   },
+   {
+    "case": 4,
+    "first": 0,
+    "last": 7,
+    "nan": 0,
+    "pass": true
+   },
+   {
+    "case": 5,
+    "first": 0,
+    "last": 0,
+    "nan": 0,
+    "pass": true
+   }
+  ],
+  "pass": true
+ },
+ "fallback": {
+  "pass": true,
+  "requests_per_leg": 12,
+  "legs": 4,
+  "binary_sha256": "7cead74492bbc4eaa05a8e642621daaf97bbf5b35d183eb13653d0b8b0576d40",
+  "model_sha256": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9"
+ },
+ "fallback_raw": {
+  "graph1_pick1": {
+   "health": {
+    "chat_template": {
+     "name": "paperkiln",
+     "version": 1
+    },
+    "chat_template_why": "paperkiln specials at ids 0-3",
+    "context": 512,
+    "deterministic": true,
+    "hidden_size": 320,
+    "layers": 16,
+    "model": "/content/model.gguf",
+    "status": "ok",
+    "tokenizer": "bpe",
+    "vocab_size": 16384
+   },
+   "rows": [
+    {
+     "config": 0,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not a single word.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      261,
+      2388,
+      2275,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 9
+    },
+    {
+     "config": 0,
+     "prompt": "What is two plus two?",
+     "reply": "One plus one plus three.",
+     "ids": [
+      2965,
+      7576,
+      590,
+      7576,
+      1335,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 0,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is the process of growing and growing in different areas of the world.",
+     "ids": [
+      36,
+      4185,
+      321,
+      265,
+      1037,
+      288,
+      3071,
+      290,
+      3071,
+      291,
+      893,
+      1701,
+      288,
+      265,
+      911,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "Here's your word red one time.\n\n1. The sky is blue, and",
+     "ids": [
+      3696,
+      414,
+      458,
+      2275,
+      2282,
+      590,
+      636,
+      607,
+      20,
+      17,
+      376,
+      5092,
+      321,
+      3712,
+      15,
+      290
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "What is two plus two?",
+     "reply": "Two plus three plus three plus three plus two plus two plus one plus one plus",
+     "ids": [
+      10558,
+      7576,
+      1335,
+      7576,
+      1335,
+      7576,
+      1335,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      590,
+      7576,
+      590,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "Tell me about a garden.",
+     "reply": "The garden consists of 3 main types: tomatoes, peppers, and cucumbers",
+     "ids": [
+      496,
+      4185,
+      5791,
+      288,
+      224,
+      22,
+      1166,
+      2024,
+      29,
+      8680,
+      15,
+      10289,
+      15,
+      290,
+      13701,
+      9399
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 2,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 2,
+     "prompt": "What is two plus two?",
+     "reply": "One plus two plus two plus two plus two plus two plus two plus two plus",
+     "ids": [
+      2965,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 2,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is a type of gardening that is done by a garden. It is",
+     "ids": [
+      36,
+      4185,
+      321,
+      261,
+      1756,
+      288,
+      13134,
+      333,
+      321,
+      1848,
+      428,
+      261,
+      4185,
+      17,
+      571,
+      321
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 3,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 3,
+     "prompt": "What is two plus two?",
+     "reply": "One plus two plus two plus two plus two plus two plus two plus two plus",
+     "ids": [
+      2965,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 3,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is a type of gardening that is done by a garden. It is",
+     "ids": [
+      36,
+      4185,
+      321,
+      261,
+      1756,
+      288,
+      13134,
+      333,
+      321,
+      1848,
+      428,
+      261,
+      4185,
+      17,
+      571,
+      321
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    }
+   ],
+   "env": {
+    "EMBER_DECODE_GRAPH": "1",
+    "EMBER_DECODE_PICK": "1",
+    "EMBER_DETERMINISTIC": "1",
+    "EMBER_SPEC": "0",
+    "EMBER_GEMM_TF32": "0"
+   }
+  },
+  "graph1_pick0": {
+   "health": {
+    "chat_template": {
+     "name": "paperkiln",
+     "version": 1
+    },
+    "chat_template_why": "paperkiln specials at ids 0-3",
+    "context": 512,
+    "deterministic": true,
+    "hidden_size": 320,
+    "layers": 16,
+    "model": "/content/model.gguf",
+    "status": "ok",
+    "tokenizer": "bpe",
+    "vocab_size": 16384
+   },
+   "rows": [
+    {
+     "config": 0,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not a single word.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      261,
+      2388,
+      2275,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 9
+    },
+    {
+     "config": 0,
+     "prompt": "What is two plus two?",
+     "reply": "One plus one plus three.",
+     "ids": [
+      2965,
+      7576,
+      590,
+      7576,
+      1335,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 0,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is the process of growing and growing in different areas of the world.",
+     "ids": [
+      36,
+      4185,
+      321,
+      265,
+      1037,
+      288,
+      3071,
+      290,
+      3071,
+      291,
+      893,
+      1701,
+      288,
+      265,
+      911,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "Here's your word red one time.\n\n1. The sky is blue, and",
+     "ids": [
+      3696,
+      414,
+      458,
+      2275,
+      2282,
+      590,
+      636,
+      607,
+      20,
+      17,
+      376,
+      5092,
+      321,
+      3712,
+      15,
+      290
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "What is two plus two?",
+     "reply": "Two plus three plus three plus three plus two plus two plus one plus one plus",
+     "ids": [
+      10558,
+      7576,
+      1335,
+      7576,
+      1335,
+      7576,
+      1335,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      590,
+      7576,
+      590,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "Tell me about a garden.",
+     "reply": "The garden consists of 3 main types: tomatoes, peppers, and cucumbers",
+     "ids": [
+      496,
+      4185,
+      5791,
+      288,
+      224,
+      22,
+      1166,
+      2024,
+      29,
+      8680,
+      15,
+      10289,
+      15,
+      290,
+      13701,
+      9399
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 2,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 2,
+     "prompt": "What is two plus two?",
+     "reply": "One plus two plus two plus two plus two plus two plus two plus two plus",
+     "ids": [
+      2965,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 2,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is a type of gardening that is done by a garden. It is",
+     "ids": [
+      36,
+      4185,
+      321,
+      261,
+      1756,
+      288,
+      13134,
+      333,
+      321,
+      1848,
+      428,
+      261,
+      4185,
+      17,
+      571,
+      321
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 3,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 3,
+     "prompt": "What is two plus two?",
+     "reply": "One plus two plus two plus two plus two plus two plus two plus two plus",
+     "ids": [
+      2965,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 3,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is a type of gardening that is done by a garden. It is",
+     "ids": [
+      36,
+      4185,
+      321,
+      261,
+      1756,
+      288,
+      13134,
+      333,
+      321,
+      1848,
+      428,
+      261,
+      4185,
+      17,
+      571,
+      321
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    }
+   ],
+   "env": {
+    "EMBER_DECODE_GRAPH": "1",
+    "EMBER_DECODE_PICK": "0",
+    "EMBER_DETERMINISTIC": "1",
+    "EMBER_SPEC": "0",
+    "EMBER_GEMM_TF32": "0"
+   }
+  },
+  "graph0_pick1": {
+   "health": {
+    "chat_template": {
+     "name": "paperkiln",
+     "version": 1
+    },
+    "chat_template_why": "paperkiln specials at ids 0-3",
+    "context": 512,
+    "deterministic": true,
+    "hidden_size": 320,
+    "layers": 16,
+    "model": "/content/model.gguf",
+    "status": "ok",
+    "tokenizer": "bpe",
+    "vocab_size": 16384
+   },
+   "rows": [
+    {
+     "config": 0,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not a single word.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      261,
+      2388,
+      2275,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 9
+    },
+    {
+     "config": 0,
+     "prompt": "What is two plus two?",
+     "reply": "One plus one plus three.",
+     "ids": [
+      2965,
+      7576,
+      590,
+      7576,
+      1335,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 0,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is the process of growing and growing in different areas of the world.",
+     "ids": [
+      36,
+      4185,
+      321,
+      265,
+      1037,
+      288,
+      3071,
+      290,
+      3071,
+      291,
+      893,
+      1701,
+      288,
+      265,
+      911,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "Here's your word red one time.\n\n1. The sky is blue, and",
+     "ids": [
+      3696,
+      414,
+      458,
+      2275,
+      2282,
+      590,
+      636,
+      607,
+      20,
+      17,
+      376,
+      5092,
+      321,
+      3712,
+      15,
+      290
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "What is two plus two?",
+     "reply": "Two plus three plus three plus three plus two plus two plus one plus one plus",
+     "ids": [
+      10558,
+      7576,
+      1335,
+      7576,
+      1335,
+      7576,
+      1335,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      590,
+      7576,
+      590,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "Tell me about a garden.",
+     "reply": "The garden consists of 3 main types: tomatoes, peppers, and cucumbers",
+     "ids": [
+      496,
+      4185,
+      5791,
+      288,
+      224,
+      22,
+      1166,
+      2024,
+      29,
+      8680,
+      15,
+      10289,
+      15,
+      290,
+      13701,
+      9399
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 2,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 2,
+     "prompt": "What is two plus two?",
+     "reply": "One plus two plus two plus two plus two plus two plus two plus two plus",
+     "ids": [
+      2965,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 2,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is a type of gardening that is done by a garden. It is",
+     "ids": [
+      36,
+      4185,
+      321,
+      261,
+      1756,
+      288,
+      13134,
+      333,
+      321,
+      1848,
+      428,
+      261,
+      4185,
+      17,
+      571,
+      321
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 3,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 3,
+     "prompt": "What is two plus two?",
+     "reply": "One plus two plus two plus two plus two plus two plus two plus two plus",
+     "ids": [
+      2965,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 3,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is a type of gardening that is done by a garden. It is",
+     "ids": [
+      36,
+      4185,
+      321,
+      261,
+      1756,
+      288,
+      13134,
+      333,
+      321,
+      1848,
+      428,
+      261,
+      4185,
+      17,
+      571,
+      321
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    }
+   ],
+   "env": {
+    "EMBER_DECODE_GRAPH": "0",
+    "EMBER_DECODE_PICK": "1",
+    "EMBER_DETERMINISTIC": "1",
+    "EMBER_SPEC": "0",
+    "EMBER_GEMM_TF32": "0"
+   }
+  },
+  "graph0_pick0": {
+   "health": {
+    "chat_template": {
+     "name": "paperkiln",
+     "version": 1
+    },
+    "chat_template_why": "paperkiln specials at ids 0-3",
+    "context": 512,
+    "deterministic": true,
+    "hidden_size": 320,
+    "layers": 16,
+    "model": "/content/model.gguf",
+    "status": "ok",
+    "tokenizer": "bpe",
+    "vocab_size": 16384
+   },
+   "rows": [
+    {
+     "config": 0,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not a single word.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      261,
+      2388,
+      2275,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 9
+    },
+    {
+     "config": 0,
+     "prompt": "What is two plus two?",
+     "reply": "One plus one plus three.",
+     "ids": [
+      2965,
+      7576,
+      590,
+      7576,
+      1335,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 0,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is the process of growing and growing in different areas of the world.",
+     "ids": [
+      36,
+      4185,
+      321,
+      265,
+      1037,
+      288,
+      3071,
+      290,
+      3071,
+      291,
+      893,
+      1701,
+      288,
+      265,
+      911,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "Here's your word red one time.\n\n1. The sky is blue, and",
+     "ids": [
+      3696,
+      414,
+      458,
+      2275,
+      2282,
+      590,
+      636,
+      607,
+      20,
+      17,
+      376,
+      5092,
+      321,
+      3712,
+      15,
+      290
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "What is two plus two?",
+     "reply": "Two plus three plus three plus three plus two plus two plus one plus one plus",
+     "ids": [
+      10558,
+      7576,
+      1335,
+      7576,
+      1335,
+      7576,
+      1335,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      590,
+      7576,
+      590,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 1,
+     "prompt": "Tell me about a garden.",
+     "reply": "The garden consists of 3 main types: tomatoes, peppers, and cucumbers",
+     "ids": [
+      496,
+      4185,
+      5791,
+      288,
+      224,
+      22,
+      1166,
+      2024,
+      29,
+      8680,
+      15,
+      10289,
+      15,
+      290,
+      13701,
+      9399
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 2,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 2,
+     "prompt": "What is two plus two?",
+     "reply": "One plus two plus two plus two plus two plus two plus two plus two plus",
+     "ids": [
+      2965,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 2,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is a type of gardening that is done by a garden. It is",
+     "ids": [
+      36,
+      4185,
+      321,
+      261,
+      1756,
+      288,
+      13134,
+      333,
+      321,
+      1848,
+      428,
+      261,
+      4185,
+      17,
+      571,
+      321
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 3,
+     "prompt": "Repeat the word blue three times.",
+     "reply": "No, it's not.",
+     "ids": [
+      2134,
+      15,
+      349,
+      414,
+      451,
+      17
+     ],
+     "prompt_ids": [
+      2,
+      10379,
+      14517,
+      265,
+      2275,
+      3712,
+      1335,
+      1684,
+      17,
+      3
+     ],
+     "stop_id": 1,
+     "tokens": 6
+    },
+    {
+     "config": 3,
+     "prompt": "What is two plus two?",
+     "reply": "One plus two plus two plus two plus two plus two plus two plus two plus",
+     "ids": [
+      2965,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576
+     ],
+     "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    },
+    {
+     "config": 3,
+     "prompt": "Tell me about a garden.",
+     "reply": "A garden is a type of gardening that is done by a garden. It is",
+     "ids": [
+      36,
+      4185,
+      321,
+      261,
+      1756,
+      288,
+      13134,
+      333,
+      321,
+      1848,
+      428,
+      261,
+      4185,
+      17,
+      571,
+      321
+     ],
+     "prompt_ids": [
+      2,
+      55,
+      473,
+      449,
+      521,
+      261,
+      4185,
+      17,
+      3
+     ],
+     "stop_id": -1,
+     "tokens": 16
+    }
+   ],
+   "env": {
+    "EMBER_DECODE_GRAPH": "0",
+    "EMBER_DECODE_PICK": "0",
+    "EMBER_DETERMINISTIC": "1",
+    "EMBER_SPEC": "0",
+    "EMBER_GEMM_TF32": "0"
+   }
+  }
+ },
+ "request_inventory": [
+  [
+   0,
+   0
+  ],
+  [
+   1,
+   0
+  ],
+  [
+   2,
+   0
+  ],
+  [
+   3,
+   0
+  ],
+  [
+   4,
+   0
+  ],
+  [
+   5,
+   0
+  ],
+  [
+   6,
+   0
+  ],
+  [
+   7,
+   0
+  ],
+  [
+   8,
+   0
+  ],
+  [
+   9,
+   0
+  ],
+  [
+   10,
+   0
+  ],
+  [
+   11,
+   0
+  ],
+  [
+   12,
+   0
+  ],
+  [
+   13,
+   0
+  ],
+  [
+   14,
+   0
+  ],
+  [
+   15,
+   0
+  ],
+  [
+   16,
+   0
+  ],
+  [
+   17,
+   0
+  ],
+  [
+   18,
+   0
+  ],
+  [
+   19,
+   0
+  ],
+  [
+   20,
+   0
+  ],
+  [
+   21,
+   0
+  ],
+  [
+   22,
+   0
+  ],
+  [
+   23,
+   0
+  ],
+  [
+   24,
+   0
+  ],
+  [
+   25,
+   0
+  ],
+  [
+   26,
+   0
+  ],
+  [
+   27,
+   0
+  ],
+  [
+   28,
+   0
+  ],
+  [
+   29,
+   0
+  ],
+  [
+   30,
+   0
+  ],
+  [
+   31,
+   0
+  ],
+  [
+   32,
+   0
+  ],
+  [
+   33,
+   0
+  ],
+  [
+   34,
+   0
+  ],
+  [
+   35,
+   0
+  ],
+  [
+   36,
+   0
+  ],
+  [
+   37,
+   0
+  ],
+  [
+   38,
+   0
+  ],
+  [
+   39,
+   0
+  ],
+  [
+   40,
+   0
+  ],
+  [
+   41,
+   0
+  ],
+  [
+   42,
+   0
+  ],
+  [
+   43,
+   0
+  ],
+  [
+   44,
+   0
+  ],
+  [
+   45,
+   0
+  ],
+  [
+   46,
+   0
+  ],
+  [
+   47,
+   0
+  ],
+  [
+   48,
+   0
+  ],
+  [
+   49,
+   0
+  ],
+  [
+   50,
+   0
+  ],
+  [
+   51,
+   0
+  ],
+  [
+   52,
+   0
+  ],
+  [
+   53,
+   0
+  ],
+  [
+   54,
+   0
+  ],
+  [
+   55,
+   0
+  ],
+  [
+   56,
+   0
+  ],
+  [
+   57,
+   0
+  ],
+  [
+   58,
+   0
+  ],
+  [
+   59,
+   0
+  ],
+  [
+   60,
+   1
+  ],
+  [
+   60,
+   2
+  ],
+  [
+   60,
+   3
+  ],
+  [
+   60,
+   4
+  ],
+  [
+   60,
+   5
+  ],
+  [
+   61,
+   1
+  ],
+  [
+   61,
+   2
+  ],
+  [
+   61,
+   3
+  ],
+  [
+   61,
+   4
+  ],
+  [
+   61,
+   5
+  ],
+  [
+   62,
+   1
+  ],
+  [
+   62,
+   2
+  ],
+  [
+   62,
+   3
+  ],
+  [
+   62,
+   4
+  ],
+  [
+   62,
+   5
+  ],
+  [
+   63,
+   1
+  ],
+  [
+   63,
+   2
+  ],
+  [
+   63,
+   3
+  ],
+  [
+   63,
+   4
+  ],
+  [
+   63,
+   5
+  ],
+  [
+   64,
+   1
+  ],
+  [
+   64,
+   2
+  ],
+  [
+   64,
+   3
+  ],
+  [
+   64,
+   4
+  ],
+  [
+   64,
+   5
+  ],
+  [
+   65,
+   1
+  ],
+  [
+   65,
+   2
+  ],
+  [
+   65,
+   3
+  ],
+  [
+   65,
+   4
+  ],
+  [
+   65,
+   5
+  ],
+  [
+   66,
+   1
+  ],
+  [
+   66,
+   2
+  ],
+  [
+   66,
+   3
+  ],
+  [
+   66,
+   4
+  ],
+  [
+   66,
+   5
+  ],
+  [
+   67,
+   1
+  ],
+  [
+   67,
+   2
+  ],
+  [
+   67,
+   3
+  ],
+  [
+   67,
+   4
+  ],
+  [
+   67,
+   5
+  ],
+  [
+   68,
+   1
+  ],
+  [
+   68,
+   2
+  ],
+  [
+   68,
+   3
+  ],
+  [
+   68,
+   4
+  ],
+  [
+   68,
+   5
+  ],
+  [
+   69,
+   1
+  ],
+  [
+   69,
+   2
+  ],
+  [
+   69,
+   3
+  ],
+  [
+   69,
+   4
+  ],
+  [
+   69,
+   5
+  ],
+  [
+   70,
+   1
+  ],
+  [
+   70,
+   2
+  ],
+  [
+   70,
+   3
+  ],
+  [
+   70,
+   4
+  ],
+  [
+   70,
+   5
+  ],
+  [
+   71,
+   1
+  ],
+  [
+   71,
+   2
+  ],
+  [
+   71,
+   3
+  ],
+  [
+   71,
+   4
+  ],
+  [
+   71,
+   5
+  ],
+  [
+   72,
+   1
+  ],
+  [
+   72,
+   2
+  ],
+  [
+   72,
+   3
+  ],
+  [
+   72,
+   4
+  ],
+  [
+   72,
+   5
+  ],
+  [
+   73,
+   1
+  ],
+  [
+   73,
+   2
+  ],
+  [
+   73,
+   3
+  ],
+  [
+   73,
+   4
+  ],
+  [
+   73,
+   5
+  ],
+  [
+   74,
+   1
+  ],
+  [
+   74,
+   2
+  ],
+  [
+   74,
+   3
+  ],
+  [
+   74,
+   4
+  ],
+  [
+   74,
+   5
+  ],
+  [
+   75,
+   1
+  ],
+  [
+   75,
+   2
+  ],
+  [
+   75,
+   3
+  ],
+  [
+   75,
+   4
+  ],
+  [
+   75,
+   5
+  ],
+  [
+   76,
+   1
+  ],
+  [
+   76,
+   2
+  ],
+  [
+   76,
+   3
+  ],
+  [
+   76,
+   4
+  ],
+  [
+   76,
+   5
+  ],
+  [
+   77,
+   1
+  ],
+  [
+   77,
+   2
+  ],
+  [
+   77,
+   3
+  ],
+  [
+   77,
+   4
+  ],
+  [
+   77,
+   5
+  ],
+  [
+   78,
+   1
+  ],
+  [
+   78,
+   2
+  ],
+  [
+   78,
+   3
+  ],
+  [
+   78,
+   4
+  ],
+  [
+   78,
+   5
+  ],
+  [
+   79,
+   1
+  ],
+  [
+   79,
+   2
+  ],
+  [
+   79,
+   3
+  ],
+  [
+   79,
+   4
+  ],
+  [
+   79,
+   5
+  ],
+  [
+   80,
+   1
+  ],
+  [
+   80,
+   2
+  ],
+  [
+   80,
+   3
+  ],
+  [
+   80,
+   4
+  ],
+  [
+   80,
+   5
+  ],
+  [
+   81,
+   1
+  ],
+  [
+   81,
+   2
+  ],
+  [
+   81,
+   3
+  ],
+  [
+   81,
+   4
+  ],
+  [
+   81,
+   5
+  ],
+  [
+   82,
+   1
+  ],
+  [
+   82,
+   2
+  ],
+  [
+   82,
+   3
+  ],
+  [
+   82,
+   4
+  ],
+  [
+   82,
+   5
+  ],
+  [
+   83,
+   1
+  ],
+  [
+   83,
+   2
+  ],
+  [
+   83,
+   3
+  ],
+  [
+   83,
+   4
+  ],
+  [
+   83,
+   5
+  ],
+  [
+   84,
+   1
+  ],
+  [
+   84,
+   2
+  ],
+  [
+   84,
+   3
+  ],
+  [
+   84,
+   4
+  ],
+  [
+   84,
+   5
+  ],
+  [
+   85,
+   1
+  ],
+  [
+   85,
+   2
+  ],
+  [
+   85,
+   3
+  ],
+  [
+   85,
+   4
+  ],
+  [
+   85,
+   5
+  ],
+  [
+   86,
+   1
+  ],
+  [
+   86,
+   2
+  ],
+  [
+   86,
+   3
+  ],
+  [
+   86,
+   4
+  ],
+  [
+   86,
+   5
+  ],
+  [
+   87,
+   1
+  ],
+  [
+   87,
+   2
+  ],
+  [
+   87,
+   3
+  ],
+  [
+   87,
+   4
+  ],
+  [
+   87,
+   5
+  ],
+  [
+   88,
+   1
+  ],
+  [
+   88,
+   2
+  ],
+  [
+   88,
+   3
+  ],
+  [
+   88,
+   4
+  ],
+  [
+   88,
+   5
+  ],
+  [
+   89,
+   1
+  ],
+  [
+   89,
+   2
+  ],
+  [
+   89,
+   3
+  ],
+  [
+   89,
+   4
+  ],
+  [
+   89,
+   5
+  ],
+  [
+   90,
+   1
+  ],
+  [
+   90,
+   2
+  ],
+  [
+   90,
+   3
+  ],
+  [
+   90,
+   4
+  ],
+  [
+   90,
+   5
+  ],
+  [
+   91,
+   1
+  ],
+  [
+   91,
+   2
+  ],
+  [
+   91,
+   3
+  ],
+  [
+   91,
+   4
+  ],
+  [
+   91,
+   5
+  ],
+  [
+   92,
+   1
+  ],
+  [
+   92,
+   2
+  ],
+  [
+   92,
+   3
+  ],
+  [
+   92,
+   4
+  ],
+  [
+   92,
+   5
+  ],
+  [
+   93,
+   1
+  ],
+  [
+   93,
+   2
+  ],
+  [
+   93,
+   3
+  ],
+  [
+   93,
+   4
+  ],
+  [
+   93,
+   5
+  ],
+  [
+   94,
+   1
+  ],
+  [
+   94,
+   2
+  ],
+  [
+   94,
+   3
+  ],
+  [
+   94,
+   4
+  ],
+  [
+   94,
+   5
+  ],
+  [
+   95,
+   1
+  ],
+  [
+   95,
+   2
+  ],
+  [
+   95,
+   3
+  ],
+  [
+   95,
+   4
+  ],
+  [
+   95,
+   5
+  ],
+  [
+   96,
+   1
+  ],
+  [
+   96,
+   2
+  ],
+  [
+   96,
+   3
+  ],
+  [
+   96,
+   4
+  ],
+  [
+   96,
+   5
+  ],
+  [
+   97,
+   1
+  ],
+  [
+   97,
+   2
+  ],
+  [
+   97,
+   3
+  ],
+  [
+   97,
+   4
+  ],
+  [
+   97,
+   5
+  ],
+  [
+   98,
+   1
+  ],
+  [
+   98,
+   2
+  ],
+  [
+   98,
+   3
+  ],
+  [
+   98,
+   4
+  ],
+  [
+   98,
+   5
+  ],
+  [
+   99,
+   1
+  ],
+  [
+   99,
+   2
+  ],
+  [
+   99,
+   3
+  ],
+  [
+   99,
+   4
+  ],
+  [
+   99,
+   5
+  ]
+ ],
+ "completed_leg_summaries": {
+  "default_off_b.jsonl.meta.json": {
+   "requests": 260,
+   "tokens": 3587,
+   "wall_ms": 6276.335583184846,
+   "decode_tokens": 3327,
+   "decode_ms": 4524.612813184845,
+   "decode_tok_per_s": 735.3115365595552,
+   "drafted": 0,
+   "accepted": 0,
+   "passes": 0,
+   "acceptance": null,
+   "tokens_from_passes": 0,
+   "draft_ms": 0.0,
+   "draft_calls": 0,
+   "draft_us_per_call": null,
+   "warm_pass_same": 260
+  },
+  "default_on_b.jsonl.meta.json": {
+   "requests": 260,
+   "tokens": 3587,
+   "wall_ms": 5817.521100630984,
+   "decode_tokens": 3327,
+   "decode_ms": 3719.2703756309825,
+   "decode_tok_per_s": 894.5302879292735,
+   "drafted": 0,
+   "accepted": 0,
+   "passes": 0,
+   "acceptance": null,
+   "tokens_from_passes": 0,
+   "draft_ms": 0.0,
+   "draft_calls": 0,
+   "draft_us_per_call": null,
+   "warm_pass_same": 260
+  },
+  "default_on_a.jsonl.meta.json": {
+   "requests": 260,
+   "tokens": 3587,
+   "wall_ms": 5625.103415455669,
+   "decode_tokens": 3327,
+   "decode_ms": 3688.6639744556683,
+   "decode_tok_per_s": 901.9525831140423,
+   "drafted": 0,
+   "accepted": 0,
+   "passes": 0,
+   "acceptance": null,
+   "tokens_from_passes": 0,
+   "draft_ms": 0.0,
+   "draft_calls": 0,
+   "draft_us_per_call": null,
+   "warm_pass_same": 260
+  },
+  "default_off_a.jsonl.meta.json": {
+   "requests": 260,
+   "tokens": 3587,
+   "wall_ms": 6650.315552484244,
+   "decode_tokens": 3327,
+   "decode_ms": 4656.600484484246,
+   "decode_tok_per_s": 714.4697104863378,
+   "drafted": 0,
+   "accepted": 0,
+   "passes": 0,
+   "acceptance": null,
+   "tokens_from_passes": 0,
+   "draft_ms": 0.0,
+   "draft_calls": 0,
+   "draft_us_per_call": null,
+   "warm_pass_same": 260
+  },
+  "default_rows_on.jsonl.meta.json": {
+   "requests": 260,
+   "tokens": 3587,
+   "wall_ms": 122640.31817228533,
+   "decode_tokens": 3327,
+   "decode_ms": 112703.22102428536,
+   "decode_tok_per_s": 29.520008121889397,
+   "drafted": 0,
+   "accepted": 0,
+   "passes": 0,
+   "acceptance": null,
+   "tokens_from_passes": 0,
+   "draft_ms": 0.0,
+   "draft_calls": 0,
+   "draft_us_per_call": null,
+   "warm_pass_same": 260
+  },
+  "default_rows_off_repeat.jsonl.meta.json": {
+   "requests": 260,
+   "tokens": 3587,
+   "wall_ms": 122356.37414921075,
+   "decode_tokens": 3327,
+   "decode_ms": 112283.54805621076,
+   "decode_tok_per_s": 29.630342624499683,
+   "drafted": 0,
+   "accepted": 0,
+   "passes": 0,
+   "acceptance": null,
+   "tokens_from_passes": 0,
+   "draft_ms": 0.0,
+   "draft_calls": 0,
+   "draft_us_per_call": null,
+   "warm_pass_same": 260
+  },
+  "default_rows_off.jsonl.meta.json": {
+   "requests": 260,
+   "tokens": 3587,
+   "wall_ms": 118431.04604806285,
+   "decode_tokens": 3327,
+   "decode_ms": 108841.01993106294,
+   "decode_tok_per_s": 30.56751950787704,
+   "drafted": 0,
+   "accepted": 0,
+   "passes": 0,
+   "acceptance": null,
+   "tokens_from_passes": 0,
+   "draft_ms": 0.0,
+   "draft_calls": 0,
+   "draft_us_per_call": null,
+   "warm_pass_same": 260
+  }
+ },
+ "scope": "CUDA handcrafted and fallback checks only; full row/ID/ABBA gate remains in progress",
+ "controls": {
+  "default": {
+   "complete_legs": 7,
+   "all_leg_ids_equal": true,
+   "baseline_row_sha256": [
+    "e43d32dd1042b6ddcb0607ceff884e09f9aa425b9b514fc650e6797dbb0dcff6",
+    "33aaef527d5e0972400c4ba1fd341602aeece538d418941830565ce180333137"
+   ]
+  }
+ },
+ "complete": false,
+ "artifact_root": "C:/ml_artifacts/ember_e10_gate/ember-e10-1030",
+ "remote_raw_receipts": "/content/out/pick"
+}
