@@ -299,7 +299,8 @@ and requested-CUDA CPU fallback. This is CPU evidence, not CUDA validation.
 
 The fixed remote diagnostic separates (a) identical-input conversion,
 bulk-versus-device-position cache writes/readback and attention versus an
-independent double reference, from (b) all original seeded Qwen3 model prompts.
+independent double reference at both capacity=L and actual capacity=8448 (paired
+identical inputs, including lengths24/55), from (b) all original seeded Qwen3 model prompts.
 Uninstrumented graph0/graph1 controls retain the original all-row gate command
 (no `--ids`, whose branch checks only last rows). Model traces use graph0
 explicitly, retaining raw Q/K/V, half codes/cache rows, attention outputs, and
@@ -315,7 +316,7 @@ identity before forwards, and restores source bytes in `finally` for the
 same-path object proof. No post-result source changes are permitted.
 
 Proposed remote limit: one L4, $1.50 cumulative, 2.25h total, with an independent
-95-minute VM timeout leaving about40 minutes for final relay. Per-case journals
+95-minute VM timeout leaving about 40 minutes for final relay. Per-case journals
 and three-minute ZIP snapshots live on retained physical storage until terminal
 fetch. They do not protect against physical-volume loss. Raw arrays have one
 canonical artifact home; public Git retains tools and small cryptographic

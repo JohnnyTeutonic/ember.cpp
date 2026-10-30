@@ -102,3 +102,22 @@ def test_historical_halted_precedes_hashing_or_execution(tmp_path):
     with pytest.raises(ValueError, match='existing HALTED'):
         runner.execute(*([tmp_path/'missing']*6), out)
     assert (out/'HALTED').read_text() == 'historical failure'
+
+@pytest.mark.parametrize('mutation', ['none', 'missing', 'duplicate', 'input_drift', 'rc_drift'])
+def test_component_requires_paired_real_capacity_inventory(mutation):
+    cases = [dict(zip(('hq','hkv','hd'),shape), length=length, capacity=capacity, input_sha256='a'*64)
+             for shape in ((16,8,128),(14,2,64))
+             for length in (1,2,24,32,33,55,127,128,129,2048,2049,4096)
+             for capacity in (length,8448)]
+    if mutation == 'missing':
+        cases.pop()
+    if mutation == 'duplicate':
+        cases.append(dict(cases[0]))
+    if mutation == 'input_drift':
+        cases[1]['input_sha256'] = 'b'*64
+    result = {'cases':cases,'complete':True,'diagnostic_only':True,'exact_component_mismatches':0}
+    if mutation == 'none':
+        runner.validate_component(result,0)
+    else:
+        with pytest.raises(ValueError):
+            runner.validate_component(result,1 if mutation=='rc_drift' else 0)
