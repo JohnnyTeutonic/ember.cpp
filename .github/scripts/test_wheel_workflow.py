@@ -24,6 +24,33 @@ class WheelWorkflowTests(unittest.TestCase):
         self.assertNotIn("CUDA_VERSION_MAJOR=", text)
         self.assertIn("cp38-*", text)
 
+    def test_native_smoke_rejects_package_that_swallows_extension_failure(self):
+        import sys
+        import shlex
+        text = (ROOT / ".github/workflows/build-wheels.yml").read_text()
+        commands = [line.split("CIBW_TEST_COMMAND: ", 1)[1] for line in text.splitlines() if "CIBW_TEST_COMMAND:" in line]
+        self.assertEqual(len(commands), 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp) / "tinyllama_cpp"
+            package.mkdir()
+            # Same suppression mechanism as the actual package initializer.
+            (package / "__init__.py").write_text("try:\n    from .tinyllama_bindings import *\nexcept ImportError:\n    pass\n")
+            old = subprocess.run([sys.executable, "-c", "import tinyllama_cpp"], cwd=tmp, capture_output=True)
+            self.assertEqual(old.returncode, 0)
+            def check(expected):
+                for command in commands:
+                    args = shlex.split(command)
+                    args[0] = sys.executable
+                    proc = subprocess.run(args, cwd=tmp, capture_output=True)
+                    self.assertEqual(proc.returncode == 0, expected, proc.stderr)
+            check(False)  # Missing extension must fail, despite successful package import.
+            (package / "tinyllama_bindings.py").write_text("raise ImportError('unresolved native symbol')\n")
+            check(False)  # An installed but unloadable extension must also fail.
+            (package / "tinyllama_bindings.py").write_text("class TinyLlamaSession: pass\nclass ModelConfig: pass\n")
+            check(True)
+            (package / "tinyllama_bindings.py").write_text("TinyLlamaSession = None\nModelConfig = None\n")
+            check(False)  # Required APIs must actually be callable.
+
     def test_actual_version_step_changes_only_project_version(self):
         import tomllib
         import sys
