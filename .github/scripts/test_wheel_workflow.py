@@ -63,11 +63,16 @@ class WheelWorkflowTests(unittest.TestCase):
         compiler = shutil.which("c++") or shutil.which("g++")
         self.assertIsNotNone(compiler, "C++ compiler required for CUDA API compatibility contract")
         calls = []
-        for name in ("model.cpp", "speculative_verify.cpp"):
+        for name in ("model.cpp", "speculative_verify.cpp", "graph_ir.cpp"):
             source = (ROOT / name).read_text()
             found = re.findall(r"cudaGraphInstantiate(?:WithFlags)?\([^;]+\)", source)
             self.assertEqual(len(found), 1)
             calls += found
+        # Check every production translation unit/header at the repository root;
+        # historical experimental snapshots deliberately remain unchanged.
+        for pattern in ("*.cpp", "*.cu", "*.h"):
+            for path in ROOT.glob(pattern):
+                self.assertNotIn("cudaGraphInstantiate(", path.read_text(), str(path))
         # Official runtime headers: 11.8's base API has five parameters; 12.1's has
         # three. WithFlags has the same three-parameter signature in both:
         # docs.nvidia.com/cuda/archive/{11.8.0,12.1.1}/cuda-runtime-api/group__CUDART__GRAPH.html
@@ -78,7 +83,7 @@ class WheelWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "graph_contract.cpp"
             def compile_call(declaration, call):
-                path.write_text(common + declaration + "int main() { cudaGraphExec_t exec{}, decode_graph_exec_{}; cudaGraph_t graph{}; return " + call + "; }\n")
+                path.write_text(common + declaration + "int main() { cudaGraphExec_t exec{}, decode_graph_exec_{}, graph_exec_{}; cudaGraph_t graph{}; return " + call + "; }\n")
                 return subprocess.run([compiler, "-std=c++17", "-fsyntax-only", "-Werror", str(path)], capture_output=True)
             for call in calls:
                 for declaration in (legacy, modern):
