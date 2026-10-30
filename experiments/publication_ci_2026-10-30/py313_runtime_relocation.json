@@ -1,0 +1,19 @@
+{
+  "schema": "ember.isolated_python_probe_relocation.v1",
+  "scope": "Only the newly installed CPython 3.13 runtime and its two new discovery symlinks moved. No pre-existing Python/runtime, UV configuration or system installation changed. No deletion.",
+  "original_source": "/home/jonat/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu",
+  "new_runtime": "/home/jonat/ember_py313_compat_20261030/python",
+  "original_global_alias": "/home/jonat/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu",
+  "moved_alias_record": "/home/jonat/ember_py313_compat_20261030/global-python-alias.link",
+  "original_global_bin_link": "/home/jonat/.local/bin/python3.13",
+  "moved_bin_link_record": "/home/jonat/ember_py313_compat_20261030/global-python-bin.link",
+  "all_relative_file_bytes_and_symlink_targets_unchanged": true,
+  "inventory_entries": 4603,
+  "inventory_sha256": "71214cfe8da0941af9689d07e550182bb4493882eb1cc8afe1adf0fe8024859c",
+  "same_directory_inode": true,
+  "version_after_relocation": "Python 3.13.14",
+  "native_roundtrip_exit_code": 0,
+  "native_roundtrip_stdout": "relocated native roundtrip PASS\n",
+  "uv_global_only_installed_after": "cpython-3.12.3-linux-x86_64-gnu     /usr/bin/python3.12\ncpython-3.12.3-linux-x86_64-gnu     /usr/bin/python3 -> python3.12\ncpython-3.11.15-linux-x86_64-gnu    /home/jonat/.local/share/uv/python/cpython-3.11-linux-x86_64-gnu/bin/python3.11\n",
+  "inventory_rechecked_after_relocated_execution": true
+}
