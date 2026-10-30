@@ -9,7 +9,8 @@ and, in the browser, the visitor's own GPU.**
 keep their old names, `tinyllama` and `tinyllama_server`.*
 
 **[▶ Chat with a model trained from scratch, running in your browser](https://huggingface.co/spaces/johnnyteutonic/ember-chat)**:
-a 14.6M-parameter paperkiln model, served by ember.cpp compiled to WebAssembly. Nothing you
+the 97.5M-parameter pk_sft_v1 paperkiln model (F16, 221 MB), served by ember.cpp
+compiled to WebAssembly. Nothing you
 type leaves the page.
 
 ```mermaid
