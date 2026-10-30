@@ -1,0 +1,11 @@
+{
+  "baseline": "c8b1fcd",
+  "baseline_header_sha256": "d41b0c0904f829e9b6cd37fdea7f8f6273bc8ac85c3106391a617e057929eea0",
+  "macro": "CONST=const",
+  "baseline_without_macro_compiles": true,
+  "baseline_with_macro_rejected": true,
+  "current_with_macro_compiles": true,
+  "probe": "include header and empty main; identical source for all three cells",
+  "scope": "GCC13 preprocessor reproduction of observed MSVC Windows SDK macro collision, not a Windows binary build",
+  "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+}
