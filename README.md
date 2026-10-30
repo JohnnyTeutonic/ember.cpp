@@ -212,9 +212,10 @@ cleared 1.15x.
 The f16 KV-cache gate retained greedy IDs but failed the unchanged CPU/device logit tolerance on
 Qwen3. These outcomes remain recorded, with no tolerance changes or default switch
 ([fixed linear and row selection](experiments/spec_r1_2026-10-28/README.md),
-[KV cache](experiments/kv_quant_r2_2026-10-28/README.md)). Self-output draft tables currently have
-a completed 100-request-per-model timing pilot and a supervised full continuation;
-quality/parity and adoption-speed results remain pending.
+[KV cache](experiments/kv_quant_r2_2026-10-28/README.md)). The full two-model self-output draft-table
+matrix is complete: evaluated IDs and pick's deterministic rows match, but the required paired
+3% speed gains do not hold across every dataset and mode. Both candidates are **NO_GAIN**;
+no default changed. [Complete results](experiments/spec_r1_2026-10-28/README.md#full-self-output-matrix-complete-negative-result).
 
 ## Quick start: build and chat
 
