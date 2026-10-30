@@ -238,3 +238,19 @@ remain separate, and no default adoption follows automatically. No device run ha
 
 `python3 test_decode_pick_gate.py`: 14 offline fixture regressions passed, including deliberately
 corrupted rows, timing, ids, hashes, modes and baseline control. Ruff passed for both new scripts.
+
+### Bounded priority-model device campaign
+
+`decode_pick_vm.sh` packages the priority `pick_e1_L16` gate for the command-only supervised
+RunPod boot. It first runs `decode_pick_rows`, which calls the actual CUDA selection kernel on
+ordinary maxima, exact/near ties, mixed NaNs and infinities. `decode_pick_fallback.py` then checks
+48 direct API requests: option off/on with graph enabled/refused, repetition penalty, top-k 4,
+zero temperature and temperature 0.049, comparing reply/ids/prompt ids/stop/token count exactly.
+The ordinary 100-prompt, 260-request row/ID/ABBA matrix follows. Five offline fallback regressions
+and the fourteen existing receipt-checker regressions pass; the CUDA row harness passes a host
+syntax check. These checks alone do not establish a device result.
+
+The campaign preserves partial archives every two minutes. A complete valid `NO_GAIN` or
+`BASELINE_UNSTABLE` result is an operationally completed job with a negative scientific outcome;
+an incomplete receipt or failed CUDA/fallback test remains a failure. The fixed-order default,
+self-output draft tables, secondary model and default adoption are outside this bounded campaign.
