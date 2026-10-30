@@ -33,7 +33,7 @@ positions.
 |---|---|---|
 | `f32` | 4 bytes | the existing cache, untouched |
 | `f16` | 2 bytes | IEEE half, round to nearest even |
-| `q8` | 1.0625 bytes | blocks of 32 channels of one position, inside a head: d = half(max\|x\| / 127), q = clamp(rint(x / d), ±127), x' = q d |
+| `q8` | 1.0625 bytes | blocks of 32 channels of one position, inside a head: d = half(max\|x\| / 127), q = clamp(rint(x / d), Â±127), x' = q d |
 | `q4` | 0.625 bytes | blocks of 32, asymmetric: d = half((max - min) / 15), m = half(min), q = clamp(rint((x - m) / d), 0..15), x' = fma(q, d, m) |
 
 Every division, product and fma is rounded once, with rint rounding half to even. So the CPU form and the CUDA
@@ -253,3 +253,20 @@ wrapper retains this classification in gate_summary.json. Eighteen offline gate/
 RunPod network volumes can be root-squashed: an actual E4 launch rejected archive ownership
 restoration. Every E9 extraction now explicitly disables ownership and permission preservation
 (`--no-same-owner --no-same-permissions`); archived source identities and hashes are unchanged.
+
+The actual L4 run is a **negative result**, preserved in
+`receipts/runpod_l4_20261030/negative_execution_receipt.json`. All ten g1 default-mode
+comparisons and all four g2 f16 deterministic repeats were byte-identical. Qwen3's
+f32 CPU/device gate passed; its f16 gate retained all 288/288 argmax and 12/12 free
+greedy sequences but failed the unchanged 1e-4 numeric tolerance: worst prefill
+0.0003446816157433488 and decode 0.0003620140669552354. These are CPU-f16 versus
+CUDA-f16 differences, distinct from the earlier f16-versus-f32 quantization errors.
+The original gate recorded margins only for argmax flips, so minimum margins are
+unavailable. There is no demonstrated conversion bug or post-hoc tolerance change.
+
+Fail-closed execution stopped at that failure; Qwen2.5's CPU/device gate, both decode
+teacher-forcing runs and the 8064-position bench did not execute. The local receipt
+validator also returns false. E9 remains open. The extra conservative comparison
+against old teacher-forcing point estimates was not reached; it is separate from
+the original registered device gate. The normal watchdog fetched diagnostics,
+terminated the pod and deleted its volume (runner ledger about $0.45, cap $3).

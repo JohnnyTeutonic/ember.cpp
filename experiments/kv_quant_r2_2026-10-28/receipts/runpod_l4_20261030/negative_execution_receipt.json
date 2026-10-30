@@ -1,0 +1,59 @@
+{
+ "result": "FAILED_REGISTERED_NUMERIC_DEVICE_GATE",
+ "scientific_pass": false,
+ "source_commit": "d147d00e19d63dec239e3a8f28f8a35c480a3b7d",
+ "baseline_commit": "f393955beee78ac3ea75edaff9d5030c53ad9b84",
+ "runner_commit": "3292ef9fbcd437c392e2389c036d6ceeeb0c4d49",
+ "original_archive": "C:\\ml_artifacts\\kvq\\ember-e9-20261030\\e9_device\\out.zip",
+ "original_archive_sha256": "daa7865875fcb4dc0032f9e52032dab0731646e746a7685501483a496b5ac022",
+ "g1": {
+  "comparisons": 10,
+  "all_identical": true
+ },
+ "g2": {
+  "f16_comparisons": 4,
+  "all_identical": true
+ },
+ "g3": {
+  "qwen3_f32": "PASS",
+  "qwen3_f16": "FAIL_NUMERIC_ONLY",
+  "top1": "288/288",
+  "greedy": "12/12",
+  "prompts": 12,
+  "prompt_length": 24,
+  "greedy_generated": 32,
+  "registered_tolerance": 0.0001,
+  "f16_worst_prefill_rel": 0.0003446816157433488,
+  "f16_worst_decode_rel": 0.0003620140669552354,
+  "min_margins": null,
+  "min_margins_reason": "Original gate only emits margins for argmax disagreements; there were none."
+ },
+ "not_run": [
+  "g3 qwen25 f32",
+  "g3 qwen25 f16",
+  "tfd_qwen3",
+  "tfd_qwen25",
+  "qwen25 8064-position bench"
+ ],
+ "interpretation": "Gate failed against CPU f16 reference, distinct from f16-versus-f32 quantization error; no threshold changed and no scientific rerun.",
+ "cleanup": {
+  "pod": "eli2e6d8drzgb8",
+  "terminated": true,
+  "volume": "ws31ihqmfn",
+  "volume_deleted": true,
+  "runner_ledger_usd_rounded": 0.45,
+  "cap_usd": 3
+ },
+ "receipt_sha256": {
+  "execution.json": "752d38c7c8b14692e2491907b36b8ab3231bbb9508467f56c377c529156ee915",
+  "gate_summary.json": "268464d653f75e3b62a5f9073fd0d451170fb46434b741d013035115c79c134e",
+  "gates.txt": "ae9a42c2e44c6b74b81877734057e31abc3eca7192b897f37e43107c9978436d",
+  "models.sha256": "59510feaa47993ea3319d0311c58975a88f9ccb3264fb6cd4fe8c85b551f16d1",
+  "STAGING.json": "1e88402501a68248556373ad498144a5ccad84aac2d2f7f77c98862bc27f304b",
+  "g3/qwen3_f16.json": "778d94cea3f989baee043db29f1320b1d540a1c8b04cad5430e621b850190414",
+  "g3/qwen3_f32.json": "3820939bde2963754ef03a15b2cc54a5b80b3a95a33c4628f5faaa728b3ee8b7",
+  "hardware.txt": "00ee1c7c90ad92db2a288b80c7d823ff1d4163e5ec2897783a021766cc109693",
+  "local_recheck.json": "8f92e1bb03afc16921675946f72dba85ecbe0eef207fc9e2dcc617fb2ff2d779",
+  "vm.log": "5659df69c049b4fdf570b3af849378657f917ee705977caf14d58acdb3f356f3"
+ }
+}

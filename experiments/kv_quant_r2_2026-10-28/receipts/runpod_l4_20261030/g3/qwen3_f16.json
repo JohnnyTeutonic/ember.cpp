@@ -1,0 +1,102 @@
+{
+ "device_supported": true,
+ "family_hint": "qwen3",
+ "gen": 32,
+ "gguf": "/content/models/qwen3/Qwen3-0.6B-Q8_0.gguf",
+ "greedy_identical": "12/12",
+ "ids_file": null,
+ "len": 24,
+ "on_gpu": true,
+ "pass": false,
+ "prompts": 12,
+ "rows": [
+  {
+   "decode_rel": 0.00026279679308362816,
+   "greedy_first_diff": -1,
+   "i": 0,
+   "prefill_rel": 0.00017792896641861882,
+   "top1": 24
+  },
+  {
+   "decode_rel": 0.00023193688094329533,
+   "greedy_first_diff": -1,
+   "i": 1,
+   "prefill_rel": 0.00024528657763292,
+   "top1": 24
+  },
+  {
+   "decode_rel": 0.00018210538112089464,
+   "greedy_first_diff": -1,
+   "i": 2,
+   "prefill_rel": 0.0001680686511705682,
+   "top1": 24
+  },
+  {
+   "decode_rel": 0.00022413852981190423,
+   "greedy_first_diff": -1,
+   "i": 3,
+   "prefill_rel": 0.00019408369677156024,
+   "top1": 24
+  },
+  {
+   "decode_rel": 0.00020664987973281236,
+   "greedy_first_diff": -1,
+   "i": 4,
+   "prefill_rel": 0.0002760056693255879,
+   "top1": 24
+  },
+  {
+   "decode_rel": 0.0003620140669552354,
+   "greedy_first_diff": -1,
+   "i": 5,
+   "prefill_rel": 0.00029119074744437287,
+   "top1": 24
+  },
+  {
+   "decode_rel": 0.00020186612287254155,
+   "greedy_first_diff": -1,
+   "i": 6,
+   "prefill_rel": 0.00015998534973941264,
+   "top1": 24
+  },
+  {
+   "decode_rel": 0.00021108592670787866,
+   "greedy_first_diff": -1,
+   "i": 7,
+   "prefill_rel": 0.00013538953719022638,
+   "top1": 24
+  },
+  {
+   "decode_rel": 0.0001550948684604625,
+   "greedy_first_diff": -1,
+   "i": 8,
+   "prefill_rel": 0.0001812914788418984,
+   "top1": 24
+  },
+  {
+   "decode_rel": 0.00022351418961275582,
+   "greedy_first_diff": -1,
+   "i": 9,
+   "prefill_rel": 0.0003446816157433488,
+   "top1": 24
+  },
+  {
+   "decode_rel": 0.00016815767597532833,
+   "greedy_first_diff": -1,
+   "i": 10,
+   "prefill_rel": 0.00024144577009282525,
+   "top1": 24
+  },
+  {
+   "decode_rel": 0.00023766979544678296,
+   "greedy_first_diff": -1,
+   "i": 11,
+   "prefill_rel": 0.00032284078025712765,
+   "top1": 24
+  }
+ ],
+ "tol": 0.0001,
+ "top1_agree": "288/288",
+ "worst_decode_rel": 0.0003620140669552354,
+ "worst_prefill_rel": 0.0003446816157433488
+}

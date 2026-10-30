@@ -1,0 +1,43 @@
+{
+ "kind": "E9_F16_DEVICE_GATE_STAGING_NOT_A_RESULT",
+ "new_ember_commit": "d147d00e19d63dec239e3a8f28f8a35c480a3b7d",
+ "baseline_ember_commit": "f393955beee78ac3ea75edaff9d5030c53ad9b84",
+ "formats": [
+  "f16"
+ ],
+ "phases": [
+  "g1",
+  "g2",
+  "g3",
+  "tfd_qwen3",
+  "tfd_qwen25"
+ ],
+ "deadline_minutes": 95,
+ "max_usd": 3,
+ "files": {
+  "colab_kvq_vm.sh": {
+   "bytes": 11458,
+   "sha256": "8b7f08e7c6bb5769648428f190b202973553c730bdf993a03fc8aa4208abc265"
+  },
+  "ember.tgz": {
+   "bytes": 5555278,
+   "sha256": "956bdca7a9846ceacc7b0efb116413da7f5a485034b7436529a17f1ab38aa57f"
+  },
+  "ember_base.tgz": {
+   "bytes": 4966331,
+   "sha256": "cfdcc39e8cdcc378502b31a0e7b7fac5b4a7d850885919df81a6f2ac218f6410"
+  },
+  "HEAD": {
+   "bytes": 41,
+   "sha256": "de684dd8a80e7cb86f6faf9d3aeb266a189ec820bc732e681e5df10710e94830"
+  },
+  "inputs.tgz": {
+   "bytes": 202764,
+   "sha256": "7270b102455bd97767a14c61e11857db2510262dad4f05a2f1553216b4cf6782"
+  },
+  "runpod_kvq_job.py": {
+   "bytes": 4115,
+   "sha256": "735d9194515fee0576ac10370fd0aacd46063083aac0d313cc06dd772c288444"
+  }
+ }
+}
