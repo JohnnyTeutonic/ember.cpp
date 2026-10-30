@@ -1,9 +1,12 @@
 """Fail-closed standalone selector experiment; no production edits or model calls."""
 
 import argparse
+import csv
 import hashlib
 import json
 import os
+import math
+import shutil
 from pathlib import Path
 import platform
 import subprocess
@@ -28,6 +31,72 @@ def atomic(path, value):
     os.replace(temporary, path)
 
 
+def validate_records(records):
+    vocabularies = [4096, 16384, 32000, 32768, 65536, 128256]
+    expected_kernel = {
+        (v, n, p, b)
+        for v in vocabularies
+        for n in [1, 4, 16]
+        for p in [0, 4, 16, 64]
+        for b in range(10)
+    }
+    expected_host = {
+        (v, 1, p, b, t)
+        for v in vocabularies
+        for p in [0, 4, 16, 64]
+        for b in range(10)
+        for t in [0, 1]
+    }
+    expected_correct = {
+        (v, n)
+        for v in [1, 31, 257, 4096, 16384, 32000, 32768, 65536, 128256]
+        for n in [1, 4, 16]
+    }
+    seen = {"kernel_trial": set(), "host_trial": set(), "correctness": set()}
+    counts = {}
+    for row in records:
+        kind = row.get("kind")
+        counts[kind] = counts.get(kind, 0) + 1
+        if kind in seen:
+            fields = {
+                "kernel_trial": ["vocab", "n", "parts", "batch"],
+                "host_trial": ["vocab", "n", "parts", "batch", "transfer_only"],
+                "correctness": ["vocab", "n"],
+            }[kind]
+            key = tuple(row[f] for f in fields)
+            if key in seen[kind]:
+                raise ValueError("duplicate trial identity")
+            seen[kind].add(key)
+        if kind in {"kernel_trial", "host_trial"}:
+            if not math.isfinite(row["microseconds"]) or row["microseconds"] <= 0:
+                raise ValueError("nonfinite/nonpositive timing")
+        if kind == "kernel_trial":
+            if (
+                row.get("iterations") != 1000
+                or row.get("raw_elapsed_ms") != row["microseconds"]
+            ):
+                raise ValueError("kernel iteration/raw elapsed inconsistency")
+        if kind == "device" and (row.get("name") != "NVIDIA L4" or row.get("sm") != 89):
+            raise ValueError("actual device not NVIDIA L4 SM89")
+    if seen != {
+        "kernel_trial": expected_kernel,
+        "host_trial": expected_host,
+        "correctness": expected_correct,
+    }:
+        raise ValueError("missing/unknown trial identities")
+    if counts != {
+        "device": 1,
+        "correctness": 27,
+        "kernel_trial": 720,
+        "host_trial": 480,
+        "COMPLETE": 1,
+    }:
+        raise ValueError("unexpected record inventory")
+    if records[-1].get("kind") != "COMPLETE" or records[-1].get("checked_rows") != 6804:
+        raise ValueError("incomplete correctness rows")
+    return counts
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
@@ -35,6 +104,16 @@ def main():
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     out = args.output
+    for relative in [
+        "tools/row_pick_profile/prepare.py",
+        "tools/row_pick_profile/run.py",
+        "tools/row_pick_profile/profile.cu",
+        "verify_kernels.cu",
+        "verify_kernels.h",
+    ]:
+        target = out / "source" / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / relative, target)
     started = time.time()
     receipt = {
         "status": "RUNNING",
@@ -73,6 +152,7 @@ def main():
             [
                 args.nvcc,
                 "-std=c++17",
+                "-O3",
                 "-arch=sm_89",
                 "-I" + str(out),
                 str(HERE / "profile.cu"),
@@ -97,23 +177,24 @@ def main():
             atomic(out / "receipt.json", receipt)
             if process.returncode:
                 raise RuntimeError(f"command {index} failed; no retry")
+            if index == 2:
+                gpu_rows = list(
+                    csv.reader((out / "command_2.log").read_text().splitlines())
+                )
+                if len(gpu_rows) != 2 or len(gpu_rows[1]) != 4:
+                    raise RuntimeError("ambiguous GPU inventory")
+                values = [value.strip() for value in gpu_rows[1]]
+                if values[0] != "NVIDIA L4" or not values[1].startswith("GPU-"):
+                    raise RuntimeError("GPU name/UUID not verified")
+                receipt["gpu"] = dict(
+                    zip(["name", "uuid", "driver", "memory_total"], values)
+                )
         records = [
             json.loads(line) for line in (out / "trials.jsonl").read_text().splitlines()
         ]
         if not records or records[-1].get("kind") != "COMPLETE":
             raise RuntimeError("missing terminal COMPLETE")
-        expected = {
-            "device": 1,
-            "correctness": 27,
-            "kernel_trial": 720,
-            "host_trial": 480,
-            "COMPLETE": 1,
-        }
-        counts = {
-            kind: sum(r.get("kind") == kind for r in records) for kind in expected
-        }
-        if counts != expected or any(r.get("kind") not in expected for r in records):
-            raise RuntimeError(f"incomplete/unknown trial inventory: {counts}")
+        counts = validate_records(records)
         receipt.update(
             status="COMPLETE",
             record_counts=counts,
@@ -124,8 +205,8 @@ def main():
     finally:
         receipt["ended_unix"] = time.time()
         receipt["artifacts"] = {
-            p.name: {"sha256": sha(p), "bytes": p.stat().st_size}
-            for p in out.iterdir()
+            str(p.relative_to(out)): {"sha256": sha(p), "bytes": p.stat().st_size}
+            for p in out.rglob("*")
             if p.is_file() and p.name not in {"receipt.json", "receipt.tmp"}
         }
         receipt["input_capture"] = {

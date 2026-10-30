@@ -46,6 +46,7 @@ int main(int argc,char**argv){try{
  {std::ifstream existing(argv[1]);if(existing.good())throw std::runtime_error("output exists");}
  std::ofstream log(argv[1]);if(!log)throw std::runtime_error("cannot open output");
  cudaDeviceProp prop{};CU(cudaGetDeviceProperties(&prop,0));
+ if(std::string(prop.name)!="NVIDIA L4" || prop.major!=8 || prop.minor!=9)throw std::runtime_error("requires actual NVIDIA L4 SM89");
  log<<"{\"kind\":\"device\",\"name\":\""<<prop.name<<"\",\"sm\":"<<prop.major*10+prop.minor<<",\"host_wall_scope\":\"n1 only; exact8B H2D and20B D2H\"}\n";log.flush();
  cudaStream_t stream;CU(cudaStreamCreate(&stream));
  float* device;RowPick *out,*partial,*host;int *step,*hoststep;
@@ -94,7 +95,7 @@ int main(int argc,char**argv){try{
    auto launch=[&](){if(!parts)select_rows_kernel<<<n,256,0,stream>>>(device,v,out);else{partition_rows_kernel<<<dim3(n,parts),256,0,stream>>>(device,v,partial,parts);merge_parts<<<n,32,0,stream>>>(partial,out,parts);}};
    for(int i=0;i<100;++i)launch();CU(cudaStreamSynchronize(stream));
    cudaEvent_t a,b;CU(cudaEventCreate(&a));CU(cudaEventCreate(&b));CU(cudaEventRecord(a,stream));for(int i=0;i<1000;++i)launch();CU(cudaEventRecord(b,stream));CU(cudaEventSynchronize(b));float ms;CU(cudaEventElapsedTime(&ms,a,b));CU(cudaEventDestroy(a));CU(cudaEventDestroy(b));
-   log<<"{\"kind\":\"kernel_trial\",\"vocab\":"<<v<<",\"n\":"<<n<<",\"parts\":"<<parts<<",\"batch\":"<<batch<<",\"microseconds\":"<<ms<<"}\n";log.flush();
+   log<<"{\"kind\":\"kernel_trial\",\"vocab\":"<<v<<",\"n\":"<<n<<",\"parts\":"<<parts<<",\"batch\":"<<batch<<",\"microseconds\":"<<ms<<",\"iterations\":1000,\"raw_elapsed_ms\":"<<ms<<"}\n";log.flush();
    if(n==1){
     for(int transfer_only=0;transfer_only<2;++transfer_only){
      cudaGraph_t graph;cudaGraphExec_t exec;CU(cudaStreamBeginCapture(stream,cudaStreamCaptureModeGlobal));if(!transfer_only)launch();CU(cudaStreamEndCapture(stream,&graph));CU(cudaGraphInstantiate(&exec,graph,nullptr,nullptr,0));
