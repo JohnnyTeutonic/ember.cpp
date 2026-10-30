@@ -1,0 +1,110 @@
+{
+  "schema": 1,
+  "status": "READY_VERIFIED",
+  "scientific_complete": false,
+  "compiled_source_commit": "7f2b24a4aac857a73f31134177a5c9a5edf493af",
+  "exact_binary_sha256": "01fe9a97aa2be814b124b30ca79d7ce567caa9e48bd045192e60a742a95b9f00",
+  "health_repair_commit": "f8837f0cec3382fe28a28abf6f9ac8e5831b500b",
+  "operational_vm_commit": "1151d5d",
+  "candidate_controller_sha256_unchanged": "dcc0d7b56add16c94ad1ae5c561159ee40fe5ba8384f820799e3823c2f4c63fd",
+  "minimum_speedup_unchanged": 1.03,
+  "evaluation_inventory_actual_requests": 260,
+  "deterministic_row_gate_pick_only_unchanged": true,
+  "prefix": {
+    "completed_each_model": 100,
+    "metadata_edited": false,
+    "manifest_exact_match_to_new_launch": true,
+    "pilot_archive_sha256": "f201b27316d7ed89b19882ce8379f2d61674888bb0af13c852841b6e2eb729c3"
+  },
+  "forecast": {
+    "observed_pilot_pick_100_seconds": 6.0376222133636475,
+    "observed_pilot_pk_100_seconds": 7.284053325653076,
+    "remaining_generation_at_2x_pilot_rate_seconds": 3553.129551706314,
+    "upload_minutes_allowance": 20,
+    "evaluation_pack_and_home_minutes_allowance": 30,
+    "total_minutes_approx": 109.22,
+    "limitation": "First100 prompts need not represent full pool. 2x is a conservative planning factor, not a statistical bound; caps and absolute deadline take precedence."
+  },
+  "budget": {
+    "pilot_exact_spend_usd": 0.18835438030102739,
+    "fresh_cap_usd": 1.8,
+    "combined_cap_usd": 2,
+    "max_hours": 2.25,
+    "absolute_deadline_utc": "2026-10-30T13:09:00Z",
+    "original_failed_v1_separately_preserved_cost_usd": 1.67
+  },
+  "inputs": {
+    "self_output_vm.sh": {
+      "path": "/home/jonat/e10_self_full_v3_stage_20261030/self_output_vm.sh",
+      "bytes": 3651,
+      "sha256": "9ca0213fb2d46b1a8c817c409c9d02cefc78bd020874065be0f9b1238ad78374"
+    },
+    "self_output_gate.py": {
+      "path": "/home/jonat/e10_self_full_v3_stage_20261030/self_output_gate.py",
+      "bytes": 13775,
+      "sha256": "3f581c8739a7849dfcb7bf2d9ffd4938ec7fc0b0055e01bb4fc664eb4c2737f1"
+    },
+    "COMMITS": {
+      "path": "/home/jonat/e10_self_full_v3_stage_20261030/COMMITS",
+      "bytes": 403,
+      "sha256": "af1cb57db132c6bb939774533a722992b139052bb48845b724a3b1d38ef6e77f"
+    },
+    "self_output_pool.py": {
+      "path": "/home/jonat/e10_self_full_v3_stage_20261030/self_output_pool.py",
+      "bytes": 13074,
+      "sha256": "88d484f311b30fdc1b56e77cfd5e8ed6d8ca5a4679c9cd90dbba0a63beb13885"
+    },
+    "pilot_prefix.tgz": {
+      "path": "/home/jonat/e10_self_full_v3_stage_20261030/pilot_prefix.tgz",
+      "bytes": 201499,
+      "sha256": "db2422c3a2ab36674a50cd5f28f6e2a09acfdeecd2084f2a51163d214ffe3cbb"
+    },
+    "tinyllama_server": {
+      "path": "/home/jonat/e10_self_pilot_v2_stage_20261030/tinyllama_server",
+      "bytes": 9341496,
+      "sha256": "01fe9a97aa2be814b124b30ca79d7ce567caa9e48bd045192e60a742a95b9f00"
+    },
+    "ember.tgz": {
+      "path": "/home/jonat/e10_self_device_stage_20261030/ember.tgz",
+      "bytes": 5584730,
+      "sha256": "35b0dea0c4fd677dce73a08d9d5c9400ebbb5f35b4a739763b8c97e68efa5f0e"
+    },
+    "eval100.jsonl": {
+      "path": "/home/jonat/e10_self_device_stage_20261030/eval100.jsonl",
+      "bytes": 27784,
+      "sha256": "a25357100c3eb1e59bc94bb26c0629e72e6ae18172b2d4fbbf148ae5168d1740"
+    },
+    "pick.gguf": {
+      "path": "/mnt/c/ml_artifacts/tiny_chat/e1/pick_e1_L16/model.gguf",
+      "bytes": 121925952,
+      "sha256": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9"
+    },
+    "pk.gguf": {
+      "path": "/mnt/c/ml_artifacts/next_base/base/pk_base_v1.gguf",
+      "bytes": 441118688,
+      "sha256": "510d288cf10ead4d3902247e3d898b6fa39e1d31d7465d3a8b6820761d6c9178"
+    },
+    "pick_pool.jsonl": {
+      "path": "/home/jonat/e10_self_stage_20261030/pick_pool.jsonl",
+      "bytes": 4605057,
+      "sha256": "50a26dbc836c0af899f3b5d1f10242ef9f66d686f6a12e5fc985797724153737"
+    },
+    "pk_pool.jsonl": {
+      "path": "/home/jonat/e10_self_stage_20261030/pk_pool.jsonl",
+      "bytes": 1975223,
+      "sha256": "b1f8603c2517e5cf5c740b3751b681229a8721fb583dd9602355a604bf5a69e0"
+    },
+    "pick_table.bin": {
+      "path": "/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+      "bytes": 10294632,
+      "sha256": "5a58236ab58b6129ec326c2abca8981261bf1055639de04b214492d8be8770be"
+    },
+    "pk_table.bin": {
+      "path": "/mnt/c/ml_artifacts/ember_draft/tables/s_c8_p10.bin",
+      "bytes": 8372504,
+      "sha256": "ade26f5a7018ab24103c06afea3096a8c97bab7ac0405292833d06f82fc5c7f4"
+    }
+  },
+  "runtime_job_and_absolute_deadline_commit": "0f9540a3fa511c6c8915cdb914237aa205632890",
+  "deadline_backend_regressions_passed": 51
+}
