@@ -153,6 +153,9 @@ def cmd_merge(a):
         k = np.concatenate(keys)
         n = np.concatenate(nxt)
         c = np.concatenate(conf)
+        if k.size == 0:
+            out.append({"keys": k, "next": n, "conf": c})
+            continue
         pri = np.concatenate([np.full(x.size, i, np.int64) for i, x in enumerate(keys)])
         idx = np.lexsort((pri, k))  # key ascending, the earlier table first
         k, n, c = k[idx], n[idx], c[idx]
