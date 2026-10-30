@@ -144,3 +144,26 @@ def test_macro_off_reconstructs_frozen_source_and_line_numbers():
             index += 1
     assert hooks == 6
     assert hashlib.sha256(b''.join(recovered)).hexdigest() == 'c5bfa090027ae1ba448707228e5bc0e961f216c3cfb8f5c1c31c309fbdd8bfd9'
+
+@pytest.mark.parametrize('name', ['../outside','/absolute','C:/drive','a\\outside'])
+def test_offline_auditor_refuses_unsafe_archive_paths(tmp_path,name):
+    import zipfile
+    import audit_f16_diagnosis as auditor
+    archive=tmp_path/'input.zip'
+    with zipfile.ZipFile(archive,'w') as writer:
+        writer.writestr(name,b'private raw bytes')
+    with pytest.raises(ValueError,match='unsafe'):
+        auditor.extract_checked(archive,tmp_path/'extract')
+
+
+def test_offline_auditor_validates_all_member_crc(tmp_path):
+    import zipfile
+    import audit_f16_diagnosis as auditor
+    archive=tmp_path/'input.zip'
+    content=b'unique payload to verify CRC'
+    with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_STORED) as writer:
+        writer.writestr('case/payload.bin',content)
+    assert auditor.extract_checked(archive,tmp_path/'good')['crc']=='PASS'
+    archive.write_bytes(archive.read_bytes().replace(content,b'X'+content[1:]))
+    with pytest.raises(zipfile.BadZipFile):
+        auditor.extract_checked(archive,tmp_path/'bad')
