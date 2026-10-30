@@ -1,13 +1,11 @@
 {
-  "scope": "Historical CPU-only compilation/fallback refusal for the recorded old source hash; current hardened harness awaits rebuild. No CUDA execution result.",
+  "scope": "CPU-only compilation and fallback refusal, not a CUDA execution result",
   "pass": true,
   "exit_code": 2,
   "stderr": "CUDA benchmark requires the actual GPU interpreter\n",
-  "binary_sha256": "019ce849257a0f43f17858f979f4372bd815848588a61d2488d5a7af44b87c57",
+  "binary_sha256": "c76b4a025d8895107bc4534b6987b11af2631674d1a42264ae39a046e877c537",
   "model_sha256": "c88d58f4def9dbea3d80d26b6cff0fe32b5ca9acbc138d971a87c6cd3bf132a0",
-  "source_sha256": "da1d7679da2858afe1de1ba8a2d06dc82e5f5e8485f71e08c96c3cb1029f9db4",
+  "source_sha256": "d468bc2a40b841aeb220c93dca8f3a733aad073606081864f73f9ecaf88356b5",
   "local_gpu_used": false,
-  "cmake_build_log_sha256": "216d75a562aa6b249983d2198b641226927da0e17a155a9f831435fc2fa137d6",
-  "historical": true,
-  "current_harness_compile_validated": false
+  "cmake_build_log_sha256": "216d75a562aa6b249983d2198b641226927da0e17a155a9f831435fc2fa137d6"
 }
