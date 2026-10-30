@@ -36,11 +36,11 @@ jobs:
             cuda_toolkit: "cuda-toolkit-12-1"
             wheel_suffix: "+cu121"
           # Windows GPU builds
-          - os: windows-latest
+          - os: windows-2022
             cuda_version: "11.8"
             cuda_toolkit: "11.8.0"
             wheel_suffix: "+cu118"
-          - os: windows-latest
+          - os: windows-2022
             cuda_version: "12.1"
             cuda_toolkit: "12.1.0"
             wheel_suffix: "+cu121"
@@ -66,12 +66,54 @@ jobs:
 
     # Windows CUDA setup
     - name: Install CUDA Toolkit (Windows)
-      if: matrix.os == 'windows-latest' && matrix.cuda_version != 'cpu'
+      if: runner.os == 'Windows' && matrix.cuda_version != 'cpu'
       uses: Jimver/cuda-toolkit@v0.2.11
       with:
         cuda: ${{ matrix.cuda_toolkit }}
         method: 'network'
-        sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "curand", "curand_dev"]'
+        sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "curand", "curand_dev", "thrust"]'
+
+    # CUDA 11.8/12.1 support MSVC 193x, not the windows-latest VS 2026 compiler.
+    - name: Install supported MSVC toolset (Windows CUDA)
+      if: runner.os == 'Windows' && matrix.cuda_version != 'cpu'
+      shell: pwsh
+      run: |
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $vsPath = & $vswhere -version '[17.0,18.0)' -products '*' -property installationPath | Select-Object -First 1
+        if (-not $vsPath) { throw "Visual Studio 2022 is required for CUDA 11.8/12.1" }
+        $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\setup.exe"
+        $vsInstallArgs = @('modify', '--installPath', "`"$vsPath`"", '--add', 'Microsoft.VisualStudio.Component.VC.14.34.17.4.x86.x64', '--quiet', '--norestart')
+        $result = Start-Process -FilePath $installer -ArgumentList $vsInstallArgs -Wait -PassThru -WindowStyle Hidden
+        if ($result.ExitCode -notin @(0, 3010)) { throw "MSVC 14.34 installation failed: $($result.ExitCode)" }
+
+    - name: Setup Visual Studio Environment (Windows CUDA)
+      if: runner.os == 'Windows' && matrix.cuda_version != 'cpu'
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+        vsversion: '2022'
+        toolset: '14.34'
+
+    - name: Verify supported compiler and vendor half headers (Windows CUDA)
+      if: runner.os == 'Windows' && matrix.cuda_version != 'cpu'
+      shell: pwsh
+      run: |
+        if ($env:VCToolsVersion -notlike '14.34.*') { throw "Expected MSVC 14.34, got $env:VCToolsVersion" }
+        "VCPKG_OVERLAY_TRIPLETS=$env:GITHUB_WORKSPACE\.github\triplets\cuda-msvc1434" >> $env:GITHUB_ENV
+        "VCPKG_VISUAL_STUDIO_PATH=$env:VSINSTALLDIR" >> $env:GITHUB_ENV
+        $cudaRoot = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.cuda_version }}"
+        if (-not (Test-Path "$cudaRoot\bin\nvcc.exe")) { throw "Requested CUDA toolkit is missing: $cudaRoot" }
+        $env:CUDA_PATH = $cudaRoot
+        foreach ($name in @('CUDA_PATH', 'CUDA_HOME', 'CUDA_ROOT', 'CUDAToolkit_ROOT')) { "$name=$cudaRoot" >> $env:GITHUB_ENV }
+        "CMAKE_CUDA_COMPILER=$cudaRoot\bin\nvcc.exe" >> $env:GITHUB_ENV
+        $nvccVersion = & "$cudaRoot\bin\nvcc.exe" --version
+        if ($LASTEXITCODE -ne 0 -or ($nvccVersion -join ' ') -notmatch ('release ' + [regex]::Escape('${{ matrix.cuda_version }}') + ',')) { throw "CUDA version mismatch: $nvccVersion" }
+        if (-not (Test-Path "$env:CUDA_PATH\include\nv\target")) { throw "CUDA Thrust/libcu++ headers are missing" }
+        $probe = "$env:RUNNER_TEMP\cuda-half-header-probe.exe"
+        & cl.exe /nologo /EHsc /std:c++17 /DHAS_CUDA /I. "/I$env:CUDA_PATH\include" .github/scripts/cuda-half-header-probe.cpp "/Fe:$probe"
+        if ($LASTEXITCODE -ne 0) { throw "Vendor half-header compilation failed" }
+        & $probe
+        if ($LASTEXITCODE -ne 0) { throw "Vendor F16/BF16 representation check failed" }
 
     # Set build environment variables
     - name: Set build environment
@@ -136,7 +178,7 @@ jobs:
         echo "CPPFLAGS=-I$(brew --prefix libomp)/include" >> $GITHUB_ENV
 
     - name: Install build dependencies (Windows)
-      if: matrix.os == 'windows-latest'
+      if: runner.os == 'Windows'
       shell: pwsh
       run: |
         Write-Host "Installing build dependencies for Windows..."
@@ -145,7 +187,10 @@ jobs:
         Write-Host "Installing Boost using vcpkg..."
         git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
         C:\vcpkg\bootstrap-vcpkg.bat
-        C:\vcpkg\vcpkg install boost-regex:x64-windows boost-system:x64-windows boost-filesystem:x64-windows boost-xpressive:x64-windows
+        $extraArgs = @()
+        if ("${{ matrix.cuda_version }}" -ne "cpu") { $extraArgs = @('--overlay-triplets=.github/triplets/cuda-msvc1434') }
+        C:\vcpkg\vcpkg install boost-regex:x64-windows boost-system:x64-windows boost-filesystem:x64-windows boost-xpressive:x64-windows @extraArgs
+        if ($LASTEXITCODE -ne 0) { throw "Boost/vcpkg build failed" }
         
         Write-Host "Setting up Boost environment variables..."
         $VCPKG_ROOT = "C:\vcpkg"
@@ -189,7 +234,7 @@ jobs:
         CIBW_ARCHS_WINDOWS: AMD64
         CIBW_ARCHS_MACOS: x86_64 arm64
         
-        CIBW_ENVIRONMENT_LINUX: "PATH=/opt/rh/devtoolset-11/root/usr/bin:$PATH CC=/opt/rh/devtoolset-11/root/usr/bin/gcc CXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CUDAHOSTCXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CMAKE_CUDA_HOST_COMPILER=/opt/rh/devtoolset-11/root/usr/bin/g++ TINYLLAMA_CPP_BUILD_CUDA=0 CMAKE_POLICY_DEFAULT_CMP0167=NEW Python_EXECUTABLE={python} Python_FIND_STRATEGY=LOCATION CMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER SETUPTOOLS_USE_DISTUTILS=stdlib"
+        CIBW_ENVIRONMENT_LINUX: "PIP_PREFER_BINARY=1 PATH=/opt/rh/devtoolset-11/root/usr/bin:$PATH CC=/opt/rh/devtoolset-11/root/usr/bin/gcc CXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CUDAHOSTCXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CMAKE_CUDA_HOST_COMPILER=/opt/rh/devtoolset-11/root/usr/bin/g++ TINYLLAMA_CPP_BUILD_CUDA=0 CMAKE_POLICY_DEFAULT_CMP0167=NEW Python_EXECUTABLE={python} Python_FIND_STRATEGY=LOCATION CMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER SETUPTOOLS_USE_DISTUTILS=stdlib"
         
         CIBW_ENVIRONMENT_WINDOWS: "TINYLLAMA_CPP_BUILD_CUDA=0 CMAKE_POLICY_DEFAULT_CMP0167=NEW CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_TARGET_TRIPLET=x64-windows"
         
@@ -292,12 +337,6 @@ jobs:
         CIBW_TEST_COMMAND: python -c "import os; from tinyllama_cpp.tinyllama_bindings import TinyLlamaSession, ModelConfig, cuda_compiled; assert callable(TinyLlamaSession) and callable(ModelConfig); expected = os.environ['TINYLLAMA_CPP_BUILD_CUDA']; assert expected in ('0', '1'); assert cuda_compiled is (expected == '1'), 'Wheel CUDA label disagrees with native build'; print('Native extension import and CUDA capability successful')"
         CIBW_TEST_SKIP: "*-macosx_arm64"
 
-    - name: Setup Visual Studio Environment (Windows CUDA)
-      if: matrix.os == 'windows-latest' && matrix.cuda_version != 'cpu'
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: x64
-
     - name: Build wheels (CUDA)
       if: matrix.cuda_version != 'cpu'
       uses: pypa/cibuildwheel@v2.23.4
@@ -311,9 +350,9 @@ jobs:
         CIBW_ARCHS_WINDOWS: AMD64
         CIBW_ARCHS_MACOS: x86_64 arm64
         
-        CIBW_ENVIRONMENT_LINUX: "PATH=/opt/rh/devtoolset-11/root/usr/bin:$PATH CC=/opt/rh/devtoolset-11/root/usr/bin/gcc CXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CUDAHOSTCXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CMAKE_CUDA_HOST_COMPILER=/opt/rh/devtoolset-11/root/usr/bin/g++ TINYLLAMA_CPP_BUILD_CUDA=1 CMAKE_CUDA_ARCHITECTURES=\"75;80;86;89;90\" CMAKE_POLICY_DEFAULT_CMP0167=NEW CUDA_HOME=/usr/local/cuda CUDA_ROOT=/usr/local/cuda CUDA_PATH=/usr/local/cuda CUDAToolkit_ROOT=/usr/local/cuda CMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc Python_EXECUTABLE={python} Python_FIND_STRATEGY=LOCATION CMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER SETUPTOOLS_USE_DISTUTILS=stdlib"
+        CIBW_ENVIRONMENT_LINUX: "PIP_PREFER_BINARY=1 PATH=/opt/rh/devtoolset-11/root/usr/bin:$PATH CC=/opt/rh/devtoolset-11/root/usr/bin/gcc CXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CUDAHOSTCXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CMAKE_CUDA_HOST_COMPILER=/opt/rh/devtoolset-11/root/usr/bin/g++ TINYLLAMA_CPP_BUILD_CUDA=1 CMAKE_CUDA_ARCHITECTURES=\"75;80;86;89;90\" CMAKE_POLICY_DEFAULT_CMP0167=NEW CUDA_HOME=/usr/local/cuda CUDA_ROOT=/usr/local/cuda CUDA_PATH=/usr/local/cuda CUDAToolkit_ROOT=/usr/local/cuda CMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc Python_EXECUTABLE={python} Python_FIND_STRATEGY=LOCATION CMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER SETUPTOOLS_USE_DISTUTILS=stdlib"
         
-        CIBW_ENVIRONMENT_WINDOWS: "TINYLLAMA_CPP_BUILD_CUDA=1 CMAKE_CUDA_ARCHITECTURES=\"75;80;86;89;90\" CMAKE_POLICY_DEFAULT_CMP0167=NEW CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_TARGET_TRIPLET=x64-windows CMAKE_PREFIX_PATH=C:/vcpkg/installed/x64-windows CMAKE_GENERATOR=Ninja"
+        CIBW_ENVIRONMENT_WINDOWS: "DISTUTILS_USE_SDK=1 CC=cl CXX=cl CUDAHOSTCXX=cl TINYLLAMA_CPP_BUILD_CUDA=1 CMAKE_CUDA_ARCHITECTURES=\"75;80;86;89;90\" CMAKE_POLICY_DEFAULT_CMP0167=NEW CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_TARGET_TRIPLET=x64-windows CMAKE_PREFIX_PATH=C:/vcpkg/installed/x64-windows CMAKE_GENERATOR=Ninja"
         
         CIBW_ENVIRONMENT_MACOS: "TINYLLAMA_CPP_BUILD_CUDA=0 CMAKE_FIND_DEBUG_MODE=ON"
         
@@ -364,52 +403,11 @@ jobs:
           fi
         
         CIBW_BEFORE_BUILD_WINDOWS: >
-          echo "Installing build dependencies for Windows CUDA build..." &
-          pip install cmake ninja &
-          echo "Setting up vcpkg for Boost..." &
-          if not exist C:\vcpkg (
-            echo "Cloning vcpkg..." &
-            git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg &
-            echo "Bootstrapping vcpkg..." &
-            C:\vcpkg\bootstrap-vcpkg.bat
-          ) else (
-            echo "vcpkg already exists"
-          ) &
-          echo "Installing Boost components via vcpkg..." &
-          C:\vcpkg\vcpkg install boost:x64-windows boost-xpressive:x64-windows &
-          echo "Detecting and using host CUDA installation..." &
-          for /d %%i in ("C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v*") do set "DETECTED_CUDA_PATH=%%i" &
-          if not defined DETECTED_CUDA_PATH (
-            echo "No CUDA installation detected, trying default paths..." &
-            set "DETECTED_CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1"
-          ) &
-          echo "Using CUDA path: %DETECTED_CUDA_PATH%" &
-          echo "Setting up comprehensive CUDA environment variables..." &
-          set "CUDA_PATH=%DETECTED_CUDA_PATH%" &
-          set "CUDA_HOME=%DETECTED_CUDA_PATH%" &
-          set "CUDA_ROOT=%DETECTED_CUDA_PATH%" &
-          set "CUDAToolkit_ROOT=%DETECTED_CUDA_PATH%" &
-          set "CUDA_TOOLKIT_ROOT_DIR=%DETECTED_CUDA_PATH%" &
-          set "CMAKE_CUDA_COMPILER=%DETECTED_CUDA_PATH%\bin\nvcc.exe" &
-          set "PATH=%DETECTED_CUDA_PATH%\bin;%DETECTED_CUDA_PATH%\libnvvp;%PATH%" &
-          set "CUDA_LIB_PATH=%DETECTED_CUDA_PATH%\lib\x64" &
-          set "CUDA_INC_PATH=%DETECTED_CUDA_PATH%\include" &
-          echo "Set CMAKE_CUDA_COMPILER to: %CMAKE_CUDA_COMPILER%" &
-          echo "Verifying CUDA installation structure..." &
-          dir "%DETECTED_CUDA_PATH%" &
-          dir "%DETECTED_CUDA_PATH%\bin" &
-          dir "%DETECTED_CUDA_PATH%\lib\x64" &
-          dir "%DETECTED_CUDA_PATH%\include" &
-          "%DETECTED_CUDA_PATH%\bin\nvcc.exe" --version &
-          echo "CUDA compilation test successful!" &
-          echo "Verifying vcpkg toolchain file..." &
-          if exist C:\vcpkg\scripts\buildsystems\vcpkg.cmake (
-            echo "✓ vcpkg toolchain file found"
-          ) else (
-            echo "✗ vcpkg toolchain file missing!" & exit 1
-          ) &
-          echo "Windows CUDA build setup complete"
-        
+          python -m pip install cmake ninja &&
+          if not exist C:\vcpkg\scripts\buildsystems\vcpkg.cmake (exit /b 1) &&
+          if not exist "%CUDA_PATH%\bin\nvcc.exe" (exit /b 1) &&
+          "%CUDA_PATH%\bin\nvcc.exe" --version
+
         CIBW_BEFORE_BUILD_MACOS: >
           echo "Setting up macOS build environment..." &&
           brew install boost libomp llvm cmake ninja || true &&
