@@ -54,3 +54,18 @@ def test_tampered_stage_is_rejected_before_launch(tmp_path, monkeypatch):
     J.run(out, content=tmp_path)
     report = json.loads((out / "gate_summary.json").read_text())
     assert report["pass"] is False and "hash mismatch" in report["errors"][0]
+
+
+def test_unstable_baseline_is_unresolved_not_a_feature_pass_or_regression(tmp_path, monkeypatch):
+    stage(tmp_path)
+
+    def remote(argv, **kwargs):
+        (tmp_path / "GATE_FAILED").write_text("BASELINE_UNSTABLE: old build differs from itself")
+        return subprocess.CompletedProcess(argv, 1)
+
+    monkeypatch.setattr(J.subprocess, "run", remote)
+    out = tmp_path / "job"
+    J.run(out, content=tmp_path)
+    report = json.loads((out / "gate_summary.json").read_text())
+    assert report["pass"] is False and report["classification"] == "BASELINE_UNSTABLE"
+    assert "old build differs" in report["errors"][-1]

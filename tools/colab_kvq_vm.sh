@@ -122,6 +122,15 @@ if want g1; then
           if [ $det = 1 ]; then EMBER_DETERMINISTIC=1 dump $b $OUT/g1/${m}_${kind}_det${det}_$t.bin ${GG[$m]} $args
           else dump $b $OUT/g1/${m}_${kind}_det${det}_$t.bin ${GG[$m]} $args; fi
         done
+        # A changed row is not evidence against the feature when the old build itself varies.
+        if ! cmp -s $OUT/g1/${m}_${kind}_det${det}_base.bin $OUT/g1/${m}_${kind}_det${det}_new.bin; then
+          repeat=$OUT/g1/${m}_${kind}_det${det}_base_run2.bin
+          if [ $det = 1 ]; then EMBER_DETERMINISTIC=1 dump $BASE "$repeat" ${GG[$m]} $args
+          else dump $BASE "$repeat" ${GG[$m]} $args; fi
+          if ! cmp -s $OUT/g1/${m}_${kind}_det${det}_base.bin "$repeat"; then
+            fail "BASELINE_UNSTABLE: g1 $m $kind det=$det; old build differs from itself"
+          fi
+        fi
         same $OUT/g1/${m}_${kind}_det${det}_base.bin $OUT/g1/${m}_${kind}_det${det}_new.bin "g1 $m $kind det=$det base-vs-new"
       done
     done

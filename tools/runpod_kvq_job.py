@@ -53,6 +53,11 @@ def run(outdir, content=Path("/content")):
         if not passed:
             summary["pass"] = False
             summary.setdefault("errors", []).append("gate process failed, timed out, or lacks completion marker")
+            failure = content / "GATE_FAILED"
+            if failure.exists():
+                reason = failure.read_text(errors="replace").strip()
+                summary["errors"].append(reason)
+                summary["classification"] = "BASELINE_UNSTABLE" if "BASELINE_UNSTABLE" in reason else "FAILED"
         execution["gate_pass"] = passed
     except (OSError, ValueError, KeyError) as exc:
         summary = {"pass": False, "errors": [str(exc)]}
