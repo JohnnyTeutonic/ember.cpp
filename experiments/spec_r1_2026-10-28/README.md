@@ -206,3 +206,35 @@ bit-for-bit (the option with dumping fetches its selected graph's full row), com
 dumping, run both default and deterministic modes, check graph fallback and penalties, and
 measure at least 15% plain decode throughput gain on pick_e1_L16 before adopting the option.
 No CUDA execution, speed claim or default change is established by the host checks.
+
+### E10.3 receipt checker prepared, 30 Oct 2026
+
+`decode_pick_gate.py` prepares and checks the next supervised remote campaign; it never starts
+a server or GPU job itself. On the remote Linux host, generate a fresh plan with:
+
+```sh
+python3 decode_pick_gate.py plan /absolute/tinyllama_server /absolute/pick_e1_L16.gguf /absolute/eval100.jsonl /absolute/new-receipts
+```
+
+It prints 14 sequential `dr_e2e.py` commands, seven each in default and deterministic modes:
+full-row option off, off repeated, on; then ABBA timing off/on/on/off without logit dumps.
+Run them only under the campaign supervisor. No new driver or campaign is installed here.
+The model, server and prompt hashes are frozen in `plan.json`; retain those inputs for checking.
+The output directory must be new. The same frozen prompts are used in every leg; multiple-turn
+prompts retain their ordinary generated histories.
+
+`python3 decode_pick_gate.py analyze /absolute/new-receipts` checks every expected request,
+warm-pass stability, server model/mode, explicit environment, lack of speculation, exact dump
+lengths/offsets, full-row bits and compact-path token ids. Missing timing and empty/truncated
+receipts fail closed. Both ABBA pairs must individually meet 1.15x in each mode for its
+conservative throughput check. It compares raw dump bytes with SHA256 rather than parsing
+float equality, so signed zeros and NaN payloads are not silently equated.
+
+The extra off/off dump control matters: default CUDA arithmetic is not generally deterministic
+(`determinism.h`). If its repeated baseline rows already differ, the bit gate is reported
+`BASELINE_UNSTABLE`, not attributed to the new option. No relaxed numerical tolerance is substituted.
+`PASS` covers only these measured rows/ids/timing checks; graph-refusal and penalty device checks
+remain separate, and no default adoption follows automatically. No device run has occurred.
+
+`python3 test_decode_pick_gate.py`: 14 offline fixture regressions passed, including deliberately
+corrupted rows, timing, ids, hashes, modes and baseline control. Ruff passed for both new scripts.
