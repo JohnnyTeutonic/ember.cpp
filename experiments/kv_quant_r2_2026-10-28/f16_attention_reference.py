@@ -49,7 +49,7 @@ def record(result, records, history, start, case, method):
         metric.pop('top1_equal')  # Hidden-activation argmax is not a vocabulary/token result.
         aggregate=result.setdefault(str(layer),{'rows':0,'worst_absolute':0.0,'worst_relative':0.0})
         if metric['worst_relative']>aggregate['worst_relative']:
-            aggregate['worst_location']={'case':case,'method':method,'start':start}
+            aggregate['worst_relative_location']={'case':case,'method':method,'start':start}
         trace.merge_metric(aggregate,metric)
 
 
@@ -57,7 +57,9 @@ def analyze_extracted(root):
     report={'scope':'Posthoc actual-Q/K/V f64 causal GQA reconstruction; descriptive only',
             'e9_closed':False,'adoption_verdict':None,'causal_claim':False,'results':{},
             'decode_cache_assumption':'Previously recorded new-row cache writes persist; past rows are not resnapshotted each step.',
-            'residual_scope':'Attention/read arithmetic or unobserved past-cache mutation; not a causal attribution.'}
+            'residual_scope':'Attention/read arithmetic or unobserved past-cache mutation; not a causal attribution.',
+            'normalizer':'Per-row range of f64 reference cast to f32; delta uses the f64 reference. Hidden-activation metric, not a vocabulary adoption gate.',
+            'maxima_not_necessarily_colocated':True}
     for fmt in ('f32','f16'):
         for backend in ('cpu','cuda'):
             folder=root/'diagnosis'/f'{fmt}_{backend}'
