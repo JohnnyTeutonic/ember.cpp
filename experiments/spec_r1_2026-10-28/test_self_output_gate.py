@@ -170,3 +170,35 @@ def test_short_pilot_cannot_claim_full_pool(receipt, monkeypatch):
     monkeypatch.setattr(g, 'MODEL_REQUESTS', {m['sha256']['model']: 20000})
     with pytest.raises(ValueError, match='no pilot adoption'):
         g.analyze(out)
+
+
+def test_default_health_absent_flag_matches_server_contract(receipt):
+    out, m = receipt
+    for run in m['runs']:
+        if run['mode'] == 'default':
+            path = out / (run['name'] + '.jsonl.meta.json')
+            meta = json.loads(path.read_text())
+            meta['health'].pop('deterministic')
+            path.write_text(json.dumps(meta))
+    assert g.analyze(out)['status'] == 'PASS'
+
+
+@pytest.mark.parametrize('flag', [True, None, 0, 'false'])
+def test_default_health_rejects_wrong_explicit_flag(receipt, flag):
+    out, _ = receipt
+    path = out / 'default_plain.jsonl.meta.json'
+    meta = json.loads(path.read_text())
+    meta['health']['deterministic'] = flag
+    path.write_text(json.dumps(meta))
+    with pytest.raises(ValueError, match='mode'):
+        g.analyze(out)
+
+
+def test_deterministic_health_requires_explicit_true(receipt):
+    out, _ = receipt
+    path = out / 'det_plain.jsonl.meta.json'
+    meta = json.loads(path.read_text())
+    meta['health'].pop('deterministic')
+    path.write_text(json.dumps(meta))
+    with pytest.raises(ValueError, match='mode'):
+        g.analyze(out)

@@ -173,10 +173,10 @@ def run(binary, model, pool, table, out, max_new_requests=None, port=8093):
                         time.sleep(1)
                 else:
                     raise RuntimeError('pool server did not become ready')
-                if (health.get('model') != inputs['model'] or health.get('deterministic') is not False
+                atomic_json(out / f'health_{count}.json', health)
+                if (health.get('model') != inputs['model'] or health.get('deterministic', False) is not False
                         or health.get('vocab_size') != manifest['vocab']):
                     raise ValueError('pool server model/mode/vocab mismatch')
-                atomic_json(out / f'health_{count}.json', health)
                 stop = len(rows) if max_new_requests is None else min(len(rows), count + max_new_requests)
                 while count < stop:
                     response = request(f'http://127.0.0.1:{port}/chat', body(rows[count]))
@@ -233,7 +233,7 @@ def analyze(out, input_map=None):
     count, previous = recover(out / 'outputs.jsonl', rows, m['vocab'])
     for file in out.glob('health_*.json'):
         h = json.loads(file.read_text())
-        if h.get('model') != m['inputs']['model'] or h.get('deterministic') is not False or h.get('vocab_size') != m['vocab']:
+        if h.get('model') != m['inputs']['model'] or h.get('deterministic', False) is not False or h.get('vocab_size') != m['vocab']:
             raise ValueError('health model/mode/vocabulary changed')
     if count and not (out / 'health_0.json').exists():
         raise ValueError('missing initial health receipt')

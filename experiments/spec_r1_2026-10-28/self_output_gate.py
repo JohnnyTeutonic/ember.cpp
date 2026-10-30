@@ -137,7 +137,7 @@ def load(out, run, m):
         if meta.get(field) != m['inputs'][key]:
             raise ValueError('wrong candidate input path')
     health = meta.get('health') or {}
-    if health.get('model') != m['inputs']['model'] or health.get('deterministic') != (run['mode'] == 'det'):
+    if health.get('model') != m['inputs']['model'] or health.get('deterministic', False) is not (run['mode'] == 'det'):
         raise ValueError('wrong candidate model/mode')
     offset = 0
     for r in records:
