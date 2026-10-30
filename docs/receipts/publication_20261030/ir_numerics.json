@@ -1,0 +1,282 @@
+{
+ "cases": [
+  {
+   "case": "relu op",
+   "got": [
+    "+0",
+    "+0",
+    "+0",
+    "+0",
+    "2.0",
+    "+0",
+    "null",
+    "+0"
+   ],
+   "pass": true,
+   "want": [
+    "+0",
+    "+0",
+    "+0",
+    "+0",
+    "2.0",
+    "+0",
+    "null",
+    "+0"
+   ]
+  },
+  {
+   "case": "expr relu",
+   "got": [
+    "+0",
+    "+0",
+    "+0",
+    "+0",
+    "2.0",
+    "+0",
+    "null",
+    "+0"
+   ],
+   "pass": true,
+   "want": [
+    "+0",
+    "+0",
+    "+0",
+    "+0",
+    "2.0",
+    "+0",
+    "null",
+    "+0"
+   ]
+  },
+  {
+   "case": "expr max",
+   "got": [
+    "1.0",
+    "NaN",
+    "-0",
+    "+0",
+    "NaN",
+    "3.0"
+   ],
+   "pass": true,
+   "want": [
+    "1.0",
+    "NaN",
+    "-0",
+    "+0",
+    "NaN",
+    "3.0"
+   ]
+  },
+  {
+   "case": "expr min",
+   "got": [
+    "1.0",
+    "NaN",
+    "-0",
+    "+0",
+    "NaN",
+    "3.0"
+   ],
+   "pass": true,
+   "want": [
+    "1.0",
+    "NaN",
+    "-0",
+    "+0",
+    "NaN",
+    "3.0"
+   ]
+  },
+  {
+   "case": "expr where",
+   "got": [
+    "9.0",
+    "9.0",
+    "9.0",
+    "7.0",
+    "9.0",
+    "7.0"
+   ],
+   "pass": true,
+   "want": [
+    "9.0",
+    "9.0",
+    "9.0",
+    "7.0",
+    "9.0",
+    "7.0"
+   ]
+  },
+  {
+   "case": "expr max folded",
+   "got": [
+    "+0"
+   ],
+   "pass": true,
+   "want": [
+    "+0"
+   ]
+  },
+  {
+   "case": "expr where folded NaN",
+   "got": [
+    "2.0"
+   ],
+   "pass": true,
+   "want": [
+    "2.0"
+   ]
+  },
+  {
+   "case": "expr rowsum of -0",
+   "got": [
+    "+0",
+    "+0",
+    "+0",
+    "+0"
+   ],
+   "pass": true,
+   "want": [
+    "+0",
+    "+0",
+    "+0",
+    "+0"
+   ]
+  },
+  {
+   "case": "expr rowmean of -0",
+   "got": [
+    "+0",
+    "+0",
+    "+0",
+    "+0"
+   ],
+   "pass": true,
+   "want": [
+    "+0",
+    "+0",
+    "+0",
+    "+0"
+   ]
+  },
+  {
+   "case": "ssm_scan state from +0",
+   "got": [
+    "+0",
+    "+0",
+    "+0"
+   ],
+   "pass": true,
+   "want": [
+    "+0",
+    "+0",
+    "+0"
+   ]
+  },
+  {
+   "case": "ssm_scan output",
+   "got": [
+    "+0",
+    "+0",
+    "+0"
+   ],
+   "pass": true,
+   "want": [
+    "+0",
+    "+0",
+    "+0"
+   ]
+  },
+  {
+   "case": "sub",
+   "got": [
+    "+0",
+    "-0",
+    "+0",
+    "5.0"
+   ],
+   "pass": true,
+   "want": [
+    "+0",
+    "-0",
+    "+0",
+    "5.0"
+   ]
+  },
+  {
+   "case": "mul_col",
+   "got": [
+    "-0",
+    "+0",
+    "-0",
+    "NaN"
+   ],
+   "pass": true,
+   "want": [
+    "-0",
+    "+0",
+    "-0",
+    "NaN"
+   ]
+  },
+  {
+   "case": "affine (x * scale) + shift",
+   "got": [
+    "+0",
+    "-0"
+   ],
+   "pass": true,
+   "want": [
+    "+0",
+    "-0"
+   ]
+  },
+  {
+   "case": "scale with bias",
+   "got": [
+    "+0",
+    "-0"
+   ],
+   "pass": true,
+   "want": [
+    "+0",
+    "-0"
+   ]
+  },
+  {
+   "case": "scale without bias",
+   "got": [
+    "-0",
+    "-0"
+   ],
+   "pass": true,
+   "want": [
+    "-0",
+    "-0"
+   ]
+  },
+  {
+   "case": "depth_attend S = 1 is s_0",
+   "got": [
+    "-0",
+    "NaN",
+    "1.5",
+    "NaN"
+   ],
+   "pass": true,
+   "want": [
+    "-0",
+    "NaN",
+    "1.5",
+    "NaN"
+   ]
+  },
+  {
+   "case": "depth_attend S = 1 keeps NaN payloads",
+   "pass": true
+  }
+ ],
+ "failures": 0,
+ "pass": true
+}

@@ -1,0 +1,64 @@
+{
+  "utc": "2026-10-30T10:53:09.250584+00:00",
+  "source_commit": "2afae2523ac7c040dbd36c4b3e1b75c81387abf8",
+  "build_started_at_commit": "586e72cbbc05f8b11dbee552b5f844cf0fd63e0e",
+  "compiled_CPP_header_CMake_paths_unchanged_since_build_started": true,
+  "backend": "CPU only; HAS_CUDA=OFF; no new CUDA validation",
+  "ctest": {
+    "pass": 2,
+    "fail": 0
+  },
+  "utf8": {
+    "fixed_cases_pass": true,
+    "random_bytes_pass": 10000,
+    "random_streamed_replies_pass": 10000
+  },
+  "IR_numerics": {
+    "pass": true,
+    "case_count": 18
+  },
+  "conformance": {
+    "pass": 554,
+    "fail": 0,
+    "skip": 44,
+    "scope": "current Keramos suite, CPU adapter; 33 unsupported op and 11 gradient skips"
+  },
+  "compiler": "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "binaries": {
+    "tinyllama_server": {
+      "bytes": 4847848,
+      "sha256": "ba73304a2e73648fad1d52eac05d77022bb0d84ae4bd1efd40230634627902d2"
+    },
+    "ir_adapter": {
+      "bytes": 2649504,
+      "sha256": "daa618dac4300857b3dd6eae8dc6b3f82e3fcae6f35cbc7b3d21ecbd8c6ed93f"
+    },
+    "ir_numerics_test": {
+      "bytes": 2226648,
+      "sha256": "24faf7f9df25488e8fb230878b2663505521a968f0d498f8454528715ed4a9c1"
+    },
+    "utf8_text_test": {
+      "bytes": 119480,
+      "sha256": "22fecbb46e06b1142b5f42c1ae10891177a4109a67985d7fde6266953c787ce1"
+    },
+    "cpu_dot_test": {
+      "bytes": 26568,
+      "sha256": "af84dba435dc60be1237e5b17a190ab168a3edd3789d9c21931f464bfa86b0b6"
+    },
+    "cpu_dot_portable_test": {
+      "bytes": 22000,
+      "sha256": "8ac873eb35bc5a8624e964924fa69e25d7c1339ab757bb48e7f89b91cae007b2"
+    }
+  },
+  "files_sha256": {
+    "utf8_fixed.log": "601f1a4d568b2fdb85dae777c610a5d8a1d75f26961830d00ad60198cce0301c",
+    "conformance.log": "8d0b30d72c6fa36debe1a06ac82f26c461b786c29cefcfcc21669d2a253231f3",
+    "source_manifest.json": "b9dc6d36f726fb3835003b4475c2148867221886fa60dd519eb8c875e1cbb5aa",
+    "build.log": "729ea8e7b8c30e7956ffd1c7a4de3f8383571c6d6ce3133783ba18adbfd67978",
+    "conformance.json": "62784813d6c4239e76257ff84c7130a658100c90761e568130b86ef331757a1a",
+    "ctest.log": "d275cd39be20413faf00f4df1236cd97f3cd50a281c221b56768800a359d8f09",
+    "ir_numerics.json": "6a69c4fb55c496dc26bf8e3d3d4d05ce9f9e985b74e3231ff963f8f19e5a9c5b",
+    "utf8_fuzz.log": "8b173bf0ce060456a68e0fe02af95ff64707254948a518b7dd6f74f1cd1ec895",
+    "state_templates.log": "7a9adb197e9e1c6a77f0632cc778866fc7b851bca3142becd703d41d2aa77f1d"
+  }
+}
