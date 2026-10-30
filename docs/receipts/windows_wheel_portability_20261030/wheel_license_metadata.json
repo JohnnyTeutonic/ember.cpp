@@ -1,0 +1,15 @@
+{
+  "backend": "scikit-build-core0.10.0 (minimum configured backend)",
+  "scope": "metadata-only wheel from exact pyproject/license/Python-source copies with CMake explicitly disabled; proves exact license inclusion, NOT a usable native wheel or native build",
+  "probe_note": "Original minimum0.8 rejects existing build.verbose; minimum corrected to0.10. Isolated fixture avoids scikit0.10 Git worktree .git/info/exclude bug. No source Git metadata altered.",
+  "license_members": {
+    "tinyllama_cpp-0.1.0.dist-info/licenses/THIRD_PARTY_NOTICES.md": "5f208391b295c830a7c80e6dddf8cbe057db4fa6334e9b0c79c7444c87a24d18",
+    "tinyllama_cpp-0.1.0.dist-info/licenses/LICENSE": "b86102db40e461f9d46083ca0f68bdb7b827e9a11f2cff11c60d2a662b066106"
+  },
+  "source_files": {
+    "pyproject.toml": "253e7a15dcf45804d13c8604f59e0981c4fdab4c76fc5b15fac05597eaed886c",
+    "LICENSE": "b86102db40e461f9d46083ca0f68bdb7b827e9a11f2cff11c60d2a662b066106",
+    "THIRD_PARTY_NOTICES.md": "5f208391b295c830a7c80e6dddf8cbe057db4fa6334e9b0c79c7444c87a24d18"
+  },
+  "pybind11_license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb"
+}
