@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "status": "READY_VERIFIED",
+  "scientific_complete": false,
+  "runtime_job_and_absolute_deadline_commit": "0f9540a3fa511c6c8915cdb914237aa205632890",
+  "readiness_source_commit": "cfb0bfa40692f90aad1936f2e48b15f1dfeb46c3",
+  "compiled_source_commit": "5bfda89345b3bcf1f0352eee555f0fd4eb73ac7d",
+  "tests": {
+    "cuda_contract_and_controller": 48,
+    "runner_deadline_backend_and_boot": 51
+  },
+  "old_final_exact_spend_usd": 0.21107908220140284,
+  "fresh_cap_usd": 1.78,
+  "original_cumulative_cap_usd": 2,
+  "max_hours": 2.25,
+  "absolute_deadline_utc": "2026-10-30T13:17:00Z",
+  "old_HALTED_untouched": true,
+  "model_forwards_in_old_attempt": 0,
+  "inputs": {
+    "ember.tgz": {
+      "path": "/home/jonat/hf_cuda_smol_stage_20261030/ember.tgz",
+      "bytes": 5621193,
+      "sha256": "43f32310514f7d328ffea310b8b1cdbfec482bd39a5b6f3bbe1188a3c5734a8f"
+    },
+    "converter.tgz": {
+      "path": "/home/jonat/hf_cuda_smol_stage_20261030/converter.tgz",
+      "bytes": 167350,
+      "sha256": "fa607fc3ec03554f6b9c2a82e24cdb1a5c627f4a2724351b44076dd193bc33d8"
+    },
+    "smol_manifest.json": {
+      "path": "/home/jonat/hf_cuda_smol_stage_20261030/smol_manifest.json",
+      "bytes": 1732,
+      "sha256": "68f7cb46092a88d21ac5e7b79d7b671aa3202c0d5751283d1393ef6f900abada"
+    },
+    "native_cuda_binary": {
+      "path": "/home/jonat/hf_cuda_smol_stage_v3_20261030/native_cuda_binary",
+      "bytes": 5089328,
+      "sha256": "6bb0b73335cd5da64a9b2145e7f01b7f0cb16e817b6f86bd2e6821358bb12f72"
+    },
+    "hf_cuda_vm.sh": {
+      "path": "/home/jonat/hf_cuda_smol_stage_v3_20261030/hf_cuda_vm.sh",
+      "bytes": 5660,
+      "sha256": "5acc322b6da8639de73436399dec1fee0e709f9f1bbf4c2a05c2ded607814deb"
+    },
+    "launch_contract_v3.py": {
+      "path": "/home/jonat/hf_cuda_smol_stage_v3_20261030/launch_contract_v3.py",
+      "bytes": 3386,
+      "sha256": "f109b6bdddd69352c60c4b6cb1d3b9f9d5634ad67f6322dd30b9ecd83a2138d9"
+    },
+    "COMMITS": {
+      "path": "/home/jonat/hf_cuda_smol_stage_v3_20261030/COMMITS",
+      "bytes": 276,
+      "sha256": "b54d9c71b6e35706f4092fa490a4840f54e0ac7b1a7b9ea1e732f3ab6b887db5"
+    }
+  }
+}
