@@ -14,6 +14,8 @@ cp COMMITS "$OUT/COMMIT"
 { nvidia-smi; nvcc --version; python3 --version; } > "$OUT/hardware.txt" 2>&1
 sha256sum ember.tgz model.gguf eval100.jsonl decode_pick_vm.sh > "$OUT/inputs.sha256"
 tar --no-same-owner --no-same-permissions -xzf ember.tgz -C "$SRC" --strip-components=1
+apt-get update -qq > /dev/null 2>&1
+apt-get install -y -q libboost-regex-dev > /dev/null 2>&1
 CC=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -1 | tr -d .)
 (while sleep 120; do pack || true; done) &
 packer=$!
