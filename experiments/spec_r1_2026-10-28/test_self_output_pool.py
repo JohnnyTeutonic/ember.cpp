@@ -121,3 +121,46 @@ def test_invalid_response_halts_without_retry(live_fake, monkeypatch):
     assert (out / 'HALTED').exists()
     with pytest.raises(ValueError, match='HALTED'):
         p.run(*files, out)
+
+
+def test_read_only_partial_and_complete_audit(live_fake):
+    files, out, calls = live_fake
+    p.run(*files, out, max_new_requests=1)
+    assert p.analyze(out)['status'] == 'VERIFIED_PARTIAL'
+    assert calls == ['server', 'one']
+    p.run(*files, out)
+    assert p.analyze(out)['status'] == 'VERIFIED_COMPLETE'
+    assert calls == ['server', 'one', 'server', 'two']
+
+
+def test_relayed_inputs_require_exact_bytes(live_fake, tmp_path):
+    files, out, _ = live_fake
+    p.run(*files, out)
+    replacement = tmp_path / 'relayed_model'
+    replacement.write_bytes(Path(files[1]).read_bytes())
+    assert p.analyze(out, {'model': str(replacement)})['status'] == 'VERIFIED_COMPLETE'
+    replacement.write_text('different')
+    with pytest.raises(ValueError, match='bytes'):
+        p.analyze(out, {'model': str(replacement)})
+
+
+def test_health_corruption_refused(live_fake):
+    files, out, _ = live_fake
+    p.run(*files, out)
+    health = out / 'health_0.json'
+    r = json.loads(health.read_text())
+    r['model'] = 'different'
+    health.write_text(json.dumps(r))
+    with pytest.raises(ValueError, match='health'):
+        p.analyze(out)
+
+
+def test_environment_corruption_refused(live_fake):
+    files, out, _ = live_fake
+    p.run(*files, out)
+    manifest = out / 'manifest.json'
+    r = json.loads(manifest.read_text())
+    r['environment']['EMBER_SPEC'] = '0'
+    manifest.write_text(json.dumps(r))
+    with pytest.raises(ValueError, match='environment'):
+        p.analyze(out)
