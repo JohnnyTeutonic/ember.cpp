@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "status": "SUPERVISED_PILOT_PENDING",
+  "scientific_complete": false,
+  "first_requests_per_model": 100,
+  "full_pool_generation_authorized": false,
+  "candidate_or_evaluation_started": false,
+  "original_failure_preserved": true,
+  "original_executable_reused": true,
+  "binary_sha256": "01fe9a97aa2be814b124b30ca79d7ce567caa9e48bd045192e60a742a95b9f00",
+  "compiled_source_commit": "7f2b24a4aac857a73f31134177a5c9a5edf493af",
+  "health_repair_commit": "f8837f0cec3382fe28a28abf6f9ac8e5831b500b",
+  "pilot_commit": "87f8ea0",
+  "runtime_job_commit": "478fa3d10717728929f1341652d6c325ff7efe02",
+  "tests_passed": 57,
+  "cap_usd": 2,
+  "max_hours": 3,
+  "pod": "3iy8rjtlxvi3cr",
+  "datacenter": "EUR-IS-1",
+  "state_dir": "/home/jonat/ember_e10_self_pilot_v2_1030_runner",
+  "inputs": {
+    "tinyllama_server": {
+      "path": "/home/jonat/e10_self_pilot_v2_stage_20261030/tinyllama_server",
+      "bytes": 9341496,
+      "sha256": "01fe9a97aa2be814b124b30ca79d7ce567caa9e48bd045192e60a742a95b9f00"
+    },
+    "self_output_vm.sh": {
+      "path": "/home/jonat/e10_self_pilot_v2_stage_20261030/self_output_vm.sh",
+      "bytes": 2437,
+      "sha256": "002828c1ddbb4f51bc399e11e47eb9637f5067128adff1bd9408f09ca46aa960"
+    },
+    "self_output_pool.py": {
+      "path": "/home/jonat/e10_self_pilot_v2_stage_20261030/self_output_pool.py",
+      "bytes": 13074,
+      "sha256": "88d484f311b30fdc1b56e77cfd5e8ed6d8ca5a4679c9cd90dbba0a63beb13885"
+    },
+    "self_output_pilot_v2.py": {
+      "path": "/home/jonat/e10_self_pilot_v2_stage_20261030/self_output_pilot_v2.py",
+      "bytes": 2103,
+      "sha256": "09ec066c780be397770e888f33b7d50f75b2e006ad227ccf2f7fca78bffedb67"
+    },
+    "pick.gguf": {
+      "path": "/mnt/c/ml_artifacts/tiny_chat/e1/pick_e1_L16/model.gguf",
+      "bytes": 121925952,
+      "sha256": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9"
+    },
+    "pk.gguf": {
+      "path": "/mnt/c/ml_artifacts/next_base/base/pk_base_v1.gguf",
+      "bytes": 441118688,
+      "sha256": "510d288cf10ead4d3902247e3d898b6fa39e1d31d7465d3a8b6820761d6c9178"
+    },
+    "pick_pool.jsonl": {
+      "path": "/home/jonat/e10_self_stage_20261030/pick_pool.jsonl",
+      "bytes": 4605057,
+      "sha256": "50a26dbc836c0af899f3b5d1f10242ef9f66d686f6a12e5fc985797724153737"
+    },
+    "pk_pool.jsonl": {
+      "path": "/home/jonat/e10_self_stage_20261030/pk_pool.jsonl",
+      "bytes": 1975223,
+      "sha256": "b1f8603c2517e5cf5c740b3751b681229a8721fb583dd9602355a604bf5a69e0"
+    },
+    "pick_table.bin": {
+      "path": "/mnt/c/ml_artifacts/ember_draft/tables/h_c8_p10.bin",
+      "bytes": 10294632,
+      "sha256": "5a58236ab58b6129ec326c2abca8981261bf1055639de04b214492d8be8770be"
+    },
+    "pk_table.bin": {
+      "path": "/mnt/c/ml_artifacts/ember_draft/tables/s_c8_p10.bin",
+      "bytes": 8372504,
+      "sha256": "ade26f5a7018ab24103c06afea3096a8c97bab7ac0405292833d06f82fc5c7f4"
+    },
+    "COMMITS": {
+      "path": "/home/jonat/e10_self_pilot_v2_stage_20261030/COMMITS",
+      "bytes": 312,
+      "sha256": "a0e17308d8c8597d0d4d1a9bafedfc7ce82becd09625f4fa8484118a09f2c083"
+    }
+  },
+  "supervisor": "existing Windows Colab driver watchdog",
+  "scientific_scope": "Timing pilot only; no parity, speedup or self-output table claim. Generation extrapolation excludes held-out evaluation and transfer.",
+  "default_changed": false
+}

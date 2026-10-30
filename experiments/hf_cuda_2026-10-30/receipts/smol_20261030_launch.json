@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "status": "SUPERVISED_RUNNING",
+  "complete": false,
+  "source_commit": "5bfda89345b3bcf1f0352eee555f0fd4eb73ac7d",
+  "operational_vm_commit": "4c7f9c2",
+  "runtime_job_commit": "0250495f1a2c7c48190f7081c452017c6f15097f",
+  "boot_hook_sha256": "9bc4abc080b2b6bb0ac1811b54db57da245450e11ef453752c39b0c2ff08cfe6",
+  "runtime_registration_tests_passed": 15,
+  "cap_usd": 2,
+  "max_hours": 3,
+  "pod_id": "y149p04j0ci2dy",
+  "datacenter": "EU-RO-1",
+  "state_dir": "/home/jonat/ember_hf_cuda_smol_1030_runner",
+  "canonical_gguf_sha256": "a898c1208f35ae7c5456d8f19d868a7505b445916dddb1e906fa0296ffdda941",
+  "scope": "SmolLM2-135M only. Exact remote reconstruction hash before all forwards; no Gemma result.",
+  "supervisor": "existing Windows Colab driver watchdog",
+  "default_changed": false,
+  "launch_gate": "L0 exact inputs verified INPUTS_OK08:31:53 UTC; no remaining L0 upload",
+  "stage": {
+    "ember.tgz": "43f32310514f7d328ffea310b8b1cdbfec482bd39a5b6f3bbe1188a3c5734a8f",
+    "converter.tgz": "fa607fc3ec03554f6b9c2a82e24cdb1a5c627f4a2724351b44076dd193bc33d8",
+    "COMMITS": "778b6b7d9b8fb9398d58d0c640ad251cfa285feb7580b471f1ffaff5128b4ba4",
+    "smol_manifest.json": "68f7cb46092a88d21ac5e7b79d7b671aa3202c0d5751283d1393ef6f900abada",
+    "hf_cuda_vm.sh": "ec7713ac02760237c98267bc139dfacb13ffe79709f8d09e24f3b511c8196700"
+  }
+}
