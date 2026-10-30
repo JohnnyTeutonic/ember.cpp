@@ -271,13 +271,17 @@ class HF:
         if not torch.cuda.is_available() or torch.cuda.device_count() != 1:
             raise ValueError("exactly one visible real CUDA device required")
         self.device = torch.device("cuda:0")
-        self.model = AutoModelForCausalLM.from_pretrained(
-            str(gguf.parent),
-            gguf_file=gguf.name,
-            torch_dtype=torch.float32,
-            attn_implementation="eager",
-            local_files_only=True,
-        ).eval().to(self.device)
+        self.model = (
+            AutoModelForCausalLM.from_pretrained(
+                str(gguf.parent),
+                gguf_file=gguf.name,
+                torch_dtype=torch.float32,
+                attn_implementation="eager",
+                local_files_only=True,
+            )
+            .eval()
+            .to(self.device)
+        )
         if any(
             p.device.type != "cuda" or p.dtype != torch.float32
             for p in self.model.parameters()
@@ -344,10 +348,14 @@ def run(a):
         raise ValueError("preserved HALTED receipt; no automatic retries")
     protocol = {
         "schema": 1,
-        "device": {"name":torch.cuda.get_device_name(0), "capability":list(torch.cuda.get_device_capability(0)), "total_memory":torch.cuda.get_device_properties(0).total_memory},
-        "cuda_runtime":torch.version.cuda,
-        "tf32":False,
-        "transfer_scope":"CPU input IDs through full CPU output logits; H2D and D2H included in both timers, no tokenization/argmax/dumps/loading/startup",
+        "device": {
+            "name": torch.cuda.get_device_name(0),
+            "capability": list(torch.cuda.get_device_capability(0)),
+            "total_memory": torch.cuda.get_device_properties(0).total_memory,
+        },
+        "cuda_runtime": torch.version.cuda,
+        "tf32": False,
+        "transfer_scope": "CPU input IDs through full CPU output logits; H2D and D2H included in both timers, no tokenization/argmax/dumps/loading/startup",
         "gguf": str(a.gguf),
         "gguf_sha256": sha(a.gguf),
         "binary": str(a.binary),
@@ -396,7 +404,16 @@ def run(a):
             )
         },
     }
-    if any(os.environ.get(k) for k in ("EMBER_IR", "EMBER_KV", "EMBER_DETERMINISTIC", "EMBER_DECODE_LINEAR", "EMBER_DECODE_PICK")):
+    if any(
+        os.environ.get(k)
+        for k in (
+            "EMBER_IR",
+            "EMBER_KV",
+            "EMBER_DETERMINISTIC",
+            "EMBER_DECODE_LINEAR",
+            "EMBER_DECODE_PICK",
+        )
+    ):
         raise ValueError(
             "unexpected interpreter overrides; use the default FP32 CUDA path"
         )

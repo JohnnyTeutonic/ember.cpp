@@ -10,7 +10,9 @@ from contextlib import nullcontext
 import numpy as np
 import pytest
 
-spec = importlib.util.spec_from_file_location("hf_cuda_benchmark_test", Path(__file__).with_name("benchmark.py"))
+spec = importlib.util.spec_from_file_location(
+    "hf_cuda_benchmark_test", Path(__file__).with_name("benchmark.py")
+)
 b = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(b)
 
@@ -104,23 +106,68 @@ def test_standalone_run_cannot_silently_give_ember_more_threads():
 
 def test_cuda_forward_timer_includes_input_and_output_transfers(monkeypatch):
     operations = []
+
     class Row:
-        def float(self): return self
-        def cpu(self): operations.append("D2H"); return self
-        def argmax(self): operations.append("argmax"); return 1
+        def float(self):
+            return self
+
+        def cpu(self):
+            operations.append("D2H")
+            return self
+
+        def argmax(self):
+            operations.append("argmax")
+            return 1
+
     class Logits:
         shape = (1, 1, 2)
-        def __getitem__(self, key): return Row()
+
+        def __getitem__(self, key):
+            return Row()
+
     class Tensor:
-        def to(self, device): operations.append("H2D"); return self
-    def tensor(ids, dtype): operations.append("CPU input"); return Tensor()
+        def to(self, device):
+            operations.append("H2D")
+            return self
+
+    def tensor(ids, dtype):
+        operations.append("CPU input")
+        return Tensor()
+
     def forward(*args, **kwargs):
         operations.append("forward")
-        return SimpleNamespace(logits=Logits(),past_key_values=object())
-    fake_torch = SimpleNamespace(inference_mode=nullcontext,tensor=tensor,long="int64",cuda=SimpleNamespace(synchronize=lambda device:operations.append("sync")))
-    hf = b.HF.__new__(b.HF);hf.torch=fake_torch;hf.device="cuda:0";hf.model=forward
-    def clock(): operations.append("timer"); return len(operations)*1000000
-    monkeypatch.setattr(b.time,"perf_counter_ns",clock)
-    result=hf.run([1,2],2,continuation=[1,1])
-    assert result["argmax"] == [1,1]
-    assert operations == ["CPU input","sync","timer","H2D","forward","D2H","sync","timer","argmax"]*2
+        return SimpleNamespace(logits=Logits(), past_key_values=object())
+
+    fake_torch = SimpleNamespace(
+        inference_mode=nullcontext,
+        tensor=tensor,
+        long="int64",
+        cuda=SimpleNamespace(synchronize=lambda device: operations.append("sync")),
+    )
+    hf = b.HF.__new__(b.HF)
+    hf.torch = fake_torch
+    hf.device = "cuda:0"
+    hf.model = forward
+
+    def clock():
+        operations.append("timer")
+        return len(operations) * 1000000
+
+    monkeypatch.setattr(b.time, "perf_counter_ns", clock)
+    result = hf.run([1, 2], 2, continuation=[1, 1])
+    assert result["argmax"] == [1, 1]
+    assert (
+        operations
+        == [
+            "CPU input",
+            "sync",
+            "timer",
+            "H2D",
+            "forward",
+            "D2H",
+            "sync",
+            "timer",
+            "argmax",
+        ]
+        * 2
+    )
