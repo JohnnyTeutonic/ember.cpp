@@ -1,0 +1,52 @@
+{
+  "baseline": {
+    "source_sha256": "c5bfa090027ae1ba448707228e5bc0e961f216c3cfb8f5c1c31c309fbdd8bfd9",
+    "object_sha256": "53f4dbbbac6eea9623185e85fa6c4372ef7478de72587cb9e96b0404a6258777",
+    "command": [
+      "/usr/bin/c++",
+      "-DBOOST_REGEX_DYN_LINK",
+      "-DBOOST_REGEX_NO_LIB",
+      "-I/home/jonat/ember_publication_build_20261030/_deps/nlohmann_json-src/include",
+      "-I/home/jonat/ember_e9_diagnosis_20261031",
+      "-I/home/jonat/ember_publication_build_20261030/_deps/cpp-httplib-src",
+      "-fopenmp",
+      "-O3",
+      "-DNDEBUG",
+      "-std=gnu++17",
+      "-fPIC",
+      "-ffp-contract=off",
+      "-DHAS_CUDA",
+      "-I/usr/local/cuda-12.6/include",
+      "-c",
+      "/home/jonat/e9_normal_byteproof_20261031/cuda_host/graph_ir.cpp",
+      "-o",
+      "/home/jonat/e9_normal_byteproof_20261031/cuda_host/baseline.o"
+    ]
+  },
+  "patched": {
+    "source_sha256": "32878a6f8a2fa7803b04580dccb61ee9aaa9952ed244f60ae6888dbec5439c91",
+    "object_sha256": "53f4dbbbac6eea9623185e85fa6c4372ef7478de72587cb9e96b0404a6258777",
+    "command": [
+      "/usr/bin/c++",
+      "-DBOOST_REGEX_DYN_LINK",
+      "-DBOOST_REGEX_NO_LIB",
+      "-I/home/jonat/ember_publication_build_20261030/_deps/nlohmann_json-src/include",
+      "-I/home/jonat/ember_e9_diagnosis_20261031",
+      "-I/home/jonat/ember_publication_build_20261030/_deps/cpp-httplib-src",
+      "-fopenmp",
+      "-O3",
+      "-DNDEBUG",
+      "-std=gnu++17",
+      "-fPIC",
+      "-ffp-contract=off",
+      "-DHAS_CUDA",
+      "-I/usr/local/cuda-12.6/include",
+      "-c",
+      "/home/jonat/e9_normal_byteproof_20261031/cuda_host/graph_ir.cpp",
+      "-o",
+      "/home/jonat/e9_normal_byteproof_20261031/cuda_host/patched.o"
+    ]
+  },
+  "object_identical": true,
+  "scope": "Host C++ compile with actual CUDA12.6 headers/HAS_CUDA; no linking/device execution; remote12.4 proof still required"
+}

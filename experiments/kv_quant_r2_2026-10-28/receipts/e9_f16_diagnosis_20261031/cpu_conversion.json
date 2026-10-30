@@ -1,0 +1,14 @@
+{
+  "checked_f32_inputs": 1256002,
+  "all_f16_expansions": 65536,
+  "failures": 0,
+  "first_failure": {
+    "input": 0,
+    "production": 0,
+    "reference": 0
+  },
+  "midpoint_example": {
+    "input_gap": 2.38419e-07,
+    "rounded_gap": 0.000976562
+  }
+}
