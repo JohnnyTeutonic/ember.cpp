@@ -1,0 +1,65 @@
+{
+  "utc": "2026-10-30T11:33:11.298343+00:00",
+  "source_commit": "c5d1d02b5e80f75a52600ebaebf1aea44042798f",
+  "scope": "CPU GCC13 incremental build, Windows SDK CONST macro simulation, IR gates; actual MSVC/CUDA wheels remain GitHub CI confirmation",
+  "source_sha256": {
+    "CMakeLists.txt": "a8f1b7f325382a12573aaffdaae0f7f20dd8fbad66e2177fce626f0051dce8ac",
+    "graph_ir_expr.h": "969cc8337080fba8b689a9950f0b1099abb6ac15c8739079e5624ebf28c8a715",
+    "graph_ir_expr.cpp": "87441c80d858abc8d6ed943ca450a7cd12898138dbbd842375f6cf226b34ad57",
+    "graph_ir_cuda.cu": "3bbe36d15b89bedba40d872f8041656d1c79df5dcaadbdae130bf0f6ef761db7",
+    "tools/ir_expr_header_portability_test.cpp": "ff74b826ff4772fbaeafb9441bf87e200ac3e13f74d2c5fd93f599cc7cae9570",
+    ".github/workflows/build-wheels.yml": "7c3589600511ee3fff06f7f51c5732b1713a05bc03c966de8d9d511a9e65517d",
+    ".github/scripts/linux-wheel-bootstrap.sh": "8f4b9dca88ad249ba02ebe92dc708b525140e57e9eae306bbda0078e7df8ada6",
+    ".github/scripts/test_wheel_workflow.py": "33d2c712d5e5e76d232d06656bd747875cfa3405acff7e451b218e1cd864cf17"
+  },
+  "binaries": {
+    "tinyllama_server": {
+      "sha256": "ba73304a2e73648fad1d52eac05d77022bb0d84ae4bd1efd40230634627902d2",
+      "bytes": 4847848,
+      "identical_to_previous_tested_build": true
+    },
+    "ir_adapter": {
+      "sha256": "daa618dac4300857b3dd6eae8dc6b3f82e3fcae6f35cbc7b3d21ecbd8c6ed93f",
+      "bytes": 2649504,
+      "identical_to_previous_tested_build": true
+    },
+    "ir_numerics_test": {
+      "sha256": "24faf7f9df25488e8fb230878b2663505521a968f0d498f8454528715ed4a9c1",
+      "bytes": 2226648,
+      "identical_to_previous_tested_build": true
+    },
+    "utf8_text_test": {
+      "sha256": "22fecbb46e06b1142b5f42c1ae10891177a4109a67985d7fde6266953c787ce1",
+      "bytes": 119480,
+      "identical_to_previous_tested_build": true
+    },
+    "cpu_dot_test": {
+      "sha256": "af84dba435dc60be1237e5b17a190ab168a3edd3789d9c21931f464bfa86b0b6",
+      "bytes": 26568,
+      "identical_to_previous_tested_build": true
+    },
+    "cpu_dot_portable_test": {
+      "sha256": "8ac873eb35bc5a8624e964924fa69e25d7c1339ab757bb48e7f89b91cae007b2",
+      "bytes": 22000,
+      "identical_to_previous_tested_build": true
+    }
+  },
+  "ctest": {
+    "pass": 3,
+    "fail": 0
+  },
+  "conformance": {
+    "PASS": 554,
+    "FAIL": 0,
+    "SKIP": 44,
+    "XFAIL": 0,
+    "XPASS": 0
+  },
+  "conformance_json_identical_to_previous_public_receipt": true,
+  "current_raw_conformance_sha256": "62784813d6c4239e76257ff84c7130a658100c90761e568130b86ef331757a1a",
+  "current_raw_conformance_log_sha256": "8d0b30d72c6fa36debe1a06ac82f26c461b786c29cefcfcc21669d2a253231f3",
+  "ir_numerics_sha256": "6a69c4fb55c496dc26bf8e3d3d4d05ce9f9e985b74e3231ff963f8f19e5a9c5b",
+  "ir_numerics_identical_to_previous_public_receipt": true,
+  "wheel_contract_tests": 5,
+  "actual_container_installation_or_wheel_success_claimed": false
+}
