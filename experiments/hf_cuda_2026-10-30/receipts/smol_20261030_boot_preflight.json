@@ -1,0 +1,84 @@
+{
+  "resolved": {
+    "nvcc": "/usr/local/cuda/bin/nvcc",
+    "python3": "/usr/bin/python3",
+    "cmake": "/usr/local/bin/cmake",
+    "bash": "/usr/bin/bash"
+  },
+  "torch": "2.4.1+cu124",
+  "versions": {
+    "numpy": "1.26.4",
+    "transformers": "4.57.0",
+    "tokenizers": "0.22.1",
+    "gguf": "0.19.0",
+    "safetensors": "0.6.2",
+    "huggingface-hub": "0.35.3",
+    "sentencepiece": "0.2.2",
+    "accelerate": "1.13.0"
+  },
+  "image": {
+    "provider": "runpod",
+    "pod_id": "y149p04j0ci2dy",
+    "image": "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04",
+    "image_digest": "sha256:61a4aafb0094cd773f11eefa378929d5a687bd775febeb78eac62fc824141fb5",
+    "image_digest_source": "Docker Hub tag lookup when the pod was created",
+    "datacenter": "EU-RO-1",
+    "cloud": "SECURE",
+    "gpu_type_id": "NVIDIA L4",
+    "usd_per_hr": 0.59,
+    "volume": "nbaoqc3xut",
+    "machine": {
+      "gpuTypeId": "NVIDIA L4",
+      "location": "RO",
+      "dataCenterId": "EU-RO-1",
+      "secureCloud": true,
+      "diskThroughputMBps": 6358,
+      "maxDownloadSpeedMbps": 1824,
+      "maxUploadSpeedMbps": 938
+    },
+    "memory_gb": 62,
+    "vcpu": 6,
+    "cgroup_cpus": 5.1,
+    "cgroup_mem_gb": 57.7,
+    "gpu": "NVIDIA L4",
+    "gpus": [
+      {
+        "name": "NVIDIA L4",
+        "driver": "595.91.07",
+        "memory": "23034 MiB",
+        "power_limit": "72.00 W",
+        "pci": "00000000:C1:00.0"
+      }
+    ],
+    "driver_version": "595.91.07",
+    "cuda_driver_api": "13.2",
+    "nvcc": "12.4",
+    "cpu": "AMD EPYC 9254 24-Core Processor",
+    "cpus": 48,
+    "mem_gb": 503.4,
+    "os": "Ubuntu 22.04.5 LTS",
+    "kernel": "6.8.0-138-generic",
+    "python": "3.11.10",
+    "paperkiln_commit": "0250495f1a2c7c48190f7081c452017c6f15097f",
+    "written_at": "2026-10-30T10:25:40Z"
+  },
+  "vm_sha256": "8868e2e5001da9cced9743a15987d5619264cd3a174ee83334e3de73a048dc1c",
+  "status": "READONLY_FULL_PREFLIGHT_PASS",
+  "preflight_after_manager_start": true,
+  "preserved_second_startup_failure": {
+    "exit_code": 127,
+    "scope": "nvcc hardware inventory before tar/model/download/forward",
+    "cause": "Approved direct manager restart lacked normal transport CUDA PATH",
+    "vm_script_changed_again": false,
+    "remote_receipt": "/content/out/operational_v2_path_failure/reason.json",
+    "local_failed_counter_history": {
+      "relayed_step": 0,
+      "status": "FAILED",
+      "home": false,
+      "failed_seen": 0
+    },
+    "reset_only_own_operational_counter": true
+  },
+  "driver_resumed": 1223319,
+  "cap_usd_unchanged": 2
+}
