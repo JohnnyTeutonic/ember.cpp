@@ -342,7 +342,7 @@ __global__ void expr_kernel(ExprCode code, ExprPtrs p, float* __restrict__ out, 
   for (int k = 0; k < code.n; ++k) {
     const expr::Instr ins = code.code[k];
     switch (ins.op) {
-      case expr::Op::CONST: st[sp++] = ins.c; break;
+      case expr::Op::CONSTANT: st[sp++] = ins.c; break;
       case expr::Op::INPUT: st[sp++] = p.in[ins.idx][i]; break;
       case expr::Op::COL: st[sp++] = p.col[ins.idx][t]; break;
       case expr::Op::WIDTH: st[sp++] = (float)w; break;
