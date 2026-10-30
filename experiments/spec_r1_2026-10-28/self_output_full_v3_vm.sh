@@ -5,7 +5,21 @@ cd /content
 exec > /content/vm.log 2>&1
 OUT=/content/out; B=/content; SRC=/content/src
 mkdir -p "$OUT" "$SRC"
-pack() { flock /content/self_pack.lock python3 -c "import os,shutil; p=shutil.make_archive('/content/self_tmp_'+str(os.getpid()),'zip','/content','out'); os.replace(p,'/content/out.zip')"; }
+pack() {
+ flock /content/self_pack.lock python3 - <<'PACK'
+import os, pathlib, zipfile
+root = pathlib.Path('/content')
+temporary = root / ('self_tmp_' + str(os.getpid()) + '.zip')
+try:
+ with zipfile.ZipFile(temporary, 'w', zipfile.ZIP_DEFLATED, strict_timestamps=False) as archive:
+  for path in sorted((root / 'out').rglob('*')):
+   if path.is_file():
+    archive.write(path, path.relative_to(root))
+ os.replace(temporary, root / 'out.zip')
+finally:
+ temporary.unlink(missing_ok=True)
+PACK
+}
 packer=""
 finish() { rc=$?; trap - EXIT; if [ -n "$packer" ]; then kill "$packer" 2>/dev/null || true; wait "$packer" 2>/dev/null || true; fi; cp /content/vm.log "$OUT/vm.log"; pack || true; exit "$rc"; }
 trap finish EXIT
