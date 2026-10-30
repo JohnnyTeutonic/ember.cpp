@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "status": "PRELAUNCH_CONTRACT_AUDITED",
+  "cpu_protocol_sha256": "7c46e717aad147bc37dad0d4763b10821c4181482d3e9cad19f757fc522d6f49",
+  "cpu_environment": {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "EMBER_IR_CTX": "1024",
+    "EMBER_IR": null,
+    "EMBER_IR_BUILD": "1",
+    "EMBER_KV": null,
+    "EMBER_DETERMINISTIC": null
+  },
+  "cuda_required_environment": {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "EMBER_IR_BUILD": "1",
+    "EMBER_IR_CTX": "1024",
+    "NVIDIA_TF32_OVERRIDE": "0",
+    "CUDA_VISIBLE_DEVICES": "0",
+    "HF_HUB_DISABLE_IMPLICIT_TOKEN": "1",
+    "HF_HUB_DISABLE_TELEMETRY": "1"
+  },
+  "cuda_unset_overrides": [
+    "EMBER_IR",
+    "EMBER_KV",
+    "EMBER_DETERMINISTIC",
+    "EMBER_DECODE_LINEAR",
+    "EMBER_DECODE_OPT",
+    "EMBER_DECODE_PICK"
+  ],
+  "version_recipe_checked_against_actual_first_pod_packages": {
+    "torch": "2.4.1+cu124",
+    "numpy": "1.26.4",
+    "transformers": "4.57.0",
+    "tokenizers": "0.22.1",
+    "gguf": "0.19.0",
+    "safetensors": "0.6.2",
+    "huggingface-hub": "0.35.3",
+    "sentencepiece": "0.2.2",
+    "accelerate": "1.13.0"
+  },
+  "intentional_cpu_cuda_differences": [
+    "CPU Torch2.8.0+cu128 versus GPU image Torch2.4.1+cu124; these are separate within-device paired experiments, not direct CPU/GPU speed ratios.",
+    "CUDA_VISIBLE_DEVICES0 and NVIDIA_TF32_OVERRIDE0 added for actual L4; native and HF require synchronous CPU-input to CPU-row output timing.",
+    "HF uses eager attention, FP32 weights/activations, CUDA TF32 disabled; Ember uses its default CUDA IR, F32 tensor inventory, fixed context1024.",
+    "Native preflight loads exact archived CUDA executable and checks actual backend/vocab/context/F32 inventory before first model forward."
+  ],
+  "native_canonical_integration_receipt": "canonical_lowering_preflight_20261030.json",
+  "frozen_controller_sha256": "ddd3104489dd2935187271d48dfabe77501a2b3c5fa02350aad1ca5e54a2f04c",
+  "controller_gate_unchanged": true,
+  "tests_passed": 48,
+  "old_HALTED_preserved": true,
+  "first_attempt_exact_cost_usd": 0.21107908220140284,
+  "new_max_usd": 1.78,
+  "combined_cap_usd": 2,
+  "absolute_campaign_deadline_utc": "2026-10-30 13:17:00"
+}

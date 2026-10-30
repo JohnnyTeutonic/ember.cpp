@@ -1,0 +1,34 @@
+{
+  "missing_lowering": {
+    "exit_code": 2,
+    "stderr": "no supported IR for model\n",
+    "elapsed_seconds": 0.6365154719678685,
+    "environment": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "EMBER_IR_BUILD": null,
+      "EMBER_IR_CTX": "1024",
+      "OMP_NUM_THREADS": "1"
+    }
+  },
+  "explicit_lowering": {
+    "exit_code": 2,
+    "stderr": "CUDA benchmark requires the actual GPU interpreter\n",
+    "elapsed_seconds": 6.139294411987066,
+    "environment": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "EMBER_IR_BUILD": "1",
+      "EMBER_IR_CTX": "1024",
+      "OMP_NUM_THREADS": "1"
+    }
+  },
+  "local_gpu_used": false,
+  "cpu_only_compile_flags_verified": true,
+  "binary": {
+    "path": "/home/jonat/ember_ir_build/ir_hf_cuda_bench",
+    "sha256": "c76b4a025d8895107bc4534b6987b11af2631674d1a42264ae39a046e877c537"
+  },
+  "canonical_gguf": {
+    "path": "/mnt/c/ml_artifacts/thirdparty/smollm2-135m/SmolLM2-135M-f32.gguf",
+    "sha256": "a898c1208f35ae7c5456d8f19d868a7505b445916dddb1e906fa0296ffdda941"
+  }
+}
