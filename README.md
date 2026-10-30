@@ -416,11 +416,14 @@ Recently landed:
   160/160. The tiny-chat MoR3 model decodes in 1.4 ms per token there, against 24 ms on the CPU
   (`experiments/mor_cuda_2026-10-25`).
 
-In progress:
-- **The research programme's models.** These are training on Colab and RunPod: the 20M and 60M
-  depth sweeps, recursion and Mixture-of-Recursions arms, and then a 12-turn model.
-- **A new public chat model.** pk_base_v1's chat model, released through `release_chat.py`
-  with the WebGPU page.
+Released and continuing:
+- **The public chat model is live.** The 97.5M `pk_sft_v1` model runs in the
+  [browser Space](https://huggingface.co/spaces/johnnyteutonic/ember-chat) and
+  [embedded chat page](https://johnnyteutonic.github.io/chat.html).
+- **Research evaluation continues.** The 20M/60M depth, recursion and Mixture-of-Recursions
+  training arms are complete. Remaining Carry-12 work is L0 and HS1 evaluation; current
+  status and immutable results live in paperkiln. DPO judge evaluation is separately
+  blocked on judge availability, rather than unfinished model training.
 
 ## More
 
