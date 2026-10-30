@@ -262,11 +262,14 @@ pip install .            # CUDA: TINYLLAMA_CPP_BUILD_CUDA=1 pip install .
 ```
 
 ```python
-import tinyllama_cpp
-s = tinyllama_cpp.TinyLlamaSession(model_path="model.gguf", tokenizer_path="model.gguf",
-                                   threads=4, n_gpu_layers=-1)
+from tinyllama_cpp import tinyllama_bindings as native
+print("CUDA support compiled:", native.cuda_compiled)
+s = native.TinyLlamaSession(model_path="model.gguf", tokenizer_path="model.gguf",
+                            threads=4, n_gpu_layers=-1)
 print(s.generate("What is AI?", steps=64))
 ```
+
+`cuda_compiled` describes the installed extension's build; it does not check whether a usable GPU is present.
 
 ## Quick start: in the browser
 
