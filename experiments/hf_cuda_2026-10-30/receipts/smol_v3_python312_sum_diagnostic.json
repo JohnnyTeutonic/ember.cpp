@@ -1,0 +1,117 @@
+{
+  "status": "CROSS_VERSION_FLOAT_SUM_DIAGNOSTIC_ONLY",
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "different_numeric_leaves": 18,
+  "maximum_absolute_difference": 3.552713678800501e-15,
+  "differences": [
+    {
+      "path": "/16/ember/decode_ms_per_token_median",
+      "saved_python311": 3.2776128709677415,
+      "replayed_python312": 3.277612870967742,
+      "absolute_difference": 4.440892098500626e-16
+    },
+    {
+      "path": "/16/ember/decode_ms_per_token_all/0",
+      "saved_python311": 3.278694290322581,
+      "replayed_python312": 3.2786942903225804,
+      "absolute_difference": 4.440892098500626e-16
+    },
+    {
+      "path": "/16/ember/decode_ms_per_token_all/1",
+      "saved_python311": 3.277643774193548,
+      "replayed_python312": 3.2776437741935482,
+      "absolute_difference": 4.440892098500626e-16
+    },
+    {
+      "path": "/16/ember/decode_ms_per_token_all/2",
+      "saved_python311": 3.277581967741935,
+      "replayed_python312": 3.2775819677419356,
+      "absolute_difference": 4.440892098500626e-16
+    },
+    {
+      "path": "/16/hf/decode_ms_per_token_all/0",
+      "saved_python311": 12.878834516129029,
+      "replayed_python312": 12.878834516129032,
+      "absolute_difference": 3.552713678800501e-15
+    },
+    {
+      "path": "/16/hf/decode_ms_per_token_all/2",
+      "saved_python311": 13.05341287096774,
+      "replayed_python312": 13.053412870967742,
+      "absolute_difference": 1.7763568394002505e-15
+    },
+    {
+      "path": "/16/hf/decode_ms_per_token_all/3",
+      "saved_python311": 13.003866645161292,
+      "replayed_python312": 13.00386664516129,
+      "absolute_difference": 1.7763568394002505e-15
+    },
+    {
+      "path": "/16/hf_over_ember_decode",
+      "saved_python311": 3.948407298273796,
+      "replayed_python312": 3.9484072982737954,
+      "absolute_difference": 4.440892098500626e-16
+    },
+    {
+      "path": "/128/ember/decode_ms_per_token_all/0",
+      "saved_python311": 3.2922401290322587,
+      "replayed_python312": 3.292240129032258,
+      "absolute_difference": 8.881784197001252e-16
+    },
+    {
+      "path": "/128/ember/decode_ms_per_token_all/1",
+      "saved_python311": 3.2923440322580633,
+      "replayed_python312": 3.292344032258064,
+      "absolute_difference": 8.881784197001252e-16
+    },
+    {
+      "path": "/128/ember/decode_ms_per_token_all/2",
+      "saved_python311": 3.2925372580645154,
+      "replayed_python312": 3.2925372580645162,
+      "absolute_difference": 8.881784197001252e-16
+    },
+    {
+      "path": "/128/hf/decode_ms_per_token_all/3",
+      "saved_python311": 12.66699580645161,
+      "replayed_python312": 12.666995806451613,
+      "absolute_difference": 3.552713678800501e-15
+    },
+    {
+      "path": "/512/ember/decode_ms_per_token_all/0",
+      "saved_python311": 3.366964032258065,
+      "replayed_python312": 3.3669640322580645,
+      "absolute_difference": 4.440892098500626e-16
+    },
+    {
+      "path": "/512/ember/decode_ms_per_token_all/1",
+      "saved_python311": 3.366202741935484,
+      "replayed_python312": 3.3662027419354836,
+      "absolute_difference": 4.440892098500626e-16
+    },
+    {
+      "path": "/512/ember/decode_ms_per_token_all/3",
+      "saved_python311": 3.3613409354838715,
+      "replayed_python312": 3.361340935483871,
+      "absolute_difference": 4.440892098500626e-16
+    },
+    {
+      "path": "/512/hf/decode_ms_per_token_all/0",
+      "saved_python311": 12.680010612903224,
+      "replayed_python312": 12.680010612903226,
+      "absolute_difference": 1.7763568394002505e-15
+    },
+    {
+      "path": "/512/hf/decode_ms_per_token_all/2",
+      "saved_python311": 12.753729580645158,
+      "replayed_python312": 12.75372958064516,
+      "absolute_difference": 1.7763568394002505e-15
+    },
+    {
+      "path": "/512/hf/decode_ms_per_token_all/3",
+      "saved_python311": 13.1944455483871,
+      "replayed_python312": 13.194445548387096,
+      "absolute_difference": 3.552713678800501e-15
+    }
+  ],
+  "strict_authoritative_replay": "Original3.11 arithmetic with NumPy1.26.4 passed full unchanged analyzer, every raw parity/ID gate, immutable journal and exact saved summary."
+}
