@@ -81,3 +81,24 @@ def test_same_path_proof_always_restores_source(tmp_path, monkeypatch, failure):
         with pytest.raises((RuntimeError, SystemExit, ValueError)):
             proof.execute(source, build, original, tmp_path/'receipt.json')
     assert (source/'graph_ir.cpp').read_bytes() == b'diagnostic'
+
+def test_saved_semantic_result_tampering_is_rejected(tmp_path):
+    import json
+    command = [sys.executable, '-c', 'import json; print(json.dumps({"pass":False})); raise SystemExit(1)']
+    folder = tmp_path/'leg'
+    runner.completed_leg(folder, command, {}, (0, 1))
+    receipt = folder/'leg.json'
+    saved = json.loads(receipt.read_text())
+    saved['result'] = {'pass': True}
+    receipt.write_text(json.dumps(saved))
+    with pytest.raises(ValueError, match='drift'):
+        runner.completed_leg(folder, command, {}, (0, 1))
+
+
+def test_historical_halted_precedes_hashing_or_execution(tmp_path):
+    out = tmp_path/'out'
+    out.mkdir()
+    (out/'HALTED').write_text('historical failure')
+    with pytest.raises(ValueError, match='existing HALTED'):
+        runner.execute(*([tmp_path/'missing']*6), out)
+    assert (out/'HALTED').read_text() == 'historical failure'
