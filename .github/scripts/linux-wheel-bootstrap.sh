@@ -75,4 +75,8 @@ if [ "$cuda_version" != cpu ]; then
     sh "$boost_tmp/$installer" --silent --toolkit --toolkitpath=/usr/local/cuda
   fi
   /usr/local/cuda/bin/nvcc --version | grep -F "release $cuda_version,"
+  repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+  "$CXX" -std=c++17 -DHAS_CUDA -I"$repo_root" -I/usr/local/cuda/include \
+    "$repo_root/.github/scripts/cuda-half-header-probe.cpp" -o "$boost_tmp/cuda-half-header-probe"
+  "$boost_tmp/cuda-half-header-probe"
 fi

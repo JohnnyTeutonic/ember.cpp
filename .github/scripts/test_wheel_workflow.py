@@ -23,6 +23,7 @@ class WheelWorkflowTests(unittest.TestCase):
             self.assertEqual(str(Version("0.1.0" + suffix)), "0.1.0" + suffix)
         self.assertNotIn("CUDA_VERSION_MAJOR=", text)
         self.assertIn("cp38-*", text)
+        self.assertEqual(text.count("PIP_PREFER_BINARY=1"), 2)
 
     def test_native_smoke_rejects_package_that_swallows_extension_failure(self):
         import sys
@@ -86,6 +87,38 @@ class WheelWorkflowTests(unittest.TestCase):
                 old_call = call.replace("cudaGraphInstantiateWithFlags", "cudaGraphInstantiate")
                 self.assertNotEqual(compile_call(legacy, old_call).returncode, 0)
                 self.assertEqual(compile_call(modern, old_call).returncode, 0)
+
+    def test_cuda_headers_are_vendor_types_without_compatibility_stubs(self):
+        header = (ROOT / "cuda_safe_headers.h").read_text()
+        for name in ("cuda_runtime.h", "cublas_v2.h", "cuda_fp16.h", "cuda_bf16.h"):
+            self.assertIn("#include <" + name + ">", header)
+        for name in ("CMakeLists.txt", "cuda_safe_headers.h", "cuda_kernels.h", "model.h"):
+            source = (ROOT / name).read_text()
+            for forbidden in ("WINDOWS_CUDA_12_1_WORKAROUND", "CUDA_NO_HALF", "__CUDA_FP16_H__", "__CUDA_BF16_H__", "allow-unsupported-compiler", "ALLOW_COMPILER_AND_STL_VERSION_MISMATCH", "typedef struct", "static inline __host__"):
+                self.assertNotIn(forbidden, source)
+
+    def test_windows_cuda_uses_supported_toolset_and_complete_headers(self):
+        text = (ROOT / ".github/workflows/build-wheels.yml").read_text()
+        for version in ("11.8", "12.1"):
+            self.assertIn('- os: windows-2022\n            cuda_version: "' + version + '"', text)
+        self.assertIn('- os: windows-latest\n            cuda_version: "cpu"', text)
+        self.assertIn('"thrust"', text)
+        self.assertIn("vsversion: '2022'", text)
+        self.assertIn("toolset: '14.34'", text)
+        self.assertIn("Microsoft.VisualStudio.Component.VC.14.34.17.4.x86.x64", text)
+        self.assertLess(text.index("Setup Visual Studio Environment (Windows CUDA)"), text.index("Install build dependencies (Windows)"))
+        self.assertIn("--overlay-triplets=.github/triplets/cuda-msvc1434", text)
+        self.assertIn("DISTUTILS_USE_SDK=1 CC=cl CXX=cl CUDAHOSTCXX=cl", text)
+        triplet = (ROOT / ".github/triplets/cuda-msvc1434/x64-windows.cmake").read_text()
+        self.assertIn("VCPKG_PLATFORM_TOOLSET_VERSION 14.34", triplet)
+        self.assertIn("VCPKG_VISUAL_STUDIO_PATH", triplet)
+        self.assertIn("VCPKG_OVERLAY_TRIPLETS=$env:GITHUB_WORKSPACE", text)
+        gpu = text.split("    - name: Build wheels (CUDA)", 1)[1]
+        hook = gpu.split("CIBW_BEFORE_BUILD_WINDOWS: >", 1)[1].split("CIBW_BEFORE_BUILD_MACOS:", 1)[0]
+        self.assertNotIn("vcpkg install", hook)
+        self.assertNotIn("DETECTED_CUDA_PATH", hook)
+        self.assertIn("@('CUDA_PATH', 'CUDA_HOME', 'CUDA_ROOT', 'CUDAToolkit_ROOT')", text)
+        self.assertIn("CMAKE_CUDA_COMPILER=$cudaRoot", text)
 
     def test_actual_version_step_changes_only_project_version(self):
         import tomllib
