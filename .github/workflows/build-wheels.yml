@@ -30,20 +30,20 @@ jobs:
           - os: ubuntu-latest
             cuda_version: "11.8"
             cuda_toolkit: "cuda-toolkit-11-8"
-            wheel_suffix: "-cu118"
+            wheel_suffix: "+cu118"
           - os: ubuntu-latest
             cuda_version: "12.1"
             cuda_toolkit: "cuda-toolkit-12-1"
-            wheel_suffix: "-cu121"
+            wheel_suffix: "+cu121"
           # Windows GPU builds
           - os: windows-latest
             cuda_version: "11.8"
             cuda_toolkit: "11.8.0"
-            wheel_suffix: "-cu118"
+            wheel_suffix: "+cu118"
           - os: windows-latest
             cuda_version: "12.1"
             cuda_toolkit: "12.1.0"
-            wheel_suffix: "-cu121"
+            wheel_suffix: "+cu121"
 
     steps:
     - uses: actions/checkout@v4
@@ -59,6 +59,10 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install build wheel cibuildwheel
+
+    - name: Check Linux wheel bootstrap contracts
+      if: runner.os == 'Linux'
+      run: python3 -m unittest discover -s .github/scripts -p test_wheel_workflow.py -v
 
     # Windows CUDA setup
     - name: Install CUDA Toolkit (Windows)
@@ -174,70 +178,25 @@ jobs:
     # Build wheels using cibuildwheel
     - name: Build wheels (CPU)
       if: matrix.cuda_version == 'cpu'
-      uses: pypa/cibuildwheel@v2.17.0
+      uses: pypa/cibuildwheel@v2.23.4
       with:
         output-dir: wheelhouse
       env:
         CIBW_BUILD: cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*
         CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux*"
+        CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux2014_x86_64:2025.04.19-1
         CIBW_ARCHS_LINUX: x86_64
         CIBW_ARCHS_WINDOWS: AMD64
         CIBW_ARCHS_MACOS: x86_64 arm64
         
-        CIBW_ENVIRONMENT_LINUX: "TINYLLAMA_CPP_BUILD_CUDA=0 CMAKE_POLICY_DEFAULT_CMP0167=NEW Python_EXECUTABLE={python} Python_FIND_STRATEGY=LOCATION CMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER SETUPTOOLS_USE_DISTUTILS=stdlib"
+        CIBW_ENVIRONMENT_LINUX: "PATH=/opt/rh/devtoolset-11/root/usr/bin:$PATH CC=/opt/rh/devtoolset-11/root/usr/bin/gcc CXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CUDAHOSTCXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CMAKE_CUDA_HOST_COMPILER=/opt/rh/devtoolset-11/root/usr/bin/g++ TINYLLAMA_CPP_BUILD_CUDA=0 CMAKE_POLICY_DEFAULT_CMP0167=NEW Python_EXECUTABLE={python} Python_FIND_STRATEGY=LOCATION CMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER SETUPTOOLS_USE_DISTUTILS=stdlib"
         
         CIBW_ENVIRONMENT_WINDOWS: "TINYLLAMA_CPP_BUILD_CUDA=0 CMAKE_POLICY_DEFAULT_CMP0167=NEW CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_TARGET_TRIPLET=x64-windows"
         
         CIBW_ENVIRONMENT_MACOS: "TINYLLAMA_CPP_BUILD_CUDA=0 CMAKE_FIND_DEBUG_MODE=ON"
         
-        CIBW_BEFORE_ALL_LINUX: >
-          echo "Installing Boost packages..." &&
-          (yum install -y boost-devel boost-regex || 
-          (curl -L https://github.com/boostorg/boost/releases/download/boost-1.82.0/boost-1.82.0.tar.gz | tar -xz && 
-          cd boost-1.82.0 && 
-          ./bootstrap.sh --prefix=/usr/local --with-libraries=regex,system,filesystem && 
-          ./b2 install --prefix=/usr/local threading=multi link=shared variant=release -j$(nproc))) &&
-          if [ "$TINYLLAMA_CPP_BUILD_CUDA" = "1" ]; then
-            echo "Installing CUDA toolkit for manylinux container..." &&
-            cd /tmp &&
-            if [ ! -d "/usr/local/cuda" ]; then
-              CUDA_VERSION_MAJOR=$(echo "$CMAKE_CUDA_ARCHITECTURES" | cut -d';' -f1 | head -c2) &&
-              if [ "$CUDA_VERSION_MAJOR" = "75" ] || [ "$CUDA_VERSION_MAJOR" = "80" ]; then
-                CUDA_VERSION="11.8"
-                CUDA_INSTALLER="cuda_11.8.0_520.61.05_linux.run"
-                CUDA_URL="https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/$CUDA_INSTALLER"
-              else
-                CUDA_VERSION="12.1"
-                CUDA_INSTALLER="cuda_12.1.1_530.30.02_linux.run"
-                CUDA_URL="https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/$CUDA_INSTALLER"
-              fi &&
-              echo "Downloading CUDA $CUDA_VERSION installer..." &&
-              curl -L -o "$CUDA_INSTALLER" "$CUDA_URL" &&
-              chmod +x "$CUDA_INSTALLER" &&
-              echo "Installing CUDA toolkit (silent install)..." &&
-              sh "$CUDA_INSTALLER" --silent --toolkit --installpath=/usr/local/cuda &&
-              rm "$CUDA_INSTALLER" &&
-              echo "Setting up CUDA environment and symlinks..." &&
-              export PATH=/usr/local/cuda/bin:$PATH &&
-              export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH &&
-              export CUDA_HOME=/usr/local/cuda &&
-              export CUDA_ROOT=/usr/local/cuda &&
-              export CUDA_PATH=/usr/local/cuda &&
-              ln -sf /usr/local/cuda/bin/nvcc /usr/bin/nvcc &&
-              echo "Creating library symlinks for CMake discovery..." &&
-              ln -sf /usr/local/cuda/lib64 /usr/local/cuda/lib &&
-              mkdir -p /usr/lib64 &&
-              ln -sf /usr/local/cuda/lib64/* /usr/lib64/ &&
-              echo "Verifying CUDA installation..." &&
-              ls -la /usr/local/cuda/bin/ &&
-              ls -la /usr/local/cuda/lib64/ &&
-              echo "CUDA installation complete" &&
-              nvcc --version
-            else
-              echo "CUDA already installed"
-            fi
-          fi
-        
+        CIBW_BEFORE_ALL_LINUX: bash {project}/.github/scripts/linux-wheel-bootstrap.sh '${{ matrix.cuda_version }}'
+
         CIBW_BEFORE_BUILD_LINUX: >
           echo "Setting up Python development environment..." &&
           python -m pip install --upgrade pip setuptools wheel &&
@@ -341,70 +300,25 @@ jobs:
 
     - name: Build wheels (CUDA)
       if: matrix.cuda_version != 'cpu'
-      uses: pypa/cibuildwheel@v2.17.0
+      uses: pypa/cibuildwheel@v2.23.4
       with:
         output-dir: wheelhouse
       env:
         CIBW_BUILD: cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*
         CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux*"
+        CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux2014_x86_64:2025.04.19-1
         CIBW_ARCHS_LINUX: x86_64
         CIBW_ARCHS_WINDOWS: AMD64
         CIBW_ARCHS_MACOS: x86_64 arm64
         
-        CIBW_ENVIRONMENT_LINUX: "TINYLLAMA_CPP_BUILD_CUDA=1 CMAKE_CUDA_ARCHITECTURES=\"75;80;86;89;90\" CMAKE_POLICY_DEFAULT_CMP0167=NEW CUDA_HOME=/usr/local/cuda CUDA_ROOT=/usr/local/cuda CUDA_PATH=/usr/local/cuda CUDAToolkit_ROOT=/usr/local/cuda CMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc Python_EXECUTABLE={python} Python_FIND_STRATEGY=LOCATION CMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER SETUPTOOLS_USE_DISTUTILS=stdlib"
+        CIBW_ENVIRONMENT_LINUX: "PATH=/opt/rh/devtoolset-11/root/usr/bin:$PATH CC=/opt/rh/devtoolset-11/root/usr/bin/gcc CXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CUDAHOSTCXX=/opt/rh/devtoolset-11/root/usr/bin/g++ CMAKE_CUDA_HOST_COMPILER=/opt/rh/devtoolset-11/root/usr/bin/g++ TINYLLAMA_CPP_BUILD_CUDA=1 CMAKE_CUDA_ARCHITECTURES=\"75;80;86;89;90\" CMAKE_POLICY_DEFAULT_CMP0167=NEW CUDA_HOME=/usr/local/cuda CUDA_ROOT=/usr/local/cuda CUDA_PATH=/usr/local/cuda CUDAToolkit_ROOT=/usr/local/cuda CMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc Python_EXECUTABLE={python} Python_FIND_STRATEGY=LOCATION CMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER SETUPTOOLS_USE_DISTUTILS=stdlib"
         
         CIBW_ENVIRONMENT_WINDOWS: "TINYLLAMA_CPP_BUILD_CUDA=1 CMAKE_CUDA_ARCHITECTURES=\"75;80;86;89;90\" CMAKE_POLICY_DEFAULT_CMP0167=NEW CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_TARGET_TRIPLET=x64-windows CMAKE_PREFIX_PATH=C:/vcpkg/installed/x64-windows CMAKE_GENERATOR=Ninja"
         
         CIBW_ENVIRONMENT_MACOS: "TINYLLAMA_CPP_BUILD_CUDA=0 CMAKE_FIND_DEBUG_MODE=ON"
         
-        CIBW_BEFORE_ALL_LINUX: >
-          echo "Installing Boost packages..." &&
-          (yum install -y boost-devel boost-regex || 
-          (curl -L https://github.com/boostorg/boost/releases/download/boost-1.82.0/boost-1.82.0.tar.gz | tar -xz && 
-          cd boost-1.82.0 && 
-          ./bootstrap.sh --prefix=/usr/local --with-libraries=regex,system,filesystem && 
-          ./b2 install --prefix=/usr/local threading=multi link=shared variant=release -j$(nproc))) &&
-          if [ "$TINYLLAMA_CPP_BUILD_CUDA" = "1" ]; then
-            echo "Installing CUDA toolkit for manylinux container..." &&
-            cd /tmp &&
-            if [ ! -d "/usr/local/cuda" ]; then
-              CUDA_VERSION_MAJOR=$(echo "$CMAKE_CUDA_ARCHITECTURES" | cut -d';' -f1 | head -c2) &&
-              if [ "$CUDA_VERSION_MAJOR" = "75" ] || [ "$CUDA_VERSION_MAJOR" = "80" ]; then
-                CUDA_VERSION="11.8"
-                CUDA_INSTALLER="cuda_11.8.0_520.61.05_linux.run"
-                CUDA_URL="https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/$CUDA_INSTALLER"
-              else
-                CUDA_VERSION="12.1"
-                CUDA_INSTALLER="cuda_12.1.1_530.30.02_linux.run"
-                CUDA_URL="https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/$CUDA_INSTALLER"
-              fi &&
-              echo "Downloading CUDA $CUDA_VERSION installer..." &&
-              curl -L -o "$CUDA_INSTALLER" "$CUDA_URL" &&
-              chmod +x "$CUDA_INSTALLER" &&
-              echo "Installing CUDA toolkit (silent install)..." &&
-              sh "$CUDA_INSTALLER" --silent --toolkit --installpath=/usr/local/cuda &&
-              rm "$CUDA_INSTALLER" &&
-              echo "Setting up CUDA environment and symlinks..." &&
-              export PATH=/usr/local/cuda/bin:$PATH &&
-              export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH &&
-              export CUDA_HOME=/usr/local/cuda &&
-              export CUDA_ROOT=/usr/local/cuda &&
-              export CUDA_PATH=/usr/local/cuda &&
-              ln -sf /usr/local/cuda/bin/nvcc /usr/bin/nvcc &&
-              echo "Creating library symlinks for CMake discovery..." &&
-              ln -sf /usr/local/cuda/lib64 /usr/local/cuda/lib &&
-              mkdir -p /usr/lib64 &&
-              ln -sf /usr/local/cuda/lib64/* /usr/lib64/ &&
-              echo "Verifying CUDA installation..." &&
-              ls -la /usr/local/cuda/bin/ &&
-              ls -la /usr/local/cuda/lib64/ &&
-              echo "CUDA installation complete" &&
-              nvcc --version
-            else
-              echo "CUDA already installed"
-            fi
-          fi
-        
+        CIBW_BEFORE_ALL_LINUX: bash {project}/.github/scripts/linux-wheel-bootstrap.sh '${{ matrix.cuda_version }}'
+
         CIBW_BEFORE_BUILD_LINUX: >
           echo "Setting up Python development environment..." &&
           python -m pip install --upgrade pip setuptools wheel &&
