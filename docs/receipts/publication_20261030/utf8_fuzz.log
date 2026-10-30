@@ -1,0 +1,2 @@
+ok: 10000 of 10000 random byte strings as Python's decode(errors='replace')
+ok: 10000 of 10000 random streamed replies as the reference after every token, joined equal to the plain reply

@@ -1,0 +1,121 @@
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- nlohmann_json not found via find_package. Fetching with FetchContent.
+-- Using the multi-header code from /home/jonat/ember_publication_build_20261030/_deps/nlohmann_json-src/include/
+-- nlohmann_json fetched via URL. Include directory: /home/jonat/ember_publication_build_20261030/_deps/nlohmann_json-src/include
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE  
+-- Attempting to patch httplib.h at: /home/jonat/ember_publication_build_20261030/_deps/cpp-httplib-src/httplib.h to disable Brotli.
+-- Patched /home/jonat/ember_publication_build_20261030/_deps/cpp-httplib-src/httplib.h to disable Brotli code block via '#if 0'.
+-- pybind11 v2.12.0 
+-- Found PythonInterp: /usr/bin/python3 (found suitable version "3.12.3", minimum required is "3.6") 
+-- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.12.so
+-- Performing Test HAS_FLTO
+-- Performing Test HAS_FLTO - Success
+-- Found OpenMP_CXX: -fopenmp (found version "4.5") 
+-- Found OpenMP: TRUE (found version "4.5")  
+-- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.83.0/BoostConfig.cmake (found suitable version "1.83.0", minimum required is "1.70.0") found components: regex 
+-- HAS_MPI option is OFF. Building without distributed inference support.
+-- Found Boost version: 1.83.0
+-- Boost include directories: /usr/include
+-- Boost regex library: Boost::regex
+-- HAS_CUDA option is OFF. Building CPU-only version.
+-- Found OpenSSL. Enabling SSL support in cpp-httplib for tinyllama_server.
+-- Found Python: /usr/bin/python3 (found version "3.12.3") found components: Interpreter Development.Module 
+-- Found OpenMP, enabling parallel execution.
+-- Project source directory: /home/jonat/ember_publication_20261030
+-- Configuring done (29.0s)
+-- Generating done (0.0s)
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BUILD_PYTHON_BINDINGS
+
+
+-- Build files have been written to: /home/jonat/ember_publication_build_20261030
+[  1%] Building CXX object CMakeFiles/tinyllama_core.dir/model.cpp.o
+[  3%] Building CXX object CMakeFiles/tinyllama_core.dir/speculative_verify.cpp.o
+[  4%] Building CXX object CMakeFiles/tinyllama_core.dir/model_config.cpp.o
+[  6%] Building CXX object CMakeFiles/tinyllama_core.dir/kv_cache.cpp.o
+[  8%] Building CXX object CMakeFiles/tinyllama_core.dir/weight_management.cpp.o
+[  9%] Building CXX object CMakeFiles/tinyllama_core.dir/cpu_attention.cpp.o
+[ 11%] Building CXX object CMakeFiles/tinyllama_core.dir/model_utils.cpp.o
+[ 13%] Building CXX object CMakeFiles/tinyllama_core.dir/gpu_initialization.cpp.o
+[ 14%] Building CXX object CMakeFiles/tinyllama_core.dir/gpu_memory_optimization.cpp.o
+[ 16%] Building CXX object CMakeFiles/tinyllama_core.dir/cpu_batch_processor.cpp.o
+[ 18%] Building CXX object CMakeFiles/tinyllama_core.dir/utils.cpp.o
+[ 19%] Building CXX object CMakeFiles/tinyllama_core.dir/safetensors_loader.cpp.o
+[ 21%] Building CXX object CMakeFiles/tinyllama_core.dir/tokenizer.cpp.o
+[ 22%] Building CXX object CMakeFiles/tinyllama_core.dir/logger.cpp.o
+[ 24%] Building CXX object CMakeFiles/tinyllama_core.dir/api.cpp.o
+[ 26%] Building CXX object CMakeFiles/tinyllama_core.dir/score.cpp.o
+[ 27%] Building CXX object CMakeFiles/tinyllama_core.dir/gguf_parser.cpp.o
+[ 29%] Building CXX object CMakeFiles/tinyllama_core.dir/quantization.cpp.o
+[ 31%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir.cpp.o
+[ 32%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_ops.cpp.o
+[ 34%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_expr.cpp.o
+[ 36%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_mamba.cpp.o
+[ 37%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_recurrence.cpp.o
+[ 39%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_validate.cpp.o
+[ 40%] Building CXX object CMakeFiles/tinyllama_core.dir/ir_digest.cpp.o
+[ 42%] Building CXX object CMakeFiles/tinyllama_core.dir/parallel_for.cpp.o
+[ 44%] Linking CXX static library libtinyllama_core.a
+[ 44%] Built target tinyllama_core
+[ 45%] Building CXX object CMakeFiles/tinyllama.dir/main.cpp.o
+[ 47%] Linking CXX executable tinyllama
+[ 47%] Built target tinyllama
+[ 49%] Building CXX object CMakeFiles/ir_logits.dir/tools/ir_logits.cpp.o
+[ 50%] Linking CXX executable ir_logits
+[ 50%] Built target ir_logits
+[ 52%] Building CXX object CMakeFiles/ir_adapter.dir/tools/ir_adapter.cpp.o
+[ 54%] Linking CXX executable ir_adapter
+[ 54%] Built target ir_adapter
+[ 55%] Building CXX object CMakeFiles/ir_doc_check.dir/tools/ir_doc_check.cpp.o
+[ 57%] Linking CXX executable ir_doc_check
+[ 57%] Built target ir_doc_check
+[ 59%] Building CXX object CMakeFiles/ir_path_check.dir/tools/ir_path_check.cpp.o
+[ 60%] Linking CXX executable ir_path_check
+[ 60%] Built target ir_path_check
+[ 62%] Building CXX object CMakeFiles/ir_numerics_test.dir/tools/ir_numerics_test.cpp.o
+[ 63%] Linking CXX executable ir_numerics_test
+[ 63%] Built target ir_numerics_test
+[ 65%] Building CXX object CMakeFiles/kquant_test.dir/tools/kquant_test.cpp.o
+[ 67%] Linking CXX executable kquant_test
+[ 67%] Built target kquant_test
+[ 68%] Building CXX object CMakeFiles/state_tokens_test.dir/tools/state_tokens_test.cpp.o
+[ 70%] Linking CXX executable state_tokens_test
+[ 70%] Built target state_tokens_test
+[ 72%] Building CXX object CMakeFiles/ir_hf_cpu_bench.dir/tools/ir_hf_cpu_bench.cpp.o
+[ 73%] Linking CXX executable ir_hf_cpu_bench
+[ 73%] Built target ir_hf_cpu_bench
+[ 75%] Building CXX object CMakeFiles/ir_hf_cuda_bench.dir/tools/ir_hf_cuda_bench.cpp.o
+[ 77%] Linking CXX executable ir_hf_cuda_bench
+[ 77%] Built target ir_hf_cuda_bench
+[ 78%] Building CXX object CMakeFiles/chat_template_check.dir/tools/chat_template_check.cpp.o
+[ 80%] Linking CXX executable chat_template_check
+[ 80%] Built target chat_template_check
+[ 81%] Building CXX object CMakeFiles/chat_v2_test.dir/tools/chat_v2_test.cpp.o
+[ 83%] Linking CXX executable chat_v2_test
+[ 83%] Built target chat_v2_test
+[ 85%] Building CXX object CMakeFiles/utf8_text_test.dir/tools/utf8_text_test.cpp.o
+[ 86%] Linking CXX executable utf8_text_test
+[ 86%] Built target utf8_text_test
+[ 88%] Building CXX object CMakeFiles/tinyllama_server.dir/server.cpp.o
+[ 90%] Linking CXX executable tinyllama_server
+[ 90%] Built target tinyllama_server
+[ 91%] Building CXX object CMakeFiles/tinyllama_bindings.dir/bindings.cpp.o
+[ 93%] Linking CXX shared module tinyllama_bindings.cpython-312-x86_64-linux-gnu.so
+lto-wrapper: warning: using serial compilation of 5 LTRANS jobs
+lto-wrapper: note: see the ‘-flto’ option documentation for more information
+[ 93%] Built target tinyllama_bindings
+[ 95%] Building CXX object CMakeFiles/cpu_dot_test.dir/tools/cpu_dot_test.cpp.o
+[ 96%] Linking CXX executable cpu_dot_test
+[ 96%] Built target cpu_dot_test
+[ 98%] Building CXX object CMakeFiles/cpu_dot_portable_test.dir/tools/cpu_dot_test.cpp.o
+[100%] Linking CXX executable cpu_dot_portable_test
+[100%] Built target cpu_dot_portable_test

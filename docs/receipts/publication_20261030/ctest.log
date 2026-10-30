@@ -1,0 +1,10 @@
+Internal ctest changing into directory: /home/jonat/ember_publication_build_20261030
+Test project /home/jonat/ember_publication_build_20261030
+    Start 1: cpu_dot_fixed_order
+1/2 Test #1: cpu_dot_fixed_order ..............   Passed    0.38 sec
+    Start 2: cpu_dot_portable_fixed_order
+2/2 Test #2: cpu_dot_portable_fixed_order .....   Passed    0.60 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =   0.98 sec
