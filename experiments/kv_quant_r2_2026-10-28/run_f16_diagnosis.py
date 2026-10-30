@@ -22,7 +22,9 @@ def completed_leg(folder, command, environment, accepted):
     receipt = folder / 'leg.json'
     if receipt.exists():
         saved = json.loads(receipt.read_text())
-        if saved['identity'] != identity or saved['files'] != inventory_without_receipt(folder):
+        if (saved['identity'] != identity or saved['files'] != inventory_without_receipt(folder)
+                or saved['result'] != json.loads((folder/'stdout.json').read_text())
+                or saved['returncode'] not in accepted):
             raise ValueError('completed diagnostic leg drift')
         return saved
     if folder.exists():
@@ -45,6 +47,8 @@ def inventory_without_receipt(folder):
 
 
 def execute(model, normal, trace, component, seeded_ids, ids, out):
+    if (out/'HALTED').exists():
+        raise ValueError('existing HALTED is final; separate operational review required')
     if (out/'diagnosis_report.json').exists():
         raise FileExistsError('completed diagnostic report is immutable')
     paths = [model, normal, trace, component, seeded_ids, ids, Path(__file__),
@@ -76,7 +80,8 @@ def execute(model, normal, trace, component, seeded_ids, ids, out):
     if not manifest.exists():
         atomic(manifest, fixed)
     probe = completed_leg(out/'component', [str(component)], environment, (0, 1))
-    if probe['result'].get('complete') is not True or probe['result'].get('diagnostic_only') is not True:
+    if (probe['result'].get('complete') is not True or probe['result'].get('diagnostic_only') is not True
+            or bool(probe['result'].get('exact_component_mismatches')) != (probe['returncode'] == 1)):
         raise ValueError('component result incomplete')
     controls = {}
     for fmt in ('f32', 'f16'):
@@ -125,5 +130,6 @@ if __name__ == '__main__':
         print(json.dumps({'status': report['status'], 'e9_closed': False}))
     except Exception as error:
         args.out.mkdir(exist_ok=True)
-        atomic(args.out/'HALTED', {'reason': str(error), 'complete': False, 'e9_closed': False})
+        if not (args.out/'HALTED').exists() and not (args.out/'diagnosis_report.json').exists():
+            atomic(args.out/'HALTED', {'reason': str(error), 'complete': False, 'e9_closed': False})
         raise
