@@ -100,3 +100,18 @@ at two-minute intervals and on failure. Eleven offline regressions cover missing
 wrong backend, bad numerical/greedy outcomes, NaNs, differing row bits and suite failures; all pass.
 The CUDA host harness compiles with g++ against CUDA12.6 headers; no local GPU used. This preparation
 is not evidence that the device gate has passed. Actual run receipts will be recorded separately.
+
+The supervised L4 run completed on 30 October at 01:45 UTC. Its downloaded archive was independently
+rechecked locally: all ten families and three modes passed, with the eight listed device families
+actually on CUDA and the two documented fallbacks on CPU. Every device family matched all 40 HF and
+CPU greedy continuations and all 640 step argmaxes; deterministic repeats had identical full row bytes.
+The conformance adapter recorded 554 PASS, 44 SKIP and zero FAIL/XFAIL/XPASS (598 total).
+`receipts/cuda_20261030.json` records source provenance, individual summaries and the archive hash.
+
+Operational failures were preserved outside the repository beside the raw archive. The first unpack
+needed `--no-same-owner --no-same-permissions` on the root-squashed volume. A manual repair initially
+omitted the CUDA PATH, before being restarted with the normal driver environment. Finally Mixtral's
+tuned Llama path returned an empty IR document (`json.parse_error.101`, empty input); this harness
+tests IR and therefore now explicitly sets `EMBER_IR_BUILD=1`, as the earlier Mixtral IR gate did.
+That changes harness selection, not the engine or numerical thresholds. Compiled engine source is
+06bcb14; operational VM script is ba66557. Neither CPU fallback is credited as a CUDA result.
