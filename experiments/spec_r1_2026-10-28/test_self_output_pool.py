@@ -164,3 +164,13 @@ def test_environment_corruption_refused(live_fake):
     manifest.write_text(json.dumps(r))
     with pytest.raises(ValueError, match='environment'):
         p.analyze(out)
+
+
+def test_frozen_auditor_source_bundled_and_checked(live_fake):
+    files, out, _ = live_fake
+    p.run(*files, out)
+    source = out / 'source/self_output_pool.py'
+    assert source.read_bytes() == Path(p.__file__).read_bytes()
+    source.write_text('corrupted')
+    with pytest.raises(ValueError, match='source snapshot'):
+        p.analyze(out)
