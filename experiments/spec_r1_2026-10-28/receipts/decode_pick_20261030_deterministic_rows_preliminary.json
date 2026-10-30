@@ -1,0 +1,27 @@
+{
+ "complete": false,
+ "status": "PRELIMINARY_DETERMINISTIC_ROWS_ONLY",
+ "pod": "n27vrqaipqbfnv",
+ "requests_per_leg": 260,
+ "ids_equal": true,
+ "row_sha256": {
+  "det_rows_off": "4760870aef6a8f5ff4edd0965660dfa00013e4703630aae0e5bf04ddc4c47cba",
+  "det_rows_off_repeat": "4760870aef6a8f5ff4edd0965660dfa00013e4703630aae0e5bf04ddc4c47cba",
+  "det_rows_on": "4760870aef6a8f5ff4edd0965660dfa00013e4703630aae0e5bf04ddc4c47cba"
+ },
+ "completed_before_retirement": [
+  "det_rows_on.jsonl.meta.json",
+  "det_rows_off_repeat.jsonl.meta.json",
+  "det_rows_off.jsonl.meta.json",
+  "default_off_b.jsonl.meta.json",
+  "default_on_b.jsonl.meta.json",
+  "default_on_a.jsonl.meta.json",
+  "default_off_a.jsonl.meta.json",
+  "default_rows_on.jsonl.meta.json",
+  "default_rows_off_repeat.jsonl.meta.json",
+  "default_rows_off.jsonl.meta.json"
+ ],
+ "ABBA_pending": true,
+ "input_and_device_receipt": "decode_pick_20261030_preliminary.json",
+ "scope": "Deterministic off/repeat/on full rows and IDs pass; all4 deterministic ABBA legs remain pending. Overall E10.3 remains open because default baseline is unstable."
+}
