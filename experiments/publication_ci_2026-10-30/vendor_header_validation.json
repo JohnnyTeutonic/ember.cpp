@@ -1,0 +1,168 @@
+{
+  "schema": "ember.vendor_header_ci_validation.v1",
+  "source_commit": "8610e1515f81c94b401a586cb32ee02f3114af13",
+  "scope": "Host-only real vendor-header validation plus CPU build/tests. No Windows GPU/device validation, no local MSVC 14.34 installation and no claim that the new remote wheel matrix has passed. No SDK headers or binaries copied into this repository.",
+  "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "compiler_sha256": "1353e9bdd29a7295c7226bf6c63abccce056d8cac31f112e5cdbecc3f28c2769",
+  "source_sha256": {
+    "CMakeLists.txt": "e171252be4dcd9cdf3cd5959264102014b63ea9f3d644853c3a2b322fe4ae21c",
+    "model.h": "77314e072cf336ab48ccd10f71937f83b7e9a48fbf9a1baf183ee7c0ecdd74d0",
+    "cuda_kernels.h": "0c21005cbe455aaa825e95625557b60193fc64c3665e8486905f04a2725ba13d",
+    "cuda_safe_headers.h": "fe098cbdb1df8116630faa9d00927be0d7b8ead071ac9a27a79f272f30cacd8b",
+    ".github/scripts/cuda-half-header-probe.cpp": "681e6c8e4ca648ab854e0c964b149c1e0bfb901bdf211aa235b28755ada5521b",
+    ".github/workflows/build-wheels.yml": "1b7fb837038c50ef43e7ae98d7908a4773aada4c0e2e7110749caa160305d422",
+    ".github/scripts/linux-wheel-bootstrap.sh": "9698c7198162c2e5bbd27dfff4925fbbfa4083b15779eb6c79269b7ec40f43d1",
+    ".github/scripts/test_wheel_workflow.py": "949ce8294dcb39d4aaafe282b5e001de315b47ee059ec6843657478c82b6a148",
+    ".github/triplets/cuda-msvc1434/x64-windows.cmake": "f3104b2362bd0359f5abf9ad5e6ceab282a684b2ed92a52e7459b67d2ee36b8a"
+  },
+  "vendor_probes": [
+    {
+      "toolkit_header_directory": "/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.8/include",
+      "toolkit_version": "11.8",
+      "command": [
+        "g++",
+        "-std=c++17",
+        "-DHAS_CUDA",
+        "-I.",
+        "-I/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.8/include",
+        "-H",
+        ".github/scripts/cuda-half-header-probe.cpp",
+        "-o",
+        "/tmp/ember_header_bound_11.8"
+      ],
+      "exit_code": 0,
+      "used_vendor_header_sha256": {
+        "cuda_runtime.h": "ee5c976747f949d3a4f87676015b5625927a9e5bc8a88d2a958c621666102ac9",
+        "crt/host_config.h": "8a4b691a5c2e28bc625c24789d73f4705a4949bda1c68b265e5aea522bea9afe",
+        "builtin_types.h": "e75d7426f7b4e8abcd6e3cdd0631fa9577a6c5f8cd31f1ff2996e79d9b5ab4a3",
+        "device_types.h": "2416b764cb308e6d9e93268826f3918f5a05e760d28e49c112ff9c732491e328",
+        "crt/host_defines.h": "acbd9d845b1d767e8ffc807b1ad40534c0e9fd45f2e491c8cea8bc173105fe86",
+        "driver_types.h": "861867c7d086721978c6009560c46e04d46abd1fb96c8907a700b8a2a321034c",
+        "vector_types.h": "80b37640c68e1100d3a55ebff992cf520b2ebe15f12f8ebb089cc68da1f10c49",
+        "surface_types.h": "8028e59c89fb4943a3fb6dae99ab2c3094ec0d1e6785faeffdab8bbeab383f89",
+        "texture_types.h": "d5bc441ef45fbdcc1284e3fb702e35f54dc1d9b668cb76b4ae99e520c2380a68",
+        "library_types.h": "655caa787063bfd1285686ddca4ed16a602cc3c2d201c80a508bae356525516c",
+        "channel_descriptor.h": "e6584b22e29f4224ec03b9854d6bb2c163bc4af616d1d4b941811f88a29297a0",
+        "cuda_runtime_api.h": "b71fb023ea93a12ccf3f9c24b175b53c1d8fcefc4a19a1897e4c9f3e836e1d16",
+        "cuda_device_runtime_api.h": "7c369a91cb5147a7fd53f25ff6385523b9e54ead9a24779b6f6b1b27cb56b025",
+        "driver_functions.h": "ab08532254d6d6829ea9a650901900bf0b4588f0d4636fbc634d7ee31874c334",
+        "vector_functions.h": "655c94fffa78a0c70a71ffdce39fbb706865a062421c4279f9b0492a4612f87e",
+        "vector_functions.hpp": "c7b15cc4d81a15ba93ccad66b086ea71ac22c524ecb98b6c5d94c7ddcca55757",
+        "cublas_v2.h": "8616ccfeab43b0c685cc430196aa01f4e73802fa1db415e4e98526a3ec374767",
+        "cublas_api.h": "c8a4bf7fe6758da8d3273d5272225531c08dd4e46ba761225900de09656baa2f",
+        "cuComplex.h": "8c04f75b56a2d57ad07aa59d8cb903fcabd6366658a89dad00a4b4a00939150f",
+        "cuda_fp16.h": "9e728eefaf9debf660b40e6d7ad558f6c27d9dd32e83f07336647c404ed148cd",
+        "cuda_fp16.hpp": "0d01d15dfc7c6fc3e0fc64c4389efd5dc4bda0483440680ec28286207f342600",
+        "cuda_bf16.h": "e5b23639365cf5c2b46918c7fa4e0b4be0cc4fa8a22bc906de71a3285b6bca7a",
+        "cuda_bf16.hpp": "8d8bf8380c89ab3cc40c42ad8f3f9e6c925a70053998a2db4bde4fb1befa4fbd"
+      },
+      "log_sha256": "8c7a5737d7e61804b838d4fc254c871a3b6202bd2e2a7d7793cd5acf04b5f155",
+      "checks": [
+        "F16(1.0)=0x3c00",
+        "BF16(1.0)=0x3f80",
+        "distinct vendor storage types",
+        "both conversions roundtrip to 1.0"
+      ],
+      "limits": "GNU host compiler against locally installed vendor headers; not an MSVC or CUDA device execution."
+    },
+    {
+      "toolkit_header_directory": "/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/include",
+      "toolkit_version": "12.6",
+      "command": [
+        "g++",
+        "-std=c++17",
+        "-DHAS_CUDA",
+        "-I.",
+        "-I/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/include",
+        "-H",
+        ".github/scripts/cuda-half-header-probe.cpp",
+        "-o",
+        "/tmp/ember_header_bound_12.6"
+      ],
+      "exit_code": 0,
+      "used_vendor_header_sha256": {
+        "cuda_runtime.h": "18f93c6c6b3e1afef0c6956a370232e5995dc8cc5b847b56d1137f01d2433baf",
+        "crt/host_config.h": "9ef25064f1dc277dc70dcff99d0e027510998b9de3fb001f519f4fa4337b8ba2",
+        "builtin_types.h": "e75d7426f7b4e8abcd6e3cdd0631fa9577a6c5f8cd31f1ff2996e79d9b5ab4a3",
+        "device_types.h": "2416b764cb308e6d9e93268826f3918f5a05e760d28e49c112ff9c732491e328",
+        "crt/host_defines.h": "086310aafabe0270fc1230cd903d025501617b7fcc810b7589c53f3d82fff8f5",
+        "driver_types.h": "57fb86140f10a6f7ba62c57368eddb8501523f4f3b8f7a43ebf1c369e74440b8",
+        "vector_types.h": "add5b60c66a0bbdf999dd8475c2b95c713dc9f862e019864c882be8f7b7c4f6e",
+        "surface_types.h": "863530cd094f387b4c4c0ee428055c91ea2733fb0a13c93136ceec9b33827c57",
+        "texture_types.h": "1887d9c33528c4d841b509f0cd586e7602d201274959c53c87ca5917b7e7cfed",
+        "library_types.h": "0f20a62393b3e9a90ea57921fa8701d71fe99a2302ec51f43758e81c1d2665fb",
+        "channel_descriptor.h": "99a8b1ded9c9b2ae52e10f3db44a407db49515c98c0c8362609e6602d3eba7b0",
+        "cuda_runtime_api.h": "e1be5462adbb090502eaa2bf3b48ce9ad082a8b564b3c16b67124cd7b12990c4",
+        "cuda_device_runtime_api.h": "aeacd8be0a5b09f0c906fecd4c4eb6a8360c02014c84a0f0413de07e2b0bab22",
+        "driver_functions.h": "ab08532254d6d6829ea9a650901900bf0b4588f0d4636fbc634d7ee31874c334",
+        "vector_functions.h": "69c863a2b5c66654fca2be925ef94b1b66e6fbb8dfbb768314146fa23775d2ab",
+        "vector_functions.hpp": "c7b15cc4d81a15ba93ccad66b086ea71ac22c524ecb98b6c5d94c7ddcca55757",
+        "cublas_v2.h": "c00d426fbc7aa24c10702492c0df2530fcf45786fc3e78832a1dccb3fba2c4ee",
+        "cublas_api.h": "b0e6a9b73ff273a8902c79a9452da401c1a4ffa1af81ec95036304d7ba4ba264",
+        "cuComplex.h": "8c04f75b56a2d57ad07aa59d8cb903fcabd6366658a89dad00a4b4a00939150f",
+        "cuda_fp16.h": "a3e9beef045ba1572d70ffe339311f840c6e259c25dfa7d6ca01fc693c874618",
+        "nv/target": "2f3bc96b3256cfc3fd4c197ae2ccabd8b42ea40d485b88cf7db979fc2caafd10",
+        "nv/detail/__target_macros": "d10e1604913b30924e48a50de3c2a7695832596998f2b6143bd067a11578c5c4",
+        "nv/detail/__preprocessor": "aacbd40d9c6548d504b27ceaf3cadb2dd38c88352615e8d3fe5070313fee4498",
+        "cuda_fp16.hpp": "ea7d33c984cdde02d150094d06565860c74a9d6801fe67c6cdf628d2156ff9e5",
+        "cuda_bf16.h": "8e0a1edbfaa6ff8177cd20bc3036bcd32f0d82b7cfc4e995d1849dd0b379338e",
+        "cuda_bf16.hpp": "3521d241b78d734faaed5bf3664de4fd5df3d9a44f7f12146a02b4d804e1a027"
+      },
+      "log_sha256": "1af890d1b4acddc789a8e159771839c4807f0f4d8c68cc72627a8d49a090d76a",
+      "checks": [
+        "F16(1.0)=0x3c00",
+        "BF16(1.0)=0x3f80",
+        "distinct vendor storage types",
+        "both conversions roundtrip to 1.0"
+      ],
+      "limits": "GNU host compiler against locally installed vendor headers; not an MSVC or CUDA device execution."
+    }
+  ],
+  "offline_ci_tests": {
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      ".github/scripts",
+      "-p",
+      "test_wheel_workflow.py",
+      "-v"
+    ],
+    "exit_code": 0,
+    "log_sha256": "dc8c6780d1c60d54ccdc7daddce70f7eb8e112de1cda6251e3b33ad17a6e5a95"
+  },
+  "cpu_ctest": {
+    "command": [
+      "ctest",
+      "--test-dir",
+      "/home/jonat/ember_publication_build_20261030",
+      "--output-on-failure"
+    ],
+    "exit_code": 0,
+    "log_sha256": "65bdbcb1c0fa094211196d261b64fca004c187eec512942b09d0de3f1af098b7"
+  },
+  "native_capability": {
+    "command": [
+      "python3",
+      "/mnt/c/Users/jonat/AppData/Local/Temp/ember_fresh_native_probe.py"
+    ],
+    "exit_code": 0,
+    "log_sha256": "b800d516bb5374f0c5b799c28163fe63b7d6347667cc88adab5e037386b20fb7",
+    "probe_source": "import sys,hashlib,json\nfrom pathlib import Path\nsys.path.insert(0,'/home/jonat/ember_publication_build_20261030')\nimport tinyllama_bindings as native\nassert native.cuda_compiled is False\nassert callable(native.TinyLlamaSession) and callable(native.ModelConfig)\nprint(json.dumps({'cuda_compiled':native.cuda_compiled,'native_module_sha256':hashlib.sha256(Path(native.__file__).read_bytes()).hexdigest(),'required_apis_callable':True}))\n"
+  },
+  "cpu_incremental_build": "All targets completed successfully after vendor-header cleanup, CPU budget 1 core. Incremental build output observed directly; CTest and fresh native module evidence retained below.",
+  "yaml_parse": {
+    "matrix_variants": 6,
+    "pass": true
+  },
+  "powershell_parse": {
+    "pass": true,
+    "method": "System.Management.Automation.Language.Parser.ParseInput on both newly added Windows CUDA PowerShell run blocks, with matrix CUDA version substituted as 11.8; zero parse errors. Parse only; scripts were not executed.",
+    "script_sha256": {
+      "ember_windows_ci_step_5.ps1": "71534a6689b32ee4dce073992fd994c6449e2eb6f548ba1f26398afc0956d24e",
+      "ember_windows_ci_step_7.ps1": "c603e768c14edecfc221943888c74661d4565d94c9931eb6337ad4124f07def5"
+    }
+  }
+}
