@@ -474,6 +474,8 @@ if(NOT SKBUILD)
         target_link_libraries(ir_device_gate PRIVATE tinyllama_core)
         add_executable(e4_device_gate experiments/e4_gemma2_phi3_2026-10-28/e4_device_gate.cpp)
         target_link_libraries(e4_device_gate PRIVATE tinyllama_core)
+        add_executable(decode_pick_rows experiments/spec_r1_2026-10-28/decode_pick_rows.cpp)
+        target_link_libraries(decode_pick_rows PRIVATE tinyllama_core)
         # Given sequences (state ids, eviction, rewinds) on the device against the CPU (tools/state_device_gate.cpp).
         add_executable(state_device_gate tools/state_device_gate.cpp)
         target_link_libraries(state_device_gate PRIVATE tinyllama_core)
