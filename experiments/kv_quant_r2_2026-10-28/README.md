@@ -357,3 +357,56 @@ AVX2 dispatch (designed/tested to retain finite-input bits), CUDA graph API and
 header/Windows portability fixes. KV conversion/storage source is unchanged.
 The current host CPU/flags are recorded separately; the original archive lacks
 those details. Uninstrumented controls measure the current recipe explicitly.
+
+## Completed f16 diagnosis: valid negative, no arithmetic fix demonstrated
+
+The complete L4 diagnostic archive is home and independently replayed. All 2,603
+ZIP members passed CRC checks; exact model bytes, original 12-by-24 seeded IDs,
+48 model trace cases, 48 primitive cases, four uninstrumented controls, source,
+binaries and runtime are bound by the small receipts below. Raw arrays have one
+canonical home, not a duplicate copy in Git:
+`C:/ml_artifacts/kvq/ember-e9-f16-diag-1031/e9_f16_diagnosis/out.zip`
+(SHA256 `87d3bf9144589f5687cae0c84d99ef572efad120ea5dbf6e82cdd352f635a273`,
+3,211,876,723 bytes).
+
+Both graph0 and graph1 reproduce the original f16 negative exactly: prefill
+0.0003446816157 and decode 0.0003620140670 exceed unchanged 1e-4. Both f32
+controls pass (2.14648e-6 / 2.33011e-6). Every control retains 288/288 argmax
+and 12/12 greedy sequences. The failure is therefore not confined to graph
+capture. CPU teacher-forced decode and prefill are bit-identical in both formats;
+CUDA f16 decode/prefill row difference reaches 0.000401192, versus 3.05212e-6
+for f32. This is a diagnosis, not an adoption pass.
+
+No conversion, cache-store or immediate readback mismatches were found in the
+actual traces or the 48 identical-input primitive cases, including capacity8448
+and the relevant short/long and tiled length boundaries. Small CPU/CUDA Q/K/V
+differences exist before conversion. Layer0 prefill has 817 differing half codes.
+The deterministic first V example differs by 5.2154e-8 before rounding and
+7.6294e-6 afterward, crossing an adjacent binary16 boundary. Other examples do
+not necessarily amplify; this observation is not a whole-model causal proof.
+
+The separate posthoc reference reconstructs attention from each execution's own
+captured Q and cache inputs using f64 causal GQA. At layer0, f16 CPU prefill/decode
+attention residual is at most 2.503e-6 absolute, CUDA prefill 2.579e-6 and CUDA
+decode 1.048e-6. The observed CPU/CUDA prefill attention gap is 4.875e-4 absolute,
+with different rounded cache inputs. This locates a substantial stage discrepancy
+before attention accumulation rather than demonstrating a large error against
+attention's own inputs. Across all layers, residual maxima are larger (CPU
+6.370e-5, CUDA prefill 9.916e-5); do not divide unrelated maxima or compare hidden
+activation normalizers to the vocabulary-logit adoption gate.
+
+Decode reconstruction assumes previously captured cache writes persist: old
+rows are not resnapshotted at every step. Active tracing changes synchronization,
+and the current EPYC7702 host cannot be equated to the historical unrecorded CPU.
+These limits prevent a definitive whole-model causal attribution. No production
+arithmetic defect or warranted arithmetic patch was demonstrated. E9 remains
+open, with no default or tolerance change and no further favorable-result retry.
+The ordinary watchdog fetched every artifact, terminated the pod and deleted
+its volume; ledger estimate was $0.563302 against the $1.50 cap.
+
+Receipts: [strict raw replay](receipts/e9_f16_diagnosis_20261031/raw_diagnosis_audit.json),
+[independent actual-input attention reference](receipts/e9_f16_diagnosis_20261031/actual_attention_f64.json),
+[final diagnosis, hardware, individual log hashes and cleanup](receipts/e9_f16_diagnosis_20261031/final_diagnosis.json).
+Offline verification tests: 65 passed. Frozen remote source remains
+`2658afb90bcadfb812fb4169e338ef9c260a2163`; the independent auditor and posthoc
+source identities are explicitly recorded separately.

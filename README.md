@@ -210,7 +210,11 @@ from the CPU reference than cuBLAS. Device row selection had an unstable default
 its deterministic paired speedups were 1.159x and 1.141x, so only one of the two required pairs
 cleared 1.15x.
 The f16 KV-cache gate retained greedy IDs but failed the unchanged CPU/device logit tolerance on
-Qwen3. These outcomes remain recorded, with no tolerance changes or default switch
+Qwen3. A complete 48-case L4 diagnosis reproduced the failure in both graph modes,
+found no conversion/cache-write/readback mismatches, and localized a substantial
+early-stage gap to differing rounded inputs rather than a large attention residual
+against each execution's own captured inputs. This does not establish whole-model
+causality or close the adoption gate. These outcomes remain recorded, with no tolerance changes or default switch
 ([fixed linear and row selection](experiments/spec_r1_2026-10-28/README.md),
 [KV cache](experiments/kv_quant_r2_2026-10-28/README.md)). The full two-model self-output draft-table
 matrix is complete: evaluated IDs and pick's deterministic rows match, but the required paired
