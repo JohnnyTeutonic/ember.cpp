@@ -1,0 +1,14 @@
+test_actual_version_step_changes_only_project_version (test_wheel_workflow.WheelWorkflowTests.test_actual_version_step_changes_only_project_version) ... ok
+test_cpu_bootstrap_never_installs_cuda_and_checks_repositories (test_wheel_workflow.WheelWorkflowTests.test_cpu_bootstrap_never_installs_cuda_and_checks_repositories) ... ok
+test_cuda_headers_are_vendor_types_without_compatibility_stubs (test_wheel_workflow.WheelWorkflowTests.test_cuda_headers_are_vendor_types_without_compatibility_stubs) ... ok
+test_existing_cuda_must_match_explicit_matrix_version (test_wheel_workflow.WheelWorkflowTests.test_existing_cuda_must_match_explicit_matrix_version) ... ok
+test_graph_instantiation_calls_compile_with_cuda_118_and_121_contracts (test_wheel_workflow.WheelWorkflowTests.test_graph_instantiation_calls_compile_with_cuda_118_and_121_contracts) ... ok
+test_matrix_versions_and_container_compiler (test_wheel_workflow.WheelWorkflowTests.test_matrix_versions_and_container_compiler) ... ok
+test_native_smoke_rejects_package_that_swallows_extension_failure (test_wheel_workflow.WheelWorkflowTests.test_native_smoke_rejects_package_that_swallows_extension_failure) ... ok
+test_shell_syntax_and_invalid_selector_refuses_before_install (test_wheel_workflow.WheelWorkflowTests.test_shell_syntax_and_invalid_selector_refuses_before_install) ... ok
+test_windows_cuda_uses_supported_toolset_and_complete_headers (test_wheel_workflow.WheelWorkflowTests.test_windows_cuda_uses_supported_toolset_and_complete_headers) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 1.363s
+
+OK
