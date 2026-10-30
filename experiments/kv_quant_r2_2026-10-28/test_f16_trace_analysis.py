@@ -91,6 +91,7 @@ def test_midpoint_discontinuity_is_reported_without_changing_bound(tmp_path):
     analysis.compare_stages(result,left,right,{'case':0})
     example = result['0']['examples'][0]
     assert example['amplification'] == 4096
+    assert example['adjacent_half_values'] and example['midpoint_is_single_rounding_boundary']
     assert example['opposite_sides_of_rounded_midpoint']
     assert result['0']['half_code_differences'] == 2
 
@@ -108,3 +109,18 @@ def test_empty_or_unequal_stage_lists_rejected(left, right):
 def test_nonpositive_or_noninteger_layers_rejected(tmp_path, layers):
     with pytest.raises(ValueError, match='layer count'):
         analysis.load_forward(tmp_path, layers, 'cpu', 'f16', 2, 0)
+
+def test_nonadjacent_rounded_values_do_not_claim_single_boundary(tmp_path):
+    sides = []
+    for name, value in (('left',1.0),('right',1.001953125)):
+        rows = analysis.load_forward(write_forward(tmp_path/name),2,'cpu','f16',2,0)
+        for row in rows:
+            row['arrays'] = {key: array.copy() for key,array in row['arrays'].items()}
+            row['arrays']['k'][0,0] = value
+            row['arrays']['k_cache'][0,0] = value
+            row['arrays']['k_codes'][0,0] = np.float16(value).view(np.uint16)
+        sides.append(rows)
+    result = {}
+    analysis.compare_stages(result,*sides,{})
+    assert not result['0']['examples'][0]['adjacent_half_values']
+    assert not result['0']['examples'][0]['midpoint_is_single_rounding_boundary']
