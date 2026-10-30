@@ -323,7 +323,7 @@ default-cuBLAS and deterministic-fixed modes. Copy20 still participates in the I
 has complete deterministic row dumps and a repeated plain control. Nonfinite rows fail; unstable
 controls and cross-device timing are classified explicitly. Complete negative or invalid legs are
 never retried to obtain a pass. Forty-two client, candidate and evaluation regressions pass together.
-These are prepared acceptance checks; device outcomes remain pending and no default is changed.
+The acceptance checks remain unchanged; the complete device outcome is recorded below. No default is changed.
 
 ### Fixed-linear reference gate: complete negative result
 
@@ -341,4 +341,51 @@ no tolerance was relaxed, and no completed scientific leg was retried.
 
 ### 30 October self-output pool operational failure
 
-The bounded E10.2 device run stopped before its first generation request: the client required an explicit `deterministic: false` health field, whereas the server omits that field when off. No self-output corpus, candidate table, parity result or speed result was produced. E10.2 remains open. The final archive passed streaming SHA256, ZIP CRC, archived executable and client-source hash checks; see `receipts/self_output_20261030_operational_failure.json`. All campaign resources were removed after outputs arrived home; displayed cumulative cost was $1.67. Commit `f8837f0` fixes the client schema assumption with 53 passing pool/gate/candidate tests, but was not deployed to this completed campaign. Defaults and scientific gates remain unchanged.
+The bounded E10.2 device run stopped before its first generation request: the client required an explicit `deterministic: false` health field, whereas the server omits that field when off. No self-output corpus, candidate table, parity result or speed result was produced. At that point E10.2 remained open. The final archive passed streaming SHA256, ZIP CRC, archived executable and client-source hash checks; see `receipts/self_output_20261030_operational_failure.json`. All campaign resources were removed after outputs arrived home; displayed cumulative cost was $1.67. Commit `f8837f0` fixes the client schema assumption with 53 passing pool/gate/candidate tests, but was not deployed to this completed campaign. Defaults and scientific gates remain unchanged.
+
+
+### Full self-output matrix: complete negative result
+
+The complete original pools contain 19,994 pick responses and 8,000 pk responses. The immutable
+100-response pilot prefixes were reused after exact manifest/hash checks; no completed request
+was resampled. Both candidates use the frozen six-order, minimum-count-2, confidence-0.10,
+corpus-first recipe. All 23 L4 evaluation legs completed with the original 260-request inventory
+per leg. No gate, output budget, dataset or model was changed to obtain a result.
+
+All evaluated IDs match plain decode in both modes. Pick's three deterministic files each contain
+3,829 finite full-vocabulary rows (250,937,344 bytes) and are bit-identical, including the repeated
+plain control. PK's frozen protocol has ten timing/ID legs and no row-dump requirement.
+
+Paired corpus-to-merged throughput ratios (both pairs must reach 1.03x for each dataset and mode):
+
+| Model | Mode | chat40 pairs | carry40 pairs | Throughput gate |
+|---|---|---|---|---|
+| pick | default | 1.0943x / 1.1089x | 1.0302x / 1.0454x | PASS |
+| pick | det | 1.0690x / 1.0781x | 0.9763x / 1.0154x | NO_GAIN |
+| pk | default | 1.0049x / 1.0088x | 1.0158x / 1.0081x | NO_GAIN |
+| pk | det | 1.0002x / 1.0027x | 1.0178x / 1.0140x | NO_GAIN |
+
+Both model verdicts are **NO_GAIN**, so the full result is **NOT_ADOPTED**. Pick's default-mode
+subset passes the speed criterion, while deterministic carry40 does not. PK does not reach 3%
+in either mode. The positive subset does not replace the registered whole-matrix criterion;
+no default was changed and no completed scientific leg was retried.
+
+The independent local audit streamed the archive SHA256 and ZIP CRC, verified the exact archived
+executable, uploaded input manifest and original controller sources, replayed both complete raw
+journals, rebuilt both self.npz and merged.bin candidates with exact hash agreement, and replayed
+every ID, finite row, repeated control and paired timing through the archived unchanged analyzer.
+The recomputed reports match the saved reports exactly under CPython 3.11 / NumPy 1.26.4.
+See [final receipt](receipts/self_output_full_v3_20261030_final.json).
+
+The canonical raw archive remains outside Git (728,426,832 bytes), SHA256
+`3b8b8ff30049a1181aa68bc65d1680d994797794fea2aee2fd2a43737c18a633`.
+Pilot plus full-continuation ledger cost was $1.219785 within their $2 envelope;
+the prior failed v1 campaign is preserved separately. The owned pod and volume were removed
+after outputs arrived home.
+
+The running VM's initial ZIP checkpoint failure came from reproducible pre-1980 extracted file
+mtimes. The approved repair recorded every affected original timestamp, size and SHA256, changed
+only extracted timestamp metadata, and verified unchanged bytes plus a successful ZIP/CRC.
+The frozen scientific script, input archive, models, controllers and gates were unchanged.
+[Repair receipt](receipts/self_output_full_v3_timestamp_repair.json) preserves that history;
+the future packer clamps ZIP metadata without altering raw timestamps, with an exact-code regression.
