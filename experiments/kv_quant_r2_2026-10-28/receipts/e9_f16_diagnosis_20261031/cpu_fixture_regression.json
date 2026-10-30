@@ -1,0 +1,31 @@
+{
+  "scope": "CPU fixture only; no CUDA execution",
+  "model_sha256": "b6e07bbb71a969c9c8c4ee5a9e13835dcb7f5707c0c1883c4b225c15fb403d1f",
+  "trace_binary_sha256": "7472a183fc8f2afc7b80d55792f988d23509745d595680b08b65bb50bb6466d0",
+  "ids": [
+    [
+      4,
+      5,
+      6,
+      7
+    ],
+    [
+      10,
+      11,
+      12,
+      13
+    ]
+  ],
+  "checks": {
+    "f32_diagnostic_disabled_identical": true,
+    "f32_trace_logits_identical": true,
+    "f32_completed_resume_immutable": true,
+    "f32_corrupt_resume_rejected_without_overwrite": true,
+    "f16_diagnostic_disabled_identical": true,
+    "f16_trace_logits_identical": true,
+    "f16_completed_resume_immutable": true,
+    "f16_corrupt_resume_rejected_without_overwrite": true,
+    "graph_refusal_before_output": true,
+    "cpu_fallback_refused": true
+  }
+}

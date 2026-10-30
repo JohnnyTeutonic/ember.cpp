@@ -1,0 +1,26 @@
+{
+  "phase": "baseline",
+  "source_sha256": "c5bfa090027ae1ba448707228e5bc0e961f216c3cfb8f5c1c31c309fbdd8bfd9",
+  "object_sha256": "a15b90614206011c49845aec7cd82c25767b35de5b7ec6a58e81fb1064052bfc",
+  "command": [
+    "/usr/bin/c++",
+    "-DBOOST_REGEX_DYN_LINK",
+    "-DBOOST_REGEX_NO_LIB",
+    "-I/home/jonat/ember_publication_build_20261030/_deps/nlohmann_json-src/include",
+    "-I/home/jonat/ember_e9_diagnosis_20261031",
+    "-I/home/jonat/ember_publication_build_20261030/_deps/cpp-httplib-src",
+    "-fopenmp",
+    "-O3",
+    "-DNDEBUG",
+    "-std=gnu++17",
+    "-fPIC",
+    "-ffp-contract=off",
+    "-c",
+    "/home/jonat/e9_normal_byteproof_20261031/graph_ir.cpp",
+    "-o",
+    "/home/jonat/e9_normal_byteproof_20261031/baseline/graph_ir.cpp.o"
+  ],
+  "compiler": "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "core_sha256": "8454af9d9bb043a5c507886316e3e53802800e700ec5d987758774312187ddcc",
+  "executable_sha256": "1f877524c3b59e1cdbf3ca29ab6d4e0ed216900516e1bcb28d5ec7e7e21b9a0f"
+}

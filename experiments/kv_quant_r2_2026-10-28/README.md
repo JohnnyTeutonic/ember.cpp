@@ -270,3 +270,60 @@ validator also returns false. E9 remains open. The extra conservative comparison
 against old teacher-forcing point estimates was not reached; it is separate from
 the original registered device gate. The normal watchdog fetched diagnostics,
 terminated the pod and deleted its volume (runner ledger about $0.45, cap $3).
+
+## Versioned f16 numerical diagnosis (31 October, preparation)
+
+E9 remains open. The preserved L4 archive SHA256
+`daa7865875fcb4dc0032f9e52032dab0731646e746a7685501483a496b5ac022`
+contains aggregate Qwen3 f16 failures (prefill 0.0003446816; decode
+0.0003620141 against unchanged 1e-4), despite 288/288 argmax and 12/12 greedy
+agreement. It contains no raw logit/cache binaries and no failing-g3 prompt
+arrays: that runner removed binaries, and ir_device_gate emitted IDs only for
+argmax flips. New IDs materialize the original seed=0, n=12, len=24 recipe;
+they are not recovered historical arrays.
+
+The provisional hypothesis is amplification at binary16 rounding boundaries
+of small upstream CPU/CUDA arithmetic differences. This is not yet a causal
+finding. An independent compiler `_Float16` comparison found zero CPU helper
+conversion failures across 1,256,002 inputs and all 65,536 half expansions.
+A constructed midpoint example illustrates possible amplification only.
+No production arithmetic change or gate relaxation follows from this example.
+
+Opt-in `-DEMBER_KV_DIAGNOSTICS=ON` adds `kv_f16_trace`,
+`kv_f16_seeded_ids`, and (on actual CUDA builds) `kv_f16_component_probe`.
+Ordinary builds default OFF. CPU object, core archive, and complete executable
+are byte identical with hooks absent; the receipts record the exact compiler
+and hashes. Real tiny Qwen3MoE CPU fixture checks preserve f32/f16 logits with
+tracing active and refuse altered case payloads, partial cases, graph tracing,
+and requested-CUDA CPU fallback. This is CPU evidence, not CUDA validation.
+
+The fixed remote diagnostic separates (a) identical-input conversion,
+bulk-versus-device-position cache writes/readback and attention versus an
+independent double reference, from (b) all original seeded Qwen3 model prompts.
+Uninstrumented graph0/graph1 controls retain the original all-row gate command
+(no `--ids`, whose branch checks only last rows). Model traces use graph0
+explicitly, retaining raw Q/K/V, half codes/cache rows, attention outputs, and
+full prefill/teacher-forced-decode logits for f32/f16 CPU/CUDA. Stage metrics are
+descriptive; only vocabulary-logit comparisons apply the original row-range
+normalization and 1e-4 tolerance. A diagnosis does not close the broader E9 gate.
+
+`run_f16_diagnosis.py` binds model, binaries, frozen IDs and controller hashes
+before/after execution. Completed negative controls are immutable and reusable;
+incomplete control or trace cases require operational review. The shell wrapper
+checks the exact image/runtime, canonical model bytes and ordinary CUDA object
+identity before forwards, and restores source bytes in `finally` for the
+same-path object proof. No post-result source changes are permitted.
+
+Proposed remote limit: one L4, $1.50 cumulative, 2.25h total, with an independent
+95-minute VM timeout leaving about40 minutes for final relay. Per-case journals
+and three-minute ZIP snapshots live on retained physical storage until terminal
+fetch. They do not protect against physical-volume loss. Raw arrays have one
+canonical artifact home; public Git retains tools and small cryptographic
+receipts. No remote diagnostic result has been obtained at this preparation
+checkpoint.
+
+Offline checks:
+
+```
+python3 -m pytest -q experiments/kv_quant_r2_2026-10-28/test_f16_trace_analysis.py experiments/kv_quant_r2_2026-10-28/test_f16_diagnosis.py
+```
