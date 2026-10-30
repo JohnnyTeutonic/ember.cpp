@@ -1,0 +1,250 @@
+{
+ "scope": "Independent offline replay/hash audit of completed single-thread synthetic CPU measurements; no models or timings rerun by auditor",
+ "status": "PASS",
+ "optimized_source_git_commit": "5652251cf13397913bfffb5b1f9f40954579ef12",
+ "replays": {
+  "smollm2-135m": {
+   "command": [
+    "/usr/bin/python3",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/hf_cpu_2026-10-30/benchmark.py",
+    "--analyze",
+    "--out",
+    "/mnt/c/ml_artifacts/benchmarks/hf_cpu_20261030/smollm2-135m"
+   ],
+   "returncode": 0,
+   "status": "COMPLETE_PARITY_GATED_CPU_MEASUREMENT",
+   "protocol_sha256": "7c46e717aad147bc37dad0d4763b10821c4181482d3e9cad19f757fc522d6f49",
+   "journal_sha256": "108e7264a0148c2e265eba026e7b4e833b427cf176623da8d759e00a3c49b944",
+   "summary_sha256": "c7c2e80d5da1e76b81ecfae9efd379cd89588abc793c79124e0307c6c6ea45c6",
+   "replay_matches_saved_summary": true
+  },
+  "gemma3-270m": {
+   "command": [
+    "/usr/bin/python3",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/hf_cpu_2026-10-30/benchmark.py",
+    "--analyze",
+    "--out",
+    "/mnt/c/ml_artifacts/benchmarks/hf_cpu_20261030/gemma3-270m"
+   ],
+   "returncode": 0,
+   "status": "COMPLETE_PARITY_GATED_CPU_MEASUREMENT",
+   "protocol_sha256": "c68bcddd71c3f71de98da5dd9b64ca52a9eb458c2ba3060800a87f39c91b9a87",
+   "journal_sha256": "1f3af5f9d65393ce625f3b7a0c96cfc42a697023f5e3f7816f6b3e5d23ebea79",
+   "summary_sha256": "2a0ba7b2fd099741b6042ac5f05e156823d8155b3a33f950742e3628d39af51f",
+   "replay_matches_saved_summary": true
+  },
+  "native_smollm2-135m": {
+   "command": [
+    "/usr/bin/python3",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/hf_cpu_2026-10-30/compare_native.py",
+    "--analyze",
+    "--out",
+    "/mnt/c/ml_artifacts/benchmarks/hf_cpu_20261030/native_smollm2-135m"
+   ],
+   "returncode": 0,
+   "status": "COMPLETE_BIT_IDENTICAL_PAIRED_NATIVE_CPU",
+   "protocol_sha256": "2eab62abd72f9705b13985d710f1b6b2df07ad44e14860c880e1ee11ca89fdd7",
+   "journal_sha256": "a4e2e69dad8d4904be8b82fefe02c77e7e1a9660584e2f28e283b9ec79029ac9",
+   "summary_sha256": "774deea3748fa6806899aeb49d0bf91edb882736fc9651324fcbf34471c359e4",
+   "replay_matches_saved_summary": true
+  },
+  "native_gemma3-270m": {
+   "command": [
+    "/usr/bin/python3",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/hf_cpu_2026-10-30/compare_native.py",
+    "--analyze",
+    "--out",
+    "/mnt/c/ml_artifacts/benchmarks/hf_cpu_20261030/native_gemma3-270m"
+   ],
+   "returncode": 0,
+   "status": "COMPLETE_BIT_IDENTICAL_PAIRED_NATIVE_CPU",
+   "protocol_sha256": "413c363568029bdf6c9bb6d40e9e42913fd033fca94f6a9539a7d4ff916e9c92",
+   "journal_sha256": "28a5218420234b4c2a417e68ea19cc589b56ec65f658092facc01b6ffb75acbf",
+   "summary_sha256": "b61dd04a543b9e041295b04db3bc1b879de819b73a6152ba323b53c0a35befe2",
+   "replay_matches_saved_summary": true
+  }
+ },
+ "canonical_binaries": {
+  "baseline": {
+   "path": "/mnt/c/ml_artifacts/benchmarks/hf_cpu_20261030/bin/ir_hf_cpu_bench_baseline",
+   "sha256": "b0c2d604b6e0497b14384713fc3b4f072a6c9d56bd68b41f88aaab2ba3c51170",
+   "matches_both_model_protocols": true
+  },
+  "optimized": {
+   "path": "/mnt/c/ml_artifacts/benchmarks/hf_cpu_20261030/bin/ir_hf_cpu_bench_avx2",
+   "sha256": "bdfa6982fdaaa543cc32a94c7bf3c72d5d68e65c78183956f6a3243c843b5412",
+   "matches_both_model_protocols": true
+  }
+ },
+ "weight_hashes": {
+  "smollm2-135m": {
+   "path": "C:\\ml_artifacts\\thirdparty\\smollm2-135m\\SmolLM2-135M-f32.gguf",
+   "sha256": "a898c1208f35ae7c5456d8f19d868a7505b445916dddb1e906fa0296ffdda941",
+   "bytes": 539845184,
+   "matches_frozen_protocol": true
+  },
+  "gemma3-270m": {
+   "path": "C:\\ml_artifacts\\thirdparty\\gemma-3-270m-it\\gemma-3-270m-it-f32.gguf",
+   "sha256": "0a174d42ccd7de15688e50dc044ea8006db31ee3bc6dc7e838f8a360ca46cdaa",
+   "bytes": 1078917728,
+   "matches_frozen_protocol": true
+  }
+ },
+ "original_hf_gates": {
+  "smollm2-135m": {
+   "rows_and_ids": 96,
+   "maximum_row_relative_error": 1.8014541993371303e-06,
+   "unchanged_bound": 0.0001
+  },
+  "gemma3-270m": {
+   "rows_and_ids": 96,
+   "maximum_row_relative_error": 5.197283698075119e-06,
+   "unchanged_bound": 0.0001
+  }
+ },
+ "native_bit_proof": {
+  "distinct_full_vocabulary_rows": 192,
+  "models": 2,
+  "prompt_lengths": [
+   16,
+   128,
+   512
+  ],
+  "rows_per_shape": 32,
+  "baseline_and_optimized_rows_match_retained_hf_gated_reference": true,
+  "both_complete_id_inventories_match": true
+ },
+ "source_provenance": {
+  "cpu_dot.h": {
+   "recorded_runtime_source_sha256": "189cc1a0f5cc3b6045cf579872f3e5272e9846be1f8fdf1e39124fa93bd3db3e",
+   "git_blob_sha256": "189cc1a0f5cc3b6045cf579872f3e5272e9846be1f8fdf1e39124fa93bd3db3e",
+   "normalized_lf_sha256": "189cc1a0f5cc3b6045cf579872f3e5272e9846be1f8fdf1e39124fa93bd3db3e",
+   "recorded_bytes_match_representation": [
+    "raw_git_blob",
+    "LF"
+   ]
+  },
+  "utils.cpp": {
+   "recorded_runtime_source_sha256": "aa50bd7176f2854c724c913d875916b9cb4803fd53e74eb09d964c651ba2018b",
+   "git_blob_sha256": "234cea72fcc777953bd25faf3e2b92bd17dbe3d51bdf876a58651aa89e2c28c8",
+   "normalized_lf_sha256": "234cea72fcc777953bd25faf3e2b92bd17dbe3d51bdf876a58651aa89e2c28c8",
+   "recorded_bytes_match_representation": [
+    "CRLF"
+   ]
+  },
+  "CMakeLists.txt": {
+   "recorded_runtime_source_sha256": "2615c3ae0568ee50cd034ec8154d00411d8a1284460c3a7333223680b4e8ac60",
+   "git_blob_sha256": "2615c3ae0568ee50cd034ec8154d00411d8a1284460c3a7333223680b4e8ac60",
+   "normalized_lf_sha256": "2615c3ae0568ee50cd034ec8154d00411d8a1284460c3a7333223680b4e8ac60",
+   "recorded_bytes_match_representation": [
+    "raw_git_blob",
+    "LF"
+   ]
+  },
+  "tools/ir_hf_cpu_bench.cpp": {
+   "recorded_runtime_source_sha256": "74477c07f48fb36a6932c10d39e8971702fd7a73a0ad8dacf4c77c0f8b28196c",
+   "git_blob_sha256": "74477c07f48fb36a6932c10d39e8971702fd7a73a0ad8dacf4c77c0f8b28196c",
+   "normalized_lf_sha256": "74477c07f48fb36a6932c10d39e8971702fd7a73a0ad8dacf4c77c0f8b28196c",
+   "recorded_bytes_match_representation": [
+    "raw_git_blob",
+    "LF"
+   ]
+  },
+  "experiments/hf_cpu_2026-10-30/compare_native.py": {
+   "recorded_runtime_source_sha256": "bb4bcead7f8214b27ba4dcee59b4d904a49499e344d05f83d873bcb1391d2aa8",
+   "git_blob_sha256": "bb4bcead7f8214b27ba4dcee59b4d904a49499e344d05f83d873bcb1391d2aa8",
+   "normalized_lf_sha256": "bb4bcead7f8214b27ba4dcee59b4d904a49499e344d05f83d873bcb1391d2aa8",
+   "recorded_bytes_match_representation": [
+    "raw_git_blob",
+    "LF"
+   ]
+  },
+  "experiments/hf_cpu_2026-10-30/benchmark.py": {
+   "recorded_runtime_source_sha256": "5f4a0fabf546711893c1c572bea252efbbe9278789fce7fc40a6a0dea7f75b88",
+   "git_blob_sha256": "5f4a0fabf546711893c1c572bea252efbbe9278789fce7fc40a6a0dea7f75b88",
+   "normalized_lf_sha256": "5f4a0fabf546711893c1c572bea252efbbe9278789fce7fc40a6a0dea7f75b88",
+   "recorded_bytes_match_representation": [
+    "raw_git_blob",
+    "LF"
+   ]
+  }
+ },
+ "bound_ir_conformance": {
+  "cases": 598,
+  "counts": {
+   "PASS": 554,
+   "FAIL": 0,
+   "SKIP": 44,
+   "XFAIL": 0,
+   "XPASS": 0
+  },
+  "all_ids_unique_and_by_kind_totals_recomputed": true,
+  "matches_initial_unbound_report_exactly": true,
+  "report_sha256": "62784813d6c4239e76257ff84c7130a658100c90761e568130b86ef331757a1a",
+  "log_sha256": "8d0b30d72c6fa36debe1a06ac82f26c461b786c29cefcfcc21669d2a253231f3",
+  "launch_receipt_sha256": "f3f30dd1e09c37f2109336a3b38da2c2c993a6c6e441b3ddf16aa7168d27124a",
+  "launcher_sha256": "ec978528a23482c5e274b57f0fcff0a486d9e36da873c60289d08416b5be7ff4",
+  "launch_returncode": 0,
+  "binary_and_sources_unchanged_before_after": true,
+  "current_adapter_binary_sha256": "daa618dac4300857b3dd6eae8dc6b3f82e3fcae6f35cbc7b3d21ecbd8c6ed93f",
+  "source_provenance": {
+   "cpu_dot.h": {
+    "runtime_sha256": "189cc1a0f5cc3b6045cf579872f3e5272e9846be1f8fdf1e39124fa93bd3db3e",
+    "normalized_lf_sha256": "189cc1a0f5cc3b6045cf579872f3e5272e9846be1f8fdf1e39124fa93bd3db3e",
+    "recorded_bytes_match_representation": [
+     "raw_git_blob",
+     "LF"
+    ]
+   },
+   "utils.cpp": {
+    "runtime_sha256": "aa50bd7176f2854c724c913d875916b9cb4803fd53e74eb09d964c651ba2018b",
+    "normalized_lf_sha256": "234cea72fcc777953bd25faf3e2b92bd17dbe3d51bdf876a58651aa89e2c28c8",
+    "recorded_bytes_match_representation": [
+     "CRLF"
+    ]
+   },
+   "CMakeLists.txt": {
+    "runtime_sha256": "2615c3ae0568ee50cd034ec8154d00411d8a1284460c3a7333223680b4e8ac60",
+    "normalized_lf_sha256": "2615c3ae0568ee50cd034ec8154d00411d8a1284460c3a7333223680b4e8ac60",
+    "recorded_bytes_match_representation": [
+     "raw_git_blob",
+     "LF"
+    ]
+   },
+   "graph_ir.cpp": {
+    "runtime_sha256": "f214f6c33ad596133ffcba8e17e65ae8527eb5bb10ae999e5e8921cae8e0cb76",
+    "normalized_lf_sha256": "7d31e3b3777b3a1605b818e35c3f49c85588e92a0e2de367f712f90188107f61",
+    "recorded_bytes_match_representation": [
+     "CRLF"
+    ]
+   },
+   "graph_ir_ops.cpp": {
+    "runtime_sha256": "0b548dd6f1e939f46600ff19768bc0154c22634d3cb924a20b516975ac3a4749",
+    "normalized_lf_sha256": "52bf031e6f85b3771aeaa5f932c632389b292eb28937863199b623798f86f1ca",
+    "recorded_bytes_match_representation": [
+     "CRLF"
+    ]
+   },
+   "graph_ir_ops.h": {
+    "runtime_sha256": "af9810f849224a8818fe51a3949d63d61af73c17d3f38f7d91561dc9f1149ce3",
+    "normalized_lf_sha256": "20f58888c8a0797476052b5b73d8c4cf2ca7ff1229b41964712c5026b747e12b",
+    "recorded_bytes_match_representation": [
+     "CRLF"
+    ]
+   },
+   "tools/ir_adapter.cpp": {
+    "runtime_sha256": "a8de39745431752426d788d2a3695dba50e19333515fa7321cf31e49440dc5d2",
+    "normalized_lf_sha256": "8d73566612ffdf626c01632a07b97f3d90babe9c72fcac89be2588ef6c8ab099",
+    "recorded_bytes_match_representation": [
+     "CRLF"
+    ]
+   }
+  }
+ },
+ "audit_artifacts": {
+  "home": "/mnt/c/ml_artifacts/benchmarks/hf_cpu_20261030",
+  "full_replay_audit_sha256": "a93f015278f0f82f6f7ddc3801db5cc67f273a635b591b983e29cff0256a3152",
+  "weight_audit_sha256": "2e270c2006effea8d4ce5e228a5d4f03e89795dbaf67672e1404cf3eb45e3652"
+ },
+ "limits": "Local paired runtime forward latency, including native wrappers/cache strategies and shared-host interference. No model-quality, GPU, isolated-kernel or general engine-ranking claim."
+}

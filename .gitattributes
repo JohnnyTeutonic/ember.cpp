@@ -1,3 +1,8 @@
 # Shell scripts run in WSL/Linux: keep them LF in every checkout, whatever
 # core.autocrlf says (a CRLF build.sh fails with "set: pipefail: invalid option").
 *.sh text eol=lf
+
+# Independent CPU audit binds the exact saved launch/source receipt bytes.
+experiments/hf_cpu_2026-10-30/receipts/cpu_avx2_independent_audit_20261030.json -text
+experiments/hf_cpu_2026-10-30/receipts/cpu_avx2_conformance_launch_20261030.json -text
+experiments/hf_cpu_2026-10-30/receipts/bound_conformance_launcher_20261030.py -text

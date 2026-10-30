@@ -12,7 +12,7 @@ Every timing trial is fsynced to a hash-chained journal. Resume verifies the pro
 
 Preflight: Transformers 4.57.0 cannot load the existing Pythia-160M GGUF (unsupported GPTNeoX GGUF architecture), and no native weights are cached. SmolLM2-135M and Gemma3-270M GGUF loaders passed shape/cache preflight; only the full parity gate establishes eligibility for timings. No weights were downloaded or copied.
 
-Canonical receipts will live under `C:/ml_artifacts/benchmarks/hf_cpu_20261030/`. The original CPU comparison is complete for both supported models. A paired native old/new comparison is in progress for the AVX2 candidate.
+Canonical receipts will live under `C:/ml_artifacts/benchmarks/hf_cpu_20261030/`. The original CPU comparison is complete for both supported models. The paired native old/new AVX2 comparison is also complete; its independent offline audit is recorded in `receipts/cpu_avx2_independent_audit_20261030.json`.
 
 
 ## Original portable CPU build versus Transformers
@@ -31,3 +31,19 @@ All 96 full vocabulary rows and greedy IDs pass for each model (32 rows at each 
 The candidate uses runtime AVX2 dispatch only on supported x86-64 GCC/Clang builds. It preserves eight FP64 accumulation lanes and the previous reduction order; other targets retain the portable implementation. Baseline, native-architecture, explicit-FMA and forced-portable builds each passed 3,840 finite/adversarial bit comparisons. Two CTest targets exercise automatic and forced-portable dispatch. This unit/microbenchmark evidence alone does not establish an end-to-end speedup.
 
 `compare_native.py` checks the current CPU against the reference, loads old/new frozen binaries on the same weights, and requires every captured output bit to equal the retained HF-gated reference before paired ABBA timing. Successful duplicate raw captures are removed only after exact SHA equality with the retained reference; failed captures remain. Every completed trial is hash-chained and checked on resume. `--analyze --out DIR` replays its report without loading models.
+
+
+## Paired old/new native CPU results
+
+All 192 captured full-vocabulary rows and greedy IDs are bit-identical to the retained HF-gated references. Each entry is baseline/optimized median latency from four ABBA trials per build; values above one indicate a measured speedup.
+
+| Model | Prompt tokens | Prefill speedup | Decode speedup |
+|---|---:|---:|---:|
+| smollm2-135m | 16 | 2.380x | 1.041x |
+| smollm2-135m | 128 | 2.798x | 1.094x |
+| smollm2-135m | 512 | 2.637x | 1.145x |
+| gemma3-270m | 16 | 2.578x | 1.483x |
+| gemma3-270m | 128 | 2.869x | 1.496x |
+| gemma3-270m | 512 | 2.494x | 1.425x |
+
+This improves the reference implementation while preserving its arithmetic order. It does not close the CPU gap to Transformers measured above; the optimized cells remain slower. A fresh source/binary-bound conformance run passed 554 cases with zero failures and 44 gradient skips. The independent audit replays all four saved timing analyses, verifies the two weight and two binary hashes and the saved conformance launch/report, and checks the 192 row/ID captures. Timing trials were not repeated to improve the result. GPU comparisons remain separate work.

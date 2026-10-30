@@ -1,0 +1,55 @@
+{
+  "command": [
+    "python3",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/scripts/cpu_budget.py",
+    "run",
+    "--session",
+    "ember",
+    "--job",
+    "bound AVX2 IR conformance",
+    "--cores",
+    "1",
+    "--resume",
+    "preserve prior receipt; a repeat uses fresh filename",
+    "--",
+    "python3",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/keramos/tools/ir_conformance.py",
+    "--adapter",
+    "cmd:/home/jonat/ember_ir_build/ir_adapter",
+    "--json",
+    "/mnt/c/ml_artifacts/benchmarks/hf_cpu_20261030/avx2_ir_conformance_bound.json"
+  ],
+  "started_utc": "2026-10-30T05:33:03.121661+00:00",
+  "finished_utc": "2026-10-30T05:33:19.444297+00:00",
+  "returncode": 0,
+  "binary_and_sources_before_sha256": {
+    "/home/jonat/ember_ir_build/ir_adapter": "daa618dac4300857b3dd6eae8dc6b3f82e3fcae6f35cbc7b3d21ecbd8c6ed93f",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/cpu_dot.h": "189cc1a0f5cc3b6045cf579872f3e5272e9846be1f8fdf1e39124fa93bd3db3e",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/utils.cpp": "aa50bd7176f2854c724c913d875916b9cb4803fd53e74eb09d964c651ba2018b",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/CMakeLists.txt": "2615c3ae0568ee50cd034ec8154d00411d8a1284460c3a7333223680b4e8ac60",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/graph_ir.cpp": "f214f6c33ad596133ffcba8e17e65ae8527eb5bb10ae999e5e8921cae8e0cb76",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/graph_ir_ops.cpp": "0b548dd6f1e939f46600ff19768bc0154c22634d3cb924a20b516975ac3a4749",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/graph_ir_ops.h": "af9810f849224a8818fe51a3949d63d61af73c17d3f38f7d91561dc9f1149ce3",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/tools/ir_adapter.cpp": "a8de39745431752426d788d2a3695dba50e19333515fa7321cf31e49440dc5d2"
+  },
+  "binary_and_sources_after_sha256": {
+    "/home/jonat/ember_ir_build/ir_adapter": "daa618dac4300857b3dd6eae8dc6b3f82e3fcae6f35cbc7b3d21ecbd8c6ed93f",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/cpu_dot.h": "189cc1a0f5cc3b6045cf579872f3e5272e9846be1f8fdf1e39124fa93bd3db3e",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/utils.cpp": "aa50bd7176f2854c724c913d875916b9cb4803fd53e74eb09d964c651ba2018b",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/CMakeLists.txt": "2615c3ae0568ee50cd034ec8154d00411d8a1284460c3a7333223680b4e8ac60",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/graph_ir.cpp": "f214f6c33ad596133ffcba8e17e65ae8527eb5bb10ae999e5e8921cae8e0cb76",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/graph_ir_ops.cpp": "0b548dd6f1e939f46600ff19768bc0154c22634d3cb924a20b516975ac3a4749",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/graph_ir_ops.h": "af9810f849224a8818fe51a3949d63d61af73c17d3f38f7d91561dc9f1149ce3",
+    "/mnt/c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/tools/ir_adapter.cpp": "a8de39745431752426d788d2a3695dba50e19333515fa7321cf31e49440dc5d2"
+  },
+  "log_sha256": "8d0b30d72c6fa36debe1a06ac82f26c461b786c29cefcfcc21669d2a253231f3",
+  "report_sha256": "62784813d6c4239e76257ff84c7130a658100c90761e568130b86ef331757a1a",
+  "counts": {
+    "PASS": 554,
+    "FAIL": 0,
+    "SKIP": 44,
+    "XFAIL": 0,
+    "XPASS": 0
+  },
+  "launcher_sha256": "ec978528a23482c5e274b57f0fcff0a486d9e36da873c60289d08416b5be7ff4"
+}
