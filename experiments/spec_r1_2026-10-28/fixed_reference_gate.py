@@ -119,13 +119,17 @@ def compare(reference, cublas, fixed, limit):
             'row_errors': rows}
 
 
-def validate_plan(m):
+def validate_plan(m, input_map=None):
     if (m.get('schema') != 1 or m.get('rounding') != 1e-4 or not m.get('request_keys')
             or [r['name'] for r in m['runs']] != [model + '_' + leg for model in MODELS for leg in LEGS]):
         raise ValueError('altered/incomplete plan')
-    if any(sha(path) != m['sha256'][key] for key, path in m['inputs'].items()):
+    mapping = input_map or {}
+    if set(mapping) - set(m['inputs']):
+        raise ValueError('unknown input mapping')
+    paths = {key: mapping.get(key, path) for key, path in m['inputs'].items()}
+    if any(sha(path) != m['sha256'][key] for key, path in paths.items()):
         raise ValueError('frozen input changed')
-    if m['request_keys'] != keys(m['inputs']['prompts']):
+    if m['request_keys'] != keys(paths['prompts']):
         raise ValueError('request inventory differs from frozen prompts')
     for run, (model, leg) in zip(m['runs'], ((model, leg) for model in MODELS for leg in LEGS)):
         if run['model'] != model or run['leg'] != leg or run['gpu_layers'] != (0 if leg == 'cpu' else 999):
@@ -137,10 +141,10 @@ def validate_plan(m):
             raise ValueError('altered gate environment')
 
 
-def analyze(out):
+def analyze(out, input_map=None):
     out = Path(out)
     m = json.loads((out / 'plan.json').read_text())
-    validate_plan(m)
+    validate_plan(m, input_map)
     results = {}
     for model in MODELS:
         loaded = [load(out, r, m) for r in m['runs'] if r['model'] == model]
@@ -167,8 +171,10 @@ if __name__ == '__main__':
     q = sub.add_parser('plan')
     for name in ('binary', 'pick', 'pk', 'prompts', 'output'):
         q.add_argument(name)
-    for action in ('run', 'analyze'):
-        sub.add_parser(action).add_argument('output')
+    sub.add_parser('run').add_argument('output')
+    q = sub.add_parser('analyze')
+    q.add_argument('output')
+    q.add_argument('--input-map')
     args = p.parse_args()
     try:
         if args.action == 'plan':
@@ -176,7 +182,7 @@ if __name__ == '__main__':
         elif args.action == 'run':
             run_plan(args.output)
         else:
-            result = analyze(args.output)
+            result = analyze(args.output, json.loads(Path(args.input_map).read_text()) if args.input_map else None)
             print(json.dumps(result, indent=1))
             sys.exit(0 if result['status'] == 'PASS' else 1)
     except (OSError, ValueError, KeyError, TypeError) as exc:
