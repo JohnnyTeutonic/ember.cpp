@@ -22,14 +22,18 @@ def digest(value):
     return hashlib.sha256(canonical(value)).hexdigest()
 
 
-def atomic_json(path, value):
+def atomic_bytes(path, value):
     path = Path(path)
     temporary = Path(str(path) + '.tmp')
     with temporary.open('wb') as f:
-        f.write(canonical(value) + b'\n')
+        f.write(value)
         f.flush()
         os.fsync(f.fileno())
     os.replace(temporary, path)
+
+
+def atomic_json(path, value):
+    atomic_bytes(path, canonical(value) + b'\n')
 
 
 def sha(path):
@@ -134,6 +138,12 @@ def run(binary, model, pool, table, out, max_new_requests=None, port=8093):
     manifest = {'schema': 1, 'inputs': inputs, 'sha256': {k: sha(p) for k, p in inputs.items()},
                 'client_source_sha256': sha(__file__),
                 'environment': environment, 'requests': len(rows), 'vocab': 16384}
+    source = out / 'source' / 'self_output_pool.py'
+    source.parent.mkdir(exist_ok=True)
+    if not source.exists():
+        atomic_bytes(source, Path(__file__).read_bytes())
+    elif sha(source) != manifest['client_source_sha256']:
+        raise ValueError('frozen source snapshot changed')
     frozen = out / 'manifest.json'
     if frozen.exists():
         if json.loads(frozen.read_text()) != manifest:
@@ -210,6 +220,8 @@ def analyze(out, input_map=None):
         raise ValueError('unknown mapped input')
     if m.get('schema') != 1 or m.get('client_source_sha256') != sha(__file__) or m.get('vocab') != 16384:
         raise ValueError('wrong schema/source/vocabulary')
+    if sha(out / 'source/self_output_pool.py') != m['client_source_sha256']:
+        raise ValueError('frozen source snapshot changed')
     if m.get('environment') != pool_environment(m['inputs']['table']):
         raise ValueError('altered pool environment')
     paths = {k: mapping.get(k, path) for k, path in m['inputs'].items()}

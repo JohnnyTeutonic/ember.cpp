@@ -305,6 +305,8 @@ floored across thirteen sources) and 8,000 pk requests; these are not shortened 
 
 `self_output_pool.py analyze OUT [--input-map local-inputs.json]` independently audits partial or complete
 journals without launching a server. Exact-hash local file mappings allow checking relayed artifacts;
-wrong source, model, request, chain, environment, health or summary data are rejected. Twenty offline
+wrong source, model, request, chain, environment, health or summary data are rejected. The exact
+standalone client/auditor source is bundled under OUT/source for future checks after a checkout changes.
+Twenty-one offline
 regressions pass, including resume without repeat sampling, torn writes, corruption, HALTED preservation
 and read-only relay checks. This is preparation, not a completed self-output experiment or speed claim.
