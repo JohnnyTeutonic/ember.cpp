@@ -82,3 +82,21 @@ sha256 in `bins.sha256`). The page serves Mixtral on the llama path.
 
 `synth_gate.sh`, `synth_gate.py`, `llama_path.cpp`, `wasm_gate.sh`; the staged CUDA leg `e4_stage.sh`,
 `e4_drive.sh`, `e4_vm.sh`; `receipts/synth/`, `receipts/wasm/`.
+
+## Fail-closed combined remote gate, 30 October 2026
+
+`e4_stage.sh` now stages all ten synthetic files and refuses to overwrite an existing stage directory.
+`e4_vm.sh` builds the registered E4 device harness and runs each file against its 40 HF sequences in
+three modes: default, deterministic first, deterministic repeat. Eight files must actually execute on
+CUDA; `deepseek2_dense_yarn` and `deepseek3` must use the documented CPU fallback. The harness compares
+CPU/HF and device/HF greedy continuations, CPU/device greedy and all 640 step argmaxes, finite logit
+errors within 1e-4 of the row range, and writes every device row. Deterministic repeats require exact
+JSON and row bytes. The full v1.6.1 conformance suite runs through the CUDA build's CPU adapter too.
+
+The old VM script only logged nonzero exits and repeatability differences, then wrote VM_DONE.
+It has been replaced: `e4_check.py` requires every report and full-sized dump, the complete case
+inventory, actual backend flags and zero suite failures before VM_DONE. Partial archives are saved
+at two-minute intervals and on failure. Eleven offline regressions cover missing/truncated evidence,
+wrong backend, bad numerical/greedy outcomes, NaNs, differing row bits and suite failures; all pass.
+The CUDA host harness compiles with g++ against CUDA12.6 headers; no local GPU used. This preparation
+is not evidence that the device gate has passed. Actual run receipts will be recorded separately.

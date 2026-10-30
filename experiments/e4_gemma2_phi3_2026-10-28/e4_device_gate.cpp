@@ -18,6 +18,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -45,6 +46,7 @@ double rel_row(const float* a, const float* ref, int n) {
   float lo = ref[0], hi = ref[0];
   double d = 0.0;
   for (int i = 0; i < n; ++i) {
+    if (!std::isfinite(a[i]) || !std::isfinite(ref[i])) return std::numeric_limits<double>::infinity();
     lo = std::min(lo, ref[i]);
     hi = std::max(hi, ref[i]);
     d = std::max(d, std::fabs(static_cast<double>(a[i]) - ref[i]));
@@ -131,6 +133,8 @@ int main(int argc, char** argv) {
               {"device_supported", supported},
               {"on_gpu", dev ? dev->on_gpu() : false},
               {"cases", n},
+              {"vocab", V},
+              {"rows_dumped", steps},
               {"cpu_greedy_vs_hf", frac(cpu_hf)},
               {"cpu_worst_first_rel_hf", worst_cpu_hf}};
   if (dev) {
@@ -146,5 +150,5 @@ int main(int argc, char** argv) {
   json brief = out;
   brief.erase("rows");
   std::cout << brief.dump() << "\n";
-  return cpu_hf == n && (!dev || dev_hf == n) ? 0 : 1;
+  return n > 0 && cpu_hf == n && (!dev || (dev_hf == n && dev_cpu == n && step_top1 == steps)) ? 0 : 1;
 }
