@@ -324,3 +324,17 @@ has complete deterministic row dumps and a repeated plain control. Nonfinite row
 controls and cross-device timing are classified explicitly. Complete negative or invalid legs are
 never retried to obtain a pass. Forty-two client, candidate and evaluation regressions pass together.
 These are prepared acceptance checks; device outcomes remain pending and no default is changed.
+
+### Fixed-linear reference gate: complete negative result
+
+The complete six-leg L4/CPU matrix and 1,534,723,113-byte canonical archive have been independently
+verified: streaming SHA256, ZIP CRC, actual archived executable and original input bytes, every
+request/row, and exact agreement with the remote report. The final receipt is
+`receipts/fixed_reference_20261030_final.json`; temporary extracted files were removed.
+
+Both models meet ROUNDING on every row, with worst normalized fixed errors 1.08535e-6 (pick) and
+7.61929e-7 (pk), against 1e-4. All 260 request identities align for each model. The stricter requirement
+that fixed be no farther from CPU than cuBLAS fails on 1,223/3,829 pick rows and 1,105/4,725 pk rows.
+The largest extra absolute errors are 4.05312e-6 and 4.91738e-6 respectively. Overall **FAIL** is a valid
+negative result under the unchanged acceptance criterion. Fixed remains opt-in; no default was changed,
+no tolerance was relaxed, and no completed scientific leg was retried.
