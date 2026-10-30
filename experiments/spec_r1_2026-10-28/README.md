@@ -234,7 +234,7 @@ The extra off/off dump control matters: default CUDA arithmetic is not generally
 (`determinism.h`). If its repeated baseline rows already differ, the bit gate is reported
 `BASELINE_UNSTABLE`, not attributed to the new option. No relaxed numerical tolerance is substituted.
 `PASS` covers only these measured rows/ids/timing checks; graph-refusal and penalty device checks
-remain separate, and no default adoption follows automatically. No device run has occurred.
+remain separate, and no default adoption follows automatically. These offline tests do not establish device execution.
 
 `python3 test_decode_pick_gate.py`: 14 offline fixture regressions passed, including deliberately
 corrupted rows, timing, ids, hashes, modes and baseline control. Ruff passed for both new scripts.
@@ -254,3 +254,18 @@ The campaign preserves partial archives every two minutes. A complete valid `NO_
 `BASELINE_UNSTABLE` result is an operationally completed job with a negative scientific outcome;
 an incomplete receipt or failed CUDA/fallback test remains a failure. The fixed-order default,
 self-output draft tables, secondary model and default adoption are outside this bounded campaign.
+
+The 30 October L4 campaign has preliminary device evidence in `receipts/decode_pick_20261030_*.json`.
+All six handcrafted CUDA cases and all 48 fallback requests passed. The frozen file has 100 items
+(40 chat, 20 copy, 40 five-turn Carry conversations), yielding 260 actual requests per leg. All seven
+default-mode legs have equal reply/ids/prompt ids/stop/token count, but the repeated option-off baseline's
+row bytes differ: the default bit comparison is inconclusive. Deterministic off/repeat/on full row bytes
+and ids agree exactly. Its four ABBA timing legs remain pending; these preliminary receipts have
+`complete=false` and do not close E10.3 or establish default adoption.
+
+Before the original driver deadline, only the orchestration parent was paused while its current
+`dr_e2e.py` child finished and independently wrote valid metadata. This held all four deterministic
+ABBA legs for one replacement L4, avoiding a pair split across pods. The runner then terminated its
+own pod normally at 02:57 UTC, retaining all ten completed legs and the volume under the same $2
+cumulative cap. No completed scientific leg is retried by the verified-resume wrapper. Full raw dumps
+remain in the supervised campaign's volume until its canonical archive is home and checked.
