@@ -42,7 +42,7 @@ for family in mixtral qwen2moe qwen3moe deepseek2 deepseek2_qlora gemma2 phi3_lo
  for mode in default det1 det2; do
   det=0; [ "$mode" = default ] || det=1
   echo "--- $family $mode $(date -u +%T)"
-  env EMBER_DETERMINISTIC="$det" EMBER_GEMM_TF32=0 "$B/e4_device_gate" \
+  env EMBER_IR_BUILD=1 EMBER_DETERMINISTIC="$det" EMBER_GEMM_TF32=0 "$B/e4_device_gate" \
    "$SM/e4_synth/$family.gguf" "$SM/e4_synth/$family.cases.json" \
    "$OUT/${family}_${mode}.json" "$OUT/${family}_${mode}.bin" \
    > "$OUT/${family}_${mode}.stdout" 2> "$OUT/${family}_${mode}.log" || echo "nonzero gate: $family $mode"
