@@ -23,6 +23,9 @@ set -uo pipefail
 cd /content
 exec > /content/gate_vm.log 2>&1
 HEAD_C=${1:?ember head}; PHASES=${2:-eval_qwen3,eval_qwen25,tfd_qwen3,tfd_qwen25,g1,g2,g3}
+FORMATS=${KVQ_FORMATS:-f16,q8,q4}
+unset EMBER_KV EMBER_DETERMINISTIC
+CHECK=/content/src/new/ember/tools/kvq_gate_check.py
 OUT=/content/out; M=/content/models
 mkdir -p "$OUT" "$M" /content/src/new /content/src/base
 fail() { echo "FAILED: $*"; echo "$*" > /content/GATE_FAILED; pack; exit 1; }
@@ -48,17 +51,28 @@ build() {  # tree targets...: a Release CUDA build for this GPU (sm_$ARCH) in /c
   make "$@" -j"$JOBS" > make.log 2>&1
 }
 # The new tree first on every core; the base tree (g1 only) in the background once the eval is running.
-JOBS=$(nproc) build new kv_quant_eval ir_device_dump ir_device_gate || { tail -30 /content/build_new/make.log; fail "build new"; }
+JOBS=${KVQ_BUILD_JOBS:-4} build new kv_quant_eval ir_device_dump ir_device_gate || { tail -30 /content/build_new/make.log; fail "build new"; }
 cd /content
 echo "--- build new done $(date -u +%T)"
-( JOBS=6 build base ir_device_dump; echo $? > /content/build_base.rc ) &
+( JOBS=${KVQ_BUILD_JOBS:-4} build base ir_device_dump; echo $? > /content/build_base.rc ) &
 BASE_PID=$!
 tar xzf /content/inputs.tgz -C /content && cp /content/inputs/*.json $OUT/ || fail "inputs"
 python3 - <<'PY' || fail "downloads"
 from huggingface_hub import hf_hub_download, snapshot_download
 hf_hub_download("Qwen/Qwen3-0.6B-GGUF", "Qwen3-0.6B-Q8_0.gguf", local_dir="/content/models/qwen3")
 hf_hub_download("Qwen/Qwen2.5-0.5B-Instruct-GGUF", "qwen2.5-0.5b-instruct-fp16.gguf", local_dir="/content/models/qwen25")
-print("downloads done")
+import hashlib
+from pathlib import Path
+expected = {
+    '/content/models/qwen3/Qwen3-0.6B-Q8_0.gguf': '9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031',
+    '/content/models/qwen25/qwen2.5-0.5b-instruct-fp16.gguf': '8e0ae26000627ed62de0e78e41860af70094558b9d2913385c842a6aa06cf3fc',
+}
+for path, digest in expected.items():
+    h = hashlib.sha256()
+    with Path(path).open('rb') as stream:
+        for block in iter(lambda: stream.read(8 * 1024 * 1024), b''): h.update(block)
+    if h.hexdigest() != digest: raise SystemExit('model hash mismatch: ' + path)
+print("downloads verified")
 PY
 QWEN3=$M/qwen3/Qwen3-0.6B-Q8_0.gguf; QWEN25=$M/qwen25/qwen2.5-0.5b-instruct-fp16.gguf
 sha256sum $QWEN3 $QWEN25 /content/inputs/*.json > $OUT/models.sha256; cat $OUT/models.sha256
@@ -76,8 +90,8 @@ evals() {  # spec...: "phase model list" runs of tools/kv_quant_eval
   want ${ph}_$m || continue
   echo "--- ${ph} $m ($list) $(date -u +%T)"
   mkdir -p $OUT/eval_$m
-  $NEW/kv_quant_eval ${GG[$m]} $OUT/inputs_$m.json $OUT/eval_$m --phases $list > $OUT/eval_$m/stdout_$ph.log \
-    2> $OUT/eval_$m/stderr_$ph.log || echo "${ph} $m failed: $(tail -3 $OUT/eval_$m/stderr_$ph.log)"
+  $NEW/kv_quant_eval ${GG[$m]} $OUT/inputs_$m.json $OUT/eval_$m --formats "$FORMATS" --phases $list > $OUT/eval_$m/stdout_$ph.log \
+    2> $OUT/eval_$m/stderr_$ph.log || fail "${ph} $m: $(tail -3 $OUT/eval_$m/stderr_$ph.log)"
   grep -v "^\[" $OUT/eval_$m/stderr_$ph.log | tail -12 | cut -c1-600
   phase_done ${ph}_$m
  done
@@ -86,11 +100,13 @@ evals "eval qwen3 bench,greedy,tf_prefill" "eval qwen25 bench,greedy,tf_prefill"
 
 dump() {  # bin out gguf args...: one ir_device_dump receipt
   local bin=$1 out=$2 g=$3; shift 3
-  $bin/ir_device_dump "$g" "$out" "$@" > "$out.log" 2>&1 || echo "dump $out failed: $(tail -2 $out.log)"
+  $bin/ir_device_dump "$g" "$out" "$@" > "$out.json" 2> "$out.log" || fail "dump $out: $(tail -2 $out.log)"
+  python3 "$CHECK" dump "$out" "$@" > "$out.check.json" || fail "invalid dump $out"
 }
 same() {  # a b label: byte equality of two dumps, one line per comparison in $OUT/gates.txt
   if [ -s "$1" ] && cmp -s "$1" "$2"; then r=IDENTICAL; else r=DIFFER; fi
   echo "$3 $r $(sha256sum < "$1" | cut -c1-16) $(sha256sum < "$2" | cut -c1-16)" | tee -a $OUT/gates.txt
+  [ "$r" = IDENTICAL ] || fail "byte comparison failed: $3"
 }
 if want g1; then
   wait $BASE_PID  # the base build only (a bare wait would also wait for the receipt packer below)
@@ -112,6 +128,7 @@ if want g1; then
     # the default mode run to run under EMBER_DETERMINISTIC=1 (the base run above is the first)
     EMBER_DETERMINISTIC=1 dump $NEW $OUT/g1/${m}_long_det1_new_run2.bin ${GG[$m]} --ids $OUT/long_$m.json --gen 32
     same $OUT/g1/${m}_long_det1_new.bin $OUT/g1/${m}_long_det1_new_run2.bin "g1 $m long det=1 new run-to-run"
+    rm -f "$OUT/g1/${m}_"*.bin  # hashes and validated byte counts remain in the receipts
   done
   phase_done g1
 fi
@@ -119,7 +136,7 @@ if want g2; then
   echo "--- g2: each format run to run, EMBER_DETERMINISTIC=1 $(date -u +%T)"
   mkdir -p $OUT/g2
   for m in qwen3 qwen25; do
-    for f in f16 q8 q4; do
+    for f in ${FORMATS//,/ }; do
       for r in 1 2; do
         EMBER_KV=$f EMBER_DETERMINISTIC=1 dump $NEW $OUT/g2/${m}_${f}_long_run$r.bin ${GG[$m]} --ids $OUT/long_$m.json --gen 32
         EMBER_KV=$f EMBER_DETERMINISTIC=1 dump $NEW $OUT/g2/${m}_${f}_short_run$r.bin ${GG[$m]} --n 40 --len 24 --gen 32
@@ -127,9 +144,12 @@ if want g2; then
       same $OUT/g2/${m}_${f}_long_run1.bin $OUT/g2/${m}_${f}_long_run2.bin "g2 $m $f long det=1 run-to-run"
       same $OUT/g2/${m}_${f}_short_run1.bin $OUT/g2/${m}_${f}_short_run2.bin "g2 $m $f short det=1 run-to-run"
     done
-    # without EMBER_DETERMINISTIC (the format's kernels have no atomics; cuBLAS is the mode's own)
+    # without EMBER_DETERMINISTIC, only when q8 is part of this requested campaign
+    if [[ ",$FORMATS," == *,q8,* ]]; then
     for r in 1 2; do EMBER_KV=q8 dump $NEW $OUT/g2/${m}_q8_long_nodet_run$r.bin ${GG[$m]} --ids $OUT/long_$m.json --gen 32; done
     same $OUT/g2/${m}_q8_long_nodet_run1.bin $OUT/g2/${m}_q8_long_nodet_run2.bin "g2 $m q8 long det=0 run-to-run"
+    fi
+    rm -f "$OUT/g2/${m}_"*.bin
   done
   rm -f $OUT/g2/*.bin $OUT/g1/*.bin  # equality is recorded in gates.txt with each file's hash
   phase_done g2
@@ -138,9 +158,9 @@ if want g3; then
   echo "--- g3: device against the CPU's form of each format $(date -u +%T)"
   mkdir -p $OUT/g3
   for m in qwen3 qwen25; do
-    for f in f32 f16 q8 q4; do
-      EMBER_KV=$f $NEW/ir_device_gate ${GG[$m]} --n 12 --len 24 --gen 32 > $OUT/g3/${m}_$f.json 2> $OUT/g3/${m}_$f.log
-      echo "g3 $m $f rc=$? $(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); d.pop('rows',None); print(json.dumps(d))" $OUT/g3/${m}_$f.json 2>&1 | cut -c1-400)" | tee -a $OUT/gates.txt
+    for f in f32 ${FORMATS//,/ }; do
+      EMBER_KV=$f $NEW/ir_device_gate ${GG[$m]} --n 12 --len 24 --gen 32 > $OUT/g3/${m}_$f.json 2> $OUT/g3/${m}_$f.log || fail "device/CPU gate: $m $f"
+      echo "g3 $m $f rc=0 $(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); d.pop('rows',None); print(json.dumps(d))" $OUT/g3/${m}_$f.json 2>&1 | cut -c1-400)" | tee -a $OUT/gates.txt
     done
   done
   phase_done g3
@@ -149,11 +169,12 @@ evals "tfd qwen3 tf_decode" "tfd qwen25 tf_decode"
 # Qwen2.5-0.5B-Instruct's GGUF declares 8,192 positions, so its 8K bench runs at 8,064 (+ 128 steps).
 if want tfd_qwen25; then
   mkdir -p $OUT/eval_qwen25_8064
-  $NEW/kv_quant_eval $QWEN25 $OUT/inputs_qwen25.json $OUT/eval_qwen25_8064 --phases bench --contexts 8064 \
-    > $OUT/eval_qwen25_8064/stdout.log 2> $OUT/eval_qwen25_8064/stderr.log || echo "bench 8064 failed"
+  $NEW/kv_quant_eval $QWEN25 $OUT/inputs_qwen25.json $OUT/eval_qwen25_8064 --formats "$FORMATS" --phases bench --contexts 8064 \
+    > $OUT/eval_qwen25_8064/stdout.log 2> $OUT/eval_qwen25_8064/stderr.log || fail "bench 8064"
   phase_done bench_qwen25_8064
 fi
 rm -f $OUT/g1/*.bin $OUT/g2/*.bin
+python3 "$CHECK" summary "$OUT" --phases "$PHASES" --formats "$FORMATS" > "$OUT/gate_summary.json" || fail "receipt validation"
 pack
 echo "=== done $(date -u) ==="
 touch /content/GATE_DONE
