@@ -1,12 +1,16 @@
 # pk_sft_v1 release gate for the browser Space, 28 Oct 2026
 
+Published 30 Oct 2026: Space commit `8e107b9706f81fec53749fa59da7602344e6c776`, website commit
+`fdbaa1deded14881cfbe70c10526c1fe915c2c3d`. All 13 remote files match the staged manifest.
+See `published_2026-10-30.json` for the publication verification; the measurements below are the prior gates.
+
 LOCAL_LLM_WORK.md E2.2. The gate for a quantised Space build (LOCAL_LLM_STACK.md section 3, point 1:
 greedy parity, plus a measured logit error): the file in ember against F32 ember, greedy 40/40 on the
 frozen chat prompts. **Q8_0-all (118 MB) fails it: 37/40.** Of the files between it and F32 (441 MB),
 every Q8_0 variant fails the same way and **F16 (221 MB) passes**, with WebAssembly = native and
 WebGPU (SwiftShader) = WebAssembly 40/40. The selection rule (the smallest file that passes 40/40
-within the contract) picks F16. It is staged in WSL `~/e22rel/space`; nothing was uploaded
-(sections "Variants", "The F16 file on the page's paths", "Staged release").
+within the contract) picks F16. The 28 Oct staged artifacts were published on 30 Oct
+(sections "Variants", "The F16 file on the page's paths", "Release staging and publication").
 
 ## Files (sha256 checked against LOCAL_LLM_STACK.md section 10, 25 Oct entry)
 
@@ -120,7 +124,7 @@ F16, 221 MB. Its error is within every bound used before (release_chat.py's 1% o
   and saw no context on a hardware adapter. 141 s per reply on one core (SwiftShader runs WGSL on the
   CPU; this says the path is correct, nothing about its speed on a GPU), 5,899 s in all.
 
-## Staged release (nothing uploaded)
+## Release staging and publication
 
 - `~/e22rel/space` (WSL ext4, 214 MB): the layout of `tools/build_wasm_space.sh` from the 9d993f4
   tree: `README.md` (the Space card, `staged/README_space.md`), `index.html` (`staged/index.html`),
@@ -137,7 +141,7 @@ F16, 221 MB. Its error is within every bound used before (release_chat.py's 1% o
   manifest and that the account is johnnyteutonic, needs `--confirm ember-chat`, and makes one commit
   to the Space (files of the same name replaced, nothing deleted; the live Space gains `webgpu/`).
 
-Publish commands (not run): `PUBLISH.md`.
+Publication commands and history: `PUBLISH.md`.
 
 ## Reproduce (WSL; every heavy step under scripts/cpu_budget.py, 1 core)
 

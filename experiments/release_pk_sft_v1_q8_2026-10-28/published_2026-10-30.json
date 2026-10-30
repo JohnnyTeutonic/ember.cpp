@@ -1,0 +1,17 @@
+{
+ "date": "2026-10-30",
+ "authorization": "Author autonomous completion mission, resumed after BioSystems resubmission",
+ "space": "https://huggingface.co/spaces/johnnyteutonic/ember-chat",
+ "space_commit": "8e107b9706f81fec53749fa59da7602344e6c776",
+ "all_13_staged_file_hashes_verified": true,
+ "live_space_page_verified": true,
+ "website_commit": "fdbaa1deded14881cfbe70c10526c1fe915c2c3d",
+ "live_website_verified": true,
+ "model": "pk_sft_v1 F16",
+ "model_bytes": 220919008,
+ "model_sha256": "3916b3ae617f01b6610e8c6a8ebfab301227c83cad2d40b33d90d548a639b957",
+ "wasm_sha256": "23f8d86ebaeffb21b6400dc8bba26a01c5647c3fe720ffddf51cd5241d582477",
+ "manifest_sha256": "3ca8505fb301bd9d1138a4d1161e186e82cb6934a7e2044393289b5166d24ac9",
+ "checks": "Prior release receipt40/40 F16vsF32, WASMvsnative, SwiftShaderWebGPUvsWASM; publication hash verification establishes same artifacts, not a new hardware benchmark",
+ "heap_sizing_fix": "fdeb1e1; 10 offline release tests pass"
+}

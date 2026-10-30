@@ -1,4 +1,8 @@
-# Publishing pk_sft_v1 F16 to the Space and the site (not run; on Jonathan's go only)
+# Publishing pk_sft_v1 F16 to the Space and the site
+
+**Completed 30 October 2026 under the author's autonomous completion mission.** Space commit
+`8e107b9706f81fec53749fa59da7602344e6c776`; website commit `fdbaa1deded14881cfbe70c10526c1fe915c2c3d`.
+Remote manifest verification is recorded in `published_2026-10-30.json`. Commands below preserve the reproduction procedure.
 
 Staged: WSL `~/e22rel/space` (13 files, 214 MB; `staged/MANIFEST.sha256`), the site page
 `staged/chat.html`. Run from Git Bash on the laptop. The token is read by `publish_space.py` from the
@@ -41,10 +45,10 @@ The workspace's source copy of the site (local-only root repository, nothing pub
     cp /c/Users/jonat/OneDrive/Documents/research_portfolio_complete/ember.cpp/experiments/release_pk_sft_v1_q8_2026-10-28/staged/chat.html /c/Users/jonat/OneDrive/Documents/research_portfolio_complete/website/chat.html
     cd /c/Users/jonat/OneDrive/Documents/research_portfolio_complete && git add website/chat.html && git commit -m "website/chat.html: pk_sft_v1 on the Space" -- website/chat.html
 
-## 3. After both
+## 3. Closure
 
-- `rm /home/jonat/e22rel/space/chat.gguf` (WSL; the upload's working copy; the file's home is
-  `C:/ml_artifacts/general_chat/sft/pk_sft_v1_f16.gguf`).
-- ember: `deploy/wasm/README_space.md` and `deploy/wasm/web/index.html` from `staged/` describe the
-  live Space; `tools/release_chat.py` picks a 1gb heap for files under 250 MB, which is too small for
-  an F16 file of this model (bad_alloc at 1gb), so its heap rule needs the dequantised size.
+- Local `deploy/wasm/README_space.md` and `deploy/wasm/web/index.html` now describe the live Space.
+- The release tool's former file-size-only heap heuristic is fixed: the F32 export is the size floor
+  for expanded weights (fdeb1e1, 10 offline tests pass). The published build is the prior gated 2gb binary.
+- The upload's working model copy is replaced by a link to its canonical artifact after verifying both hashes;
+  `C:/ml_artifacts/general_chat/sft/pk_sft_v1_f16.gguf` remains the model's home.
