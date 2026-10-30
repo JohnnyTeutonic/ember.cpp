@@ -101,6 +101,7 @@ def validate_control(control, returncode, ids):
 
 
 def audit(archive, outer_report, readiness, scratch):
+    audit_source_sha = analysis.sha(Path(__file__))
     execution = json.loads((outer_report.parent/'execution.json').read_text())
     if execution.get('complete') is not True or execution.get('exit_code') != 0:
         raise ValueError('terminal operational execution is incomplete')
@@ -166,10 +167,13 @@ def audit(archive, outer_report, readiness, scratch):
             folder = root/'diagnosis'/('control_'+name)
             record = check_leg(folder, control)
             validate_control(control, record['returncode'], replay['ids'])
+        if audit_source_sha != analysis.sha(Path(__file__)):
+            raise ValueError('offline auditor source changed during replay')
         if archive_sha != analysis.sha(archive):
             raise ValueError('canonical ZIP changed during audit')
         return {'status':'RAW_DIAGNOSIS_REPLAY_VERIFIED', 'e9_closed':False,
                 'archive_sha256':archive_sha,'archive_bytes':archive.stat().st_size,
+                'audit_source_sha256':audit_source_sha,'frozen_helper_sha256':analysis.sha(Path(analysis.__file__)),
                 'source':plan['source'],'runner':plan['runner'],'zip':zip_receipt,
                 'model_sha256':MODEL_SHA,'ids_sha256':plan['ids_sha256'],'execution':execution,
                 'remote_numpy':reported['numpy_version'],'replay_numpy':replay['numpy_version'],
@@ -186,5 +190,9 @@ if __name__ == '__main__':
     if args.output.exists():
         raise FileExistsError('audit receipt is immutable')
     result=audit(args.archive,args.report,args.readiness,args.scratch)
-    args.output.write_text(json.dumps(result,indent=1,allow_nan=False)+'\n')
+    temporary=args.output.with_suffix(args.output.suffix+'.partial')
+    temporary.write_text(json.dumps(result,indent=1,allow_nan=False)+'\n')
+    if args.output.exists():
+        raise FileExistsError('audit receipt appeared during replay; preserve it')
+    temporary.replace(args.output)
     print(json.dumps({'status':result['status'],'e9_closed':False}))
