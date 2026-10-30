@@ -1,0 +1,14 @@
+{
+  "cuda_compiled": false,
+  "native_import_pass": true,
+  "ModelConfig_callable": true,
+  "TinyLlamaSession_callable": true,
+  "module_sha256": "1f9145195d4a41b8fffa807d06d425c190238c754b414118b39e97f8eca4b25f",
+  "scope": "Actual locally rebuilt CPU extension; CUDA compilation capability metadata, not a device availability check",
+  "source_commit": "87234ef2eb82ea867c1368ec044e296746e8ab82",
+  "source_sha256": {
+    "bindings.cpp": "33700ef147a52450cb57daca949309b0dc7d56285897e56653d90f94c7d9eb27",
+    ".github/workflows/build-wheels.yml": "f1af73f025e54997dbcf02cd33309e33f38b7def12bd13ba9c998d350b602570",
+    ".github/scripts/test_wheel_workflow.py": "d678af75646b36ec1a62318fad219328d7d92986a080ebfb17b9af70d9086b47"
+  }
+}
