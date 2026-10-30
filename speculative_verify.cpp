@@ -282,7 +282,7 @@ bool TinyLlamaModel::forward_device_verify_graph(const std::vector<int>& tokens,
       if (e == cudaSuccess) e = e_end;
       cublasSetStream(cublas_handle_, 0);
       cudaGraphExec_t exec = nullptr;
-      if (e == cudaSuccess) e = cudaGraphInstantiate(&exec, graph, 0);
+      if (e == cudaSuccess) e = cudaGraphInstantiateWithFlags(&exec, graph, 0);
       if (graph) cudaGraphDestroy(graph);
       if (e != cudaSuccess) {
         cudaGetLastError();

@@ -57,6 +57,36 @@ class WheelWorkflowTests(unittest.TestCase):
             (package / "tinyllama_bindings.py").write_text("TinyLlamaSession = None\nModelConfig = None\ncuda_compiled = False\n")
             check(False)  # Required APIs must actually be callable.
 
+    def test_graph_instantiation_calls_compile_with_cuda_118_and_121_contracts(self):
+        import shutil
+        compiler = shutil.which("c++") or shutil.which("g++")
+        self.assertIsNotNone(compiler, "C++ compiler required for CUDA API compatibility contract")
+        calls = []
+        for name in ("model.cpp", "speculative_verify.cpp"):
+            source = (ROOT / name).read_text()
+            found = re.findall(r"cudaGraphInstantiate(?:WithFlags)?\([^;]+\)", source)
+            self.assertEqual(len(found), 1)
+            calls += found
+        # Official runtime headers: 11.8's base API has five parameters; 12.1's has
+        # three. WithFlags has the same three-parameter signature in both:
+        # docs.nvidia.com/cuda/archive/{11.8.0,12.1.1}/cuda-runtime-api/group__CUDART__GRAPH.html
+        common = "using cudaGraphExec_t = void*; using cudaGraph_t = void*; using cudaGraphNode_t = void*; using cudaError_t = int;\n"
+        common += "cudaError_t cudaGraphInstantiateWithFlags(cudaGraphExec_t*, cudaGraph_t, unsigned long long);\n"
+        legacy = "cudaError_t cudaGraphInstantiate(cudaGraphExec_t*, cudaGraph_t, cudaGraphNode_t*, char*, unsigned long);\n"
+        modern = "cudaError_t cudaGraphInstantiate(cudaGraphExec_t*, cudaGraph_t, unsigned long long);\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "graph_contract.cpp"
+            def compile_call(declaration, call):
+                path.write_text(common + declaration + "int main() { cudaGraphExec_t exec{}, decode_graph_exec_{}; cudaGraph_t graph{}; return " + call + "; }\n")
+                return subprocess.run([compiler, "-std=c++17", "-fsyntax-only", "-Werror", str(path)], capture_output=True)
+            for call in calls:
+                for declaration in (legacy, modern):
+                    proc = compile_call(declaration, call)
+                    self.assertEqual(proc.returncode, 0, proc.stderr)
+                old_call = call.replace("cudaGraphInstantiateWithFlags", "cudaGraphInstantiate")
+                self.assertNotEqual(compile_call(legacy, old_call).returncode, 0)
+                self.assertEqual(compile_call(modern, old_call).returncode, 0)
+
     def test_actual_version_step_changes_only_project_version(self):
         import tomllib
         import sys
