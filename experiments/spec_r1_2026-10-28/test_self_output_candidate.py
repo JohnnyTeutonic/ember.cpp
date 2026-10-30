@@ -6,6 +6,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
 import r1_sim
+import self_output_pool
 
 
 def test_merge_preserves_empty_high_orders_and_corpus_priority(tmp_path):
@@ -27,3 +28,18 @@ def test_merge_preserves_empty_high_orders_and_corpus_priority(tmp_path):
     assert vocab == 16384 and len(tables) == 6
     assert tables[0]['next'].tolist() == [9]
     assert all(t['keys'].size == 0 for t in tables[1:])
+
+
+def test_canonical_checkpoint_journal_builds_existing_self_table(tmp_path):
+    journal = tmp_path / 'outputs.jsonl'
+    response = {'reply': 'hello', 'ids': [4], 'prompt_ids': [1, 2], 'stop_id': 3, 'tokens': 1}
+    previous = '0' * 64
+    for i in range(2):
+        previous = self_output_pool.append(journal, i, {'user_input': str(i)}, response, previous, 16384)
+    built = tmp_path / 'self.npz'
+    r1_sim.cmd_build(SimpleNamespace(out=str(built), corpus=None, pool=str(journal),
+                                     orders=6, min_count=2, min_conf=0.10))
+    table = r1_sim.Table(str(built))
+    assert table.orders == 6
+    assert table.lookup([1, 2]) == (4, 1.0, 2)
+    assert table.lookup([2, 4]) == (3, 1.0, 2)
