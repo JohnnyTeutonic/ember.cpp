@@ -222,3 +222,25 @@ Four L4 sessions, about 187 minutes in all (about 15 units at 4.8 units an hour)
 - **Rerunning.** One session with
   `bash tools/colab_kvq_drive.sh <session> 115 <stage> g1,g2,g3,tfd_qwen3,tfd_qwen25 L4`, from a stage of
   ember HEAD and the inputs, reruns everything still open.
+
+## E9 f16 gate campaign, 30 October 2026
+
+The rerun selects only f16 (`KVQ_FORMATS=f16`), because q8/q4 are not adoption candidates. Existing
+model/input hashes and the original 40 short prompts, two 3,072-id prompts, 32 generated tokens,
+12-prompt CPU/device gate and 1e-4 tolerance remain fixed. Both models' decode teacher forcing is
+compared against the corresponding stored prefill observations, without increasing their bounds.
+The recorded prefill figures are measurements, so a larger decode error is reported as a failed
+comparison, not silently accepted under a new tolerance.
+
+`colab_kvq_vm.sh` now fails closed: dump/evaluation errors, byte differences or a failed CPU/device
+process create GATE_FAILED; dump sizes must match the requested logits/id inventory; model hashes
+are verified before use; `kvq_gate_check.py` checks all expected comparisons, inputs and JSON evidence
+before GATE_DONE. Binary scratch is removed only after its byte count/hash and comparison are recorded.
+Build concurrency is bounded (`KVQ_BUILD_JOBS`, default 4). Twelve offline validator tests pass.
+
+The RunPod command-only job is `microtorch/tools/colab_chat/ember_e9_device_20261030.json`. The root
+watchdog owns launch and the $3 cap. The wrapper always returns diagnostic artifacts, including an
+explicit false gate summary on timeout; FINISHED means receipts are home, not that the science gate
+passed. Inputs are staged from the original `C:/ml_artifacts/kvq/ember-r2c-3/` files. The 1.9 GB of
+GGUFs are downloaded on the VM, then verified against the prior full SHA-256s. No local GPU is used.
+This paragraph describes tested preparation; it is not a device result.
