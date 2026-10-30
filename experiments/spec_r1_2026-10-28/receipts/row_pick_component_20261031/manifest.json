@@ -1,0 +1,26 @@
+{
+  "ember_commit": "3ae7f47f4ed2d735333461eaa6e0be4212ce94ad",
+  "pk_job_commit": "5de89be1d27db02f23c06213a802f20f5d6b3b2d",
+  "archive_sha256": "42ae638e4b583914690f0ae3c97a3024c64022bd331d8cf999ea477c951a8abb",
+  "vm_sha256": "d7b99c3db049c138c34a863515182ddcf81fbd2baab1c76258669a31d6e9b31a",
+  "source_sha256": {
+    "tools/row_pick_profile/prepare.py": "5c4b9811f921086bff2403f6c400871f9fe1162a6667e55f566aed0648423908",
+    "tools/row_pick_profile/profile.cu": "6bc7455910ae3648adf868149866d5d7167e7866c3fbbec84d3adf2d45bc32a9",
+    "tools/row_pick_profile/run.py": "19e5f9d396bf72de3534052eb0809f7aaa1f0fca7a52ecaa4b9fbd32e9737de0",
+    "tools/row_pick_profile/test_profile.py": "ce4f10490b3c69d83494b3c87c9b944c49cc1ff304361c9ed0d38dd24fd77805",
+    "verify_kernels.cu": "174d92710317ef2f24567f5606f8b5c47b4d3dc6976ad4c921cd5716c2249c8b",
+    "verify_kernels.h": "b03cab664fea334fc46093c6605ddf97be8c7f630d9ebc8ccbdd17c3cee94579"
+  },
+  "max_usd": 1,
+  "max_hours": 0.5,
+  "baseline_prespecified_first": true,
+  "candidate_parity_before_candidate_timing": true,
+  "production_unchanged": true,
+  "local_tests": {
+    "component": 16,
+    "vm_operational": 4,
+    "accepted_sampler_decisions": 19830,
+    "conservative_fallbacks": 5370
+  },
+  "local_compile": "NVCC12.6 -O3 -std=c++17 -arch=sm_89; no local GPU execution"
+}
