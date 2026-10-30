@@ -71,7 +71,7 @@ jobs:
       with:
         cuda: ${{ matrix.cuda_toolkit }}
         method: 'network'
-        sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "curand", "curand_dev", "thrust"]'
+        sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "curand", "curand_dev", "thrust", "nvtx"]'
 
     # CUDA 11.8/12.1 support MSVC 193x, not the windows-latest VS 2026 compiler.
     - name: Install supported MSVC toolset (Windows CUDA)
@@ -102,6 +102,7 @@ jobs:
         "VCPKG_OVERLAY_TRIPLETS=$env:GITHUB_WORKSPACE\.github\triplets\cuda-msvc1434" >> $env:GITHUB_ENV
         $cudaRoot = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.cuda_version }}"
         if (-not (Test-Path "$cudaRoot\bin\nvcc.exe")) { throw "Requested CUDA toolkit is missing: $cudaRoot" }
+        if (-not (Test-Path "$cudaRoot\include\nvtx3\nvToolsExt.h")) { throw "CUDA NVTX development headers are missing" }
         $env:CUDA_PATH = $cudaRoot
         foreach ($name in @('CUDA_PATH', 'CUDA_HOME', 'CUDA_ROOT', 'CUDAToolkit_ROOT')) { "$name=$cudaRoot" >> $env:GITHUB_ENV }
         "CMAKE_CUDA_COMPILER=$cudaRoot\bin\nvcc.exe" >> $env:GITHUB_ENV

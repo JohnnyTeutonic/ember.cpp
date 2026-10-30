@@ -108,6 +108,8 @@ class WheelWorkflowTests(unittest.TestCase):
             self.assertIn('- os: windows-2022\n            cuda_version: "' + version + '"', text)
         self.assertIn('- os: windows-latest\n            cuda_version: "cpu"', text)
         self.assertIn('"thrust"', text)
+        self.assertIn('"nvtx"', text)
+        self.assertIn("CUDA NVTX development headers are missing", text)
         self.assertIn("vsversion: '2022'", text)
         self.assertIn("toolset: '14.34'", text)
         self.assertIn("Microsoft.VisualStudio.Component.VC.14.34.17.4.x86.x64", text)
