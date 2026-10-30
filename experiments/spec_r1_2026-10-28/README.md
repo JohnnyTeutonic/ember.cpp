@@ -279,3 +279,32 @@ therefore remains experimental and the default is unchanged. The executable was 
 output: its SHA is consistent across the plan, binaries list and fallback receipt; local verification
 recomputed model/prompt hashes and all raw row/ID/timing checks, not the absent executable's bytes.
 Temporary extracted files were removed; the ZIP remains the canonical raw artifact outside OneDrive.
+
+### Complete fixed-linear reference gate prepared
+
+`fixed_reference_gate.py` plans six full-dump legs: CPU, deterministic cuBLAS and deterministic fixed
+for each original GGUF, over all 260 frozen requests. Unlike the exploratory `r1_rows.py`, it never
+drops requests with differing IDs. Complete inventories, modes/backends, warm-pass identity, frozen
+inputs, row offsets/lengths and finite values are required. On every CPU-reference row, fixed must
+meet ROUNDING (`max |difference| / max(1, max |CPU row|) <= 1e-4`) and have maximum absolute error no
+larger than cuBLAS's. All per-row errors and their request/turn/position are retained. Fifteen offline
+regressions pass; the bounded `fixed_reference_vm.sh` campaign uses exact original model hashes and
+includes its executable in the final artifact. No engine default changes merely because preparation passes.
+
+### Resumable self-output pool client prepared
+
+`self_output_pool.py run BIN GGUF POOL.jsonl CORPUS_TABLE.bin OUT --max-new-requests 100` is the bounded
+pilot form, to be run only through the supervised remote campaign. Repeating it on the same OUT without
+the cap resumes the same frozen pool. Each completed response is appended and fsynced, with request
+hash, source/binary/model/table/pool/environment provenance and a hash chain. Completed requests are
+never re-sampled; only an interrupted final append can be truncated. A complete invalid response creates
+HALTED and preserves its diagnostic. Manifests and summaries are atomic; final summaries are immutable.
+The canonical journal is directly readable by the existing `r1_sim.py build --pool` recipe, avoiding
+a second response corpus. The unchanged larger-pool recipe produces 19,994 pick requests (20,000 target
+floored across thirteen sources) and 8,000 pk requests; these are not shortened evaluation subsets.
+
+`self_output_pool.py analyze OUT [--input-map local-inputs.json]` independently audits partial or complete
+journals without launching a server. Exact-hash local file mappings allow checking relayed artifacts;
+wrong source, model, request, chain, environment, health or summary data are rejected. Twenty offline
+regressions pass, including resume without repeat sampling, torn writes, corruption, HALTED preservation
+and read-only relay checks. This is preparation, not a completed self-output experiment or speed claim.
