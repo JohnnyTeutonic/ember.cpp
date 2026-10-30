@@ -167,3 +167,59 @@ def test_offline_auditor_validates_all_member_crc(tmp_path):
     archive.write_bytes(archive.read_bytes().replace(content,b'X'+content[1:]))
     with pytest.raises(zipfile.BadZipFile):
         auditor.extract_checked(archive,tmp_path/'bad')
+
+@pytest.mark.parametrize('mutation', ['none','substitute','truncate','model','extra_case','missing_case'])
+def test_home_audit_binds_frozen_ids_model_and_exact_48_cases(tmp_path,mutation):
+    import audit_f16_diagnosis as auditor
+    ids=[[case]*24 for case in range(12)]
+    replay={'ids':[list(row) for row in ids],'prompts':12,'model_sha256':runner.MODEL_SHA}
+    for fmt in ('f32','f16'):
+        for backend in ('cpu','cuda'):
+            for case in range(12):
+                (tmp_path/'diagnosis'/f'{fmt}_{backend}'/f'case_{case:04d}').mkdir(parents=True)
+    if mutation=='substitute':
+        replay['ids'][0][0]=999
+    if mutation=='truncate':
+        replay['ids'].pop()
+        replay['prompts']=11
+    if mutation=='model':
+        replay['model_sha256']='0'*64
+    if mutation=='extra_case':
+        (tmp_path/'diagnosis/f16_cuda/case_0012').mkdir()
+    if mutation=='missing_case':
+        (tmp_path/'diagnosis/f16_cuda/case_0011').rmdir()
+    if mutation=='none':
+        auditor.bind_matrix_inventory(tmp_path,replay,ids)
+    else:
+        with pytest.raises(ValueError):
+            auditor.bind_matrix_inventory(tmp_path,replay,ids)
+
+@pytest.mark.parametrize('mutation', ['none','prompts','len','gen','tol','top_denominator','greedy_denominator','rows','row_index','backend','status','aggregate'])
+def test_home_audit_rejects_incomplete_registered_controls(mutation):
+    import audit_f16_diagnosis as auditor
+    control={'on_gpu':True,'device_supported':True,'prompts':12,'len':24,'gen':32,'tol':1e-4,
+             'ids_file':None,'pass':True,'top1_agree':'288/288','greedy_identical':'12/12',
+             'worst_prefill_rel':1e-6,'worst_decode_rel':2e-6,
+             'rows':[{'i':i,'top1':24,'greedy_first_diff':-1,'prefill_rel':1e-6,'decode_rel':2e-6} for i in range(12)]}
+    if mutation in ('prompts','len','gen','tol'):
+        control[mutation]*=2
+    if mutation=='top_denominator':
+        control['top1_agree']='24/24'
+    if mutation=='greedy_denominator':
+        control['greedy_identical']='11/11'
+    if mutation=='rows':
+        control['rows'].pop()
+    if mutation=='row_index':
+        control['rows'][0]['i']=1
+    if mutation=='backend':
+        control['on_gpu']=False
+    if mutation=='status':
+        control['pass']=False
+    if mutation=='aggregate':
+        control['worst_decode_rel']=3e-6
+    ids=[[i]*24 for i in range(12)]
+    if mutation=='none':
+        auditor.validate_control(control,0,ids)
+    else:
+        with pytest.raises(ValueError):
+            auditor.validate_control(control,0,ids)
