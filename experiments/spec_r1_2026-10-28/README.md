@@ -407,7 +407,7 @@ including matching RNG state. No parity rule or signed-zero comparison was relax
 
 For the registered pick's actual vocabulary **16,384**, one row, ten-trial medians in microseconds:
 
-| Selector | Kernel(s) | Captured selector + 8-byte H2D + 20-byte D2H + stream synchronisation |
+| Selector | CUDA-event launch loop | Captured selector + 8-byte H2D + 20-byte D2H + stream synchronisation |
 |---|---:|---:|
 | Original, independent baseline leg | 16.15 | 24.70 |
 | Original, candidate comparison leg | 16.12 | 24.64 |
@@ -421,7 +421,9 @@ GPU's descriptive timings, not a significance test, full-model measurement or pr
 partition count is best. Larger vocabularies and batches are retained in the raw results; they
 are future geometries, not evidence about this 16,384-token pick. Host wall timing covers only
 one row; batches four and sixteen have kernel timing only. Each kernel trial records 1,000
-iterations and raw elapsed milliseconds; numerically that total is microseconds per iteration.
+iterations and raw elapsed milliseconds; numerically that total is microseconds per iteration. The
+CUDA-event interval includes gaps between host-submitted launches; it is not an isolated
+kernel-body latency measurement. The captured host-wall measurements are reported separately.
 
 The actual matrix includes seeded random rows, constant finite rows, all-negative-infinity and
 all-NaN rows, positive infinities, an inserted NaN, both signed-zero layouts, separated equal
