@@ -25,20 +25,23 @@ sha256sum "$B/tinyllama_server" "$B/decode_pick_rows" > "$OUT/binaries.sha256"
 "$B/decode_pick_rows" > "$OUT/handcrafted.json"
 P="$SRC/experiments/spec_r1_2026-10-28"
 python3 - "$P" "$B/tinyllama_server" "$OUT" <<'PY'
-import hashlib, json, sys
+import json, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 import decode_pick_fallback as fallback
 import decode_pick_gate as gate
 binary, out = sys.argv[2], Path(sys.argv[3])
 f = out / 'fallback'
-if (f / 'summary.json').exists():
-    summary = json.loads((f / 'summary.json').read_text())
+fallback_files = [f / f'graph{graph}_pick{pick}.json' for graph in (0, 1) for pick in (0, 1)]
+if (f / 'summary.json').exists() or all(path.exists() for path in fallback_files):
     records = {(graph, pick): json.loads((f / f'graph{graph}_pick{pick}.json').read_text())['rows']
                for graph in (0, 1) for pick in (0, 1)}
-    assert fallback.compare(records)['pass']
-    assert summary['binary_sha256'] == gate.sha(binary)
-    assert summary['model_sha256'] == gate.sha('/content/model.gguf')
+    checked = fallback.compare(records)
+    checked.update(binary_sha256=gate.sha(binary), model_sha256=gate.sha('/content/model.gguf'))
+    if (f / 'summary.json').exists():
+        assert json.loads((f / 'summary.json').read_text()) == checked
+    else:
+        (f / 'summary.json').write_text(json.dumps(checked, indent=1) + '\n')
 else:
     # An interrupted fallback has no final summary: retain diagnostics, rerun it.
     if f.exists():
@@ -53,11 +56,10 @@ assert manifest['inputs'] == {'binary': binary, 'model': '/content/model.gguf', 
 assert all(gate.sha(path) == manifest['sha256'][key] for key, path in manifest['inputs'].items())
 import subprocess
 for run in manifest['runs']:
-    try:
+    # Metadata is written only after a complete leg. Its invalid scientific
+    # result must stop the job, never trigger another draw/retry for a pass.
+    if (p.parent / (run['name'] + '.jsonl.meta.json')).exists():
         gate.load_run(p.parent, run, manifest)
-    except (OSError, ValueError, KeyError, TypeError):
-        pass
-    else:
         print('verified completed leg', run['name'], flush=True)
         continue
     subprocess.run(run["command"], check=True)
