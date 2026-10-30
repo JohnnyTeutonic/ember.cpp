@@ -24,13 +24,42 @@ make -C "$B" -j"$J" tinyllama_server decode_pick_rows > "$OUT/make.log" 2>&1
 sha256sum "$B/tinyllama_server" "$B/decode_pick_rows" > "$OUT/binaries.sha256"
 "$B/decode_pick_rows" > "$OUT/handcrafted.json"
 P="$SRC/experiments/spec_r1_2026-10-28"
-python3 "$P/decode_pick_fallback.py" "$B/tinyllama_server" /content/model.gguf "$OUT/fallback"
-python3 "$P/decode_pick_gate.py" plan "$B/tinyllama_server" /content/model.gguf /content/eval100.jsonl "$OUT/pick" > "$OUT/commands.sh"
-python3 - "$OUT/pick/plan.json" <<'PY'
-import json, subprocess, sys
+python3 - "$P" "$B/tinyllama_server" "$OUT" <<'PY'
+import hashlib, json, sys
 from pathlib import Path
-p = Path(sys.argv[1])
-for run in json.loads(p.read_text())["runs"]:
+sys.path.insert(0, sys.argv[1])
+import decode_pick_fallback as fallback
+import decode_pick_gate as gate
+binary, out = sys.argv[2], Path(sys.argv[3])
+f = out / 'fallback'
+if (f / 'summary.json').exists():
+    summary = json.loads((f / 'summary.json').read_text())
+    records = {(graph, pick): json.loads((f / f'graph{graph}_pick{pick}.json').read_text())['rows']
+               for graph in (0, 1) for pick in (0, 1)}
+    assert fallback.compare(records)['pass']
+    assert summary['binary_sha256'] == gate.sha(binary)
+    assert summary['model_sha256'] == gate.sha('/content/model.gguf')
+else:
+    # An interrupted fallback has no final summary: retain diagnostics, rerun it.
+    if f.exists():
+        import time
+        f.rename(out / ('fallback_partial_' + str(time.time_ns())))
+    fallback.run(binary, '/content/model.gguf', f)
+p = out / 'pick' / 'plan.json'
+if not p.exists():
+    gate.plan(binary, '/content/model.gguf', '/content/eval100.jsonl', p.parent, 8080)
+manifest = json.loads(p.read_text())
+assert manifest['inputs'] == {'binary': binary, 'model': '/content/model.gguf', 'prompts': '/content/eval100.jsonl'}
+assert all(gate.sha(path) == manifest['sha256'][key] for key, path in manifest['inputs'].items())
+import subprocess
+for run in manifest['runs']:
+    try:
+        gate.load_run(p.parent, run, manifest)
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    else:
+        print('verified completed leg', run['name'], flush=True)
+        continue
     subprocess.run(run["command"], check=True)
     (p.parent / "progress.json").write_text(json.dumps({"completed": run["name"]}) + "\n")
 PY
