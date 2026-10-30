@@ -472,6 +472,8 @@ if(NOT SKBUILD)
         # The interpreter on the CUDA device against the CPU (tools/ir_device_gate.cpp).
         add_executable(ir_device_gate tools/ir_device_gate.cpp)
         target_link_libraries(ir_device_gate PRIVATE tinyllama_core)
+        add_executable(e4_device_gate experiments/e4_gemma2_phi3_2026-10-28/e4_device_gate.cpp)
+        target_link_libraries(e4_device_gate PRIVATE tinyllama_core)
         # Given sequences (state ids, eviction, rewinds) on the device against the CPU (tools/state_device_gate.cpp).
         add_executable(state_device_gate tools/state_device_gate.cpp)
         target_link_libraries(state_device_gate PRIVATE tinyllama_core)
