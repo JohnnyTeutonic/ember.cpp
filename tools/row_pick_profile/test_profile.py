@@ -96,23 +96,20 @@ def test_wrapper_terminal_contract(tmp_path, monkeypatch, failure):
     monkeypatch.setattr(sys, "argv", ["run.py", "--output", str(output)])
 
     def fake(command, **kwargs):
+        if command[0] == "nvidia-smi":
+            kwargs["stdout"].write(
+                "name, uuid, driver_version, memory.total\nNVIDIA L4, GPU-test, 550, 23034 MiB\n"
+            )
+            kwargs["stdout"].flush()
         if command[0] == str(output / "profile"):
             (output / "inputs.bin").write_bytes(b"fixed captured inputs")
             if failure == "timeout":
                 raise subprocess.TimeoutExpired(command, 900)
             if failure == "exit":
                 return SimpleNamespace(returncode=1)
-            counts = {
-                "device": 1,
-                "correctness": 27,
-                "kernel_trial": 720,
-                "host_trial": 480,
-            }
-            rows = [
-                {"kind": kind} for kind, count in counts.items() for _ in range(count)
-            ]
-            if failure == "complete":
-                rows.append({"kind": "COMPLETE", "checked_rows": 123})
+            rows = complete_records()
+            if failure == "partial":
+                rows.pop()
             (output / "trials.jsonl").write_text("\n".join(json.dumps(r) for r in rows))
         return SimpleNamespace(returncode=0)
 
@@ -126,3 +123,80 @@ def test_wrapper_terminal_contract(tmp_path, monkeypatch, failure):
     assert not (output / "inputs.bin").exists()
     with pytest.raises(FileExistsError):
         wrapper.main()
+
+
+def complete_records():
+    rows = [{"kind": "device", "name": "NVIDIA L4", "sm": 89}]
+    rows += [
+        {"kind": "correctness", "vocab": v, "n": n}
+        for v in [1, 31, 257, 4096, 16384, 32000, 32768, 65536, 128256]
+        for n in [1, 4, 16]
+    ]
+    for v in [4096, 16384, 32000, 32768, 65536, 128256]:
+        for n in [1, 4, 16]:
+            for p in [0, 4, 16, 64]:
+                for b in range(10):
+                    rows.append(
+                        {
+                            "kind": "kernel_trial",
+                            "vocab": v,
+                            "n": n,
+                            "parts": p,
+                            "batch": b,
+                            "microseconds": 2.0,
+                            "iterations": 1000,
+                            "raw_elapsed_ms": 2.0,
+                        }
+                    )
+                    if n == 1:
+                        for t in [0, 1]:
+                            rows.append(
+                                {
+                                    "kind": "host_trial",
+                                    "vocab": v,
+                                    "n": n,
+                                    "parts": p,
+                                    "batch": b,
+                                    "transfer_only": t,
+                                    "microseconds": 5.0,
+                                }
+                            )
+    rows.append({"kind": "COMPLETE", "checked_rows": 6804})
+    return rows
+
+
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "duplicate",
+        "missing",
+        "nan",
+        "zero",
+        "wrong_gpu",
+        "iterations",
+        "wrong_identity",
+    ],
+)
+def test_trial_inventory_refuses_damage(damage):
+    spec = importlib.util.spec_from_file_location("runner_validator", HERE / "run.py")
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    rows = complete_records()
+    runner.validate_records(rows)
+    kernel = next(r for r in rows if r["kind"] == "kernel_trial")
+    if damage == "duplicate":
+        rows.insert(-1, dict(kernel))
+    elif damage == "missing":
+        rows.remove(kernel)
+    elif damage == "nan":
+        kernel["microseconds"] = math.nan
+    elif damage == "zero":
+        kernel["microseconds"] = 0
+    elif damage == "wrong_gpu":
+        rows[0]["name"] = "NVIDIA T4"
+    elif damage == "iterations":
+        kernel["iterations"] = 1
+    elif damage == "wrong_identity":
+        kernel["vocab"] = 42
+    with pytest.raises(ValueError):
+        runner.validate_records(rows)
