@@ -40,7 +40,7 @@ echo "=== kvq vm $(date -u) ember HEAD $HEAD_C, phases $PHASES ==="
 echo "--- deps, builds and downloads $(date -u +%T)"
 apt-get update -qq > /dev/null 2>&1
 apt-get install -y -q libboost-regex-dev > /dev/null 2>&1 || fail "apt libboost-regex-dev"
-tar xzf ember.tgz -C /content/src/new && tar xzf ember_base.tgz -C /content/src/base || fail "untar"
+tar --no-same-owner --no-same-permissions -xzf ember.tgz -C /content/src/new && tar --no-same-owner --no-same-permissions -xzf ember_base.tgz -C /content/src/base || fail "untar"
 ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -1 | tr -d . | tr -d " ")
 echo "GPU compute capability $ARCH"
 build() {  # tree targets...: a Release CUDA build for this GPU (sm_$ARCH) in /content/build_<tree>
@@ -56,7 +56,7 @@ cd /content
 echo "--- build new done $(date -u +%T)"
 ( JOBS=${KVQ_BUILD_JOBS:-4} build base ir_device_dump; echo $? > /content/build_base.rc ) &
 BASE_PID=$!
-tar xzf /content/inputs.tgz -C /content && cp /content/inputs/*.json $OUT/ || fail "inputs"
+tar --no-same-owner --no-same-permissions -xzf /content/inputs.tgz -C /content && cp /content/inputs/*.json $OUT/ || fail "inputs"
 python3 - <<'PY' || fail "downloads"
 from huggingface_hub import hf_hub_download, snapshot_download
 hf_hub_download("Qwen/Qwen3-0.6B-GGUF", "Qwen3-0.6B-Q8_0.gguf", local_dir="/content/models/qwen3")
