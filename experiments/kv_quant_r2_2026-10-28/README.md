@@ -244,3 +244,8 @@ explicit false gate summary on timeout; FINISHED means receipts are home, not th
 passed. Inputs are staged from the original `C:/ml_artifacts/kvq/ember-r2c-3/` files. The 1.9 GB of
 GGUFs are downloaded on the VM, then verified against the prior full SHA-256s. No local GPU is used.
 This paragraph describes tested preparation; it is not a device result.
+
+If a default-mode byte comparison differs, the old build is repeated with the same mode and prompt.
+An unstable old control is recorded as BASELINE_UNSTABLE (unresolved), never as feature regression or
+pass. A stable old control still leaves a differing new result as a failed byte-identity gate. The
+wrapper retains this classification in gate_summary.json. Eighteen offline gate/wrapper tests pass.
