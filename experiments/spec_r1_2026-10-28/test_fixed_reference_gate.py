@@ -138,3 +138,24 @@ def test_identical_reference_is_no_farther():
     a = np.array([[1, 2]], dtype=np.float32)
     result = g.compare((r, a), (copy.deepcopy(r), a), (copy.deepcopy(r), a), 1e-4)
     assert result['pass']
+
+
+def test_relay_mapping_preserves_original_metadata_and_checks_exact_bytes(receipt, tmp_path):
+    out, m = receipt
+    mapping = {}
+    for key, source in m['inputs'].items():
+        source = Path(source)
+        target = tmp_path / ('relayed_' + key)
+        target.write_bytes(source.read_bytes())
+        source.unlink()
+        mapping[key] = str(target)
+    assert g.analyze(out, mapping)['status'] == 'PASS'
+    Path(mapping['binary']).write_bytes(b'altered')
+    with pytest.raises(ValueError, match='frozen'):
+        g.analyze(out, mapping)
+
+
+def test_unknown_relay_mapping_rejected(receipt):
+    out, _ = receipt
+    with pytest.raises(ValueError, match='unknown input'):
+        g.analyze(out, {'unexpected': 'path'})
