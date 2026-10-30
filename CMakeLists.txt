@@ -456,6 +456,9 @@ if(NOT SKBUILD)
     # Per-turn state tokens: template rule, eviction on/off, rewinds (tools/state_tokens_test.cpp).
     add_executable(state_tokens_test tools/state_tokens_test.cpp)
     target_link_libraries(state_tokens_test PRIVATE tinyllama_core)
+    # Raw-token CPU/HF forward timings, with complete numerical gates.
+    add_executable(ir_hf_cpu_bench tools/ir_hf_cpu_bench.cpp)
+    target_link_libraries(ir_hf_cpu_bench PRIVATE tinyllama_core)
     # Chat templates: paperkiln's conformance file and ember's rendering paths (tools/chat_template_check.cpp).
     add_executable(chat_template_check tools/chat_template_check.cpp)
     target_link_libraries(chat_template_check PRIVATE tinyllama_core)
