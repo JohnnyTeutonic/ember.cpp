@@ -1,0 +1,92 @@
+{
+  "complete": true,
+  "archive_home_verified": true,
+  "archive_sha256": "617759b2cc66c4fab41c148921ae7587bd783d9dafa1841202544b3a087402f0",
+  "archive_bytes": 1370269388,
+  "strict_checker": {
+    "status": "BASELINE_UNSTABLE",
+    "modes": {
+      "default": {
+        "baseline_repeat_bits_equal": false,
+        "reason": "off/off logit bits differ; off/on bit gate is inconclusive"
+      },
+      "det": {
+        "requests": 260,
+        "logit_bits_equal": true,
+        "paired_speedups": [
+          1.159246560127609,
+          1.141462409508764
+        ],
+        "throughput_pass": false
+      }
+    },
+    "scope": "E10.3 rows, greedy ids and paired throughput only; fallback/penalty device checks remain separate"
+  },
+  "binary_verification": "Executable absent from archive; hash cross-checked between plan, binaries.sha256 and fallback. Raw rows/IDs/timing independently recomputed; model/prompt bytes rehashed locally.",
+  "handcrafted": {
+    "cases": [
+      {
+        "case": 0,
+        "first": 1,
+        "last": 1,
+        "nan": 0,
+        "pass": true
+      },
+      {
+        "case": 1,
+        "first": 0,
+        "last": 7,
+        "nan": 0,
+        "pass": true
+      },
+      {
+        "case": 2,
+        "first": 0,
+        "last": 0,
+        "nan": 0,
+        "pass": true
+      },
+      {
+        "case": 3,
+        "first": 2,
+        "last": 2,
+        "nan": 1,
+        "pass": true
+      },
+      {
+        "case": 4,
+        "first": 0,
+        "last": 7,
+        "nan": 0,
+        "pass": true
+      },
+      {
+        "case": 5,
+        "first": 0,
+        "last": 0,
+        "nan": 0,
+        "pass": true
+      }
+    ],
+    "pass": true
+  },
+  "fallback": {
+    "pass": true,
+    "requests_per_leg": 12,
+    "legs": 4,
+    "binary_sha256": "7cead74492bbc4eaa05a8e642621daaf97bbf5b35d183eb13653d0b8b0576d40",
+    "model_sha256": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9"
+  },
+  "source_commit": "ef34236697fe82c0cf2a1822b99a8eeb5dc82b10",
+  "request_count": 260,
+  "legs": 14,
+  "artifact": "C:\\ml_artifacts\\ember_e10_gate\\ember-e10-1030\\e10_pick\\out.zip",
+  "inputs_sha256": {
+    "ember.tgz": "84396d50c921b7e281a3e74ef7cc761e52e776e5eb7a5b302191ac56d34d0207",
+    "model.gguf": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9",
+    "eval100.jsonl": "a25357100c3eb1e59bc94bb26c0629e72e6ae18172b2d4fbbf148ae5168d1740",
+    "decode_pick_vm.sh": "415772f6536aaf02fad9d723763fda4d772364cd14686f5225fb7a457b66fe9d"
+  },
+  "timing_pod": "hg6y1vb6g6xz16",
+  "row_and_default_timing_pod": "n27vrqaipqbfnv"
+}
