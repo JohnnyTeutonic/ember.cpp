@@ -1,0 +1,22 @@
+{
+  "schema": "ember.windows_cpu_artifact_smoke.v1",
+  "run_id": 41051778996,
+  "head_sha": "1106be5efc21d3a8cb0e2414ae1ac49a23c55ba9",
+  "artifact_id": 12976056897,
+  "artifact_size": 7596976,
+  "artifact_sha256": "e2ebe4ec30d9539ad227ccd6d2f26a66ffe97ef3db1a72ccf5a8717a3213b3bf",
+  "wheel": "tinyllama_cpp-0.1.0-cp313-cp313-win_amd64.whl",
+  "wheel_sha256": "c616142b3c04d1b4ee89f0eeb2027e01cfe8424ac5c866e17c5480289806ec01",
+  "python": "3.13.14 (tags/v3.13.14:fd17997, Jun 10 2026, 13:03:48) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "scope": "Native Windows CPython3.13 CPU wheel import/config/API smoke only. Earlier1106 artifact; does not attest subsequent notice packaging or inference/numerical/model quality.",
+  "native_module_sha256": "d703e4b445c28fe4d8bc72674a2d42db025c3fa612a22857a5a59472ec6a67d5",
+  "cuda_compiled": false,
+  "configuration_roundtrip": true,
+  "required_apis_callable": true,
+  "probe_source_sha256": "2baa5e95e093b6b9a0eeb7f1f274db95e82cc067de5fd5e2aff72900b398acc9",
+  "probe_stderr": "",
+  "first_attempt_cleanup_error": "Initial in-process import passed checks but Windows locked its loaded .pyd during TemporaryDirectory cleanup. This run imports in a child and cleans after its process exits.",
+  "probe_source_file": "windows_cpu_native_probe.py",
+  "cleanup": "Successful child-process smoke exited before its temporary wheel extraction was removed. The first attempt left one small .pyd in Temp after DLL-lock failure; automatic approval blocked separate cleanup."
+}
