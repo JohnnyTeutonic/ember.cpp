@@ -289,7 +289,7 @@ jobs:
           echo "Compilers and OpenMP environment set successfully for macOS CUDA (CPU) build"
         
         CIBW_BUILD_VERBOSITY: 1
-        CIBW_TEST_COMMAND: python -c "from tinyllama_cpp.tinyllama_bindings import TinyLlamaSession, ModelConfig; assert callable(TinyLlamaSession) and callable(ModelConfig); print('Native extension import successful')"
+        CIBW_TEST_COMMAND: python -c "import os; from tinyllama_cpp.tinyllama_bindings import TinyLlamaSession, ModelConfig, cuda_compiled; assert callable(TinyLlamaSession) and callable(ModelConfig); expected = os.environ['TINYLLAMA_CPP_BUILD_CUDA']; assert expected in ('0', '1'); assert cuda_compiled is (expected == '1'), 'Wheel CUDA label disagrees with native build'; print('Native extension import and CUDA capability successful')"
         CIBW_TEST_SKIP: "*-macosx_arm64"
 
     - name: Setup Visual Studio Environment (Windows CUDA)
@@ -436,7 +436,7 @@ jobs:
           echo "Compilers and OpenMP environment set successfully for macOS CUDA (CPU) build"
         
         CIBW_BUILD_VERBOSITY: 1
-        CIBW_TEST_COMMAND: python -c "from tinyllama_cpp.tinyllama_bindings import TinyLlamaSession, ModelConfig; assert callable(TinyLlamaSession) and callable(ModelConfig); print('Native extension import successful')"
+        CIBW_TEST_COMMAND: python -c "import os; from tinyllama_cpp.tinyllama_bindings import TinyLlamaSession, ModelConfig, cuda_compiled; assert callable(TinyLlamaSession) and callable(ModelConfig); expected = os.environ['TINYLLAMA_CPP_BUILD_CUDA']; assert expected in ('0', '1'); assert cuda_compiled is (expected == '1'), 'Wheel CUDA label disagrees with native build'; print('Native extension import and CUDA capability successful')"
         CIBW_TEST_SKIP: "*-macosx_arm64"
 
     - name: Upload wheels
