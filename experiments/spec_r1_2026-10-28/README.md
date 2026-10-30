@@ -338,3 +338,7 @@ that fixed be no farther from CPU than cuBLAS fails on 1,223/3,829 pick rows and
 The largest extra absolute errors are 4.05312e-6 and 4.91738e-6 respectively. Overall **FAIL** is a valid
 negative result under the unchanged acceptance criterion. Fixed remains opt-in; no default was changed,
 no tolerance was relaxed, and no completed scientific leg was retried.
+
+### 30 October self-output pool operational failure
+
+The bounded E10.2 device run stopped before its first generation request: the client required an explicit `deterministic: false` health field, whereas the server omits that field when off. No self-output corpus, candidate table, parity result or speed result was produced. E10.2 remains open. The final archive passed streaming SHA256, ZIP CRC, archived executable and client-source hash checks; see `receipts/self_output_20261030_operational_failure.json`. All campaign resources were removed after outputs arrived home; displayed cumulative cost was $1.67. Commit `f8837f0` fixes the client schema assumption with 53 passing pool/gate/candidate tests, but was not deployed to this completed campaign. Defaults and scientific gates remain unchanged.
