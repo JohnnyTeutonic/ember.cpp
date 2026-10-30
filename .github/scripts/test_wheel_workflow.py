@@ -37,18 +37,24 @@ class WheelWorkflowTests(unittest.TestCase):
             (package / "__init__.py").write_text("try:\n    from .tinyllama_bindings import *\nexcept ImportError:\n    pass\n")
             old = subprocess.run([sys.executable, "-c", "import tinyllama_cpp"], cwd=tmp, capture_output=True)
             self.assertEqual(old.returncode, 0)
-            def check(expected):
+            def check(expected, cuda="0"):
+                import os
                 for command in commands:
                     args = shlex.split(command)
                     args[0] = sys.executable
-                    proc = subprocess.run(args, cwd=tmp, capture_output=True)
+                    proc = subprocess.run(args, cwd=tmp, capture_output=True, env=dict(os.environ, TINYLLAMA_CPP_BUILD_CUDA=cuda))
                     self.assertEqual(proc.returncode == 0, expected, proc.stderr)
             check(False)  # Missing extension must fail, despite successful package import.
             (package / "tinyllama_bindings.py").write_text("raise ImportError('unresolved native symbol')\n")
             check(False)  # An installed but unloadable extension must also fail.
-            (package / "tinyllama_bindings.py").write_text("class TinyLlamaSession: pass\nclass ModelConfig: pass\n")
+            (package / "tinyllama_bindings.py").write_text("class TinyLlamaSession: pass\nclass ModelConfig: pass\ncuda_compiled = False\n")
             check(True)
-            (package / "tinyllama_bindings.py").write_text("TinyLlamaSession = None\nModelConfig = None\n")
+            check(False, "1")  # GPU-labelled CPU fallback must fail.
+            check(False, "invalid")
+            (package / "tinyllama_bindings.py").write_text("class TinyLlamaSession: pass\nclass ModelConfig: pass\ncuda_compiled = True\n")
+            check(True, "1")
+            check(False, "0")
+            (package / "tinyllama_bindings.py").write_text("TinyLlamaSession = None\nModelConfig = None\ncuda_compiled = False\n")
             check(False)  # Required APIs must actually be callable.
 
     def test_actual_version_step_changes_only_project_version(self):

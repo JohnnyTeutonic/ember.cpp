@@ -10,6 +10,12 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(tinyllama_bindings, m) {
+    // Build capability, not device availability: wheel smoke tests verify their label.
+#ifdef HAS_CUDA
+    m.attr("cuda_compiled") = py::bool_(true);
+#else
+    m.attr("cuda_compiled") = py::bool_(false);
+#endif
     m.doc() = R"pbdoc(
         TinyLlama.cpp Python Bindings
         =============================
