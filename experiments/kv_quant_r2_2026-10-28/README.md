@@ -336,3 +336,24 @@ the ordered half codes are adjacent; the analyzer records adjacency separately.
 Neither an amplification example nor a stage correlation alone proves causality.
 Source `#line` restoration preserves ordinary CUDA `gpuErrchk` error-location
 constants, which otherwise change when guarded lines are merely inserted.
+Offline home verification is separate from the frozen remote controller:
+`audit_f16_diagnosis.py` streams ZIP hashes/CRCs, validates source/runtime and
+all raw case/control inventories, and independently replays the frozen analyzer.
+It keeps the ZIP in its canonical artifact home and extracts only to an owned
+temporary directory. Run long audits through the one-core CPU budget wrapper.
+
+Only after that audit, `f16_attention_reference.py` reconstructs actual captured
+causal GQA attention using an independent f64 softmax reference. Its separate
+posthoc receipt binds raw archive, audit, source and helper hashes. Decode cache
+history uses recorded decode writes, never prefill rows. Earlier cache rows are
+not resnapshotted each step, so their persistence is an explicit assumption;
+a residual can reflect read/arithmetic error or unobserved past-cache mutation.
+Hand-solvable causal means, nonzero softmax/GQA and decode-history tests cover
+the reference. This tool changes neither the frozen report nor E9's gate.
+
+The current-source diagnostic does not reproduce the old whole machine/binary.
+Compared with original d147d00e, base5b96961 also has fixed-order FP64 CPU dot
+AVX2 dispatch (designed/tested to retain finite-input bits), CUDA graph API and
+header/Windows portability fixes. KV conversion/storage source is unchanged.
+The current host CPU/flags are recorded separately; the original archive lacks
+those details. Uninstrumented controls measure the current recipe explicitly.
