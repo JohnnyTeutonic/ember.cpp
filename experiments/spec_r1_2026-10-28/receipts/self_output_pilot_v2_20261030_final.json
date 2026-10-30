@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "status": "VERIFIED_PILOT_ONLY",
+  "scientific_complete": false,
+  "archive": {
+    "path": "/mnt/c/ml_artifacts/ember_e10_self_pilot_v2/ember-e10-self-pilot-v2-1030/e10_self_pilot_v2/out.zip",
+    "bytes": 3412570,
+    "sha256": "f201b27316d7ed89b19882ce8379f2d61674888bb0af13c852841b6e2eb729c3",
+    "crc_verified": true
+  },
+  "exact_v1_binary_sha256": "01fe9a97aa2be814b124b30ca79d7ce567caa9e48bd045192e60a742a95b9f00",
+  "local_raw_journal_replay": {
+    "pick": {
+      "audit": {
+        "status": "VERIFIED_PARTIAL",
+        "requests": 19994,
+        "completed": 100,
+        "last_record_sha256": "41ad8cbdca983f106cc6699a4a177cf41a162916df0f55bc112d4dc877a085d7",
+        "journal_sha256": "edb2c39fbd41fad1a9358f07d4e67c43d748ea017e243a1af0f03f500d56a4c8",
+        "halted": false
+      },
+      "first_entry_keys": [
+        "i",
+        "ids",
+        "previous_sha256",
+        "prompt_ids",
+        "record_sha256",
+        "reply",
+        "request_sha256",
+        "stop_id",
+        "tokens",
+        "ttft"
+      ]
+    },
+    "pk": {
+      "audit": {
+        "status": "VERIFIED_PARTIAL",
+        "requests": 8000,
+        "completed": 100,
+        "last_record_sha256": "ca445a4095afeff40edfc9ca47b7224dc17f08f3d2f1d77a71c275ed981e47f7",
+        "journal_sha256": "6f165562a3783747b67885704628a35a442913e2736026c551711e11345b7b53",
+        "halted": false
+      },
+      "first_entry_keys": [
+        "i",
+        "ids",
+        "previous_sha256",
+        "prompt_ids",
+        "record_sha256",
+        "reply",
+        "request_sha256",
+        "stop_id",
+        "tokens",
+        "ttft"
+      ]
+    }
+  },
+  "remote_pilot_summary": {
+    "status": "PILOT_ONLY",
+    "scientific_complete": false,
+    "full_generation_started": false,
+    "evaluation_forecast_available": false,
+    "forecast_limit": "Pilot extrapolates remaining generation only; evaluation and transfer costs excluded. Interrupted downtime is included in elapsed time.",
+    "models": {
+      "pick": {
+        "pilot": {
+          "complete": false,
+          "completed": 100,
+          "elapsed_seconds": 6.0376222133636475,
+          "journal_sha256": "edb2c39fbd41fad1a9358f07d4e67c43d748ea017e243a1af0f03f500d56a4c8",
+          "new_requests": 100,
+          "requests": 19994,
+          "timing_scope": "first100 including startup and any interrupted downtime"
+        },
+        "audit": {
+          "status": "VERIFIED_PARTIAL",
+          "requests": 19994,
+          "completed": 100,
+          "last_record_sha256": "41ad8cbdca983f106cc6699a4a177cf41a162916df0f55bc112d4dc877a085d7",
+          "journal_sha256": "edb2c39fbd41fad1a9358f07d4e67c43d748ea017e243a1af0f03f500d56a4c8",
+          "halted": false
+        },
+        "seconds_per_request_including_startup": 0.06037622213363648,
+        "remaining_pool_seconds_at_pilot_rate": 1201.124563126564,
+        "conservative_remaining_pool_seconds_2x": 2402.249126253128
+      },
+      "pk": {
+        "pilot": {
+          "complete": false,
+          "completed": 100,
+          "elapsed_seconds": 7.284053325653076,
+          "journal_sha256": "6f165562a3783747b67885704628a35a442913e2736026c551711e11345b7b53",
+          "new_requests": 100,
+          "requests": 8000,
+          "timing_scope": "first100 including startup and any interrupted downtime"
+        },
+        "audit": {
+          "status": "VERIFIED_PARTIAL",
+          "requests": 8000,
+          "completed": 100,
+          "last_record_sha256": "ca445a4095afeff40edfc9ca47b7224dc17f08f3d2f1d77a71c275ed981e47f7",
+          "journal_sha256": "6f165562a3783747b67885704628a35a442913e2736026c551711e11345b7b53",
+          "halted": false
+        },
+        "seconds_per_request_including_startup": 0.07284053325653077,
+        "remaining_pool_seconds_at_pilot_rate": 575.440212726593,
+        "conservative_remaining_pool_seconds_2x": 1150.880425453186
+      }
+    }
+  },
+  "pod": null,
+  "volume": null,
+  "displayed_cost_usd": 0.19,
+  "cleanup_utc": "2026-10-30 10:37:07",
+  "default_changed": false
+}
