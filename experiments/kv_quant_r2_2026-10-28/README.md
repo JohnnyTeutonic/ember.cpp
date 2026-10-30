@@ -249,3 +249,7 @@ If a default-mode byte comparison differs, the old build is repeated with the sa
 An unstable old control is recorded as BASELINE_UNSTABLE (unresolved), never as feature regression or
 pass. A stable old control still leaves a differing new result as a failed byte-identity gate. The
 wrapper retains this classification in gate_summary.json. Eighteen offline gate/wrapper tests pass.
+
+RunPod network volumes can be root-squashed: an actual E4 launch rejected archive ownership
+restoration. Every E9 extraction now explicitly disables ownership and permission preservation
+(`--no-same-owner --no-same-permissions`); archived source identities and hashes are unchanged.
