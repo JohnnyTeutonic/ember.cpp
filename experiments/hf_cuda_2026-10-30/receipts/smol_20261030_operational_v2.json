@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "status": "OPERATIONAL_V2_SUPERVISED_RUNNING",
+  "complete": false,
+  "scientific_result_available": false,
+  "original_runtime_failure": "Image tag2.4.0 actually supplies torch2.4.1+cu124; original exact2.4.0 assertion stopped before HF weights download or forwards.",
+  "failed_v1_preserved_remote": "/content/out/operational_v1",
+  "failed_v1_vm_sha256": "ec7713ac02760237c98267bc139dfacb13ffe79709f8d09e24f3b511c8196700",
+  "v2_vm_sha256": "8868e2e5001da9cced9743a15987d5619264cd3a174ee83334e3de73a048dc1c",
+  "actual_torch_required": "2.4.1+cu124",
+  "image_digest_required": "sha256:61a4aafb0094cd773f11eefa378929d5a687bd775febeb78eac62fc824141fb5",
+  "source_commit_unchanged": "5bfda89345b3bcf1f0352eee555f0fd4eb73ac7d",
+  "runtime_job_commit_unchanged": "0250495f1a2c7c48190f7081c452017c6f15097f",
+  "canonical_gguf_sha256_unchanged": "a898c1208f35ae7c5456d8f19d868a7505b445916dddb1e906fa0296ffdda941",
+  "versions_checked_before_download_and_forward": true,
+  "outcome_gates_changed": false,
+  "same_pod": "y149p04j0ci2dy",
+  "same_volume_and_ledger": true,
+  "cap_usd_unchanged": 2,
+  "driver_resumed_pid": 1223319,
+  "syntax_python_blocks_parsed": 3
+}
