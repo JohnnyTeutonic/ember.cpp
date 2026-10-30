@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "cpu_dot.h"
 #include "parallel_for.h"
 
 #include "logger.h"
@@ -353,13 +354,7 @@ void matvec_q8_0_f32_vector_cpu(const std::vector<block_q8_0>& mat_q8_0,
 // serial dependency chain the compiler cannot vectorise). Double over at most
 // a few thousand terms is accurate to ~1e-16 before the cast to float.
 static inline double dot_f32_as_f64(const float* a, const float* b, int n) {
-  double acc[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-  int i = 0;
-  for (; i + 8 <= n; i += 8)
-    for (int k = 0; k < 8; ++k) acc[k] += static_cast<double>(a[i + k]) * static_cast<double>(b[i + k]);
-  double tail = 0.0;
-  for (; i < n; ++i) tail += static_cast<double>(a[i]) * static_cast<double>(b[i]);
-  return ((acc[0] + acc[1]) + (acc[2] + acc[3])) + ((acc[4] + acc[5]) + (acc[6] + acc[7])) + tail;
+  return ember::dot_f32_f64(a, b, n);
 }
 
 void matvec_f32_f32_vector_cpu(const std::vector<float>& mat_f32,
