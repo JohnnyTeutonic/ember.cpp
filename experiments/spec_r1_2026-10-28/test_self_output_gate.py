@@ -10,7 +10,7 @@ import self_output_gate as g
 
 
 @pytest.fixture
-def receipt(tmp_path):
+def receipt(tmp_path, monkeypatch):
     inputs = {}
     for name in ('binary', 'model', 'prompts', 'corpus', 'merged', 'journal'):
         p = tmp_path / name
@@ -21,6 +21,15 @@ def receipt(tmp_path):
     recipe.write_text(json.dumps({'orders': 6, 'min_count': 2, 'min_conf': 0.10,
                                  'corpus_first': True, 'pool_status': 'VERIFIED_COMPLETE',
                                  'sha256': {k: g.common.sha(inputs[k]) for k in ('model', 'corpus', 'merged', 'journal')}}))
+    request_pool = tmp_path / 'request_pool'
+    request_pool.write_text('pool')
+    (tmp_path / 'manifest.json').write_text(json.dumps({'inputs': {'pool': str(request_pool)},
+        'sha256': {'binary': g.common.sha(inputs['binary']), 'model': g.common.sha(inputs['model']),
+                   'table': g.common.sha(inputs['corpus']), 'pool': g.common.sha(request_pool)}}))
+    (tmp_path / 'summary.json').write_text('{}')
+    monkeypatch.setattr(g, 'MODEL_REQUESTS', {g.common.sha(inputs['model']): 2})
+    monkeypatch.setattr(g.pool, 'analyze', lambda *a, **k: {'status': 'VERIFIED_COMPLETE',
+                        'requests': 2, 'completed': 2, 'journal_sha256': g.common.sha(inputs['journal'])})
     out = tmp_path / 'out'
     m = g.plan(*(inputs[k] for k in ('binary', 'model', 'prompts', 'corpus', 'merged', 'journal')), str(recipe), out, True)
     for run in m['runs']:
@@ -145,4 +154,19 @@ def test_truncated_rows_fail(receipt):
     out, _ = receipt
     (out / 'det_rows_merged.jsonl.rows.f32').write_bytes(b'1234')
     with pytest.raises(ValueError, match='rows'):
+        g.analyze(out)
+
+
+def test_partial_pool_cannot_be_adopted(receipt, monkeypatch):
+    out, _ = receipt
+    monkeypatch.setattr(g.pool, 'analyze', lambda *a, **k: {'status': 'VERIFIED_PARTIAL',
+                        'requests': 2, 'completed': 1, 'journal_sha256': ''})
+    with pytest.raises(ValueError, match='complete original'):
+        g.analyze(out)
+
+
+def test_short_pilot_cannot_claim_full_pool(receipt, monkeypatch):
+    out, m = receipt
+    monkeypatch.setattr(g, 'MODEL_REQUESTS', {m['sha256']['model']: 20000})
+    with pytest.raises(ValueError, match='no pilot adoption'):
         g.analyze(out)

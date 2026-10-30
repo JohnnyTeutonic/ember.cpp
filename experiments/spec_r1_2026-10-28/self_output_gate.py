@@ -9,9 +9,12 @@ import sys
 import numpy as np
 
 import decode_pick_gate as common
+import self_output_pool as pool
 
 LEGS = ('plain', 'corpus_a', 'merged_a', 'merged_b', 'corpus_b')
 MODES = ('default', 'det')
+MODEL_REQUESTS = {'96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9': 19994,
+                  '510d288cf10ead4d3902247e3d898b6fa39e1d31d7465d3a8b6820761d6c9178': 8000}
 
 
 def finite_row_sha(path):
@@ -41,6 +44,14 @@ def plan(binary, model, prompts, corpus, merged, journal, recipe, out, rows=Fals
         for leg in ('rows_plain', 'rows_plain_repeat', 'rows_merged'):
             m['runs'].append(make_run(m, out, 'det', leg, True))
     validate_recipe(m, inputs)
+    pool_dir = Path(inputs['journal']).parent
+    pool_manifest = json.loads((pool_dir / 'manifest.json').read_text())
+    for key, path in (('pool_manifest', pool_dir / 'manifest.json'),
+                      ('pool_summary', pool_dir / 'summary.json'),
+                      ('request_pool', Path(pool_manifest['inputs']['pool']))):
+        inputs[key] = str(path)
+        m['sha256'][key] = common.sha(path)
+    validate_pool(m, inputs)
     (out / 'plan.json').write_text(json.dumps(m, indent=1) + '\n')
     return m
 
@@ -72,6 +83,22 @@ def validate_recipe(m, paths):
             raise ValueError('recipe input/output hash differs: ' + key)
 
 
+def validate_pool(m, paths):
+    if m['sha256']['model'] not in MODEL_REQUESTS:
+        raise ValueError('not one of the two frozen model checkpoints')
+    audit = pool.analyze(Path(paths['journal']).parent,
+                         {'binary': paths['binary'], 'model': paths['model'],
+                          'pool': paths['request_pool'], 'table': paths['corpus']})
+    required = MODEL_REQUESTS[m['sha256']['model']]
+    if (audit['status'] != 'VERIFIED_COMPLETE' or audit['requests'] != required
+            or audit['completed'] != required or audit['journal_sha256'] != m['sha256']['journal']):
+        raise ValueError('complete original self-output pool required; no pilot adoption')
+    manifest = json.loads(Path(paths['pool_manifest']).read_text())
+    if any(manifest['sha256'][a] != m['sha256'][b] for a, b in
+           (('binary', 'binary'), ('model', 'model'), ('table', 'corpus'), ('pool', 'request_pool'))):
+        raise ValueError('pool generation inputs differ from evaluation')
+
+
 def validate_plan(m, out, mapping=None):
     mapping = mapping or {}
     if set(mapping) - set(m['inputs']):
@@ -89,6 +116,7 @@ def validate_plan(m, out, mapping=None):
     if common.request_keys(paths['prompts']) != m['request_keys']:
         raise ValueError('altered request inventory')
     validate_recipe(m, paths)
+    validate_pool(m, paths)
     for run, (mode, leg, dump) in zip(m['runs'], slots):
         expected_run = make_run(m, Path(m['output']), mode, leg, dump)
         if run != expected_run:
