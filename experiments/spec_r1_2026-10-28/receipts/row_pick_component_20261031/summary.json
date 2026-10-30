@@ -1,0 +1,7 @@
+{
+  "status": "COMPLETE",
+  "scope": "component only; no improvement/adoption inference",
+  "source_commit": "3ae7f47f4ed2d735333461eaa6e0be4212ce94ad",
+  "baseline": "COMPLETE",
+  "candidate": "COMPLETE"
+}

@@ -1,0 +1,22 @@
+{
+  "scope": "Posthoc scale comparison across campaigns; not a predicted full-model gain or gate result",
+  "historical_archive_sha256": "617759b2cc66c4fab41c148921ae7587bd783d9dafa1841202544b3a087402f0",
+  "pairs": {
+    "a": {
+      "off_us_per_decode_token": 1253.4824921498687,
+      "on_us_per_decode_token": 1081.2906721171435,
+      "additional_us_saving_to_1_15": -8.694103665351122
+    },
+    "b": {
+      "off_us_per_decode_token": 1228.7721839648284,
+      "on_us_per_decode_token": 1076.4893996760163,
+      "additional_us_saving_to_1_15": 7.991848402252344
+    }
+  },
+  "historical_metadata_sha256": {
+    "out/pick/det_off_a.jsonl.meta.json": "12f711eba37cbbb7ab0765cbe4b48fb5c132b4fe97b4a5c412ec9df245635600",
+    "out/pick/det_on_a.jsonl.meta.json": "7d41427132d4848f0788768a80f02e3d0da4f29c596a30e5c28afcdbe786cf63",
+    "out/pick/det_off_b.jsonl.meta.json": "b46c3bcf60e288c2e0629dd43c5fb8fd360de418fcfeb07490c1de4567cb094e",
+    "out/pick/det_on_b.jsonl.meta.json": "7a85fdac115ac3ab53a02aafd2b14c9efa88f3eadbf79cca87cc6bae2582ef41"
+  }
+}

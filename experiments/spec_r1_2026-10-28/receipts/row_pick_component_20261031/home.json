@@ -1,0 +1,44 @@
+{
+  "campaign_home": true,
+  "jobs": {
+    "e10_component_20261031": {
+      "relayed_step": 0,
+      "status": "FINISHED",
+      "home": true,
+      "failed_seen": 0,
+      "fetched": [
+        "out.zip",
+        "summary.json",
+        "../e10_component_20261031_train.log"
+      ]
+    }
+  },
+  "pod_present_provider": false,
+  "volume_present_provider": false,
+  "provider_checked_utc": "2026-10-30T15:08Z",
+  "pod_ledger": {
+    "id": "ggcqhk2lx0wjcj",
+    "name": "pk-e10-component-20261031",
+    "gpu": "L4",
+    "usd_per_hr": 0.59,
+    "dc": "EU-RO-1",
+    "volume": "69r6ftbnid",
+    "start": 1793372451.171809,
+    "stop": 1793372864.8840137,
+    "image": "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04",
+    "image_digest": "sha256:61a4aafb0094cd773f11eefa378929d5a687bd775febeb78eac62fc824141fb5",
+    "stopped_by": "runner"
+  },
+  "volume_ledger": {
+    "id": "69r6ftbnid",
+    "dc": "EU-RO-1",
+    "gb": 10,
+    "created": 1793372447.5004532,
+    "name": "pk-e10-component-20261031-vol",
+    "deleted": 1793372865.7165904
+  },
+  "pod_compute_usd": 0.0678028335471948,
+  "runner_rounded_spend_usd": 0.07,
+  "cap_usd": 1,
+  "original_watchdog_deadline_utc": "2026-10-30T15:26:44Z"
+}

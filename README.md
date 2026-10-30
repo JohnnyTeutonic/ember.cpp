@@ -209,6 +209,10 @@ passed the registered rounding tolerance but failed the stronger requirement of 
 from the CPU reference than cuBLAS. Device row selection had an unstable default off/off control;
 its deterministic paired speedups were 1.159x and 1.141x, so only one of the two required pairs
 cleared 1.15x.
+A later standalone L4 selector profile found about 8.2 microseconds of avoidable component wall
+time at the pick's 16,384-token vocabulary, with exact tested RowPick fields. That tool leaves
+production unchanged and does not clear the full-model gate.
+[Component measurements and scope](experiments/spec_r1_2026-10-28/README.md#row-selection-component-follow-up-31-october-2026).
 The f16 KV-cache gate retained greedy IDs but failed the unchanged CPU/device logit tolerance on
 Qwen3. These outcomes remain recorded, with no tolerance changes or default switch
 ([fixed linear and row selection](experiments/spec_r1_2026-10-28/README.md),
