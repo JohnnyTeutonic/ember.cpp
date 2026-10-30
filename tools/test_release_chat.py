@@ -74,3 +74,37 @@ def test_publish_refuses(tmp_path):
     with pytest.raises(SystemExit, match="not passed"):
         R.publish(args)
     assert json.load(open(os.path.join(out, "release.json")))["stages"].get("publish") is None
+
+
+@pytest.mark.parametrize("kind,compressed", [("f16", 220919008), ("q8", 117699712)])
+def test_wasm_heap_uses_expanded_weights(kind, compressed):
+    # This F16 release actually failed at 1 GB and passed at 2 GB.
+    files = {"f32": {"bytes": 441119872}, kind: {"bytes": compressed}}
+    assert R.select_wasm_heap(files, kind) == ("2gb", 441119872)
+
+
+def test_wasm_heap_requires_uncompressed_reference():
+    with pytest.raises(ValueError, match="F32"):
+        R.select_wasm_heap({"q8": {"bytes": 100000000}}, "q8")
+    assert R.select_wasm_heap({"f32": {"bytes": 58000000}}, "f32") == ("1gb", 58000000)
+
+
+def test_wasm_stage_build_uses_expanded_heap(tmp_path, monkeypatch):
+    from argparse import Namespace
+    from subprocess import CompletedProcess
+
+    rc = R.Receipt(str(tmp_path))
+    rc.put("export", True, files={"f32": {"bytes": 441119872},
+                                 "q8": {"bytes": 117699712, "path": "model.gguf"}})
+    calls = []
+    monkeypatch.setenv("CPU_BUDGET_CORES", "1")
+
+    def fail_build(command, env):
+        calls.append(env)
+        return CompletedProcess(command, 1)
+
+    monkeypatch.setattr(R, "run", fail_build)
+    R.stage_wasm(Namespace(out=str(tmp_path), space_model="q8", json_inc="json", emsdk="emsdk"), rc)
+    assert calls[0]["EMBER_WASM_MAX_MEMORY"] == "2gb"
+    assert rc.data["stages"]["wasm"]["sizing_bytes"] == 441119872
+    assert not rc.done("wasm")

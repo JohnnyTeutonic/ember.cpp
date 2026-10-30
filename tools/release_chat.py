@@ -328,11 +328,25 @@ def stage_evals(a, rc):
     rc.put("evals", all(v["exit"] == 0 for v in info.values()), **info)
 
 
+def select_wasm_heap(files, kind):
+    """Use the F32 export as a floor for weights expanded in browser memory.
+
+    Download size alone underestimates F16/quantized files: pk_sft_v1 F16 is
+    221 MB on disk but its 441 MB F32 weights need the measured 2 GB build.
+    This retains the existing sizing bands; parity still gates the build.
+    """
+    if "f32" not in files:
+        raise ValueError("WASM sizing requires the uncompressed F32 export")
+    size = max(files[kind]["bytes"], files["f32"]["bytes"])
+    if size <= 0:
+        raise ValueError("WASM sizing requires positive export sizes")
+    return ("1gb" if size < 250e6 else ("2gb" if size < 600e6 else "4gb")), size
+
+
 def stage_wasm(a, rc):
     files = rc.data["stages"]["export"]["files"]
     model = files[a.space_model]
-    size = model["bytes"]
-    heap = "1gb" if size < 250e6 else ("2gb" if size < 600e6 else "4gb")
+    heap, sizing_bytes = select_wasm_heap(files, a.space_model)
     work = os.path.join(a.out, "wasm")
     if os.path.exists(work):
         shutil.rmtree(work)
@@ -341,7 +355,7 @@ def stage_wasm(a, rc):
         r = run(["bash", "-c", f'source "{a.emsdk}/emsdk_env.sh" > /dev/null 2>&1; '
                                f'bash "{REPO}/deploy/wasm/build.sh" "{work}"'], env=env)
         if r.returncode != 0:
-            return rc.put("wasm", False, error="deploy/wasm/build.sh failed", heap=heap)
+            return rc.put("wasm", False, error="deploy/wasm/build.sh failed", heap=heap, sizing_bytes=sizing_bytes)
         ref = os.path.join(a.out, "gate", "ember_cpu_q8_replies.jsonl" if a.space_model == "q8" else "ember_cpu_replies.jsonl")
         res = os.path.join(work, "parity.json")
         r = run(["bash", "-c", f'source "{a.emsdk}/emsdk_env.sh" > /dev/null 2>&1; '
@@ -349,7 +363,7 @@ def stage_wasm(a, rc):
                 env={"REF_FIELD": "ember", "REF_TOKENS": "ember_tokens", "REF_STOP": "ember_stop"})
     parity = read_json(res) or {}
     parity.pop("replies", None)
-    rc.put("wasm", r.returncode == 0, heap=heap, parity=parity, ember_wasm_sha256=sha256(os.path.join(work, "ember.wasm")))
+    rc.put("wasm", r.returncode == 0, heap=heap, sizing_bytes=sizing_bytes, parity=parity, ember_wasm_sha256=sha256(os.path.join(work, "ember.wasm")))
 
 
 def stage_space(a, rc):
