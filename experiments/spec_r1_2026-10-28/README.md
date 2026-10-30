@@ -310,3 +310,17 @@ standalone client/auditor source is bundled under OUT/source for future checks a
 Twenty-one offline
 regressions pass, including resume without repeat sampling, torn writes, corruption, HALTED preservation
 and read-only relay checks. This is preparation, not a completed self-output experiment or speed claim.
+
+The bounded `self_output_vm.sh` wrapper now prepares both original model pools, audits completion,
+builds candidates with `self_output_candidate.py`, and evaluates them using `self_output_gate.py`.
+The frozen builder uses six orders, minimum count 2, confidence 0.10 and corpus-first priority;
+its recipe hashes the journal, model, tables and builder sources. An empty higher-order table is
+valid and remains empty. Completed candidates reject source/input/output drift.
+
+The evaluation retains every frozen request and checks exact IDs against plain decode. Two paired
+corpus/merged timings must each improve chat40 and carry40 by at least 3%, in both explicitly selected
+default-cuBLAS and deterministic-fixed modes. Copy20 still participates in the ID gate. Pick also
+has complete deterministic row dumps and a repeated plain control. Nonfinite rows fail; unstable
+controls and cross-device timing are classified explicitly. Complete negative or invalid legs are
+never retried to obtain a pass. Forty-two client, candidate and evaluation regressions pass together.
+These are prepared acceptance checks; device outcomes remain pending and no default is changed.
