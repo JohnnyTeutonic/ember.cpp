@@ -24,6 +24,13 @@ int main(int argc, char** argv) {
   try {
     if (argc != 2) throw std::runtime_error("usage: ir_hf_cuda_bench MODEL.gguf");
     const GGUFData gguf = load_gguf_meta(argv[1], true);
+    if (gguf.tensor_infos.empty()) throw std::runtime_error("empty GGUF tensor inventory");
+    json tensor_inventory = json::array();
+    for (const auto& tensor : gguf.tensor_infos) {
+      if (static_cast<int>(tensor.type) != 0)
+        throw std::runtime_error("FP32 benchmark requires every GGUF tensor type to be F32 (0)");
+      tensor_inventory.push_back({{"name", tensor.name}, {"type", 0}, {"shape", tensor.shape}});
+    }
     const std::string doc = ember_ir::find_ir(gguf);
     if (doc.empty()) throw std::runtime_error("no supported IR for model");
     ember_ir::Interpreter model(doc, gguf, true);
@@ -34,7 +41,8 @@ int main(int argc, char** argv) {
 #endif
     if (threads != 1) throw std::runtime_error("CUDA benchmark requires exactly one host OpenMP thread");
     std::cout << json({{"ready", true}, {"backend", "cuda"}, {"vocab", model.vocab()},
-                       {"max_len", model.max_len()}, {"threads", threads}}).dump() << std::endl;
+                       {"max_len", model.max_len()}, {"threads", threads},
+                       {"tensor_inventory", tensor_inventory}}).dump() << std::endl;
     std::string line;
     while (std::getline(std::cin, line)) {
       const json request = json::parse(line);

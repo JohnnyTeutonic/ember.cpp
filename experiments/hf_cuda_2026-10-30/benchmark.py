@@ -39,6 +39,46 @@ def atomic_json(path, value):
     os.replace(tmp, path)
 
 
+def validate_inputs(data, length, steps, vocab):
+    if not isinstance(vocab, int) or vocab < 1:
+        raise ValueError("invalid frozen vocabulary")
+    expected = [(11 + 37 * i) % vocab for i in range(length)]
+    if data.get("prompt_ids") != expected:
+        raise ValueError("frozen prompt length/formula differs")
+    continuation = data.get("continuation_ids", [])
+    if len(continuation) != steps or any(
+        type(token) is not int or not 0 <= token < vocab for token in continuation
+    ):
+        raise ValueError("invalid frozen continuation inventory/range")
+
+
+def verify_files(expected):
+    actual = {path: sha(path) for path in expected}
+    if actual != expected:
+        raise ValueError("input/binary/source integrity drift")
+    return actual
+
+
+def validate_native_metadata(ready, hf_vocab):
+    inventory = ready.get("tensor_inventory", [])
+    if not inventory or any(t.get("type") != 0 for t in inventory):
+        raise ValueError("native GGUF inventory is not entirely F32")
+    names = [t.get("name") for t in inventory]
+    if len(set(names)) != len(names) or any(not n for n in names):
+        raise ValueError("invalid native tensor inventory")
+    if ready.get("vocab") != hf_vocab:
+        raise ValueError("vocabulary differs")
+    return {
+        "vocab": hf_vocab,
+        "max_len": ready["max_len"],
+        "tensor_count": len(inventory),
+        "tensor_type": 0,
+        "tensor_inventory_sha256": hashlib.sha256(
+            json.dumps(inventory, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest(),
+    }
+
+
 def assert_parity(hf, ember, hf_ids, ember_ids, tolerance=1e-4):
     if hf_ids != ember_ids or not hf_ids:
         raise ValueError("complete greedy ID inventory differs")
@@ -119,7 +159,7 @@ def journal_rows(path, protocol, protocol_sha):
     return rows
 
 
-def check_gate(out, length, steps):
+def check_gate(out, length, steps, vocab):
     inputs = out / f"inputs_{length}.json"
     hf_dump, ember_dump = out / f"hf_{length}.f32", out / f"ember_{length}.f32"
     gate = json.loads((out / f"gate_{length}.json").read_text())
@@ -130,8 +170,11 @@ def check_gate(out, length, steps):
     ):
         raise ValueError("completed numerical-gate artifacts changed")
     data = json.loads(inputs.read_text())
+    validate_inputs(data, length, steps, vocab)
     hf = np.fromfile(hf_dump, dtype="<f4").reshape(steps, -1)
     ember = np.fromfile(ember_dump, dtype="<f4").reshape(steps, -1)
+    if hf.shape[1] != vocab or ember.shape[1] != vocab:
+        raise ValueError("frozen vocabulary/row width differs")
     recomputed = assert_parity(
         hf, ember, data["continuation_ids"], np.argmax(ember, axis=1).tolist()
     )
@@ -150,12 +193,21 @@ def analyze(out):
     journal = out / "trials.jsonl"
     rows = journal_rows(journal, protocol, sha(path))
     for length in protocol["lengths"]:
-        data = check_gate(out, length, protocol["steps"])
+        data = check_gate(out, length, protocol["steps"], protocol["model_metadata"]["vocab"])
         for row in rows:
             if row["length"] == length:
                 validate_trial(row, data["continuation_ids"], protocol["steps"])
                 if row.get("inputs_sha256") != sha(out / f"inputs_{length}.json"):
                     raise ValueError("trial inputs changed")
+    integrity = json.loads((out / "integrity.json").read_text())
+    expected = protocol["integrity_files"]
+    if integrity != {
+        "protocol_sha256": sha(path), "journal_sha256": sha(journal),
+        "files": expected,
+        "inputs": {str(length): sha(out / f"inputs_{length}.json") for length in protocol["lengths"]},
+        "status": "FINAL_INTEGRITY_VERIFIED",
+    }:
+        raise ValueError("final integrity receipt differs")
     result = {
         "status": "COMPLETE_PARITY_GATED_CUDA_MEASUREMENT",
         "protocol_sha256": sha(path),
@@ -346,7 +398,15 @@ def run(a):
     a.out.mkdir(parents=True, exist_ok=True)
     if (a.out / "HALTED").exists():
         raise ValueError("preserved HALTED receipt; no automatic retries")
+    source = Path(__file__).resolve().parents[2]
+    integrity_files = {
+        str(path.resolve()): sha(path) for path in (
+            a.gguf, a.binary, Path(__file__), source / "tools/ir_hf_cuda_bench.cpp",
+            source / "graph_ir.cpp", source / "graph_ir.h", source / "CMakeLists.txt",
+        )
+    }
     protocol = {
+        "integrity_files": integrity_files,
         "schema": 1,
         "device": {
             "name": torch.cuda.get_device_name(0),
@@ -417,17 +477,19 @@ def run(a):
         raise ValueError(
             "unexpected interpreter overrides; use the default FP32 CUDA path"
         )
-    path = a.out / "protocol.json"
-    if path.exists():
-        if json.loads(path.read_text()) != protocol:
-            raise ValueError("protocol/input/source drift")
-    else:
-        atomic_json(path, protocol)
+    verify_files(integrity_files)  # immediately before loading either implementation
     hf = HF(a.gguf)
+    verify_files(integrity_files)
     ember = Ember(a.binary, a.gguf, a.out)
     try:
-        if ember.ready["vocab"] != hf.model.config.vocab_size:
-            raise ValueError("vocabulary differs")
+        verify_files(integrity_files)
+        protocol["model_metadata"] = validate_native_metadata(ember.ready, hf.model.config.vocab_size)
+        path = a.out / "protocol.json"
+        if path.exists():
+            if json.loads(path.read_text()) != protocol:
+                raise ValueError("protocol/input/source drift")
+        else:
+            atomic_json(path, protocol)
         journal = a.out / "trials.jsonl"
         done = journal_rows(journal, protocol, sha(path))
         for length in a.lengths:
@@ -443,7 +505,7 @@ def run(a):
                 a.out / f"ember_{length}.f32",
             )
             if gate_path.exists():
-                data = check_gate(a.out, length, a.steps)
+                data = check_gate(a.out, length, a.steps, protocol["model_metadata"]["vocab"])
                 if data["prompt_ids"] != prompt:
                     raise ValueError("frozen prompt changed")
                 continuation = data["continuation_ids"]
@@ -471,6 +533,8 @@ def run(a):
                     ember_rows_sha256=sha(ember_dump),
                 )
                 atomic_json(gate_path, gate)
+            verify_files(integrity_files)
+            check_gate(a.out, length, a.steps, protocol["model_metadata"]["vocab"])
             for row in done:
                 if row["length"] == length:
                     validate_trial(row, continuation, a.steps)
@@ -486,12 +550,16 @@ def run(a):
                     key = f"{length}_{cycle}_{slot}_{engine}"
                     if key in {r["key"] for r in done}:
                         continue
+                    verify_files(integrity_files)
+                    check_gate(a.out, length, a.steps, protocol["model_metadata"]["vocab"])
                     row = (
                         hf.run(prompt, a.steps, continuation)
                         if engine == "hf"
                         else ember.run(key, prompt, continuation)
                     )
                     validate_trial(row, continuation, a.steps)
+                    verify_files(integrity_files)
+                    check_gate(a.out, length, a.steps, protocol["model_metadata"]["vocab"])
                     row.update(
                         key=key, length=length, engine=engine, inputs_sha256=sha(inputs)
                     )
@@ -512,6 +580,15 @@ def run(a):
                         round(statistics.mean(row["forward_ms"][1:]), 2),
                         flush=True,
                     )
+        verify_files(integrity_files)
+        for length in a.lengths:
+            check_gate(a.out, length, a.steps, protocol["model_metadata"]["vocab"])
+        atomic_json(a.out / "integrity.json", {
+            "protocol_sha256": sha(path), "journal_sha256": sha(journal),
+            "files": integrity_files,
+            "inputs": {str(length): sha(a.out / f"inputs_{length}.json") for length in a.lengths},
+            "status": "FINAL_INTEGRITY_VERIFIED",
+        })
         summary = analyze(a.out)
         atomic_json(a.out / "summary.json", summary)
         print(json.dumps(summary["results"], indent=2))
@@ -551,7 +628,7 @@ def main():
     try:
         run(a)
     except BaseException as e:
-        if a.out.exists():
+        if a.out.exists() and not (a.out / "HALTED").exists():
             (a.out / "HALTED").write_text(type(e).__name__ + ": " + str(e) + "\n")
         raise
 
