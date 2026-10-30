@@ -1,0 +1,154 @@
+{
+  "status": "COMPLETE",
+  "baseline_only": false,
+  "started_unix": 1793372627.267708,
+  "scope": "component only; production/defaults unchanged; full-model 15% gate not tested",
+  "source_sha256": {
+    "tools/row_pick_profile/prepare.py": "5c4b9811f921086bff2403f6c400871f9fe1162a6667e55f566aed0648423908",
+    "tools/row_pick_profile/profile.cu": "6bc7455910ae3648adf868149866d5d7167e7866c3fbbec84d3adf2d45bc32a9",
+    "tools/row_pick_profile/run.py": "19e5f9d396bf72de3534052eb0809f7aaa1f0fca7a52ecaa4b9fbd32e9737de0",
+    "verify_kernels.cu": "174d92710317ef2f24567f5606f8b5c47b4d3dc6976ad4c921cd5716c2249c8b",
+    "verify_kernels.h": "b03cab664fea334fc46093c6605ddf97be8c7f630d9ebc8ccbdd17c3cee94579"
+  },
+  "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+  "commands": [
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "/content/chat/e10_component_20261031/source_tree/tools/row_pick_profile/prepare.py",
+        "--root",
+        "/content/chat/e10_component_20261031/source_tree",
+        "--output",
+        "/content/chat/e10_component_20261031/candidate"
+      ],
+      "started_unix": 1793372627.341029,
+      "returncode": 0,
+      "ended_unix": 1793372627.6330624
+    },
+    {
+      "argv": [
+        "nvcc",
+        "--version"
+      ],
+      "started_unix": 1793372627.6551855,
+      "returncode": 0,
+      "ended_unix": 1793372627.7987332
+    },
+    {
+      "argv": [
+        "nvidia-smi",
+        "--query-gpu=name,uuid,driver_version,memory.total",
+        "--format=csv"
+      ],
+      "started_unix": 1793372627.8357608,
+      "returncode": 0,
+      "ended_unix": 1793372627.9287078
+    },
+    {
+      "argv": [
+        "nvcc",
+        "-std=c++17",
+        "-O3",
+        "-arch=sm_89",
+        "-I/content/chat/e10_component_20261031/candidate",
+        "/content/chat/e10_component_20261031/source_tree/tools/row_pick_profile/profile.cu",
+        "-o",
+        "/content/chat/e10_component_20261031/candidate/profile"
+      ],
+      "started_unix": 1793372627.9652627,
+      "returncode": 0,
+      "ended_unix": 1793372632.5715506
+    },
+    {
+      "argv": [
+        "/content/chat/e10_component_20261031/candidate/profile",
+        "/content/chat/e10_component_20261031/candidate/trials.jsonl",
+        "/content/chat/e10_component_20261031/candidate/inputs.bin"
+      ],
+      "started_unix": 1793372632.594818,
+      "returncode": 0,
+      "ended_unix": 1793372664.6190665
+    }
+  ],
+  "gpu": {
+    "name": "NVIDIA L4",
+    "uuid": "GPU-7452db91-edd6-a82b-5090-e798b8a12bed",
+    "driver": "595.91.07",
+    "memory_total": "23034 MiB"
+  },
+  "record_counts": {
+    "device": 1,
+    "correctness": 27,
+    "kernel_trial": 720,
+    "host_trial": 480,
+    "COMPLETE": 1
+  },
+  "checked_rows": 6804,
+  "ended_unix": 1793372664.6640394,
+  "artifacts": {
+    "trials.jsonl": {
+      "sha256": "2430ba2edb684739ca5744276db5cf89b6e5098789c4c6b573a46c993586ca0d",
+      "bytes": 145553
+    },
+    "inputs.bin": {
+      "sha256": "9e922274380034d76ae14f603424097ad5fa378ceb434e38da334a0cb79c0b2f",
+      "bytes": 305002992
+    },
+    "command_4.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "profile": {
+      "sha256": "6a717a15eb781da68eb22ea61cc151da82efdaf9d77dd43b6eadeb29084fc3bb",
+      "bytes": 1070360
+    },
+    "command_3.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "command_2.log": {
+      "sha256": "775fbc933513d26811745fea15f81319fa99241aa9d60c3267b6a082b9451d91",
+      "bytes": 121
+    },
+    "command_1.log": {
+      "sha256": "3c71ed984d2ca98770b0cba5c23a849a87209351e105433929c3062fb66d1915",
+      "bytes": 209
+    },
+    "extraction.json": {
+      "sha256": "b868227ddb134c904abf6a1d7fbd7d634e894273b58dd59d5490a87983a4ee2a",
+      "bytes": 397
+    },
+    "selector.cuh": {
+      "sha256": "1ab2a8f186250fb596769ca375fc47644354dbe0cc51fb92fa22f0432389536d",
+      "bytes": 3984
+    },
+    "command_0.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "source/verify_kernels.h": {
+      "sha256": "b03cab664fea334fc46093c6605ddf97be8c7f630d9ebc8ccbdd17c3cee94579",
+      "bytes": 5123
+    },
+    "source/verify_kernels.cu": {
+      "sha256": "174d92710317ef2f24567f5606f8b5c47b4d3dc6976ad4c921cd5716c2249c8b",
+      "bytes": 24755
+    },
+    "source/tools/row_pick_profile/profile.cu": {
+      "sha256": "6bc7455910ae3648adf868149866d5d7167e7866c3fbbec84d3adf2d45bc32a9",
+      "bytes": 8860
+    },
+    "source/tools/row_pick_profile/run.py": {
+      "sha256": "19e5f9d396bf72de3534052eb0809f7aaa1f0fca7a52ecaa4b9fbd32e9737de0",
+      "bytes": 8364
+    },
+    "source/tools/row_pick_profile/prepare.py": {
+      "sha256": "5c4b9811f921086bff2403f6c400871f9fe1162a6667e55f566aed0648423908",
+      "bytes": 2152
+    }
+  },
+  "input_capture": {
+    "retained": false,
+    "regeneration": "standard mt19937 seed20261031; uint32 modulo65536 and exact power-of-two scale; source hash pinned"
+  }
+}

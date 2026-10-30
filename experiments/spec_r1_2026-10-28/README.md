@@ -389,3 +389,74 @@ only extracted timestamp metadata, and verified unchanged bytes plus a successfu
 The frozen scientific script, input archive, models, controllers and gates were unchanged.
 [Repair receipt](receipts/self_output_full_v3_timestamp_repair.json) preserves that history;
 the future packer clamps ZIP metadata without altering raw timestamps, with an exact-code regression.
+
+### Row-selection component follow-up, 31 October 2026
+
+The measured avoidable cost is the existing selector's single 256-thread block and two
+vocabulary scans. A **standalone experimental tool**, not a production kernel change, divides
+that identical local reduction into 4, 16 or 64 partitions and merges the complete RowPick:
+maximum, largest strictly smaller value, first/last maximum indices and NaN flag.
+
+One supervised NVIDIA L4/SM89 run is fully home. The independent audit verifies the frozen
+manifest, original kernel extraction, source/binary/generated-header hashes, raw trial identities,
+units and GPU UUID. The original-only leg passed 2,268 CPU-oracle row checks before its timings;
+the separate candidate leg passed **6,804 bitwise field comparisons** against the original before
+any candidate timing. The two complete legs have identical generated-input hashes. The unchanged
+host sampler differential also passed 19,830 accepted decisions and 5,370 conservative fallbacks,
+including matching RNG state. No parity rule or signed-zero comparison was relaxed.
+
+For the registered pick's actual vocabulary **16,384**, one row, ten-trial medians in microseconds:
+
+| Selector | Kernel(s) | Captured selector + 8-byte H2D + 20-byte D2H + stream synchronisation |
+|---|---:|---:|
+| Original, independent baseline leg | 16.15 | 24.70 |
+| Original, candidate comparison leg | 16.12 | 24.64 |
+| 4 partitions + merge | 7.97 | 16.39 |
+| 16 partitions + merge | 5.95 | 16.41 |
+| 64 partitions + merge | 8.44 | 16.41 |
+
+The independent transfer-only baseline was 6.54 microseconds. These results identify about
+**8.2 microseconds of component wall time** that may be avoidable for this shape. They are one
+GPU's descriptive timings, not a significance test, full-model measurement or proof that one
+partition count is best. Larger vocabularies and batches are retained in the raw results; they
+are future geometries, not evidence about this 16,384-token pick. Host wall timing covers only
+one row; batches four and sixteen have kernel timing only. Each kernel trial records 1,000
+iterations and raw elapsed milliseconds; numerically that total is microseconds per iteration.
+
+The actual matrix includes seeded random rows, constant finite rows, all-negative-infinity and
+all-NaN rows, positive infinities, an inserted NaN, both signed-zero layouts, separated equal
+maxima and a guaranteed peak/nextafter runner-up. Two additional fixtures insert 0/-1e-5 or
+positive/negative subnormal values among random values: those inserted values are **not guaranteed
+to be the maximum/runner-up**. This is not a guaranteed precise threshold/subnormal-maximum gate
+or a dedicated all-finite-negative fixture. The existing host sampler tests supplement this
+component matrix; no new device rerun was used to expand coverage after seeing results.
+
+For scale only, the retained historical deterministic pair b would need 7.992 microseconds less
+per decode token to move from its recorded 1.14146x to 1.15x. That is comparable to this synthetic
+component saving, with little margin; it does **not** predict an end-to-end gain across campaigns.
+The original default-mode off/off instability is also unaffected. The unchanged full-model
+repeatability and both-pair 15% gates remain unmet: **no default or production kernel changed**,
+and no further paid full-model rerun was launched. A further full-model gate would require
+separately reviewed production integration and a concrete case for sufficient overall margin,
+together with addressing the existing default-control instability; this component result alone
+does not justify an unchanged paid rerun.
+
+Frozen sources: Ember `3ae7f47f4ed2d735333461eaa6e0be4212ce94ad`, command job
+paperkiln `5de89be1d27db02f23c06213a802f20f5d6b3b2d`. The 756,113-byte canonical ZIP remains at
+`C:/ml_artifacts/e10_component_20261031/e10_component_20261031/out.zip`; all public raw trials,
+receipts, descriptive summaries and home proof are in
+[`receipts/row_pick_component_20261031/`](receipts/row_pick_component_20261031/audit.json).
+The pod and volume were independently absent from the provider after normal cleanup; rounded
+ledger spend was **$0.07**, within the $1 cap. Newly generated input scratch was hashed and removed
+before relay; exact generation is pinned in the archived source. The ZIP retains source and binaries.
+
+Replay the independent audit without GPU or network calls:
+
+```sh
+python3 tools/row_pick_profile/audit.py /absolute/out.zip \
+  --stage /absolute/original-frozen-stage --output /absolute/new-audit.json
+```
+
+The stage supplies the prelaunch `e10_component_manifest.json`; the public copy beside the raw
+receipts has the same bytes. The output path must be new. Component tests and the independent
+audit refusal tests are separate from the frozen GPU experiment.
