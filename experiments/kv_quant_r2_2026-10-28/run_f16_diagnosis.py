@@ -46,6 +46,26 @@ def inventory_without_receipt(folder):
     return {name: value for name, value in inventory(folder).items() if name != 'leg.json'}
 
 
+def validate_component(result, returncode):
+    lengths = (1, 2, 24, 32, 33, 55, 127, 128, 129, 2048, 2049, 4096)
+    shapes = ((16, 8, 128), (14, 2, 64))
+    expected = {(shape, length, capacity) for shape in shapes for length in lengths for capacity in (length, 8448)}
+    actual = {}
+    for case in result.get('cases', []):
+        key = (tuple(case.get(name) for name in ('hq', 'hkv', 'hd')), case.get('length'), case.get('capacity'))
+        if key in actual:
+            raise ValueError('duplicate primitive case')
+        actual[key] = case.get('input_sha256')
+    if set(actual) != expected or any(not isinstance(value, str) or len(value) != 64 for value in actual.values()):
+        raise ValueError('incomplete primitive capacity matrix')
+    for shape in shapes:
+        for length in lengths:
+            if actual[shape, length, length] != actual[shape, length, 8448]:
+                raise ValueError('capacity controls must use identical inputs')
+    if (result.get('complete') is not True or result.get('diagnostic_only') is not True
+            or bool(result.get('exact_component_mismatches')) != (returncode == 1)):
+        raise ValueError('component result incomplete/inconsistent')
+
 def execute(model, normal, trace, component, seeded_ids, ids, out):
     if (out/'HALTED').exists():
         raise ValueError('existing HALTED is final; separate operational review required')
@@ -80,9 +100,7 @@ def execute(model, normal, trace, component, seeded_ids, ids, out):
     if not manifest.exists():
         atomic(manifest, fixed)
     probe = completed_leg(out/'component', [str(component)], environment, (0, 1))
-    if (probe['result'].get('complete') is not True or probe['result'].get('diagnostic_only') is not True
-            or bool(probe['result'].get('exact_component_mismatches')) != (probe['returncode'] == 1)):
-        raise ValueError('component result incomplete')
+    validate_component(probe['result'], probe['returncode'])
     controls = {}
     for fmt in ('f32', 'f16'):
         for graph in ('0', '1'):

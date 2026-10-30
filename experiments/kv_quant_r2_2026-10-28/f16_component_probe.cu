@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "cuda_kernels.h"
+#include "ir_digest.h"
 #include "kv_quant.h"
 using json = nlohmann::json;
 void checked(cudaError_t status) {
@@ -150,82 +151,97 @@ int main() {
                    {"conversion_mismatches", mismatches},
                    {"cases", json::array()}};
     for (auto shape : std::vector<std::vector<int>>{{16, 8, 128}, {14, 2, 64}})
-      for (int L : {1, 2, 24, 32, 33, 127, 128, 129, 2048, 2049, 4096}) {
-        int hq = shape[0], hkv = shape[1], hd = shape[2], row = hkv * hd;
-        float scale = 1 / std::sqrt(float(hd));
-        std::vector<float> k(size_t(L) * row), v(k.size()), q(size_t(hq) * hd);
-        for (auto* vector : {&k, &v, &q})
-          for (float& x : *vector) x = uniform(rng);
-        Device<float> dk(k.size()), dv(v.size()), dq(q.size()), out(q.size()),
-            deqk(k.size()), deqv(v.size());
-        dk.put(k);
-        dv.put(v);
-        dq.put(q);
-        Device<uint16_t> K(k.size()), V(v.size()), Ks(k.size()), Vs(v.size());
-        Device<float> partial(ember_kvq::partial_floats(hq, hd, L));
-        Device<int> position(1);
-        ember_kvq::write_cuda(ember_kvq::kF16, K.p, nullptr, V.p, nullptr, dk.p,
-                              dv.p, L, row, 0, nullptr);
-        for (int t = 0; t < L; ++t) {
-          position.put(std::vector<int>{t});
-          ember_kvq::write_cuda(ember_kvq::kF16, Ks.p, nullptr, Vs.p, nullptr,
-                                dk.p + size_t(t) * row, dv.p + size_t(t) * row,
-                                1, row, 0, nullptr, position.p);
-        }
-        checked(cudaDeviceSynchronize());
-        auto kc = K.get(k.size()), vc = V.get(v.size());
-        auto sk = Ks.get(k.size()), sv = Vs.get(v.size());
-        size_t store = 0, split = 0;
-        for (size_t i = 0; i < k.size(); ++i) {
-          store += kc[i] != ember_kvq::f32_to_f16(k[i]);
-          store += vc[i] != ember_kvq::f32_to_f16(v[i]);
-          split += kc[i] != sk[i];
-          split += vc[i] != sv[i];
-          k[i] = ember_kvq::f16_to_f32(kc[i]);
-          v[i] = ember_kvq::f16_to_f32(vc[i]);
-        }
-        ember_kvq::dequant_rows_cuda(ember_kvq::kF16, K.p, nullptr, V.p,
-                                     nullptr, deqk.p, deqv.p, L, row, nullptr);
-        ember_kvq::decode_cuda(ember_kvq::kF16, dq.p, K.p, nullptr, V.p,
-                               nullptr, out.p, hq, hkv, hd, scale, L, L,
-                               partial.p, nullptr);
-        checked(cudaDeviceSynchronize());
-        auto decoded = out.get(q.size());
-        auto ref = reference(q, k, v, 1, L, hq, hkv, hd, scale);
-        json item = {
-            {"hq", hq},
-            {"hkv", hkv},
-            {"hd", hd},
-            {"length", L},
-            {"store_mismatches", store},
-            {"bulk_vs_pointer_writes", split},
-            {"readback_mismatches", bit_differences(k, deqk.get(k.size())) +
-                                        bit_differences(v, deqv.get(v.size()))},
-            {"decode_vs_f64", metric(decoded, ref, hq * hd)}};
-        position.put(std::vector<int>{L - 1});
-        ember_kvq::decode_cuda(ember_kvq::kF16, dq.p, K.p, nullptr, V.p,
-                               nullptr, out.p, hq, hkv, hd, scale, L, 1,
-                               partial.p, nullptr, position.p);
-        checked(cudaDeviceSynchronize());
-        item["position_pointer_decode_bit_differences"] =
-            bit_differences(decoded, out.get(q.size()));
-        if (L <= 129) {
-          std::vector<float> queries(size_t(L) * hq * hd);
-          for (float& x : queries) x = uniform(rng);
-          Device<float> queries_d(queries.size()), prefill(queries.size());
-          queries_d.put(queries);
-          attention_batch_prefill_cuda(queries_d.p, nullptr, nullptr, deqk.p,
-                                       deqv.p, prefill.p, L, 0, L, hq, hkv, hd,
-                                       scale, nullptr);
+      for (int L : {1, 2, 24, 32, 33, 55, 127, 128, 129, 2048, 2049, 4096}) {
+        const auto case_rng = rng;
+        for (int capacity : {L, 8448}) {
+          rng = case_rng;
+          int hq = shape[0], hkv = shape[1], hd = shape[2], row = hkv * hd;
+          float scale = 1 / std::sqrt(float(hd));
+          std::vector<float> k(size_t(L) * row), v(k.size()),
+              q(size_t(hq) * hd);
+          for (auto* vector : {&k, &v, &q})
+            for (float& x : *vector) x = uniform(rng);
+          Device<float> dk(k.size()), dv(v.size()), dq(q.size()), out(q.size()),
+              deqk(size_t(capacity) * row), deqv(size_t(capacity) * row);
+          std::string input_bytes;
+          for (const auto* x : {&k, &v, &q})
+            input_bytes.append(reinterpret_cast<const char*>(x->data()),
+                               x->size() * sizeof(float));
+          const auto input_sha = ember_ir::sha256_hex_bytes(input_bytes);
+          dk.put(k);
+          dv.put(v);
+          dq.put(q);
+          Device<uint16_t> K(size_t(capacity) * row), V(size_t(capacity) * row),
+              Ks(size_t(capacity) * row), Vs(size_t(capacity) * row);
+          Device<float> partial(ember_kvq::partial_floats(hq, hd, capacity));
+          Device<int> position(1);
+          ember_kvq::write_cuda(ember_kvq::kF16, K.p, nullptr, V.p, nullptr,
+                                dk.p, dv.p, L, row, 0, nullptr);
+          for (int t = 0; t < L; ++t) {
+            position.put(std::vector<int>{t});
+            ember_kvq::write_cuda(ember_kvq::kF16, Ks.p, nullptr, Vs.p, nullptr,
+                                  dk.p + size_t(t) * row,
+                                  dv.p + size_t(t) * row, 1, row, 0, nullptr,
+                                  position.p);
+          }
           checked(cudaDeviceSynchronize());
-          item["prefill_vs_f64"] = metric(
-              prefill.get(queries.size()),
-              reference(queries, k, v, L, L, hq, hkv, hd, scale), hq * hd);
+          auto kc = K.get(k.size()), vc = V.get(v.size());
+          auto sk = Ks.get(k.size()), sv = Vs.get(v.size());
+          size_t store = 0, split = 0;
+          for (size_t i = 0; i < k.size(); ++i) {
+            store += kc[i] != ember_kvq::f32_to_f16(k[i]);
+            store += vc[i] != ember_kvq::f32_to_f16(v[i]);
+            split += kc[i] != sk[i];
+            split += vc[i] != sv[i];
+            k[i] = ember_kvq::f16_to_f32(kc[i]);
+            v[i] = ember_kvq::f16_to_f32(vc[i]);
+          }
+          ember_kvq::dequant_rows_cuda(ember_kvq::kF16, K.p, nullptr, V.p,
+                                       nullptr, deqk.p, deqv.p, L, row,
+                                       nullptr);
+          ember_kvq::decode_cuda(ember_kvq::kF16, dq.p, K.p, nullptr, V.p,
+                                 nullptr, out.p, hq, hkv, hd, scale, capacity,
+                                 L, partial.p, nullptr);
+          checked(cudaDeviceSynchronize());
+          auto decoded = out.get(q.size());
+          auto ref = reference(q, k, v, 1, L, hq, hkv, hd, scale);
+          json item = {{"hq", hq},
+                       {"hkv", hkv},
+                       {"hd", hd},
+                       {"length", L},
+                       {"capacity", capacity},
+                       {"input_sha256", input_sha},
+                       {"store_mismatches", store},
+                       {"bulk_vs_pointer_writes", split},
+                       {"readback_mismatches",
+                        bit_differences(k, deqk.get(k.size())) +
+                            bit_differences(v, deqv.get(v.size()))},
+                       {"decode_vs_f64", metric(decoded, ref, hq * hd)}};
+          position.put(std::vector<int>{L - 1});
+          ember_kvq::decode_cuda(ember_kvq::kF16, dq.p, K.p, nullptr, V.p,
+                                 nullptr, out.p, hq, hkv, hd, scale, capacity,
+                                 1, partial.p, nullptr, position.p);
+          checked(cudaDeviceSynchronize());
+          item["position_pointer_decode_bit_differences"] =
+              bit_differences(decoded, out.get(q.size()));
+          if (L <= 129) {
+            std::vector<float> queries(size_t(L) * hq * hd);
+            for (float& x : queries) x = uniform(rng);
+            Device<float> queries_d(queries.size()), prefill(queries.size());
+            queries_d.put(queries);
+            attention_batch_prefill_cuda(queries_d.p, nullptr, nullptr, deqk.p,
+                                         deqv.p, prefill.p, L, 0, capacity, hq,
+                                         hkv, hd, scale, nullptr);
+            checked(cudaDeviceSynchronize());
+            item["prefill_vs_f64"] = metric(
+                prefill.get(queries.size()),
+                reference(queries, k, v, L, L, hq, hkv, hd, scale), hq * hd);
+          }
+          mismatches +=
+              store + split + item["readback_mismatches"].get<size_t>() +
+              item["position_pointer_decode_bit_differences"].get<size_t>();
+          report["cases"].push_back(item);
         }
-        mismatches +=
-            store + split + item["readback_mismatches"].get<size_t>() +
-            item["position_pointer_decode_bit_differences"].get<size_t>();
-        report["cases"].push_back(item);
       }
     report["exact_component_mismatches"] = mismatches;
     report["complete"] = true;
