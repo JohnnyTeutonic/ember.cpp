@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "status": "OPERATIONAL_FAILURE_ZERO_GENERATION",
+  "scientific_complete": false,
+  "generation_requests_completed": 0,
+  "candidate_and_evaluation_started": false,
+  "default_changed": false,
+  "archive": {
+    "path": "C:\\ml_artifacts\\ember_e10_self\\ember-e10-self-1030\\e10_self\\out.zip",
+    "bytes": 4472740,
+    "sha256": "05e49a236951c4592d7f9a852ac0018e59bf20bca9581212f632233c61d3a198",
+    "crc_verified": true
+  },
+  "compiled_source_commit": "7f2b24a4aac857a73f31134177a5c9a5edf493af",
+  "job_commit": "51a0c0bef3677a66c49e04f2eecc68ba26d16f7c",
+  "archived_binary_sha256": "01fe9a97aa2be814b124b30ca79d7ce567caa9e48bd045192e60a742a95b9f00",
+  "archived_client_sha256": "b2a47580afb36ed96e3b26fd3d4b6a46ed48357edf29687ea8a33d8a371ef0db",
+  "pool_manifest": {
+    "client_source_sha256": "b2a47580afb36ed96e3b26fd3d4b6a46ed48357edf29687ea8a33d8a371ef0db",
+    "environment": {
+      "EMBER_DECODE_GRAPH": "1",
+      "EMBER_DECODE_LINEAR": "cublas",
+      "EMBER_DECODE_OPT": "1",
+      "EMBER_DECODE_PICK": "0",
+      "EMBER_DETERMINISTIC": "0",
+      "EMBER_DRAFT": "table",
+      "EMBER_DRAFT_TABLE": "/content/pick_table.bin",
+      "EMBER_DRAFT_THETA": "0.02",
+      "EMBER_GEMM_TF32": "0",
+      "EMBER_SPEC": "8"
+    },
+    "inputs": {
+      "binary": "/content/b/tinyllama_server",
+      "model": "/content/pick.gguf",
+      "pool": "/content/pick_pool.jsonl",
+      "table": "/content/pick_table.bin"
+    },
+    "requests": 19994,
+    "schema": 1,
+    "sha256": {
+      "binary": "01fe9a97aa2be814b124b30ca79d7ce567caa9e48bd045192e60a742a95b9f00",
+      "model": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9",
+      "pool": "50a26dbc836c0af899f3b5d1f10242ef9f66d686f6a12e5fc985797724153737",
+      "table": "5a58236ab58b6129ec326c2abca8981261bf1055639de04b214492d8be8770be"
+    },
+    "vocab": 16384
+  },
+  "failure": "Client required explicit deterministic=false, but server health omits this field when off. Failure occurred before first generation request. This is an operational client defect, not a scientific negative.",
+  "repair": {
+    "commit": "f8837f0cec3382fe28a28abf6f9ac8e5831b500b",
+    "deployed": false,
+    "tests_passed": 53,
+    "behavior": "Accept missing deterministic as false; reject invalid explicit values; deterministic mode still requires true."
+  },
+  "cleanup": {
+    "outputs_home_utc": "2026-10-30 07:29:34",
+    "resources_deleted_utc": "2026-10-30 07:29:42",
+    "pod": null,
+    "volume": null,
+    "displayed_cumulative_cost_usd": 1.67
+  },
+  "limitations": [
+    "No self-output corpus, candidate table, parity verdict or performance result was produced.",
+    "Historical source receipts inside out/source are source-archive contents, not outputs of this run."
+  ]
+}
