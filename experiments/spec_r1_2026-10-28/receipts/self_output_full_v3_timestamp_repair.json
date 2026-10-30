@@ -1,0 +1,115 @@
+{
+  "status": "ORIGINAL_PACK_VERIFIED",
+  "wall_time": 1793359448.6381464,
+  "reason": "ZIP rejects reproducible pre-1980 extracted tar timestamps",
+  "files": [
+    {
+      "path": "pick_pool/pilot_started.json",
+      "atime_ns": 1793359436000000000,
+      "mtime_ns": 0,
+      "size": 33,
+      "sha256": "85c23cd8848ec9c1bbf2d449e4521d059bce4729cd73c8cf86fd19ca29184c13"
+    },
+    {
+      "path": "pick_pool/manifest.json",
+      "atime_ns": 1793359114000000000,
+      "mtime_ns": 0,
+      "size": 869,
+      "sha256": "ff5f574c647753572e895d74f012b725e1eb0e2ee1a3e1811ed26955c4aa0a94"
+    },
+    {
+      "path": "pick_pool/server_0.log",
+      "atime_ns": 1793359100000000000,
+      "mtime_ns": 0,
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pick_pool/health_0.json",
+      "atime_ns": 1793359436000000000,
+      "mtime_ns": 0,
+      "size": 227,
+      "sha256": "d7199067ee82d6a15e2f3e9b1a0c6411b364649cf64918eb8a72e2b1011ae6a7"
+    },
+    {
+      "path": "pick_pool/partial_100.json",
+      "atime_ns": 1793359436000000000,
+      "mtime_ns": 0,
+      "size": 279,
+      "sha256": "f72570407aaeece523cd9abe3a90104c40deceeff5eaf9825cb5f759ec90c1f9"
+    },
+    {
+      "path": "pick_pool/source/self_output_pool.py",
+      "atime_ns": 1793359114000000000,
+      "mtime_ns": 0,
+      "size": 13074,
+      "sha256": "88d484f311b30fdc1b56e77cfd5e8ed6d8ca5a4679c9cd90dbba0a63beb13885"
+    },
+    {
+      "path": "pk_pool/pilot_started.json",
+      "atime_ns": 1793359436000000000,
+      "mtime_ns": 0,
+      "size": 33,
+      "sha256": "052d633e69f62d72468faff2904198f5192cfba6f9ef338e672a0bcc2df37b45"
+    },
+    {
+      "path": "pk_pool/manifest.json",
+      "atime_ns": 1793359436000000000,
+      "mtime_ns": 0,
+      "size": 860,
+      "sha256": "9bc546faabd2785adb188dbaaea2e6f821ad70005144a65dcf14363bf1861e5b"
+    },
+    {
+      "path": "pk_pool/server_0.log",
+      "atime_ns": 1793359100000000000,
+      "mtime_ns": 0,
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pk_pool/debugging.log",
+      "atime_ns": 1793359436000000000,
+      "mtime_ns": 0,
+      "size": 1727645,
+      "sha256": "571f3b4d18dde57063ffc2f66bae1cb4d9583790154d2ab5f40df883c835e240"
+    },
+    {
+      "path": "pk_pool/health_0.json",
+      "atime_ns": 1793359436000000000,
+      "mtime_ns": 0,
+      "size": 225,
+      "sha256": "544568c149cdf2ebcef3f498c20ae4b1eaf62cbc36c54df749f2946f36dceba4"
+    },
+    {
+      "path": "pk_pool/outputs.jsonl",
+      "atime_ns": 1793359380000000000,
+      "mtime_ns": 0,
+      "size": 94501,
+      "sha256": "6f165562a3783747b67885704628a35a442913e2736026c551711e11345b7b53"
+    },
+    {
+      "path": "pk_pool/partial_100.json",
+      "atime_ns": 1793359436000000000,
+      "mtime_ns": 0,
+      "size": 279,
+      "sha256": "a798b159011ebf6529fc5596a005d2d7397292e2b423476775f51f96200dc9cd"
+    },
+    {
+      "path": "pk_pool/source/self_output_pool.py",
+      "atime_ns": 1793359436000000000,
+      "mtime_ns": 0,
+      "size": 13074,
+      "sha256": "88d484f311b30fdc1b56e77cfd5e8ed6d8ca5a4679c9cd90dbba0a63beb13885"
+    }
+  ],
+  "uploaded_archives_unchanged": true,
+  "frozen_scientific_source_unchanged": true,
+  "archive": {
+    "path": "/content/out.zip",
+    "size": 11863199,
+    "sha256": "5139c42e886ba1b1fd4ec6cc53c60de94f633bf32bca8e2c6d778163beb67f31",
+    "members": 388,
+    "crc": "PASS"
+  }
+}
+
