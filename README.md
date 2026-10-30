@@ -435,4 +435,5 @@ In progress:
 
 ## License
 
-MIT (declared in `pyproject.toml`).
+[MIT](LICENSE), as declared in `pyproject.toml`. Original project material is copyright (c) 2024-2026 Jonathan Reich.
+Third-party components retain their notices and terms; see [Third-party notices](THIRD_PARTY_NOTICES.md).
