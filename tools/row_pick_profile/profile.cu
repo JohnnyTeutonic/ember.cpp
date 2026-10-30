@@ -78,7 +78,7 @@ int main(int argc,char**argv){try{
    for(int parts:{4,16,64}){
     partition_rows_kernel<<<dim3(n,parts),256,0,stream>>>(device,v,partial,parts);merge_parts<<<n,32,0,stream>>>(partial,out,parts);CU(cudaGetLastError());
     CU(cudaMemcpyAsync(host,out,n*20,cudaMemcpyDeviceToHost,stream));CU(cudaStreamSynchronize(stream));
-    for(int r=0;r<n;++r){if(!equal(host[r],original[r])){log<<"{\"kind\":\"MISMATCH\",\"vocab\":"<<v<<",\"n\":"<<n<<",\"fixture\":"<<fixture<<",\"parts\":"<<parts<<",\"row\":"<<r<<"}\n";log.flush();throw std::runtime_error("candidate bitwise field mismatch");}
+    for(int r=0;r<n;++r){if(!equal(host[r],original[r])){log<<"{\"kind\":\"MISMATCH\",\"vocab\":"<<v<<",\"n\":"<<n<<",\"fixture\":"<<fixture<<",\"parts\":"<<parts<<",\"row\":"<<r<<",\"original\":["<<bits(original[r].max)<<","<<bits(original[r].second)<<","<<original[r].first<<","<<original[r].last<<","<<original[r].nan<<"],\"candidate\":["<<bits(host[r].max)<<","<<bits(host[r].second)<<","<<host[r].first<<","<<host[r].last<<","<<host[r].nan<<"]}\n";log.flush();throw std::runtime_error("candidate bitwise field mismatch");}
      for(float t:{.01f,.05f,.7f,1.f})if(decision(host[r],t)!=decision(original[r],t))throw std::runtime_error("fallback mismatch");++checks;
     }
    }
