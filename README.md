@@ -47,16 +47,16 @@ flowchart LR
 | `llama_attnres` under tied-block recursion (`tensor_index`: each application reads its own pseudo-queries) | IR interpreter | ✅ | ✅ | ✅ | ✅ |
 | Recurrent ops the document defines (`recurrence`: a paper's new state-space model or linear attention as data) | IR interpreter | ✅ | runs on the CPU | ✅ | ✅ |
 
-Every paperkiln family is gated the same way: **greedy replies identical to paperkiln's own
-sampler on 40 frozen prompts**, on each backend, including a trained 70M mixture-of-experts
-model. The receipts are in [`experiments/`](experiments/). "Runs on the CPU" means a CUDA build
+The core paperkiln parity gates compare **greedy replies with paperkiln's own sampler on
+40 frozen prompts**, including a trained 70M mixture-of-experts model. Backend coverage and
+exceptions are stated in the table; receipts are in [`experiments/`](experiments/). "Runs on the CPU" means a CUDA build
 serves that family on its CPU path, because the device kernels for it are not written yet. The WebGPU column of the
 IR rows is gated on a software adapter (SwiftShader), against ember's CPU interpreter: greedy 40/40, the
 top-1 at every position and logits within 1.5e-6 of the range, plus the page's chat path against
 WebAssembly and ember's CPU replies ([`experiments/webgpu_ir_2026-10-26/`](experiments/webgpu_ir_2026-10-26/),
 [`experiments/tensor_index_gate_2026-10-27/`](experiments/tensor_index_gate_2026-10-27/),
 [`experiments/webgpu_recurrence_2026-10-27/`](experiments/webgpu_recurrence_2026-10-27/));
-its speed on a GPU is not measured yet.
+hardware speed measurements cover the subset linked below.
 
 The last four rows serve paperkiln's research programme,
 [tiny chat from scratch](https://github.com/JohnnyTeutonic/paperkiln#research-programme-tiny-chat-from-scratch):
@@ -68,15 +68,19 @@ ember serves every arm's models and checks paperkiln's generation in its post jo
 metadata at load (`build_ir_from_gguf`, a C++ port of keramos's `tools/gguf_ir.py`, node for
 node) and runs on the interpreter:
 
-| Family (official checkpoint gated) | What the graph has | CPU | CUDA | WASM | WebGPU |
+| Family and checked checkpoint | What the graph has | CPU | CUDA | WASM | WebGPU |
 |---|---|:---:|:---:|:---:|:---:|
-| Qwen2.5 (0.5B-Instruct, f16) | q/k/v biases, NEOX RoPE, tied head, ChatML | ✅ | ✅ | ✅ | not gated |
-| Qwen3 (0.6B, Q8_0 read in place) | per-head q/k RMSNorm | ✅ | ✅ | ✅ | 1 of 10 prompts (memory) |
-| Gemma 3 (270m-it) | sliding window on 5 of every 6 layers, per-layer RoPE base, sandwich norms, GeGLU | ✅ | ✅ | ✅ | not gated |
+| Qwen2.5 (0.5B-Instruct, f16) | q/k/v biases, NEOX RoPE, tied head, ChatML | ✅ | ✅ | ✅ | ✅ (L4, 6 prompts) |
+| Qwen3 (0.6B, Q8_0 read in place) | per-head q/k RMSNorm | ✅ | ✅ | ✅ | ✅ (L4, 6 prompts) |
+| Gemma 3 (270m-it) | sliding window on 5 of every 6 layers, per-layer RoPE base, sandwich norms, GeGLU | ✅ | ✅ | ✅ | ✅ (L4, 6 prompts) |
 | GPT-NeoX / Pythia (160m) | partial NEOX rotary, parallel residual, exact GELU | ✅ | ✅ | ✅ | ✅ |
 | Mamba-1 (130m) | causal depthwise convolution and selective scan, recurrent state | ✅ | ✅ | ✅ | ✅ |
 | Mistral (sliding window) | the window as an attribute on the llama graph | ✅ | ✅ | ✅ | ✅ (tiny random model) |
 | GPT-2 (124M) | fused qkv, LayerNorm, learned positions | ✅ | ✅ | ✅ | ✅ (tiny random model) |
+| Gemma 2; Phi-3 LongRoPE and sliding window (synthetic) | soft caps, scaled rotary and windows | ✅ | ✅ | ✅ | not gated |
+| Mixtral; Qwen2-MoE; Qwen3-MoE (synthetic) | routed/shared experts; explicit IR path | ✅ | ✅ | ✅ | not gated |
+| DeepSeek2 and query-LoRA (synthetic) | multi-head latent attention | ✅ | ✅ | ✅ | not gated |
+| DeepSeek2 dense/YaRN; DeepSeek3 (synthetic) | leading dense layers and grouped router | ✅ | CPU fallback | ✅ | not gated |
 
 How they are checked:
 - **The graph.** The IR ember builds equals `gguf_ir.py`'s field by field, on every family.
@@ -120,20 +124,34 @@ How they are checked:
   and Qwen2.5-0.5B were not run: the laptop lacked the memory for a software-adapter copy of them
   ([`experiments/webgpu_ir_2026-10-26/`](experiments/webgpu_ir_2026-10-26/)).
 
+The later-family synthetic gate passed all ten files on an L4: eight actually executed on CUDA,
+two used the named CPU fallbacks above. Each matched 40 HF continuations and 640 CPU/device
+argmaxes; deterministic repeats matched every saved row bit. Mixtral used `EMBER_IR_BUILD=1`:
+this result validates its IR path, while the attempted tuned-path harness failed to produce an
+IR document. These small synthetic models do not establish full checkpoint support or speed
+([E4 receipts](experiments/e4_moe_mla_2026-10-28/README.md)).
+
+The three official Gemma/Qwen WebGPU entries also have actual L4 browser measurements against
+WebAssembly, with identical replies on six prompts each. Those GPU-specific checks supplement
+the earlier software-adapter gates; browser memory limits still depend on the device and build
+([hardware WebGPU receipts](experiments/webgpu_gpu_2026-10-27/README.md)).
+
 **Highlights**
 
-- **Fast where it matters.** CUDA prefill is 7.5x to 188x faster than the original path, up to
-  4,096 tokens ([docs/TTFT.md](docs/TTFT.md)). A whole decode step is captured as one CUDA
-  graph: 2.7 ms/token and a first streamed word in 16-20 ms on a laptop RTX 4060.
+- **CUDA graph decode and batched prefill.** Historical tuned-path measurements show prefill
+  7.5x to 188x faster than its original implementation, up to 4,096 tokens, with 2.7 ms/token
+  decode and a first streamed word in 16–20 ms on an RTX 4060. These are the recorded models
+  and workloads, not a comparison with another engine ([docs/TTFT.md](docs/TTFT.md)).
 - **Reproducible when asked.** `EMBER_DETERMINISTIC=1` makes CUDA prefill and decode logits bit-identical run
   to run on the same GPU and build (fixed-order decode reductions, pinned cuBLAS workspace), at no measurable
   cost; off by default, and off changes nothing
   ([docs/USAGE.md](docs/USAGE.md), [`experiments/determinism_2026-10-26/`](experiments/determinism_2026-10-26/)).
 - **The visitor's GPU, in the browser.** The chat page runs the forward pass through WebGPU when
-  the browser has it, and falls back to WebAssembly when it does not. On an Intel laptop GPU it
-  answers in 166 ms per reply against 646 ms for WebAssembly, with replies identical to ember's
-  CPU on all 40 prompts. Q8_0 weights stay quantised on the GPU. Every IR family but `recurrence`
-  runs there too, through a WGSL interpreter of the document (gated on a software adapter).
+  the browser has it, and falls back to WebAssembly when it does not. On an Intel laptop GPU,
+  the earlier `chat_sftfinal_v3` page measured 166 ms per reply against 646 ms for WebAssembly,
+  with identical replies on 40 prompts. This is not a latency claim for the current 97.5M chat
+  model. Q8_0 weights stay quantised on the GPU; the tables above distinguish software and
+  hardware checks for the IR families ([browser receipts](experiments/webgpu_2026-10-21/README.md)).
 - **Any paperkiln network, not just llama.** paperkiln writes the model's graph into the GGUF
   (`paperkiln.ir`). ember's interpreter runs it on the CPU or GPU, with a CUDA-graph decode of
   its own, and refuses at load any op it cannot run, naming it.
@@ -156,18 +174,45 @@ How they are checked:
   by token. Kernel tests check the attention, MoE and recurrent kernels against
   double-precision references.
 
+## Current performance evidence
+
+The matched single-thread FP32 CPU comparison uses the same F32 GGUFs, frozen token IDs and
+full vocabulary rows in Ember and Transformers: SmolLM2-135M and Gemma3-270M, at 16/128/512
+prompt tokens with 32 output rows. Both models passed the fixed numerical and greedy-ID gates.
+The portable Ember build was slower in every cell. The subsequent AVX2 change preserved all
+192 captured rows bit for bit and improved prefill by 2.38–2.87x and decode by 1.04–1.50x over
+that build; the optimized cells remain slower than Transformers. The paired trials, arithmetic
+and timing boundaries, host limits and independent audit are in the
+[CPU comparison](experiments/hf_cpu_2026-10-30/README.md). These are laptop workload results,
+not a general engine ranking. A separate Smol-only CUDA comparison is supervised and pending;
+there is no completed CUDA-versus-Transformers speed claim here.
+
+Recent optional decode experiments have not justified changing defaults. Fixed-linear logits
+passed the registered rounding tolerance but failed the stronger requirement of being no farther
+from the CPU reference than cuBLAS. Device row selection had an unstable default off/off control;
+its deterministic paired speedups were 1.159x and 1.141x, so only one of the two required pairs
+cleared 1.15x.
+The f16 KV-cache gate retained greedy IDs but failed the unchanged CPU/device logit tolerance on
+Qwen3. These outcomes remain recorded, with no tolerance changes or default switch
+([fixed linear and row selection](experiments/spec_r1_2026-10-28/README.md),
+[KV cache](experiments/kv_quant_r2_2026-10-28/README.md)). Self-output draft tables currently have
+only a supervised timing pilot, not a completed quality or speed result.
+
 ## Quick start: build and chat
 
 ```bash
 git clone https://github.com/JohnnyTeutonic/ember.cpp.git && cd ember.cpp
-mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j && cd ..
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 2 --target tinyllama_server
 ./build/tinyllama_server path/to/model.gguf 8080 127.0.0.1 ./www -1   # -1: all layers on the GPU, 0: CPU
 ```
 
 Open http://127.0.0.1:8080. You need CMake, a C++17 compiler and Boost; CUDA and OpenMP are
-optional (details: [docs/USAGE.md](docs/USAGE.md)). Any GGUF from the
-[paperkiln](https://github.com/JohnnyTeutonic/paperkiln) studio, or a Llama GGUF from Hugging
-Face, works as `model.gguf`.
+optional (details: [docs/USAGE.md](docs/USAGE.md)). For an explicit CPU build, add
+`-DHAS_CUDA=OFF` to the configure command and pass `0` instead of `-1` to the server.
+Use a compatible [paperkiln](https://github.com/JohnnyTeutonic/paperkiln) export or one of the
+supported GGUF families above; unsupported operators or configurations are refused at load.
+`curl http://127.0.0.1:8080/health` reports the loaded model and selected chat template.
 
 ## Quick start: OpenAI-compatible API
 
