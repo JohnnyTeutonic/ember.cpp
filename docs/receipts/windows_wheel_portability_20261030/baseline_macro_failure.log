@@ -1,0 +1,87 @@
+<command-line>: error: expected identifier before ‘const’
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:71:3: note: in expansion of macro ‘CONST’
+   71 |   CONST, INPUT, COL, WIDTH,                            // push c, input idx at (t, j), column idx at t, (float) w
+      |   ^~~~~
+<command-line>: error: expected ‘}’ before ‘const’
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:71:3: note: in expansion of macro ‘CONST’
+   71 |   CONST, INPUT, COL, WIDTH,                            // push c, input idx at (t, j), column idx at t, (float) w
+      |   ^~~~~
+In file included from /tmp/ember_const_regression_34w4krqw/probe.cpp:1:
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:70:21: note: to match this ‘{’
+   70 | enum class Op : int {
+      |                     ^
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:71:8: error: expected unqualified-id before ‘,’ token
+   71 |   CONST, INPUT, COL, WIDTH,                            // push c, input idx at (t, j), column idx at t, (float) w
+      |        ^
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:71:10: error: uninitialized ‘const ember_ir::expr::INPUT’ [-fpermissive]
+   71 |   CONST, INPUT, COL, WIDTH,                            // push c, input idx at (t, j), column idx at t, (float) w
+      |          ^~~~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:71:17: error: uninitialized ‘const ember_ir::expr::COL’ [-fpermissive]
+   71 |   CONST, INPUT, COL, WIDTH,                            // push c, input idx at (t, j), column idx at t, (float) w
+      |                 ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:71:22: error: uninitialized ‘const ember_ir::expr::WIDTH’ [-fpermissive]
+   71 |   CONST, INPUT, COL, WIDTH,                            // push c, input idx at (t, j), column idx at t, (float) w
+      |                      ^~~~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:72:3: error: uninitialized ‘const ember_ir::expr::NEG’ [-fpermissive]
+   72 |   NEG, EXP, LOG, SQRT, TANH, SIGMOID, ERF, ABS, RELU,  // pop a, push f(a)
+      |   ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:72:8: error: uninitialized ‘const ember_ir::expr::EXP’ [-fpermissive]
+   72 |   NEG, EXP, LOG, SQRT, TANH, SIGMOID, ERF, ABS, RELU,  // pop a, push f(a)
+      |        ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:72:13: error: uninitialized ‘const ember_ir::expr::LOG’ [-fpermissive]
+   72 |   NEG, EXP, LOG, SQRT, TANH, SIGMOID, ERF, ABS, RELU,  // pop a, push f(a)
+      |             ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:72:18: error: uninitialized ‘const ember_ir::expr::SQRT’ [-fpermissive]
+   72 |   NEG, EXP, LOG, SQRT, TANH, SIGMOID, ERF, ABS, RELU,  // pop a, push f(a)
+      |                  ^~~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:72:24: error: uninitialized ‘const ember_ir::expr::TANH’ [-fpermissive]
+   72 |   NEG, EXP, LOG, SQRT, TANH, SIGMOID, ERF, ABS, RELU,  // pop a, push f(a)
+      |                        ^~~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:72:30: error: uninitialized ‘const ember_ir::expr::SIGMOID’ [-fpermissive]
+   72 |   NEG, EXP, LOG, SQRT, TANH, SIGMOID, ERF, ABS, RELU,  // pop a, push f(a)
+      |                              ^~~~~~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:72:39: error: uninitialized ‘const ember_ir::expr::ERF’ [-fpermissive]
+   72 |   NEG, EXP, LOG, SQRT, TANH, SIGMOID, ERF, ABS, RELU,  // pop a, push f(a)
+      |                                       ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:72:44: error: uninitialized ‘const ember_ir::expr::ABS’ [-fpermissive]
+   72 |   NEG, EXP, LOG, SQRT, TANH, SIGMOID, ERF, ABS, RELU,  // pop a, push f(a)
+      |                                            ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:72:49: error: uninitialized ‘const ember_ir::expr::RELU’ [-fpermissive]
+   72 |   NEG, EXP, LOG, SQRT, TANH, SIGMOID, ERF, ABS, RELU,  // pop a, push f(a)
+      |                                                 ^~~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:73:3: error: uninitialized ‘const ember_ir::expr::ADD’ [-fpermissive]
+   73 |   ADD, SUB, MUL, DIV, POW, MAX, MIN,                   // pop b, pop a, push f(a, b)
+      |   ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:73:8: error: uninitialized ‘const ember_ir::expr::SUB’ [-fpermissive]
+   73 |   ADD, SUB, MUL, DIV, POW, MAX, MIN,                   // pop b, pop a, push f(a, b)
+      |        ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:73:13: error: uninitialized ‘const ember_ir::expr::MUL’ [-fpermissive]
+   73 |   ADD, SUB, MUL, DIV, POW, MAX, MIN,                   // pop b, pop a, push f(a, b)
+      |             ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:73:18: error: uninitialized ‘const ember_ir::expr::DIV’ [-fpermissive]
+   73 |   ADD, SUB, MUL, DIV, POW, MAX, MIN,                   // pop b, pop a, push f(a, b)
+      |                  ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:73:23: error: uninitialized ‘const ember_ir::expr::POW’ [-fpermissive]
+   73 |   ADD, SUB, MUL, DIV, POW, MAX, MIN,                   // pop b, pop a, push f(a, b)
+      |                       ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:73:28: error: uninitialized ‘const ember_ir::expr::MAX’ [-fpermissive]
+   73 |   ADD, SUB, MUL, DIV, POW, MAX, MIN,                   // pop b, pop a, push f(a, b)
+      |                            ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:73:33: error: uninitialized ‘const ember_ir::expr::MIN’ [-fpermissive]
+   73 |   ADD, SUB, MUL, DIV, POW, MAX, MIN,                   // pop b, pop a, push f(a, b)
+      |                                 ^~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:74:3: error: uninitialized ‘const ember_ir::expr::WHERE’ [-fpermissive]
+   74 |   WHERE,                                               // pop b, a, c; push c > 0 ? a : b
+      |   ^~~~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:75:1: error: expected unqualified-id before ‘}’ token
+   75 | };
+      | ^
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:77:3: error: ‘Op’ does not name a type
+   77 |   Op op = Op::CONST;
+      |   ^~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:89:32: error: ‘Expr’ does not name a type
+   89 | std::vector<Stage> lower(const Expr& e);
+      |                                ^~~~
+/tmp/ember_const_regression_34w4krqw/graph_ir_expr.h:92:1: error: expected declaration before ‘}’ token
+   92 | }  // namespace ember_ir
+      | ^
