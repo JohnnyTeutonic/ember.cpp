@@ -186,8 +186,23 @@ The portable Ember build was slower in every cell. The subsequent AVX2 change pr
 that build; the optimized cells remain slower than Transformers. The paired trials, arithmetic
 and timing boundaries, host limits and independent audit are in the
 [CPU comparison](experiments/hf_cpu_2026-10-30/README.md). These are laptop workload results,
-not a general engine ranking. A separate Smol-only CUDA comparison is supervised and pending;
-there is no completed CUDA-versus-Transformers speed claim here.
+not a general engine ranking.
+
+A separate **L4 FP32 SmolLM2-135M** comparison passed all 96 full-vocabulary row/ID pairs and
+24 immutable timing trials. Medians from four observations per runtime and shape are below;
+HF is Transformers 4.57 with Torch 2.4.1, eager attention and TF32 disabled.
+
+| Prompt tokens | Ember prefill ms | HF prefill ms | Ember decode ms/token | HF decode ms/token |
+|---|---:|---:|---:|---:|
+| 16 | 5.18 | 26.51 | 3.28 | 12.94 |
+| 128 | 8.42 | 24.94 | 3.29 | 12.75 |
+| 512 | 24.70 | 25.46 | 3.36 | 12.78 |
+
+Decode is 3.80-3.95x faster in this workload; 512-token prefill is nearly tied and HF's
+prefill trials vary. Both timers include CPU input-ID transfer through synchronous CPU output
+rows, runtime dispatch and cache wrappers. They exclude loading, tokenization, sampling and
+row writes. This is one model/GPU against eager HF, not a comparison with compiled HF or a
+general engine ranking. [CUDA protocol, raw-trial summaries and independent audit](experiments/hf_cuda_2026-10-30/README.md).
 
 Recent optional decode experiments have not justified changing defaults. Fixed-linear logits
 passed the registered rounding tolerance but failed the stronger requirement of being no farther

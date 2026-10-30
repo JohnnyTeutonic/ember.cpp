@@ -1,0 +1,255 @@
+{
+  "independent_audit_python": "3.11.15 (main, Jun 23 2026, 15:19:43) [Clang 22.1.3 ]",
+  "independent_audit_numpy": "1.26.4",
+  "strict_replay_runtime_note": "CPython3.12 changes builtin float summation; its exact saved-summary replay differed at last bits. This audit uses original3.11 arithmetic and NumPy1.26.4, without changing controller, raw rows, trial data, gates or saved summary.",
+  "schema": 1,
+  "status": "COMPLETE_INDEPENDENTLY_VERIFIED_SMOL_CUDA_SUBSET",
+  "complete": true,
+  "scope": "SmolLM2-135M only, L4, FP32, one host thread, eager HF4.57/Torch2.4.1 versus Ember IR. CPU input IDs through synchronous full CPU output row; no tokenization/startup/argmax/dump timing. No Gemma/GPU model-quality or general engine/SOTA ranking.",
+  "archive": {
+    "path": "/mnt/c/ml_artifacts/benchmarks/hf_cuda_smol_v3_20261030/hf_cuda_smol_v3/out.zip",
+    "bytes": 39988204,
+    "sha256": "e9eef4ca63beea4d42039ecbfe7db02dedd1b353e766a864a55d0c092dc5e4fb",
+    "crc_verified": true
+  },
+  "compiled_source_commit": "5bfda89345b3bcf1f0352eee555f0fd4eb73ac7d",
+  "runtime_job_commit": "0f9540a3fa511c6c8915cdb914237aa205632890",
+  "local_check": {
+    "offline_frozen_controller_report_exact_match": true,
+    "full_rows_and_greedy_ids_verified": 96,
+    "completed_immutable_trials_verified": 24,
+    "live_canonical_weight_archived_binary_and_source_integrity_files": {
+      "/content/SmolLM2-135M-f32.gguf": "a898c1208f35ae7c5456d8f19d868a7505b445916dddb1e906fa0296ffdda941",
+      "/content/b/ir_hf_cuda_bench": "6bb0b73335cd5da64a9b2145e7f01b7f0cb16e817b6f86bd2e6821358bb12f72",
+      "/content/src/experiments/hf_cuda_2026-10-30/benchmark.py": "ddd3104489dd2935187271d48dfabe77501a2b3c5fa02350aad1ca5e54a2f04c",
+      "/content/src/tools/ir_hf_cuda_bench.cpp": "d468bc2a40b841aeb220c93dca8f3a733aad073606081864f73f9ecaf88356b5",
+      "/content/src/graph_ir.cpp": "7d31e3b3777b3a1605b818e35c3f49c85588e92a0e2de367f712f90188107f61",
+      "/content/src/graph_ir.h": "c32a106d87fce531a12e7144dec8d781b560585694196d0ac66ce140b5d6bc2a",
+      "/content/src/CMakeLists.txt": "538c02e17a972587220cf785ea92fa2c5cd3ed2c0041723b78c61f1005654f9e"
+    }
+  },
+  "canonical_reconstruction": {
+    "bytes": 539845184,
+    "sha256": "a898c1208f35ae7c5456d8f19d868a7505b445916dddb1e906fa0296ffdda941",
+    "expected_sha256": "a898c1208f35ae7c5456d8f19d868a7505b445916dddb1e906fa0296ffdda941"
+  },
+  "environment": {
+    "environment": {
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "EMBER_IR_BUILD": "1",
+      "EMBER_IR_CTX": "1024",
+      "NVIDIA_TF32_OVERRIDE": "0",
+      "CUDA_VISIBLE_DEVICES": "0",
+      "HF_HUB_DISABLE_IMPLICIT_TOKEN": "1",
+      "HF_HUB_DISABLE_TELEMETRY": "1"
+    },
+    "unset_overrides": [
+      "EMBER_IR",
+      "EMBER_KV",
+      "EMBER_DETERMINISTIC",
+      "EMBER_DECODE_LINEAR",
+      "EMBER_DECODE_OPT",
+      "EMBER_DECODE_PICK"
+    ],
+    "versions": {
+      "torch": "2.4.1+cu124",
+      "numpy": "1.26.4",
+      "transformers": "4.57.0",
+      "tokenizers": "0.22.1",
+      "gguf": "0.19.0",
+      "safetensors": "0.6.2",
+      "huggingface-hub": "0.35.3",
+      "sentencepiece": "0.2.2",
+      "accelerate": "1.13.0"
+    },
+    "image_digest": "sha256:61a4aafb0094cd773f11eefa378929d5a687bd775febeb78eac62fc824141fb5",
+    "status": "LAUNCH_CONTRACT_PASS"
+  },
+  "native_metadata": {
+    "vocab": 49152,
+    "max_len": 1024,
+    "tensor_count": 272,
+    "tensor_type": 0,
+    "tensor_inventory_sha256": "8bb6c219de71e6d2039d52528707db98b642ae59fc33e0917832f60eb8d8dc45"
+  },
+  "gate_results": {
+    "16": {
+      "rows": 32,
+      "vocab": 49152,
+      "max_abs": 2.6702880859375e-05,
+      "max_relative": 1.088561155539888e-06,
+      "tolerance": 0.0001,
+      "inputs_sha256": "0ecbd727934b8edbda62918de28006c30ad6aff317ac3ad5f351bb2411b562a6",
+      "hf_rows_sha256": "5e0743e257b7d47537b86f8455894f75dd4ac7da5fba24968bbe92332d47b7e2",
+      "ember_rows_sha256": "acc0b3d276ad4e20ba021c1b8396eaa2d5a7357a9fa019bf340796d29f24c70a"
+    },
+    "128": {
+      "rows": 32,
+      "vocab": 49152,
+      "max_abs": 2.47955322265625e-05,
+      "max_relative": 6.63668992945607e-07,
+      "tolerance": 0.0001,
+      "inputs_sha256": "3a6bcd6ddc806565d4eaa1cc4b094129f4a53a0771a1d0e4fa8fba90f568beb2",
+      "hf_rows_sha256": "dd338d678103c09e5135052624e7c5e24796fe5abded67d5ddc07798402037ee",
+      "ember_rows_sha256": "817da79b005ca48ba83d0a1fb3979e4d7ac2ff677b74f95cb119215135af93c2"
+    },
+    "512": {
+      "rows": 32,
+      "vocab": 49152,
+      "max_abs": 2.288818359375e-05,
+      "max_relative": 9.11668911352593e-07,
+      "tolerance": 0.0001,
+      "inputs_sha256": "e9ae2d77cde70a718a8f5a7c2975f50424c184f807d1f3b6de26eb97135cfa19",
+      "hf_rows_sha256": "bc2dcddb2e646e8dafd1578c0cba428422523d2a95a0ab48f573d47a070e4e4c",
+      "ember_rows_sha256": "001e6c757157341b7b818bf18ec2bd15619f3e1392df3f0980dfdcaa5417a554"
+    }
+  },
+  "results": {
+    "16": {
+      "ember": {
+        "trials": 4,
+        "prefill_ms_median": 5.180979000000001,
+        "decode_ms_per_token_median": 3.2776128709677415,
+        "prefill_ms_all": [
+          5.183147,
+          5.182546,
+          5.177949,
+          5.179412
+        ],
+        "decode_ms_per_token_all": [
+          3.278694290322581,
+          3.277643774193548,
+          3.277581967741935,
+          3.277471870967742
+        ]
+      },
+      "hf": {
+        "trials": 4,
+        "prefill_ms_median": 26.505954000000003,
+        "decode_ms_per_token_median": 12.94135058064516,
+        "prefill_ms_all": [
+          25.243079,
+          27.952966,
+          25.061455,
+          27.768829
+        ],
+        "decode_ms_per_token_all": [
+          12.878834516129029,
+          12.75815129032258,
+          13.05341287096774,
+          13.003866645161292
+        ]
+      },
+      "hf_over_ember_prefill": 5.116012630045402,
+      "hf_over_ember_decode": 3.948407298273796
+    },
+    "128": {
+      "ember": {
+        "trials": 4,
+        "prefill_ms_median": 8.4159325,
+        "decode_ms_per_token_median": 3.292292080645161,
+        "prefill_ms_all": [
+          8.412317,
+          8.420279,
+          8.395401,
+          8.419548
+        ],
+        "decode_ms_per_token_all": [
+          3.2922401290322587,
+          3.2923440322580633,
+          3.2925372580645154,
+          3.29130164516129
+        ]
+      },
+      "hf": {
+        "trials": 4,
+        "prefill_ms_median": 24.9407585,
+        "decode_ms_per_token_median": 12.75115035483871,
+        "prefill_ms_all": [
+          25.929034,
+          23.840945,
+          25.314657,
+          24.56686
+        ],
+        "decode_ms_per_token_all": [
+          12.813151161290323,
+          12.795007,
+          12.707293709677419,
+          12.66699580645161
+        ]
+      },
+      "hf_over_ember_prefill": 2.9635169364773306,
+      "hf_over_ember_decode": 3.873031323618159
+    },
+    "512": {
+      "ember": {
+        "trials": 4,
+        "prefill_ms_median": 24.699984999999998,
+        "decode_ms_per_token_median": 3.3637718387096776,
+        "prefill_ms_all": [
+          24.705579,
+          24.678128,
+          24.697967,
+          24.702003
+        ],
+        "decode_ms_per_token_all": [
+          3.366964032258065,
+          3.366202741935484,
+          3.3581147096774195,
+          3.3613409354838715
+        ]
+      },
+      "hf": {
+        "trials": 4,
+        "prefill_ms_median": 25.458849999999998,
+        "decode_ms_per_token_median": 12.777597403225805,
+        "prefill_ms_all": [
+          25.900161,
+          25.017539,
+          28.967827,
+          20.339945
+        ],
+        "decode_ms_per_token_all": [
+          12.680010612903224,
+          12.801465225806451,
+          12.753729580645158,
+          13.1944455483871
+        ]
+      },
+      "hf_over_ember_prefill": 1.0307232980101,
+      "hf_over_ember_decode": 3.798592180415903
+    }
+  },
+  "protocol_sha256": "2d1c18ef40c9e6c8c161a67fa2231673513ac70955bb0ac311f1402acb352d99",
+  "journal_sha256": "58cbd4b653e8d276110fd4e78bcc2e16422ffe1c2b7ffe043b395417fcf6db21",
+  "budget": {
+    "first_attempt_exact_usd": 0.21107908220140284,
+    "this_attempt_exact_usd": 0.12417190965265035,
+    "combined_exact_usd": 0.33525099185405316,
+    "original_cap_usd": 2
+  },
+  "pod_and_volume_cleaned": true,
+  "default_changed": false,
+  "old_startup_HALTED_preserved": true,
+  "timing_limits": [
+    "Only two ABBA cycles/four observations per runtime and shape.",
+    "Synthetic fixed raw-token workloads; HF eager dispatch/cache wrappers and Ember wrappers included.",
+    "The near-equal512-token prefill medians have variable HF trials; no broad prefill superiority claim."
+  ],
+  "device": {
+    "name": "NVIDIA L4",
+    "capability": [
+      8,
+      9
+    ],
+    "total_memory": 23661248512
+  },
+  "torch": "2.4.1+cu124",
+  "transformers": "4.57.0",
+  "cuda_runtime": "12.4",
+  "tf32": false,
+  "measurement_python": "3.11.10",
+  "thread_contract": 1
+}
