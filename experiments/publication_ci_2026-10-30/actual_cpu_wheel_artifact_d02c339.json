@@ -1,0 +1,117 @@
+{
+  "schema": "ember.actual_ci_wheel_artifact_audit.v1",
+  "run_id": 41052940085,
+  "head_sha": "d02c339af04e56c6f7ee1dad6d0892e9d56d5d70",
+  "artifact_id": 12975138894,
+  "artifact_name": "wheels-ubuntu-latest-cpu",
+  "artifact_zip_sha256": "7ab330dcf64b2410846b9b8aee6dd479ff2d27e9af422d3b9aeb75d7dca41bae",
+  "artifact_api_digest": "sha256:7ab330dcf64b2410846b9b8aee6dd479ff2d27e9af422d3b9aeb75d7dca41bae",
+  "wheels": [
+    {
+      "filename": "tinyllama_cpp-0.1.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "7e26c8fa08d2719996998e11be320b2d0fc55c34483c379584bf041dd5053c64",
+      "license_files": {
+        "LICENSE": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/LICENSE",
+          "sha256": "b86102db40e461f9d46083ca0f68bdb7b827e9a11f2cff11c60d2a662b066106",
+          "exact_source_bytes": true
+        },
+        "THIRD_PARTY_NOTICES.md": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/THIRD_PARTY_NOTICES.md",
+          "sha256": "5f208391b295c830a7c80e6dddf8cbe057db4fa6334e9b0c79c7444c87a24d18",
+          "exact_source_bytes": true
+        }
+      }
+    },
+    {
+      "filename": "tinyllama_cpp-0.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "71148a2767751cf700546bc26f59b3a0f506de900fe9908ffef81d3acffd4c8d",
+      "license_files": {
+        "LICENSE": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/LICENSE",
+          "sha256": "b86102db40e461f9d46083ca0f68bdb7b827e9a11f2cff11c60d2a662b066106",
+          "exact_source_bytes": true
+        },
+        "THIRD_PARTY_NOTICES.md": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/THIRD_PARTY_NOTICES.md",
+          "sha256": "5f208391b295c830a7c80e6dddf8cbe057db4fa6334e9b0c79c7444c87a24d18",
+          "exact_source_bytes": true
+        }
+      }
+    },
+    {
+      "filename": "tinyllama_cpp-0.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "6ca647f8c4ba6bc0466592e5e9d089145f015522fa6d09a282d7a67be97da238",
+      "license_files": {
+        "LICENSE": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/LICENSE",
+          "sha256": "b86102db40e461f9d46083ca0f68bdb7b827e9a11f2cff11c60d2a662b066106",
+          "exact_source_bytes": true
+        },
+        "THIRD_PARTY_NOTICES.md": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/THIRD_PARTY_NOTICES.md",
+          "sha256": "5f208391b295c830a7c80e6dddf8cbe057db4fa6334e9b0c79c7444c87a24d18",
+          "exact_source_bytes": true
+        }
+      },
+      "native_import": {
+        "cuda_compiled": false,
+        "required_apis_callable": true,
+        "module_sha256": "6402bb2bb943d5fa63582ace99fdd6e19398a321497c053b0b758d3ffbdba9a2"
+      }
+    },
+    {
+      "filename": "tinyllama_cpp-0.1.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "1e89811b5b43b1364062933809fc9a2ed2b71d9082c04dceb9b904347f5db42d",
+      "license_files": {
+        "LICENSE": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/LICENSE",
+          "sha256": "b86102db40e461f9d46083ca0f68bdb7b827e9a11f2cff11c60d2a662b066106",
+          "exact_source_bytes": true
+        },
+        "THIRD_PARTY_NOTICES.md": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/THIRD_PARTY_NOTICES.md",
+          "sha256": "5f208391b295c830a7c80e6dddf8cbe057db4fa6334e9b0c79c7444c87a24d18",
+          "exact_source_bytes": true
+        }
+      }
+    },
+    {
+      "filename": "tinyllama_cpp-0.1.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "717918e2df7e121c56ff5adce769ad075826593351e2d44e408e4eb94731fb70",
+      "license_files": {
+        "LICENSE": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/LICENSE",
+          "sha256": "b86102db40e461f9d46083ca0f68bdb7b827e9a11f2cff11c60d2a662b066106",
+          "exact_source_bytes": true
+        },
+        "THIRD_PARTY_NOTICES.md": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/THIRD_PARTY_NOTICES.md",
+          "sha256": "5f208391b295c830a7c80e6dddf8cbe057db4fa6334e9b0c79c7444c87a24d18",
+          "exact_source_bytes": true
+        }
+      }
+    },
+    {
+      "filename": "tinyllama_cpp-0.1.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "58373fe400e25e42c429aa8c64dbd5e759979280492f640f19df40e91de0c9b7",
+      "license_files": {
+        "LICENSE": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/LICENSE",
+          "sha256": "b86102db40e461f9d46083ca0f68bdb7b827e9a11f2cff11c60d2a662b066106",
+          "exact_source_bytes": true
+        },
+        "THIRD_PARTY_NOTICES.md": {
+          "path": "tinyllama_cpp-0.1.0.dist-info/licenses/THIRD_PARTY_NOTICES.md",
+          "sha256": "5f208391b295c830a7c80e6dddf8cbe057db4fa6334e9b0c79c7444c87a24d18",
+          "exact_source_bytes": true
+        }
+      }
+    }
+  ],
+  "scope": "Actual GitHub wheel ZIP content/license and CPU-native import audit; no GPU/device/model inference or timing.",
+  "artifact_api_digest_verified": true,
+  "artifact_size_in_bytes": 13458711,
+  "launcher_source": "import subprocess,json,zipfile,io,hashlib,tempfile,sys,os\nfrom pathlib import Path,PurePosixPath\nrepo='JohnnyTeutonic/ember.cpp';run_id=sys.argv[1];root=Path('/home/jonat/ember_publication_20261030')\napi=lambda suffix:json.loads(subprocess.check_output(['gh','api','repos/'+repo+'/'+suffix]))\nrun=api('actions/runs/'+run_id);arts=api('actions/runs/'+run_id+'/artifacts')['artifacts'];art=next((a for a in arts if a['name']=='wheels-ubuntu-latest-cpu'),None)\nif not art:print('CPU artifact not available yet');sys.exit(3)\nassert art['size_in_bytes'] <= 40_000_000, ('CPU artifact exceeds 40 MB bound',art['size_in_bytes'])\nraw=subprocess.check_output(['gh','api','repos/'+repo+'/actions/artifacts/'+str(art['id'])+'/zip']);assert len(raw)<100_000_000\nassert art.get('digest') in (None, 'sha256:'+hashlib.sha256(raw).hexdigest())\nexpected={name:subprocess.check_output(['git','show',run['head_sha']+':'+name],cwd=root) for name in ['LICENSE','THIRD_PARTY_NOTICES.md']}\nresult={'schema':'ember.actual_ci_wheel_artifact_audit.v1','run_id':int(run_id),'head_sha':run['head_sha'],'artifact_id':art['id'],'artifact_name':art['name'],'artifact_zip_sha256':hashlib.sha256(raw).hexdigest(),'artifact_api_digest':art.get('digest'),'wheels':[],'scope':'Actual GitHub wheel ZIP content/license and CPU-native import audit; no GPU/device/model inference or timing.'}\nwith zipfile.ZipFile(io.BytesIO(raw)) as outer:\n for info in outer.infolist():\n  if not info.filename.endswith('.whl'):continue\n  wheelraw=outer.read(info);row={'filename':info.filename,'sha256':hashlib.sha256(wheelraw).hexdigest(),'license_files':{}}\n  with zipfile.ZipFile(io.BytesIO(wheelraw)) as wheel:\n   for name,want in expected.items():\n    matches=[n for n in wheel.namelist() if '.dist-info/' in n and PurePosixPath(n).name==name];assert len(matches)==1,(info.filename,name,matches)\n    content=wheel.read(matches[0]);assert content==want,(info.filename,name)\n    row['license_files'][name]={'path':matches[0],'sha256':hashlib.sha256(content).hexdigest(),'exact_source_bytes':True}\n   if '-cp312-cp312-' in info.filename:\n    with tempfile.TemporaryDirectory(prefix='ember_cpu_wheel_audit_') as tmp:\n     for item in wheel.infolist():\n      path=PurePosixPath(item.filename);assert not path.is_absolute() and '..' not in path.parts\n      assert (item.external_attr>>16)&0o170000 !=0o120000\n      dest=Path(tmp)/str(path)\n      if item.is_dir():dest.mkdir(parents=True,exist_ok=True)\n      else:dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(wheel.read(item))\n     code='import sys,json,hashlib,pathlib;sys.path.insert(0,sys.argv[1]);import tinyllama_cpp.tinyllama_bindings as b;assert b.cuda_compiled is False;assert callable(b.TinyLlamaSession) and callable(b.ModelConfig);print(json.dumps({\"cuda_compiled\":b.cuda_compiled,\"required_apis_callable\":True,\"module_sha256\":hashlib.sha256(pathlib.Path(b.__file__).read_bytes()).hexdigest()}))'\n     p=subprocess.run([sys.executable,'-I','-c',code,tmp],cwd=tmp,capture_output=True,text=True);assert p.returncode==0,p.stderr\n     row['native_import']=json.loads(p.stdout)\n  result['wheels'].append(row)\nassert len(result['wheels'])==6\nout=Path('/home/jonat')/('ember_actual_wheel_audit_'+run_id+'.json');out.write_text(json.dumps(result,indent=2)+'\\n');print(json.dumps({'receipt':str(out),'head_sha':run['head_sha'],'wheels':len(result['wheels']),'all_license_bytes_exact':True,'cpu312_native_import':'PASS'},indent=2))\n",
+  "limits": "All six Linux CPU wheels inspected for exact license bytes; only CPython 3.12 actual artifact loaded locally. GitHub CI separately tests each ABI. No Windows wheel artifact or CUDA/GPU/device/model validation in this audit. Download remained in memory; only a temporary selected-wheel extraction was used and automatically removed."
+}
