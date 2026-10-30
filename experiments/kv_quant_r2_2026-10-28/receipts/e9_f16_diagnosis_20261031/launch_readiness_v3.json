@@ -1,0 +1,49 @@
+{
+ "kind": "E9_F16_DIAGNOSIS_PREPARATION_NOT_RESULT",
+ "source": "2658afb90bcadfb812fb4169e338ef9c260a2163",
+ "original": "5b96961",
+ "runner": "e260097908e9d97df4601a9d8145bd1a1a97c8be",
+ "max_usd": 1.5,
+ "max_hours": 2.25,
+ "vm_timeout_minutes": 95,
+ "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+ "model_revision": "23749fefcc72300e3a2ad315e1317431b06b590a",
+ "ids_sha256": "944f232af3e662550de2714014d596e402477baac25c7f78e7ed312cbdb5fec3",
+ "registered_tolerance": 0.0001,
+ "production_arithmetic_changed": false,
+ "e9_closed": false,
+ "local_checks": "38 pytest; Ruff; shell syntax; CUDA compile-only; normalCPUbyteproof; realCPUfixture10checks; CPUconversion1256002+65536",
+ "raw_checkpoint_scope": "per-case journal and ZIP retained physical volume; terminal home fetch; not physical-volume-loss safe",
+ "transport_regressions": "11 exact embedded-Python tests; missing/corrupt artifacts fail closed; no newline bug reproduced",
+ "files": {
+  "ember.tgz": {
+   "bytes": 5722914,
+   "sha256": "cc6c26e7e338a24d06eb60fc682b608325aaec97a64bfe9054bf6870ad4f1a82"
+  },
+  "graph_ir_original.cpp": {
+   "bytes": 243683,
+   "sha256": "c5bfa090027ae1ba448707228e5bc0e961f216c3cfb8f5c1c31c309fbdd8bfd9"
+  },
+  "f16_diagnosis_vm.sh": {
+   "bytes": 5116,
+   "sha256": "8f52614db1583648c57bbcb3378be14f26b4091706763fc024aed9d6e9631295"
+  },
+  "COMMITS": {
+   "bytes": 976,
+   "sha256": "5224cc02f16bbf533303d889498142c445643a61dd503b430ef5eb21e18aa111"
+  },
+  "INPUT_SHA256SUMS": {
+   "bytes": 324,
+   "sha256": "50cbe7200ec1ae8576ece91b99437a789c23b9bbb5a88dad79217267c39de992"
+  }
+ },
+ "proposal": {
+  "name": "ember-e9-f16-diag-1031 (fixed all-prompt numerical diagnosis only; cap$1.50; no E9 closure; disable when home)",
+  "enabled": false,
+  "workdir": "/home/jonat/e9_diagnosis_runner_20261031",
+  "state_dir": "/home/jonat/e9_f16_diag_20261031_runner",
+  "command": "python3 /home/jonat/e9_diagnosis_runner_20261031/tools/colab_chat/runner_multi.py --backend runpod --gpu L4 --cloud SECURE --volume-gb 25 --image runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04 --commit e260097908e9d97df4601a9d8145bd1a1a97c8be --jobs tools/colab_chat/ember_e9_f16_diagnosis_20261031.json --boot-script tools/colab_chat/boot_commands_sparse.sh --name ember-e9-f16-diag-1031 --art /mnt/c/ml_artifacts/kvq/ember-e9-f16-diag-1031 --state-dir /home/jonat/e9_f16_diag_20261031_runner --max-usd 1.5 --max-hours 2.25 --deadline-utc 2026-10-30T17:15:00Z --upload ember.tgz=/home/jonat/e9_f16_diag_stage_v3_20261031/ember.tgz --upload graph_ir_original.cpp=/home/jonat/e9_f16_diag_stage_v3_20261031/graph_ir_original.cpp --upload f16_diagnosis_vm.sh=/home/jonat/e9_f16_diag_stage_v3_20261031/f16_diagnosis_vm.sh --upload COMMITS=/home/jonat/e9_f16_diag_stage_v3_20261031/COMMITS --upload INPUT_SHA256SUMS=/home/jonat/e9_f16_diag_stage_v3_20261031/INPUT_SHA256SUMS"
+ },
+ "status": "PREPARED_NOT_LAUNCHED",
+ "scientific_result": null
+}
