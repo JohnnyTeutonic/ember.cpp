@@ -1,0 +1,9 @@
+# CUDA forward comparison — frozen workload
+
+This is a separate CUDA counterpart to the completed CPU comparison. It does not alter or replay the CPU timing protocol. It measures one actual CUDA GPU with one host thread, FP32 weights/activations, TF32 disabled, eager HF attention, synthetic raw prompts16/128/512 and32 fixed output rows. The HF CUDA greedy continuation, including EOS, is frozen before native comparison.
+
+Both timers start with CPU input IDs and end with a full CPU output-logit row: H2D input and D2H output transfers and synchronization are included. Token creation, tokenizer/sampler/argmax, JSON, row writing, model loading and startup are excluded. Native CPU wrappers, HF Python/cache dispatch and differing KV strategies remain included. These are runtime forward latencies, not isolated kernel or chat performance.
+
+Before any timed shape, every full-vocabulary row and argmax must pass `max_abs_error / max(1,max_abs_HF_row) <= 1e-4`. Failed rows and HALTED markers remain; no tolerance change or prompt replacement. Each passed shape uses one warm request per engine followed by two ABBA cycles (four observations each). Completed trials are hash-chained, immutable on resume, and offline replayable. Native fallback is rejected; the binary must report actual GPU execution. Hardware, runtime, source/binary/weights and input hashes are recorded.
+
+Candidate inputs are the exact existing F32 SmolLM2-135M and Gemma3-270M GGUFs used by the CPU comparison. Remote regeneration is acceptable only when the entire file SHA matches the canonical artifact; another revision, quantization or weights file is not a substitute. No model-quality or general engine-ranking claim follows from these synthetic measurements. No CUDA result exists merely because this harness is prepared.

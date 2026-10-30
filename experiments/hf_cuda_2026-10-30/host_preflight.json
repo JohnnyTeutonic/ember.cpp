@@ -1,0 +1,11 @@
+{
+  "scope": "CPU-only compilation and fallback refusal, not a CUDA execution result",
+  "pass": true,
+  "exit_code": 2,
+  "stderr": "CUDA benchmark requires the actual GPU interpreter\n",
+  "binary_sha256": "019ce849257a0f43f17858f979f4372bd815848588a61d2488d5a7af44b87c57",
+  "model_sha256": "c88d58f4def9dbea3d80d26b6cff0fe32b5ca9acbc138d971a87c6cd3bf132a0",
+  "source_sha256": "da1d7679da2858afe1de1ba8a2d06dc82e5f5e8485f71e08c96c3cb1029f9db4",
+  "local_gpu_used": false,
+  "cmake_build_log_sha256": "216d75a562aa6b249983d2198b641226927da0e17a155a9f831435fc2fa137d6"
+}
