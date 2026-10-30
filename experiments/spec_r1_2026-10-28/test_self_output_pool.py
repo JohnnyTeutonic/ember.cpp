@@ -174,3 +174,32 @@ def test_frozen_auditor_source_bundled_and_checked(live_fake):
     source.write_text('corrupted')
     with pytest.raises(ValueError, match='source snapshot'):
         p.analyze(out)
+
+
+def test_default_health_omits_flag_as_real_server_contract(live_fake, monkeypatch):
+    files, out, _ = live_fake
+    original = p.request
+    def request(url, payload=None):
+        result = original(url, payload)
+        if url.endswith('/health'):
+            result.pop('deterministic')
+        return result
+    monkeypatch.setattr(p, 'request', request)
+    assert p.run(*files, out)['complete']
+    assert p.analyze(out)['status'] == 'VERIFIED_COMPLETE'
+
+
+@pytest.mark.parametrize('flag', [True, None, 0, 'false'])
+def test_wrong_explicit_health_mode_refused_before_generation(live_fake, monkeypatch, flag):
+    files, out, calls = live_fake
+    original = p.request
+    def request(url, payload=None):
+        result = original(url, payload)
+        if url.endswith('/health'):
+            result['deterministic'] = flag
+        return result
+    monkeypatch.setattr(p, 'request', request)
+    with pytest.raises(ValueError, match='mode/vocab'):
+        p.run(*files, out)
+    assert calls == ['server']
+    assert json.loads((out / 'health_0.json').read_text())['deterministic'] == flag
