@@ -1,0 +1,23 @@
+{
+  "schema": "ember.pybind_python_compatibility_probe.v1",
+  "date": "2026-10-30",
+  "source_commit": "1106be5efc21d3a8cb0e2414ae1ac49a23c55ba9",
+  "scope": "Minimal pybind11 C++ extension compile/import/identity roundtrip only. This does not establish full Ember wheel compatibility or CUDA support. No pybind11 source/version change warranted by this successful bounded probe.",
+  "python": "Python 3.13.14",
+  "python_executable_sha256": "b200d6c7ae464af64f81808ba246a856b1a1cdf3b2ae7088d37d87d31aebe9ff",
+  "installation": "uv-managed isolated CPython download (33.4 MiB); no system Python or local Visual Studio installation modified.",
+  "pybind_version": "2.12.0",
+  "pybind_common_header_sha256": "c30f2a63ac450230e1c1337c477cfe7f8288f62b665514701b81f9bf16047e4d",
+  "cmake_source_sha256": "e171252be4dcd9cdf3cd5959264102014b63ea9f3d644853c3a2b322fe4ae21c",
+  "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "source": "#include <pybind11/pybind11.h>\nPYBIND11_MODULE(ember_py313_probe,m){ m.def(\"identity\", [](int x){return x;}); }\n",
+  "source_sha256": "4c00639b869a4e92ecf26102c1c605e16af9343f86f92180e4fe4dbd0c79863b",
+  "launcher_source": "import subprocess,json,sys,hashlib\nfrom pathlib import Path\nwork=Path('/home/jonat/ember_py313_compat_20261030');work.mkdir(exist_ok=True)\npy=subprocess.check_output(['/home/jonat/.local/bin/uv','python','find','3.13'],text=True).strip()\nconfig=json.loads(subprocess.check_output([py,'-c','import sysconfig,json;print(json.dumps({\"include\":sysconfig.get_path(\"include\"),\"suffix\":sysconfig.get_config_var(\"EXT_SUFFIX\")}))'],text=True))\nsource=work/'probe.cpp';source.write_text('#include <pybind11/pybind11.h>\\nPYBIND11_MODULE(ember_py313_probe,m){ m.def(\"identity\", [](int x){return x;}); }\\n')\nout=work/('ember_py313_probe'+config['suffix']);inc='/home/jonat/ember_publication_build_20261030/_deps/pybind11-src/include'\ncmd=['g++','-std=c++17','-O0','-shared','-fPIC','-I'+config['include'],'-I'+inc,str(source),'-o',str(out)]\np=subprocess.run(cmd,capture_output=True,text=True);(work/'compile.log').write_text(p.stdout+p.stderr)\nprint('CPython',subprocess.check_output([py,'--version'],text=True).strip(),'pybind11 v2.12 compile exit',p.returncode)\nif p.returncode:print((p.stdout+p.stderr)[-7000:])\nelse:\n r=subprocess.run([py,'-c','import ember_py313_probe as p; assert p.identity(17)==17; print(\"native roundtrip PASS\")'],cwd=work,capture_output=True,text=True);(work/'import.log').write_text(r.stdout+r.stderr);print(r.stdout,r.stderr,'import exit',r.returncode)\n",
+  "compile_exit_code": 0,
+  "compile_log": "",
+  "extension_sha256": "fbd66148a3dff0736e96de04539b1c0959ad6d07a62474a7f0e9861cbb2e2074",
+  "import_exit_code": 0,
+  "import_stdout": "native roundtrip PASS\n",
+  "import_stderr": "",
+  "cpu_budget_cores": 1
+}
