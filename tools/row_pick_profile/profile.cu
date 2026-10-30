@@ -40,7 +40,8 @@ bool semantic_equal(const RowPick&a,const RowPick&b){return a.max==b.max&&a.seco
 int decision(const RowPick&p,float temp){if(p.nan||!std::isfinite(p.max)||p.first<0||p.last<0)return -1;if(temp<.05f)return p.first;return ((p.second-p.max)*(1.f/temp)<-1e-5f)?p.last:-1;}
 using Clock=std::chrono::steady_clock;
 int main(int argc,char**argv){try{
- if(argc!=3)throw std::runtime_error("usage: row_pick_profile NEW.jsonl NEW_inputs.bin");
+ bool baseline=argc==4 && std::string(argv[3])=="--baseline-only";
+ if(argc!=3 && !baseline)throw std::runtime_error("usage: row_pick_profile NEW.jsonl NEW_inputs.bin");
  {std::ifstream existing(argv[2]);if(existing.good())throw std::runtime_error("input capture exists");}
  std::ofstream inputs(argv[2],std::ios::binary);if(!inputs)throw std::runtime_error("input capture open failed");
  {std::ifstream existing(argv[1]);if(existing.good())throw std::runtime_error("output exists");}
@@ -76,7 +77,8 @@ int main(int argc,char**argv){try{
    select_rows_kernel<<<n,256,0,stream>>>(device,v,out);CU(cudaGetLastError());CU(cudaMemcpyAsync(host,out,n*20,cudaMemcpyDeviceToHost,stream));CU(cudaStreamSynchronize(stream));
    std::vector<RowPick> original(host,host+n);
    for(int r=0;r<n;++r)if(!semantic_equal(original[r],oracle(row.data()+r*v,v)))throw std::runtime_error("original disagrees with independent oracle");
-   for(int parts:{4,16,64}){
+   if(baseline)checks+=n;
+   if(!baseline)for(int parts:{4,16,64}){
     partition_rows_kernel<<<dim3(n,parts),256,0,stream>>>(device,v,partial,parts);merge_parts<<<n,32,0,stream>>>(partial,out,parts);CU(cudaGetLastError());
     CU(cudaMemcpyAsync(host,out,n*20,cudaMemcpyDeviceToHost,stream));CU(cudaStreamSynchronize(stream));
     for(int r=0;r<n;++r){if(!equal(host[r],original[r])){log<<"{\"kind\":\"MISMATCH\",\"vocab\":"<<v<<",\"n\":"<<n<<",\"fixture\":"<<fixture<<",\"parts\":"<<parts<<",\"row\":"<<r<<",\"original\":["<<bits(original[r].max)<<","<<bits(original[r].second)<<","<<original[r].first<<","<<original[r].last<<","<<original[r].nan<<"],\"candidate\":["<<bits(host[r].max)<<","<<bits(host[r].second)<<","<<host[r].first<<","<<host[r].last<<","<<host[r].nan<<"]}\n";log.flush();throw std::runtime_error("candidate bitwise field mismatch");}
@@ -90,8 +92,8 @@ int main(int argc,char**argv){try{
  for(int v:{4096,16384,32000,32768,65536,128256})for(int n:{1,4,16}){
   std::vector<float> row(v*n);for(auto&x:row)x=dist(rng);inputs.write(reinterpret_cast<const char*>(row.data()),row.size()*4);if(!inputs)throw std::runtime_error("input capture write failed");
    CU(cudaMemcpyAsync(device,row.data(),row.size()*4,cudaMemcpyHostToDevice,stream));CU(cudaStreamSynchronize(stream));
-  for(int batch=0;batch<10;++batch)for(int order=0;order<4;++order){
-   int parts=((batch+order)%4==0)?0:((batch+order)%4==1?4:((batch+order)%4==2?16:64));
+  for(int batch=0;batch<10;++batch)for(int order=0;order<(baseline?1:4);++order){
+   int parts=baseline?0:((batch+order)%4==0)?0:((batch+order)%4==1?4:((batch+order)%4==2?16:64));
    auto launch=[&](){if(!parts)select_rows_kernel<<<n,256,0,stream>>>(device,v,out);else{partition_rows_kernel<<<dim3(n,parts),256,0,stream>>>(device,v,partial,parts);merge_parts<<<n,32,0,stream>>>(partial,out,parts);}};
    for(int i=0;i<100;++i)launch();CU(cudaStreamSynchronize(stream));
    cudaEvent_t a,b;CU(cudaEventCreate(&a));CU(cudaEventCreate(&b));CU(cudaEventRecord(a,stream));for(int i=0;i<1000;++i)launch();CU(cudaEventRecord(b,stream));CU(cudaEventSynchronize(b));float ms;CU(cudaEventElapsedTime(&ms,a,b));CU(cudaEventDestroy(a));CU(cudaEventDestroy(b));

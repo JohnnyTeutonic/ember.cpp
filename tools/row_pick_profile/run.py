@@ -31,19 +31,19 @@ def atomic(path, value):
     os.replace(temporary, path)
 
 
-def validate_records(records):
+def validate_records(records, baseline=False):
     vocabularies = [4096, 16384, 32000, 32768, 65536, 128256]
     expected_kernel = {
         (v, n, p, b)
         for v in vocabularies
         for n in [1, 4, 16]
-        for p in [0, 4, 16, 64]
+        for p in ([0] if baseline else [0, 4, 16, 64])
         for b in range(10)
     }
     expected_host = {
         (v, 1, p, b, t)
         for v in vocabularies
-        for p in [0, 4, 16, 64]
+        for p in ([0] if baseline else [0, 4, 16, 64])
         for b in range(10)
         for t in [0, 1]
     }
@@ -87,12 +87,14 @@ def validate_records(records):
     if counts != {
         "device": 1,
         "correctness": 27,
-        "kernel_trial": 720,
-        "host_trial": 480,
+        "kernel_trial": 180 if baseline else 720,
+        "host_trial": 120 if baseline else 480,
         "COMPLETE": 1,
     }:
         raise ValueError("unexpected record inventory")
-    if records[-1].get("kind") != "COMPLETE" or records[-1].get("checked_rows") != 6804:
+    if records[-1].get("kind") != "COMPLETE" or records[-1].get("checked_rows") != (
+        2268 if baseline else 6804
+    ):
         raise ValueError("incomplete correctness rows")
     return counts
 
@@ -101,6 +103,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--nvcc", default="nvcc")
+    parser.add_argument("--baseline-only", action="store_true")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     out = args.output
@@ -117,6 +120,7 @@ def main():
     started = time.time()
     receipt = {
         "status": "RUNNING",
+        "baseline_only": args.baseline_only,
         "started_unix": started,
         "scope": "component only; production/defaults unchanged; full-model 15% gate not tested",
         "source_sha256": {
@@ -161,6 +165,8 @@ def main():
             ],
             [str(out / "profile"), str(out / "trials.jsonl"), str(out / "inputs.bin")],
         ]
+        if args.baseline_only:
+            commands[-1].append("--baseline-only")
         for index, command in enumerate(commands):
             record = {"argv": command, "started_unix": time.time()}
             receipt["commands"].append(record)
@@ -194,7 +200,7 @@ def main():
         ]
         if not records or records[-1].get("kind") != "COMPLETE":
             raise RuntimeError("missing terminal COMPLETE")
-        counts = validate_records(records)
+        counts = validate_records(records, args.baseline_only)
         receipt.update(
             status="COMPLETE",
             record_counts=counts,

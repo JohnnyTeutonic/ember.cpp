@@ -200,3 +200,20 @@ def test_trial_inventory_refuses_damage(damage):
         kernel["vocab"] = 42
     with pytest.raises(ValueError):
         runner.validate_records(rows)
+
+
+def test_baseline_inventory_independent_of_candidate():
+    spec = importlib.util.spec_from_file_location("baseline_validator", HERE / "run.py")
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    rows = [r for r in complete_records() if r.get("parts", 0) == 0]
+    rows[-1]["checked_rows"] = 2268
+    counts = runner.validate_records(rows, baseline=True)
+    assert counts["kernel_trial"] == 180
+    assert counts["host_trial"] == 120
+    with pytest.raises(ValueError):
+        runner.validate_records(rows)
+    damaged = list(rows)
+    damaged.insert(-1, {"kind": "MISMATCH"})
+    with pytest.raises(ValueError):
+        runner.validate_records(damaged, baseline=True)
