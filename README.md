@@ -272,6 +272,14 @@ print(s.generate("What is AI?", steps=64))
 
 `cuda_compiled` describes the installed extension's build; it does not check whether a usable GPU is present.
 
+Windows CUDA wheels require a matching installed CUDA toolkit runtime; they do not bundle
+CUDA or cuBLAS. Set `CUDA_PATH` to the toolkit's absolute installation directory before
+importing, for example `$env:CUDA_PATH = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1'`
+in PowerShell for a CUDA 12.1 wheel. On a failed native import, the package registers that
+explicit directory's `bin` with Python's DLL loader. Working CPU wheels do not need this setting.
+A wheel build or successful native import alone does not establish clean-machine portability
+or GPU inference correctness.
+
 ## Quick start: in the browser
 
 ```bash
