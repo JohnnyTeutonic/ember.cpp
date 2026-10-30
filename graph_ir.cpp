@@ -4299,7 +4299,7 @@ bool Interpreter::capture_decode(int start_pos) {
   pending_.clear();
   cudaGraph_t graph = nullptr;
   cudaError_t e = cudaStreamEndCapture(stream_, &graph);
-  if (err.empty() && e == cudaSuccess) e = cudaGraphInstantiate(&graph_exec_, graph, 0);
+  if (err.empty() && e == cudaSuccess) e = cudaGraphInstantiateWithFlags(&graph_exec_, graph, 0);
   if (graph) cudaGraphDestroy(graph);
   if (!err.empty() || e != cudaSuccess) {
     cudaGetLastError();
