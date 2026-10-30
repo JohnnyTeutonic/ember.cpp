@@ -114,9 +114,16 @@ def compare_stages(target, left, right, example_identity):
                     x, y = float(aa[name].flat[i]), float(bb[name].flat[i])
                     hx, hy = float(aa[name + '_cache'].flat[i]), float(bb[name + '_cache'].flat[i])
                     middle = (hx + hy) / 2
+                    def half_order(code):
+                        code = int(code)
+                        return 0x8000 - (code & 0x7fff) if code & 0x8000 else 0x8000 + code
+                    adjacent = abs(half_order(aa[name + '_codes'].flat[i])
+                                   - half_order(bb[name + '_codes'].flat[i])) == 1
                     output['examples'].append(dict(example_identity, kind=name, index=i, left_raw=x,
                         right_raw=y, left_rounded=hx, right_rounded=hy, raw_gap=abs(x-y), rounded_gap=abs(hx-hy),
                         amplification=abs(hx-hy)/abs(x-y) if x != y else None,
+                        adjacent_half_values=adjacent,
+                        midpoint_is_single_rounding_boundary=adjacent,
                         opposite_sides_of_rounded_midpoint=min(x,y) <= middle <= max(x,y)))
 
 

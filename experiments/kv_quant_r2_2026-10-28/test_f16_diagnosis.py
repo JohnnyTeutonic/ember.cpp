@@ -121,3 +121,26 @@ def test_component_requires_paired_real_capacity_inventory(mutation):
     else:
         with pytest.raises(ValueError):
             runner.validate_component(result,1 if mutation=='rc_drift' else 0)
+
+def test_macro_off_reconstructs_frozen_source_and_line_numbers():
+    import hashlib
+    source = Path(__file__).parents[2]/'graph_ir.cpp'
+    lines = source.read_bytes().splitlines(keepends=True)
+    recovered = []
+    original_line = 1
+    index = 0
+    hooks = 0
+    while index < len(lines):
+        if lines[index].strip() == b'#ifdef EMBER_KV_DIAGNOSTICS':
+            hooks += 1
+            while lines[index].strip() != b'#endif':
+                index += 1
+            index += 1
+            assert lines[index] == f'#line {original_line}\n'.encode()
+            index += 1
+        else:
+            recovered.append(lines[index])
+            original_line += 1
+            index += 1
+    assert hooks == 6
+    assert hashlib.sha256(b''.join(recovered)).hexdigest() == 'c5bfa090027ae1ba448707228e5bc0e961f216c3cfb8f5c1c31c309fbdd8bfd9'

@@ -328,3 +328,11 @@ Offline checks:
 ```
 python3 -m pytest -q experiments/kv_quant_r2_2026-10-28/test_f16_trace_analysis.py experiments/kv_quant_r2_2026-10-28/test_f16_diagnosis.py
 ```
+Interpretation limits: macro-OFF byte identity does not establish invariance of
+active GPU tracing: trace copies/synchronizations deliberately change the
+execution schedule. Report traced observations beside uninstrumented controls.
+A midpoint between two rounded values is a single binary16 boundary only when
+the ordered half codes are adjacent; the analyzer records adjacency separately.
+Neither an amplification example nor a stage correlation alone proves causality.
+Source `#line` restoration preserves ordinary CUDA `gpuErrchk` error-location
+constants, which otherwise change when guarded lines are merely inserted.
