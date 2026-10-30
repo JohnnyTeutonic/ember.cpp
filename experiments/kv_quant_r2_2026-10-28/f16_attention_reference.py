@@ -105,5 +105,9 @@ if __name__=='__main__':
     result.update(archive_sha256=before,audit_receipt_sha256=trace.sha(args.audit),source=audited['source'],
                   posthoc_source_sha256=trace.sha(Path(__file__)),frozen_helper_sha256=trace.sha(Path(trace.__file__)),
                   numpy_version=np.__version__,zip=extracted)
-    args.output.write_text(json.dumps(result,indent=1,allow_nan=False)+'\n')
+    temporary=args.output.with_suffix(args.output.suffix+'.partial')
+    temporary.write_text(json.dumps(result,indent=1,allow_nan=False)+'\n')
+    if args.output.exists():
+        raise FileExistsError('posthoc receipt appeared during replay; preserve it')
+    temporary.replace(args.output)
     print(json.dumps({'posthoc_complete':True,'e9_closed':False}))
