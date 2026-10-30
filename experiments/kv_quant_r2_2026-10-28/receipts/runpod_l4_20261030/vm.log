@@ -1,0 +1,33 @@
+=== kvq vm Fri Oct 30 01:38:26 UTC 2026 ember HEAD f393955beee78ac3ea75edaff9d5030c53ad9b84, phases g1,g2,g3,tfd_qwen3,tfd_qwen25 ===
+--- deps, builds and downloads 01:38:26
+GPU compute capability 89
+--- build new done 01:42:32
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+downloads verified
+9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031  /content/models/qwen3/Qwen3-0.6B-Q8_0.gguf
+8e0ae26000627ed62de0e78e41860af70094558b9d2913385c842a6aa06cf3fc  /content/models/qwen25/qwen2.5-0.5b-instruct-fp16.gguf
+64b85f2eecd7db09ba323f23935e8c1a4ddff79fa0045bb67e290ff4fcdc9ea4  /content/inputs/inputs_qwen25.json
+de22edf77fd41e10e11e6f5549600fb027d09cbd1f1329b981b66e586354a24c  /content/inputs/inputs_qwen3.json
+1f67e810f56cc6c877778ee9e604f544855f0c1523183d66fa24ceb68b4b5812  /content/inputs/long_qwen25.json
+ad8be540f48fed37ee41e848164a63d3c2936a2ea933f7ebad776efebfa3728c  /content/inputs/long_qwen3.json
+--- g1: default mode, HEAD vs HEAD + R2 01:44:26
+g1 qwen3 short det=0 base-vs-new IDENTICAL 6fb7d1ac7ab4bda3 6fb7d1ac7ab4bda3
+g1 qwen3 long det=0 base-vs-new IDENTICAL ac5e2a402d4074f4 ac5e2a402d4074f4
+g1 qwen3 short det=1 base-vs-new IDENTICAL 6fb7d1ac7ab4bda3 6fb7d1ac7ab4bda3
+g1 qwen3 long det=1 base-vs-new IDENTICAL ac5e2a402d4074f4 ac5e2a402d4074f4
+g1 qwen3 long det=1 new run-to-run IDENTICAL ac5e2a402d4074f4 ac5e2a402d4074f4
+g1 qwen25 short det=0 base-vs-new IDENTICAL 5e0ffcf74add0403 5e0ffcf74add0403
+g1 qwen25 long det=0 base-vs-new IDENTICAL 28f11e7e54c822ed 28f11e7e54c822ed
+g1 qwen25 short det=1 base-vs-new IDENTICAL 5e0ffcf74add0403 5e0ffcf74add0403
+g1 qwen25 long det=1 base-vs-new IDENTICAL 28f11e7e54c822ed 28f11e7e54c822ed
+g1 qwen25 long det=1 new run-to-run IDENTICAL 28f11e7e54c822ed 28f11e7e54c822ed
+=== phase g1 done 02:00:53
+--- g2: each format run to run, EMBER_DETERMINISTIC=1 02:00:53
+g2 qwen3 f16 long det=1 run-to-run IDENTICAL e5c85982e0f45902 e5c85982e0f45902
+g2 qwen3 f16 short det=1 run-to-run IDENTICAL b857263bf6a6ef08 b857263bf6a6ef08
+g2 qwen25 f16 long det=1 run-to-run IDENTICAL b35199127dd9a55e b35199127dd9a55e
+g2 qwen25 f16 short det=1 run-to-run IDENTICAL 83209aef7d63807c 83209aef7d63807c
+=== phase g2 done 02:07:58
+--- g3: device against the CPU's form of each format 02:07:58
+g3 qwen3 f32 rc=0 {"device_supported": true, "family_hint": "qwen3", "gen": 32, "gguf": "/content/models/qwen3/Qwen3-0.6B-Q8_0.gguf", "greedy_identical": "12/12", "ids_file": null, "len": 24, "on_gpu": true, "pass": true, "prompts": 12, "tol": 0.0001, "top1_agree": "288/288", "worst_decode_rel": 2.330109424564053e-06, "worst_prefill_rel": 2.146482987624777e-06}
+FAILED: device/CPU gate: qwen3 f16
