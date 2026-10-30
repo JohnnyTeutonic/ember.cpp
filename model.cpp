@@ -1311,7 +1311,7 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
     cudaGraph_t graph = nullptr;
     cudaError_t e = cudaStreamEndCapture(st, &graph);
     cublasSetStream(cublas_handle_, 0);
-    if (e == cudaSuccess) e = cudaGraphInstantiate(&decode_graph_exec_, graph, 0);
+    if (e == cudaSuccess) e = cudaGraphInstantiateWithFlags(&decode_graph_exec_, graph, 0);
     if (graph) cudaGraphDestroy(graph);
     if (e != cudaSuccess) {
       cudaGetLastError();
