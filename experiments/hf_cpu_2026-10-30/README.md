@@ -12,4 +12,22 @@ Every timing trial is fsynced to a hash-chained journal. Resume verifies the pro
 
 Preflight: Transformers 4.57.0 cannot load the existing Pythia-160M GGUF (unsupported GPTNeoX GGUF architecture), and no native weights are cached. SmolLM2-135M and Gemma3-270M GGUF loaders passed shape/cache preflight; only the full parity gate establishes eligibility for timings. No weights were downloaded or copied.
 
-Canonical receipts will live under `C:/ml_artifacts/benchmarks/hf_cpu_20261030/`. Results are pending.
+Canonical receipts will live under `C:/ml_artifacts/benchmarks/hf_cpu_20261030/`. The original CPU comparison is complete for both supported models. A paired native old/new comparison is in progress for the AVX2 candidate.
+
+
+## Original portable CPU build versus Transformers
+
+All 96 full vocabulary rows and greedy IDs pass for each model (32 rows at each of three prompt lengths). Maximum row-relative errors remain below 1e-4. Values below are medians of four trials per runtime and shape, in milliseconds. These are this laptop's measurements, not general model/engine rankings. The original portable Ember build is slower in every measured cell.
+
+| Model | Prompt tokens | Ember prefill ms | HF prefill ms | Ember decode ms/token | HF decode ms/token |
+|---|---:|---:|---:|---:|---:|
+| smollm2-135m | 16 | 879.61 | 122.08 | 309.88 | 45.40 |
+| smollm2-135m | 128 | 6627.86 | 374.05 | 333.72 | 41.70 |
+| smollm2-135m | 512 | 34832.42 | 3216.86 | 412.75 | 71.63 |
+| gemma3-270m | 16 | 861.55 | 125.36 | 159.26 | 69.67 |
+| gemma3-270m | 128 | 6532.57 | 446.47 | 175.34 | 71.38 |
+| gemma3-270m | 512 | 25202.29 | 2215.97 | 182.19 | 87.81 |
+
+The candidate uses runtime AVX2 dispatch only on supported x86-64 GCC/Clang builds. It preserves eight FP64 accumulation lanes and the previous reduction order; other targets retain the portable implementation. Baseline, native-architecture, explicit-FMA and forced-portable builds each passed 3,840 finite/adversarial bit comparisons. Two CTest targets exercise automatic and forced-portable dispatch. This unit/microbenchmark evidence alone does not establish an end-to-end speedup.
+
+`compare_native.py` checks the current CPU against the reference, loads old/new frozen binaries on the same weights, and requires every captured output bit to equal the retained HF-gated reference before paired ABBA timing. Successful duplicate raw captures are removed only after exact SHA equality with the retained reference; failed captures remain. Every completed trial is hash-chained and checked on resume. `--analyze --out DIR` replays its report without loading models.

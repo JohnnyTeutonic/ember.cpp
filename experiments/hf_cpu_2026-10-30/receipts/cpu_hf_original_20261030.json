@@ -1,0 +1,336 @@
+{
+  "scope": "Original single-thread CPU runtime comparison; not GPU or model quality",
+  "source_commit": "7c693b0",
+  "models": {
+    "smollm2-135m": {
+      "canonical_home": "C:\\ml_artifacts\\benchmarks\\hf_cpu_20261030\\smollm2-135m",
+      "results": {
+        "16": {
+          "ember": {
+            "trials": 4,
+            "prefill_ms_median": 879.606438,
+            "decode_ms_per_token_median": 309.87562506451616,
+            "prefill_ms_all": [
+              846.973436,
+              854.746578,
+              904.466298,
+              944.269043
+            ],
+            "decode_ms_per_token_all": [
+              313.69295545161293,
+              306.0582946774193,
+              302.74197567741936,
+              315.87375187096774
+            ]
+          },
+          "hf": {
+            "trials": 4,
+            "prefill_ms_median": 122.0829785,
+            "decode_ms_per_token_median": 45.40469853225807,
+            "prefill_ms_all": [
+              137.247381,
+              142.822988,
+              103.111423,
+              106.918576
+            ],
+            "decode_ms_per_token_all": [
+              58.339122129032255,
+              44.013529677419356,
+              46.79586738709677,
+              43.68979735483871
+            ]
+          },
+          "hf_over_ember_prefill": 0.13879272959573313,
+          "hf_over_ember_decode": 0.14652555689982005
+        },
+        "128": {
+          "ember": {
+            "trials": 4,
+            "prefill_ms_median": 6627.861892499999,
+            "decode_ms_per_token_median": 333.7168318387097,
+            "prefill_ms_all": [
+              6130.770618,
+              5821.972476,
+              7124.953167,
+              7970.656327
+            ],
+            "decode_ms_per_token_all": [
+              344.5018544516129,
+              322.9318092258065,
+              309.8877547419355,
+              434.730615967742
+            ]
+          },
+          "hf": {
+            "trials": 4,
+            "prefill_ms_median": 374.04741149999995,
+            "decode_ms_per_token_median": 41.69902230645161,
+            "prefill_ms_all": [
+              376.632389,
+              373.166186,
+              374.653467,
+              373.441356
+            ],
+            "decode_ms_per_token_all": [
+              40.16054648387097,
+              42.52340612903226,
+              40.87463848387097,
+              43.03481738709677
+            ]
+          },
+          "hf_over_ember_prefill": 0.056435607374871084,
+          "hf_over_ember_decode": 0.12495330869797232
+        },
+        "512": {
+          "ember": {
+            "trials": 4,
+            "prefill_ms_median": 34832.419771,
+            "decode_ms_per_token_median": 412.7543529032258,
+            "prefill_ms_all": [
+              38220.789993,
+              27477.837267,
+              34190.313412,
+              35474.52613
+            ],
+            "decode_ms_per_token_all": [
+              442.18464,
+              365.34838516129037,
+              401.62921267741933,
+              423.87949312903226
+            ]
+          },
+          "hf": {
+            "trials": 4,
+            "prefill_ms_median": 3216.861523,
+            "decode_ms_per_token_median": 71.62757633870967,
+            "prefill_ms_all": [
+              3281.67156,
+              3342.999232,
+              2855.022534,
+              3152.051486
+            ],
+            "decode_ms_per_token_all": [
+              73.1535344516129,
+              60.86011690322581,
+              90.21806722580645,
+              70.10161822580645
+            ]
+          },
+          "hf_over_ember_prefill": 0.09235251366826439,
+          "hf_over_ember_decode": 0.173535604978837
+        }
+      },
+      "artifacts_sha256": {
+        "protocol.json": "7c46e717aad147bc37dad0d4763b10821c4181482d3e9cad19f757fc522d6f49",
+        "trials.jsonl": "108e7264a0148c2e265eba026e7b4e833b427cf176623da8d759e00a3c49b944",
+        "summary.json": "c7c2e80d5da1e76b81ecfae9efd379cd89588abc793c79124e0307c6c6ea45c6",
+        "gate_16.json": "7567af846ce3546cbfa09e389dc84949abcaaac7829ab0524a4b453fe1bd9e26",
+        "gate_128.json": "fb1d818b02b48726581666ee37fef073ac4b06e3036ac763d827bb52b67ae5fa",
+        "gate_512.json": "030baf738af31cc53f1492c37033590f7c92db4ee56c9cd55ed1492b7ce8962a",
+        "inputs_16.json": "0ecbd727934b8edbda62918de28006c30ad6aff317ac3ad5f351bb2411b562a6",
+        "inputs_128.json": "3a6bcd6ddc806565d4eaa1cc4b094129f4a53a0771a1d0e4fa8fba90f568beb2",
+        "inputs_512.json": "e9ae2d77cde70a718a8f5a7c2975f50424c184f807d1f3b6de26eb97135cfa19"
+      },
+      "raw_rows": [
+        {
+          "length": 16,
+          "rows": 32,
+          "vocab": 49152,
+          "max_abs": 2.682209014892578e-05,
+          "max_relative": 1.4600265346940094e-06,
+          "tolerance": 0.0001,
+          "inputs_sha256": "0ecbd727934b8edbda62918de28006c30ad6aff317ac3ad5f351bb2411b562a6",
+          "hf_rows_sha256": "2a385a494006151595a761aae7cf7a83dbf83a4560b80ff83c204e5798bde4be",
+          "ember_rows_sha256": "e27a0af4686b7ba848fdd65ee9030b558348a421e5828a4b91a7fb8f5f1157f6"
+        },
+        {
+          "length": 128,
+          "rows": 32,
+          "vocab": 49152,
+          "max_abs": 4.0531158447265625e-05,
+          "max_relative": 1.0871948704457663e-06,
+          "tolerance": 0.0001,
+          "inputs_sha256": "3a6bcd6ddc806565d4eaa1cc4b094129f4a53a0771a1d0e4fa8fba90f568beb2",
+          "hf_rows_sha256": "1988ddb6e2256a005fe9f6e7980220f2fc98267de92300cc072af846801e87dd",
+          "ember_rows_sha256": "3f990956bef788e8edebaec7a253701ec51ea38fb7bd4c214ef2901cdd202f22"
+        },
+        {
+          "length": 512,
+          "rows": 32,
+          "vocab": 49152,
+          "max_abs": 4.1961669921875e-05,
+          "max_relative": 1.8014541993371303e-06,
+          "tolerance": 0.0001,
+          "inputs_sha256": "e9ae2d77cde70a718a8f5a7c2975f50424c184f807d1f3b6de26eb97135cfa19",
+          "hf_rows_sha256": "1ed205d663ceddd735c65f93f60e710f153b4953b844e90508afa93d081d7296",
+          "ember_rows_sha256": "5ce090e085a01c268e0523d11ee0c456fba835fba5083ae268491f7159379b05"
+        }
+      ]
+    },
+    "gemma3-270m": {
+      "canonical_home": "C:\\ml_artifacts\\benchmarks\\hf_cpu_20261030\\gemma3-270m",
+      "results": {
+        "16": {
+          "ember": {
+            "trials": 4,
+            "prefill_ms_median": 861.5537495000001,
+            "decode_ms_per_token_median": 159.25789283870967,
+            "prefill_ms_all": [
+              954.1939,
+              917.402682,
+              805.704817,
+              717.292957
+            ],
+            "decode_ms_per_token_all": [
+              168.9360609032258,
+              162.60551032258064,
+              155.91027535483872,
+              152.42760441935485
+            ]
+          },
+          "hf": {
+            "trials": 4,
+            "prefill_ms_median": 125.356015,
+            "decode_ms_per_token_median": 69.67055774193548,
+            "prefill_ms_all": [
+              131.666529,
+              135.225056,
+              119.045501,
+              114.233888
+            ],
+            "decode_ms_per_token_all": [
+              76.0775805483871,
+              72.29563906451614,
+              67.04547641935484,
+              63.44902719354838
+            ]
+          },
+          "hf_over_ember_prefill": 0.145499935520854,
+          "hf_over_ember_decode": 0.4374700462255593
+        },
+        "128": {
+          "ember": {
+            "trials": 4,
+            "prefill_ms_median": 6532.5679045,
+            "decode_ms_per_token_median": 175.34361817741933,
+            "prefill_ms_all": [
+              6098.536272,
+              7625.281518,
+              6966.599537,
+              5483.52478
+            ],
+            "decode_ms_per_token_all": [
+              161.75448793548387,
+              198.01209751612902,
+              188.93274841935482,
+              156.10221370967741
+            ]
+          },
+          "hf": {
+            "trials": 4,
+            "prefill_ms_median": 446.467466,
+            "decode_ms_per_token_median": 71.37777308064516,
+            "prefill_ms_all": [
+              389.511407,
+              500.598035,
+              392.336897,
+              551.993533
+            ],
+            "decode_ms_per_token_all": [
+              73.62504396774193,
+              92.06301338709677,
+              67.49201393548388,
+              69.13050219354838
+            ]
+          },
+          "hf_over_ember_prefill": 0.06834486415249479,
+          "hf_over_ember_decode": 0.4070736866420905
+        },
+        "512": {
+          "ember": {
+            "trials": 4,
+            "prefill_ms_median": 25202.288757000002,
+            "decode_ms_per_token_median": 182.18844937096773,
+            "prefill_ms_all": [
+              24809.354959,
+              24987.90495,
+              25416.672564,
+              28431.057623
+            ],
+            "decode_ms_per_token_all": [
+              180.22789232258063,
+              164.12110822580647,
+              184.5475913870968,
+              184.14900641935483
+            ]
+          },
+          "hf": {
+            "trials": 4,
+            "prefill_ms_median": 2215.967834,
+            "decode_ms_per_token_median": 87.81090003225808,
+            "prefill_ms_all": [
+              2660.757973,
+              1737.659831,
+              2220.690479,
+              2211.245189
+            ],
+            "decode_ms_per_token_all": [
+              85.07237461290323,
+              74.90611,
+              96.40781764516129,
+              90.5494254516129
+            ]
+          },
+          "hf_over_ember_prefill": 0.08792724563099488,
+          "hf_over_ember_decode": 0.48197841485252246
+        }
+      },
+      "artifacts_sha256": {
+        "protocol.json": "c68bcddd71c3f71de98da5dd9b64ca52a9eb458c2ba3060800a87f39c91b9a87",
+        "trials.jsonl": "1f3af5f9d65393ce625f3b7a0c96cfc42a697023f5e3f7816f6b3e5d23ebea79",
+        "summary.json": "2a0ba7b2fd099741b6042ac5f05e156823d8155b3a33f950742e3628d39af51f",
+        "gate_16.json": "0c447df90e766fe046731f1b1b14458352fde6d63974d269850dfd6df1e8db2a",
+        "gate_128.json": "407c09e584023a1916f26b712666fa3c5a80fc1c5e014eba8c64ebf2d2e84747",
+        "gate_512.json": "bcca3cb03f9b25f4bc497c4f7fd07fed1bfc32121c5c3aeba7f58cc04bc0af8a",
+        "inputs_16.json": "46cbe6535af62c81561f9a7e3796fb1b7e4ae7296a081784f392a5caf21e0f30",
+        "inputs_128.json": "37c65473dd7eb0c22875506b11ab7034faec3796cffabb6c25754177c858676f",
+        "inputs_512.json": "f2bf0fe2a380094f7910ae36c7c7b00733d359703f6fa3f222b311c2c2be567a"
+      },
+      "raw_rows": [
+        {
+          "length": 16,
+          "rows": 32,
+          "vocab": 262144,
+          "max_abs": 0.00017547607421875,
+          "max_relative": 2.232844738364476e-06,
+          "tolerance": 0.0001,
+          "inputs_sha256": "46cbe6535af62c81561f9a7e3796fb1b7e4ae7296a081784f392a5caf21e0f30",
+          "hf_rows_sha256": "51e3093b6d88deda2e2e75e753c21d27d4d7d180de1c020c06b1455c1dbf760a",
+          "ember_rows_sha256": "afe49c76b777468968a782b9b2f9f5808d22b92e13f41c82cae78f351b5520e0"
+        },
+        {
+          "length": 128,
+          "rows": 32,
+          "vocab": 262144,
+          "max_abs": 0.0001888275146484375,
+          "max_relative": 5.197283698075119e-06,
+          "tolerance": 0.0001,
+          "inputs_sha256": "37c65473dd7eb0c22875506b11ab7034faec3796cffabb6c25754177c858676f",
+          "hf_rows_sha256": "8d4551931dded36b286c602f0ee1c4973aaf49999ff6cca7132b8e3ffa8be85e",
+          "ember_rows_sha256": "0fb9f13c8bd8174350a86161de7ec194125276094b10ac4234c885c4e1e1aeb0"
+        },
+        {
+          "length": 512,
+          "rows": 32,
+          "vocab": 262144,
+          "max_abs": 8.296966552734375e-05,
+          "max_relative": 3.88244492283306e-06,
+          "tolerance": 0.0001,
+          "inputs_sha256": "f2bf0fe2a380094f7910ae36c7c7b00733d359703f6fa3f222b311c2c2be567a",
+          "hf_rows_sha256": "bbd9a218794bd0c1308a4b5c30e5224f4dab7c1a0cea0a067caa1bb084c1da8e",
+          "ember_rows_sha256": "c5408931a6379c371d2141ce407287d37a63df05fd6f97c7f9ccd0847d68eb83"
+        }
+      ]
+    }
+  }
+}
