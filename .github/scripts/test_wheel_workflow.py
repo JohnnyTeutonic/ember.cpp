@@ -116,7 +116,8 @@ class WheelWorkflowTests(unittest.TestCase):
         self.assertIn("DISTUTILS_USE_SDK=1 CC=cl CXX=cl CUDAHOSTCXX=cl", text)
         triplet = (ROOT / ".github/triplets/cuda-msvc1434/x64-windows.cmake").read_text()
         self.assertIn("VCPKG_PLATFORM_TOOLSET_VERSION 14.34", triplet)
-        self.assertIn("VCPKG_VISUAL_STUDIO_PATH", triplet)
+        self.assertNotIn("VCPKG_VISUAL_STUDIO_PATH", triplet)
+        self.assertNotIn("VCPKG_VISUAL_STUDIO_PATH", text)
         self.assertIn("VCPKG_OVERLAY_TRIPLETS=$env:GITHUB_WORKSPACE", text)
         gpu = text.split("    - name: Build wheels (CUDA)", 1)[1]
         hook = gpu.split("CIBW_BEFORE_BUILD_WINDOWS: >", 1)[1].split("CIBW_BEFORE_BUILD_MACOS:", 1)[0]

@@ -100,7 +100,6 @@ jobs:
       run: |
         if ($env:VCToolsVersion -notlike '14.34.*') { throw "Expected MSVC 14.34, got $env:VCToolsVersion" }
         "VCPKG_OVERLAY_TRIPLETS=$env:GITHUB_WORKSPACE\.github\triplets\cuda-msvc1434" >> $env:GITHUB_ENV
-        "VCPKG_VISUAL_STUDIO_PATH=$env:VSINSTALLDIR" >> $env:GITHUB_ENV
         $cudaRoot = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.cuda_version }}"
         if (-not (Test-Path "$cudaRoot\bin\nvcc.exe")) { throw "Requested CUDA toolkit is missing: $cudaRoot" }
         $env:CUDA_PATH = $cudaRoot
