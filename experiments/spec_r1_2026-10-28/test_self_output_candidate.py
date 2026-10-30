@@ -43,3 +43,36 @@ def test_canonical_checkpoint_journal_builds_existing_self_table(tmp_path):
     assert table.orders == 6
     assert table.lookup([1, 2]) == (4, 1.0, 2)
     assert table.lookup([2, 4]) == (3, 1.0, 2)
+
+
+def test_candidate_freezes_recipe_and_rejects_completed_drift(tmp_path, monkeypatch):
+    import json
+    import self_output_candidate as candidate
+    corpus = tmp_path / 'corpus.bin'
+    r1_sim.dr_sim.dr_table.write(str(corpus), 16384, [
+        {'keys': np.array([2], dtype=np.uint64), 'next': np.array([9], dtype=np.uint16),
+         'conf': np.array([255], dtype=np.uint8)}])
+    pool_dir = tmp_path / 'pool'
+    pool_dir.mkdir()
+    (pool_dir / 'outputs.jsonl').write_text('\n'.join(json.dumps(
+        {'prompt_ids': [1, 2], 'ids': [4], 'stop_id': 3}) for _ in range(2)) + '\n')
+    (pool_dir / 'manifest.json').write_text(json.dumps({'sha256': {
+        'table': candidate.common.sha(corpus), 'model': 'a' * 64}}))
+    monkeypatch.setattr(candidate.pool, 'analyze', lambda p: {
+        'status': 'VERIFIED_COMPLETE', 'requests': 2})
+    out = tmp_path / 'candidate'
+    receipt = candidate.build(pool_dir, corpus, out)
+    assert receipt['corpus_first'] is True
+    assert candidate.build(pool_dir, corpus, out) == receipt
+    (out / 'merged.bin').write_bytes(b'altered')
+    import pytest
+    with pytest.raises(ValueError, match='drift'):
+        candidate.build(pool_dir, corpus, out)
+
+
+def test_candidate_rejects_partial_pool_before_build(tmp_path, monkeypatch):
+    import pytest
+    import self_output_candidate as candidate
+    monkeypatch.setattr(candidate.pool, 'analyze', lambda p: {'status': 'VERIFIED_PARTIAL'})
+    with pytest.raises(ValueError, match='complete audited'):
+        candidate.build(tmp_path, tmp_path / 'corpus', tmp_path / 'out')
