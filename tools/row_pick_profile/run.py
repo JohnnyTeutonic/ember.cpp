@@ -176,7 +176,7 @@ def main():
                     command,
                     stdout=log,
                     stderr=subprocess.STDOUT,
-                    timeout=900,
+                    timeout=300,
                     check=False,
                 )
             record.update(returncode=process.returncode, ended_unix=time.time())
