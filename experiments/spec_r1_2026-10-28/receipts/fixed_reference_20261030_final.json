@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "complete": true,
+  "status": "FAIL",
+  "scope": "E10.1 complete CPU-reference row gate, both models; no default change",
+  "default_changed": false,
+  "archive": {
+    "path": "/mnt/c/ml_artifacts/ember_e10_fixed/ember-e10-fixed-1030/e10_fixed/out.zip",
+    "bytes": 1534723113,
+    "sha256": "e26a51581f683e7e687542c504b7aade830ad10b60f3f30063827b0926638734",
+    "zip_crc": "PASS"
+  },
+  "source_commit": "cced28a43275fe28ad441fccf402980ad7fb2a1f",
+  "job_commit": "ced3f2a151e6f29202e6571981fc85b1c6b41f4a",
+  "source_archive_sha256": "e4413858739bfadcc78024a421582e03c19d40c0611ae79c987f3a7d06022ebf",
+  "input_sha256sums_sha256": "c8cca6cc101a18077c4b5cde931bef3b04446cdcc1c52d0460d2229e7754c411",
+  "auditor_sha256": "908067bd89d9f19a9917f97feaa7871bf08d317d6ab72f43a19e4dc453dd52ae",
+  "inputs_sha256": {
+    "binary": "58ae9ea69d0ed8ef62814692a14ef6ad21ccdd1625a13fa2fd1762f2aee15fa2",
+    "pick": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9",
+    "pk": "510d288cf10ead4d3902247e3d898b6fa39e1d31d7465d3a8b6820761d6c9178",
+    "prompts": "a25357100c3eb1e59bc94bb26c0629e72e6ae18172b2d4fbbf148ae5168d1740"
+  },
+  "checks": [
+    "streaming archive SHA256",
+    "ZIP CRC",
+    "actual archived executable SHA256",
+    "actual original model and prompt SHA256",
+    "all six full request inventories and metadata",
+    "all CPU/cuBLAS/fixed row comparisons with unchanged thresholds",
+    "exact equality to remote report"
+  ],
+  "models": {
+    "pick": {
+      "pass": false,
+      "requests": 260,
+      "rows": 3829,
+      "failed_rows": 1223,
+      "worst_fixed_relative": 1.0853545600691439e-06,
+      "worst_fixed_minus_cublas": 4.0531158447265625e-06
+    },
+    "pk": {
+      "pass": false,
+      "requests": 260,
+      "rows": 4725,
+      "failed_rows": 1105,
+      "worst_fixed_relative": 7.619293586507597e-07,
+      "worst_fixed_minus_cublas": 4.9173831939697266e-06
+    }
+  },
+  "remote_report_sha256": "1eeb24c038daa408a8c2fc1bed6d0790a7e4d1c2c69c85d4c5d13ed4921ad88b"
+}
