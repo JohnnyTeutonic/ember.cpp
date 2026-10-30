@@ -49,6 +49,9 @@ def check_leg(folder, expected):
 
 
 def audit(archive, outer_report, readiness, scratch):
+    execution = json.loads((outer_report.parent/'execution.json').read_text())
+    if execution.get('complete') is not True or execution.get('exit_code') != 0:
+        raise ValueError('terminal operational execution is incomplete')
     archive_sha = analysis.sha(archive)
     plan = json.loads(readiness.read_text())
     with tempfile.TemporaryDirectory(prefix='e9-independent-audit-', dir=scratch) as temporary:
@@ -116,6 +119,7 @@ def audit(archive, outer_report, readiness, scratch):
         return {'status':'RAW_DIAGNOSIS_REPLAY_VERIFIED', 'e9_closed':False,
                 'archive_sha256':archive_sha,'archive_bytes':archive.stat().st_size,
                 'source':plan['source'],'runner':plan['runner'],'zip':zip_receipt,
+                'model_sha256':MODEL_SHA,'ids_sha256':plan['ids_sha256'],'execution':execution,
                 'remote_numpy':reported['numpy_version'],'replay_numpy':replay['numpy_version'],
                 'controls':reported['controls'],'storage':replay['storage'],'logits':replay['logits'],
                 'limitations':['Active trace scheduling differs; compare uninstrumented controls.',
