@@ -111,6 +111,13 @@ def request(url, payload=None):
         return json.load(response)
 
 
+def pool_environment(table):
+    return {'EMBER_SPEC': '8', 'EMBER_DRAFT': 'table', 'EMBER_DRAFT_TABLE': table,
+            'EMBER_DRAFT_THETA': '0.02', 'EMBER_DECODE_PICK': '0', 'EMBER_DECODE_GRAPH': '1',
+            'EMBER_DECODE_OPT': '1', 'EMBER_DECODE_LINEAR': 'cublas', 'EMBER_DETERMINISTIC': '0',
+            'EMBER_GEMM_TF32': '0'}
+
+
 def run(binary, model, pool, table, out, max_new_requests=None, port=8093):
     if max_new_requests is not None and max_new_requests < 1:
         raise ValueError('request cap must be positive')
@@ -123,10 +130,7 @@ def run(binary, model, pool, table, out, max_new_requests=None, port=8093):
         raise ValueError('empty pool')
     inputs = {k: str(Path(v).resolve()) for k, v in
               (('binary', binary), ('model', model), ('pool', pool), ('table', table))}
-    environment = {'EMBER_SPEC': '8', 'EMBER_DRAFT': 'table', 'EMBER_DRAFT_TABLE': inputs['table'],
-                   'EMBER_DRAFT_THETA': '0.02', 'EMBER_DECODE_PICK': '0', 'EMBER_DECODE_GRAPH': '1',
-                   'EMBER_DECODE_OPT': '1', 'EMBER_DECODE_LINEAR': 'cublas', 'EMBER_DETERMINISTIC': '0',
-                   'EMBER_GEMM_TF32': '0'}
+    environment = pool_environment(inputs['table'])
     manifest = {'schema': 1, 'inputs': inputs, 'sha256': {k: sha(p) for k, p in inputs.items()},
                 'client_source_sha256': sha(__file__),
                 'environment': environment, 'requests': len(rows), 'vocab': 16384}
@@ -197,13 +201,59 @@ def run(binary, model, pool, table, out, max_new_requests=None, port=8093):
     return result
 
 
+def analyze(out, input_map=None):
+    """Read-only audit; exact-hash path mapping permits checking relayed artifacts."""
+    out = Path(out)
+    m = json.loads((out / 'manifest.json').read_text())
+    mapping = input_map or {}
+    if set(mapping) - set(m['inputs']):
+        raise ValueError('unknown mapped input')
+    if m.get('schema') != 1 or m.get('client_source_sha256') != sha(__file__) or m.get('vocab') != 16384:
+        raise ValueError('wrong schema/source/vocabulary')
+    if m.get('environment') != pool_environment(m['inputs']['table']):
+        raise ValueError('altered pool environment')
+    paths = {k: mapping.get(k, path) for k, path in m['inputs'].items()}
+    if any(sha(path) != m['sha256'][k] for k, path in paths.items()):
+        raise ValueError('frozen input bytes changed')
+    rows = [json.loads(line) for line in Path(paths['pool']).read_text(encoding='utf-8').splitlines() if line.strip()]
+    if len(rows) != m['requests']:
+        raise ValueError('wrong pool inventory')
+    count, previous = recover(out / 'outputs.jsonl', rows, m['vocab'])
+    for file in out.glob('health_*.json'):
+        h = json.loads(file.read_text())
+        if h.get('model') != m['inputs']['model'] or h.get('deterministic') is not False or h.get('vocab_size') != m['vocab']:
+            raise ValueError('health model/mode/vocabulary changed')
+    if count and not (out / 'health_0.json').exists():
+        raise ValueError('missing initial health receipt')
+    journal_hash = sha(out / 'outputs.jsonl') if (out / 'outputs.jsonl').exists() else None
+    summary = out / 'summary.json'
+    if summary.exists():
+        saved = json.loads(summary.read_text())
+        expected = {'complete': True, 'requests': len(rows), 'completed': count,
+                    'last_record_sha256': previous, 'journal_sha256': journal_hash}
+        if count != len(rows) or any(saved.get(k) != v for k, v in expected.items()):
+            raise ValueError('complete summary differs from journal')
+    return {'status': ('HALTED' if (out / 'HALTED').exists() else
+                       'VERIFIED_COMPLETE' if count == len(rows) else 'VERIFIED_PARTIAL'),
+            'requests': len(rows), 'completed': count, 'last_record_sha256': previous,
+            'journal_sha256': journal_hash, 'halted': (out / 'HALTED').exists()}
+
+
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
+    sub = p.add_subparsers(dest='action', required=True)
+    runner = sub.add_parser('run')
     for name in ('binary', 'model', 'pool', 'table', 'out'):
-        p.add_argument(name)
-    p.add_argument('--max-new-requests', type=int)
-    p.add_argument('--port', type=int, default=8093)
+        runner.add_argument(name)
+    runner.add_argument('--max-new-requests', type=int)
+    runner.add_argument('--port', type=int, default=8093)
+    auditor = sub.add_parser('analyze')
+    auditor.add_argument('out')
+    auditor.add_argument('--input-map', help='JSON of input name to exact-hash local file')
     a = p.parse_args()
-    if a.max_new_requests is not None and a.max_new_requests < 1:
-        p.error('--max-new-requests must be positive')
-    print(json.dumps(run(a.binary, a.model, a.pool, a.table, a.out, a.max_new_requests, a.port)))
+    if a.action == 'analyze':
+        print(json.dumps(analyze(a.out, json.loads(Path(a.input_map).read_text()) if a.input_map else None)))
+    else:
+        if a.max_new_requests is not None and a.max_new_requests < 1:
+            p.error('--max-new-requests must be positive')
+        print(json.dumps(run(a.binary, a.model, a.pool, a.table, a.out, a.max_new_requests, a.port)))
