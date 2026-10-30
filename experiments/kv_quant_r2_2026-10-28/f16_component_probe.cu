@@ -151,7 +151,7 @@ int main() {
                    {"conversion_mismatches", mismatches},
                    {"cases", json::array()}};
     for (auto shape : std::vector<std::vector<int>>{{16, 8, 128}, {14, 2, 64}})
-      for (int L : {1, 2, 24, 32, 33, 55, 127, 128, 129, 2048, 2049, 4096}) {
+      for (int L : {1, 2, 24, 32, 33, 127, 128, 129, 2048, 2049, 4096, 55}) {
         const auto case_rng = rng;
         for (int capacity : {L, 8448}) {
           rng = case_rng;
@@ -242,6 +242,8 @@ int main() {
               item["position_pointer_decode_bit_differences"].get<size_t>();
           report["cases"].push_back(item);
         }
+        if (L == 55)
+          rng = case_rng;  // Extra case does not change original case inputs.
       }
     report["exact_component_mismatches"] = mismatches;
     report["complete"] = true;
