@@ -1,0 +1,26 @@
+{
+ "complete": false,
+ "status": "PRELIMINARY_BASELINE_CONTROLS_ONLY",
+ "pod": "n27vrqaipqbfnv",
+ "controls": {
+  "default": {
+   "requests": 260,
+   "ids_equal": true,
+   "baseline_row_sha256": [
+    "e43d32dd1042b6ddcb0607ceff884e09f9aa425b9b514fc650e6797dbb0dcff6",
+    "33aaef527d5e0972400c4ba1fd341602aeece538d418941830565ce180333137"
+   ]
+  },
+  "det": {
+   "requests": 260,
+   "ids_equal": true,
+   "baseline_row_sha256": [
+    "4760870aef6a8f5ff4edd0965660dfa00013e4703630aae0e5bf04ddc4c47cba",
+    "4760870aef6a8f5ff4edd0965660dfa00013e4703630aae0e5bf04ddc4c47cba"
+   ]
+  }
+ },
+ "input_and_device_receipt": "decode_pick_20261030_preliminary.json",
+ "input_and_device_receipt_sha256": "059dd808a8839cd8fd63930709ed373f1e915affba1f08e74e9b6499185b6124",
+ "scope": "Off/off controls only; deterministic off/on and throughput remain pending. Overall E10.3 remains open."
+}
