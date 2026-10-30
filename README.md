@@ -144,7 +144,7 @@ the earlier software-adapter gates; browser memory limits still depend on the de
   and workloads, not a comparison with another engine ([docs/TTFT.md](docs/TTFT.md)).
 - **Reproducible when asked.** `EMBER_DETERMINISTIC=1` makes CUDA prefill and decode logits bit-identical run
   to run on the same GPU and build (fixed-order decode reductions, pinned cuBLAS workspace), at no measurable
-  cost; off by default, and off changes nothing
+  cost in the recorded workloads; it is opt-in and off by default
   ([docs/USAGE.md](docs/USAGE.md), [`experiments/determinism_2026-10-26/`](experiments/determinism_2026-10-26/)).
 - **The visitor's GPU, in the browser.** The chat page runs the forward pass through WebGPU when
   the browser has it, and falls back to WebAssembly when it does not. On an Intel laptop GPU,
@@ -178,7 +178,9 @@ the earlier software-adapter gates; browser memory limits still depend on the de
 
 The matched single-thread FP32 CPU comparison uses the same F32 GGUFs, frozen token IDs and
 full vocabulary rows in Ember and Transformers: SmolLM2-135M and Gemma3-270M, at 16/128/512
-prompt tokens with 32 output rows. Both models passed the fixed numerical and greedy-ID gates.
+prompt tokens with 32 output rows. Weights and activations are FP32; Ember's fixed dot
+uses eight FP64 accumulation lanes, while Transformers uses its own Torch kernels. Both models
+passed the fixed numerical and greedy-ID gates.
 The portable Ember build was slower in every cell. The subsequent AVX2 change preserved all
 192 captured rows bit for bit and improved prefill by 2.38–2.87x and decode by 1.04–1.50x over
 that build; the optimized cells remain slower than Transformers. The paired trials, arithmetic
@@ -196,7 +198,8 @@ The f16 KV-cache gate retained greedy IDs but failed the unchanged CPU/device lo
 Qwen3. These outcomes remain recorded, with no tolerance changes or default switch
 ([fixed linear and row selection](experiments/spec_r1_2026-10-28/README.md),
 [KV cache](experiments/kv_quant_r2_2026-10-28/README.md)). Self-output draft tables currently have
-only a supervised timing pilot, not a completed quality or speed result.
+a completed 100-request-per-model timing pilot and a supervised full continuation;
+quality/parity and adoption-speed results remain pending.
 
 ## Quick start: build and chat
 
