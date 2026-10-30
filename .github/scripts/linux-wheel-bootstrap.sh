@@ -20,13 +20,13 @@ name=CentOS 7.9.2009 base archive
 baseurl=https://vault.centos.org/7.9.2009/os/x86_64/
 enabled=1
 gpgcheck=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+gpgkey=https://www.centos.org/keys/RPM-GPG-KEY-CentOS-7
 [wheel-updates]
 name=CentOS 7.9.2009 updates archive
 baseurl=https://vault.centos.org/7.9.2009/updates/x86_64/
 enabled=1
 gpgcheck=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+gpgkey=https://www.centos.org/keys/RPM-GPG-KEY-CentOS-7
 [wheel-sclo-rh]
 name=CentOS 7.9.2009 SCLo RH archive
 baseurl=https://vault.centos.org/7.9.2009/sclo/x86_64/rh/
@@ -46,7 +46,11 @@ cat >"$probe_tmp/to_chars.cpp" <<'CPP'
 #include <charconv>
 #include <system_error>
 int main() { char out[64]; auto r = std::to_chars(out, out + sizeof(out), 1.25);
-  return r.ec == std::errc{} && r.ptr - out == 4 && out[0] == '1' && out[3] == '5' ? 0 : 1; }
+  if (r.ec != std::errc{} || r.ptr - out != 4 || out[0] != '1' || out[3] != '5') return 1;
+  auto f = std::to_chars(out, out + sizeof(out), 1.25f, std::chars_format::scientific);
+  if (f.ec != std::errc{}) return 2;
+  auto d = std::to_chars(out, out + sizeof(out), 1.25, std::chars_format::scientific);
+  return d.ec == std::errc{} ? 0 : 3; }
 CPP
 "$CXX" -std=c++17 "$probe_tmp/to_chars.cpp" -o "$probe_tmp/to_chars"
 "$probe_tmp/to_chars"

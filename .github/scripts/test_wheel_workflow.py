@@ -24,6 +24,28 @@ class WheelWorkflowTests(unittest.TestCase):
         self.assertNotIn("CUDA_VERSION_MAJOR=", text)
         self.assertIn("cp38-*", text)
 
+    def test_actual_version_step_changes_only_project_version(self):
+        import tomllib
+        import sys
+        import shlex
+        text = (ROOT / ".github/workflows/build-wheels.yml").read_text()
+        block = text.split("    - name: Modify package version for CUDA builds\n", 1)[1]
+        block = block.split("      run: |\n", 1)[1].split("\n    # Install build dependencies", 1)[0]
+        command = "\n".join(line[8:] if line.startswith("        ") else line for line in block.splitlines())
+        original = (ROOT / "pyproject.toml").read_text()
+        before = tomllib.loads(original)
+        for version, suffix in (("11.8", "+cu118"), ("12.1", "+cu121")):
+            with tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "pyproject.toml"
+                path.write_text(original)
+                shell = command.replace("${{ matrix.wheel_suffix }}", suffix).replace("${{ matrix.cuda_version }}", version)
+                shell = shell.replace("python -c", shlex.quote(sys.executable) + " -c", 1)
+                subprocess.run(["bash", "-eu", "-c", shell], cwd=tmp, check=True, capture_output=True)
+                after = tomllib.loads(path.read_text())
+                self.assertEqual(after["project"]["version"], before["project"]["version"] + suffix)
+                after["project"]["version"] = before["project"]["version"]
+                self.assertEqual(after, before)
+
     def test_shell_syntax_and_invalid_selector_refuses_before_install(self):
         subprocess.run(["bash", "-n", str(SCRIPT)], check=True)
         for selector in ("", "12.2", "75", "cpu; false"):
