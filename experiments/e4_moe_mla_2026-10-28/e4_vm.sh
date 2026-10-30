@@ -6,7 +6,7 @@ cd /content
 exec > /content/vm.log 2>&1
 OUT=/content/out; SM=/content/small; B=/content/b
 mkdir -p "$OUT"
-pack() { python3 -c "import shutil; shutil.make_archive('/content/out_tmp','zip','/content','out')" && mv /content/out_tmp.zip /content/out.zip; }
+pack() { flock /content/out_pack.lock python3 -c "import os,shutil; p=shutil.make_archive('/content/out_tmp_'+str(os.getpid()),'zip','/content','out'); os.replace(p,'/content/out.zip')"; }
 packer=""
 finish() {
  rc=$?
@@ -35,7 +35,8 @@ find /content/src -name '*.sh' -exec sed -i 's/\r$//' {} +
 packer=$!
 cmake -S /content/src -B "$B" -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES="$CC" > "$OUT/cmake.log" 2>&1
 grep -q 'CUDA toolkit and cuBLAS found' "$OUT/cmake.log"
-make -C "$B" -j"$(nproc)" e4_device_gate ir_adapter > "$OUT/make.log" 2>&1
+J=$(nproc); [ "$J" -le 8 ] || J=8
+make -C "$B" -j"$J" e4_device_gate ir_adapter > "$OUT/make.log" 2>&1
 sha256sum "$B/e4_device_gate" "$B/ir_adapter" > "$OUT/bins.sha256"
 for family in mixtral qwen2moe qwen3moe deepseek2 deepseek2_qlora gemma2 phi3_longrope phi3_swa deepseek2_dense_yarn deepseek3; do
  for mode in default det1 det2; do
