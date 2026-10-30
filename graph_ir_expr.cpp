@@ -474,7 +474,7 @@ class Lowering {
       peak = std::max(peak, ++depth);
     };
     float v;
-    if (constant(n, v)) return push(Op::CONST, 0, v);
+    if (constant(n, v)) return push(Op::CONSTANT, 0, v);
     switch (n.kind) {
       case Kind::INPUT: return push(Op::INPUT, static_cast<int>(n.input));
       case Kind::ROWSUM: case Kind::ROWMEAN: case Kind::ROWMAX: {

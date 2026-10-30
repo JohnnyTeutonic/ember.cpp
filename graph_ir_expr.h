@@ -68,13 +68,13 @@ const Expr& cached(const std::string& text, size_t n_inputs);
 // paths compute with the same constants; every other primitive is one
 // instruction, rounded on its own.
 enum class Op : int {
-  CONST, INPUT, COL, WIDTH,                            // push c, input idx at (t, j), column idx at t, (float) w
+  CONSTANT, INPUT, COL, WIDTH,                            // push c, input idx at (t, j), column idx at t, (float) w
   NEG, EXP, LOG, SQRT, TANH, SIGMOID, ERF, ABS, RELU,  // pop a, push f(a)
   ADD, SUB, MUL, DIV, POW, MAX, MIN,                   // pop b, pop a, push f(a, b)
   WHERE,                                               // pop b, a, c; push c > 0 ? a : b
 };
 struct Instr {
-  Op op = Op::CONST;
+  Op op = Op::CONSTANT;
   int idx = 0;
   float c = 0.0f;
 };

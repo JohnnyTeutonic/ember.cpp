@@ -608,3 +608,8 @@ if(NOT MSVC)
     target_compile_options(cpu_dot_portable_test PRIVATE -ffp-contract=off)
 endif()
 add_test(NAME cpu_dot_portable_fixed_order COMMAND cpu_dot_portable_test)
+
+# Windows headers define CONST as const; keep IR instruction names macro-safe.
+add_executable(ir_expr_header_portability_test tools/ir_expr_header_portability_test.cpp)
+target_link_libraries(ir_expr_header_portability_test PRIVATE tinyllama_core)
+add_test(NAME ir_expr_windows_const_macro COMMAND ir_expr_header_portability_test)
