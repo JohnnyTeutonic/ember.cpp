@@ -1,0 +1,6 @@
+{
+  "production_source_sha256": "174d92710317ef2f24567f5606f8b5c47b4d3dc6976ad4c921cd5716c2249c8b",
+  "original_kernel_sha256": "a2563b09551faea8631ae53c5f27d6cc86dea40bed61fc9145e0fd60e43a79c0",
+  "generated_header_sha256": "1ab2a8f186250fb596769ca375fc47644354dbe0cc51fb92fa22f0432389536d",
+  "candidate_delta": "same partition-local reduction, absolute indices; separate exact top-two merge"
+}
