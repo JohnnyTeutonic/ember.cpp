@@ -128,6 +128,7 @@ def run(binary, model, pool, table, out, max_new_requests=None, port=8093):
                    'EMBER_DECODE_OPT': '1', 'EMBER_DECODE_LINEAR': 'cublas', 'EMBER_DETERMINISTIC': '0',
                    'EMBER_GEMM_TF32': '0'}
     manifest = {'schema': 1, 'inputs': inputs, 'sha256': {k: sha(p) for k, p in inputs.items()},
+                'client_source_sha256': sha(__file__),
                 'environment': environment, 'requests': len(rows), 'vocab': 16384}
     frozen = out / 'manifest.json'
     if frozen.exists():
