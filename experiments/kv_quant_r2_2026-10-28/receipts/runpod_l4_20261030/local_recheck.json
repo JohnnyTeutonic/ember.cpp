@@ -1,0 +1,20 @@
+{
+ "returncode": 1,
+ "result": {
+  "pass": false,
+  "errors": [
+   "incomplete or failed CPU/device gate"
+  ],
+  "formats": [
+   "f16"
+  ],
+  "phases": [
+   "g1",
+   "g2",
+   "g3",
+   "tfd_qwen3",
+   "tfd_qwen25"
+  ],
+  "teacher_forcing_comparison": {}
+ }
+}

@@ -1,0 +1,9 @@
+{
+ "pass": false,
+ "errors": [
+  "missing gate summary",
+  "gate process failed, timed out, or lacks completion marker",
+  "device/CPU gate: qwen3 f16"
+ ],
+ "classification": "FAILED"
+}
