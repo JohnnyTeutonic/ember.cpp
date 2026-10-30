@@ -2,7 +2,7 @@
 requires = [
     "setuptools>=64",
     "wheel",
-    "scikit-build-core>=0.8.0",
+    "scikit-build-core>=0.10.0",
     "cmake>=3.18",
     "pybind11>=2.12.0",
     "ninja; platform_system!='Windows'"
@@ -67,6 +67,7 @@ build.verbose = true
 wheel.expand-macos-universal-tags = true
 wheel.install-dir = "tinyllama_cpp"
 wheel.packages = ["tinyllama_cpp"]
+wheel.license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 
 [tool.scikit-build.cmake.define]
 # Default to CPU-only build
