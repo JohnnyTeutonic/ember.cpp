@@ -269,3 +269,13 @@ ABBA legs for one replacement L4, avoiding a pair split across pods. The runner 
 own pod normally at 02:57 UTC, retaining all ten completed legs and the volume under the same $2
 cumulative cap. No completed scientific leg is retried by the verified-resume wrapper. Full raw dumps
 remain in the supervised campaign's volume until its canonical archive is home and checked.
+
+The final 1,370,269,388-byte archive is now home and independently checked (streaming SHA256,
+ZIP CRC, temporary extraction, full strict row/ID/timing analysis; one CPU budget slot). Final
+receipt: `receipts/decode_pick_20261030_final.json`. Its classification is **BASELINE_UNSTABLE**:
+default off/off row bits differ. Deterministic rows and IDs agree, but the paired throughput
+ratios are 1.15924656 and 1.14146241; the latter misses the unchanged 1.15 threshold. The option
+therefore remains experimental and the default is unchanged. The executable was not an archived
+output: its SHA is consistent across the plan, binaries list and fallback receipt; local verification
+recomputed model/prompt hashes and all raw row/ID/timing checks, not the absent executable's bytes.
+Temporary extracted files were removed; the ZIP remains the canonical raw artifact outside OneDrive.
