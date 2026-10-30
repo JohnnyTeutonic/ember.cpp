@@ -115,6 +115,10 @@ def summary(out, phases, formats):
     out = Path(out)
     errors, teacher = [], {}
     try:
+        allowed_phases = {"g1", "g2", "g3", "eval_qwen3", "eval_qwen25", "tfd_qwen3", "tfd_qwen25"}
+        if (not phases or set(phases) - allowed_phases or len(set(phases)) != len(phases)
+                or not formats or set(formats) - {"f16", "q8", "q4"} or len(set(formats)) != len(formats)):
+            raise ValueError("empty, duplicate or unknown campaign scope")
         actual = {Path(parts[1]).name: parts[0] for line in (out / "models.sha256").read_text().splitlines()
                   if (parts := line.split())}
         if actual != EXPECTED:
@@ -152,6 +156,9 @@ def summary(out, phases, formats):
                     check_device(load(out / "g3" / f"{model}_{fmt}.json"))
         reference = Path(__file__).resolve().parents[1] / "experiments/kv_quant_r2_2026-10-28/receipts/colab_l4_eval"
         for model in MODELS:
+            if f"tfd_{model}" in phases or f"eval_{model}" in phases:
+                if load(out / f"eval_{model}/meta.json").get("device") != "cuda":
+                    raise ValueError("teacher-forcing/evaluation did not run on CUDA")
             if f"tfd_{model}" in phases:
                 teacher[model] = compare_teacher(load(out / f"eval_{model}/tf_decode.json"),
                                                 load(reference / f"eval_{model}/tf_prefill.json"))
