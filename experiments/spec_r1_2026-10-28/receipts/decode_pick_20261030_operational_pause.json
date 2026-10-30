@@ -1,0 +1,26 @@
+{
+ "reason": "Root-authorized orchestration pause only; current child finishes its own leg metadata; all four ABBA legs deferred to same replacement pod",
+ "parent_pid": 2437,
+ "child_pid": 4532,
+ "child_args": [
+  "python3",
+  "/content/src/experiments/draft_2026-10-27/dr_e2e.py",
+  "run",
+  "/content/b/tinyllama_server",
+  "/content/model.gguf",
+  "999",
+  "8080",
+  "/content/eval100.jsonl",
+  "/content/out/pick/det_rows_on.jsonl",
+  "--dump",
+  "EMBER_DECODE_PICK=1",
+  "EMBER_SPEC=0",
+  "EMBER_DECODE_GRAPH=1",
+  "EMBER_DECODE_OPT=1",
+  "EMBER_DECODE_LINEAR=cublas",
+  "EMBER_DETERMINISTIC=1"
+ ],
+ "utc": "2026-10-30T02:53:37.976747+00:00",
+ "completed_scientific_legs_retried": false,
+ "scope": "Operational orchestration pause only. dr_e2e child completed its own valid metadata; no completed scientific leg retried."
+}
