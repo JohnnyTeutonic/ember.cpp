@@ -1,0 +1,132 @@
+{
+  "status": "KNOWN_DEFAULT_NONDETERMINISM_NOT_FIXED",
+  "historical_source_commit": "ef34236697fe82c0cf2a1822b99a8eeb5dc82b10",
+  "current_source_commit": "106fb0c731e4297f4e512989e205f860b9a3b48f",
+  "source_bodies": [
+    {
+      "file": "cuda_kernels.cu",
+      "symbol": "__global__ void rmsnorm_optimized_kernel(",
+      "historical_equals_current": true,
+      "body_sha256": "fe0dfed4f0d486deda90e8b62b2f25d9ec457db447aa50490036fe2ce7eb62ef"
+    },
+    {
+      "file": "cuda_kernels.cu",
+      "symbol": "void rmsnorm_vector_cuda_optimized(",
+      "historical_equals_current": true,
+      "body_sha256": "ca56b2b7ecac562a116cb7ea2bea7a1d0921bb539b654e1e22b7b4721d485e92"
+    }
+  ],
+  "archive": {
+    "path": "/mnt/c/ml_artifacts/ember_e10_gate/ember-e10-1030/e10_pick/out.zip",
+    "sha256": "617759b2cc66c4fab41c148921ae7587bd783d9dafa1841202544b3a087402f0",
+    "bytes": 1370269388,
+    "validation": "Full archive hash independently matched; selected row/JSON members fully read and CRC checked, not all-member CRC replay"
+  },
+  "registered_model_sha256": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9",
+  "binary_sha256": "7cead74492bbc4eaa05a8e642621daaf97bbf5b35d183eb13653d0b8b0576d40",
+  "prompts_sha256": "a25357100c3eb1e59bc94bb26c0629e72e6ae18172b2d4fbbf148ae5168d1740",
+  "default_control_env": [
+    "EMBER_DECODE_PICK=0",
+    "EMBER_SPEC=0",
+    "EMBER_DECODE_GRAPH=1",
+    "EMBER_DECODE_OPT=1",
+    "EMBER_DECODE_LINEAR=cublas",
+    "EMBER_DETERMINISTIC=0"
+  ],
+  "geometry": {
+    "chat_template": {
+      "name": "paperkiln",
+      "version": 1
+    },
+    "chat_template_why": "paperkiln specials at ids 0-3",
+    "context": 512,
+    "hidden_size": 320,
+    "layers": 16,
+    "model": "/content/model.gguf",
+    "status": "ok",
+    "tokenizer": "bpe",
+    "vocab_size": 16384
+  },
+  "raw_recomparison": {
+    "requests": 260,
+    "ids_prompt_stop_row_mapping_equal": true,
+    "row_count": 3829,
+    "vocab": 16384,
+    "row_sha256": [
+      "e43d32dd1042b6ddcb0607ceff884e09f9aa425b9b514fc650e6797dbb0dcff6",
+      "33aaef527d5e0972400c4ba1fd341602aeece538d418941830565ce180333137"
+    ],
+    "bit_equal_rows": 101,
+    "bit_different_rows": 3728,
+    "bit_different_values": 56730988,
+    "worst_absolute_float64_difference": 0.003870725631713867,
+    "top1_equal_rows": 3829,
+    "first_sampled_row_equal": 100,
+    "first_sampled_row_total": 260,
+    "turn_zero_first_row_equal": 60,
+    "turn_zero_first_row_total": 60,
+    "history_turn_first_row_equal": 40,
+    "history_turn_first_row_total": 200
+  },
+  "permitted_order_example": {
+    "positive_warp_partials": [
+      1.0,
+      5.960464477539063e-08,
+      5.960464477539063e-08,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "orders": [
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      [
+        1,
+        2,
+        0,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    ],
+    "sum_f32": [
+      1.0,
+      1.0000001192092896
+    ],
+    "sum_bits": [
+      "0x3f800000",
+      "0x3f800001"
+    ],
+    "scope": "Offline IEEE binary32 permitted-order counterexample only; not actual captured model activations or a measured CUDA schedule/rsqrt output."
+  },
+  "diagnosis": "The historical and current tuned decode share the exact unordered atomicAdd RMSNorm body and wrapper. Default controls explicitly select that path. Existing deterministic-mode evidence and this source mechanism explain why bit-repeatability is not a default guarantee; this audit does not uniquely attribute every historical logit delta to a captured per-layer event.",
+  "gate_interpretation": "The frozen default bit gate remains a valid strict adoption requirement and remains unmet. It cannot isolate selector-induced changes when unchanged off/off model rows already differ. A repeated attempt until scheduling happens to match would not establish reproducibility. No criterion is waived or retroactively changed.",
+  "historical_verdict": "BASELINE_UNSTABLE preserved; deterministic paired speeds1.159246560127609 and1.141462409508764 still fail the requirement that both reach1.15.",
+  "current_four_partition_scope": "The explicitly experimental PARTS=4 path requires deterministic mode; its synthetic actual-GPU pass is separate from this pre-four-part registered gate.",
+  "prospective_minimum_if_needed": [
+    "For selector-only default-mode correctness, teacher-force the registered model and capture each current forward row once, then run original/four-part selectors and full sampler against that immutable same row. This avoids conflating upstream nondeterminism, but cannot close historical repeatability or speed requirements.",
+    "For unique cause attribution, capture actual same-token RMSNorm input and warp partials at the first divergent stage, and compare permitted atomic accumulation orders against ordered control. Do not infer that causal proof from this toy arithmetic example.",
+    "To promise whole-model bit-stable default execution requires a substantive default-path design/change and fresh registered parity/performance gates; simply rerunning or changing tolerances is not a remedy."
+  ],
+  "changes": "No production/default/arithmetic/tolerance change and no GPU/API execution. NumPy is used only for streamed offline raw-row comparisons.",
+  "numpy_version": "1.26.4",
+  "offline_auditor_sha256": "8298660515264b6bad8a5a30980fd2c924eedd599841330158b0c42c533224dd",
+  "prior_evidence": {
+    "determinism_design": "experiments/determinism_2026-10-26/README.md",
+    "default_vs_default_receipt": "experiments/determinism_2026-10-26/receipts/s2_cmp_pick_off_a_vs_pick_off_b.json",
+    "deterministic_vs_deterministic_receipt": "experiments/determinism_2026-10-26/receipts/s2_cmp_pick_on_a_vs_pick_on_b.json",
+    "scope": "Earlier T4 registered-pick evidence; supportive context, not a new L4 causal counterfactual."
+  }
+}
