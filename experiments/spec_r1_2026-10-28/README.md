@@ -462,3 +462,52 @@ python3 tools/row_pick_profile/audit.py /absolute/out.zip \
 The stage supplies the prelaunch `e10_component_manifest.json`; the public copy beside the raw
 receipts has the same bytes. The output path must be new. Component tests and the independent
 audit refusal tests are separate from the frozen GPU experiment.
+
+### Experimental four-part selector integration, 31 October 2026
+
+The standalone component candidate now has a separate, explicitly experimental integration:
+`EMBER_DECODE_PICK=1 EMBER_DECODE_PICK_PARTS=4 EMBER_DETERMINISTIC=1`. Unset or `PARTS=0`
+keeps the existing selector. A request that activates four partitions outside deterministic mode
+throws an explicit configuration error; the integration never enables deterministic arithmetic
+silently. This restriction leaves the historical default-mode instability unresolved.
+
+`row_pick_partitioned.cuh` preserves the component experiment's partition and merge function bodies.
+The model allocates four partial records before graph capture, retains them for the graph's lifetime,
+and includes the partition mode in the capture cache key alongside KV identity and pick presence.
+Its destruction synchronises the stream and destroys the graph before freeing those records.
+The original selector and speculative-verification callers are unchanged. Only the new four-part
+plain-decode route defers its redundant host embedding lookup. Fixed diagnostic positions still
+fetch the current token, as does graph fallback; repeated requests for that token reuse the one
+lookup. A near-tie or dump reads the already computed logits without another forward/KV write.
+
+The bounded CPU and compile-only integration milestone is complete:
+
+- 54 targeted tests pass, including 12 integration cases for strict option refusal, cache-mode
+  transitions, allocation/destruction order, lazy lookup and actual generation-dispatch fragments
+  with mock transport. The merge-body CPU checks include guaranteed negative, threshold and
+  subnormal peak fixtures; these are not additional device checks or signed-zero bit proofs.
+- The unchanged production sampler differential passes 19,830 compact decisions and 5,370
+  conservative fallbacks with equal ids and RNG state. Ruff and both CUDA-host/CPU syntax checks pass.
+- A fresh CPU build passes all three registered CTests, the native numerical and state-template
+  checks, and Keramos conformance (554 PASS, no FAIL, 44 SKIP).
+- Six actual CPU HTTP requests use the registered pick in the baseline binary, candidate with the
+  option off and candidate with the experimental flags. Outputs match, and each run's 21 finite
+  16,384-value logit rows have identical float32 bytes. This validates the CPU path, not CUDA dispatch.
+- CUDA 12.6 compile-only SM89 disassembly preserves all 42 pre-existing verification kernel bodies,
+  with exactly the partition and merge kernels added. Only compiler-generated anonymous namespace
+  identifiers are normalised; instructions, addresses and encodings are compared unchanged.
+
+The cross-toolchain comparison is deliberately retained as negative evidence: the new kernels'
+CUDA 12.6 SASS is **not** identical to the archived component's CUDA 12.4 SASS, despite exact source
+bodies. Its earlier device field checks therefore do not establish integrated-binary field parity.
+The raw compiler objects, disassembly and CPU row dumps remain in the receipt's external artifact
+home; source identities, logs, actual HTTP outputs and this limitation are in
+[`partition_integration_20261031/validation.json`](receipts/partition_integration_20261031/validation.json).
+An independent source review found no production blocker; unrelated Unicode comment changes found
+in that review were restored before the final source-bound build and checks.
+
+**No new GPU execution, paid calls, speed result, adoption or default change occurred.** The retained
+full-model gate still has unstable default repeated rows and deterministic paired speedups 1.15925x /
+1.14146x against the unchanged 1.15x requirement. A deterministic-only integration diagnostic could
+investigate this new route, but cannot replace the original default-plus-deterministic adoption
+matrix or close E10. No such diagnostic or paid rerun is queued by this change.

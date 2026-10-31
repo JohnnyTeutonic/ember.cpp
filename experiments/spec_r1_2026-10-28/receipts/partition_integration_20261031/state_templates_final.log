@@ -1,0 +1,191 @@
+{
+ "assistant_after_closed_exchange": {
+  "out": [
+   2,
+   5,
+   3,
+   6,
+   1,
+   10,
+   11,
+   12,
+   3,
+   7,
+   1,
+   2,
+   8,
+   3
+  ],
+  "pass": true
+ },
+ "assistant_without_user": {
+  "out": [
+   3,
+   6,
+   1,
+   2,
+   8,
+   3
+  ],
+  "pass": true
+ },
+ "block_cut_at_end": {
+  "pass": true,
+  "refused": "the state block after the <|endoftext|> at position 4 is not the 3 ids 10 .. 12 in order"
+ },
+ "block_given": {
+  "out": [
+   2,
+   5,
+   3,
+   6,
+   1,
+   10,
+   11,
+   12,
+   2,
+   8,
+   3
+  ],
+  "pass": true
+ },
+ "block_incomplete": {
+  "pass": true,
+  "refused": "the state block after the <|endoftext|> at position 4 is not the 3 ids 10 .. 12 in order"
+ },
+ "block_out_of_order": {
+  "pass": true,
+  "refused": "the state block after the <|endoftext|> at position 4 is not the 3 ids 10 .. 12 in order"
+ },
+ "closed_reply": {
+  "out": [
+   2,
+   5,
+   3,
+   6,
+   7,
+   1,
+   10,
+   11,
+   12,
+   2,
+   8,
+   3
+  ],
+  "pass": true
+ },
+ "closed_reply_at_end": {
+  "out": [
+   2,
+   5,
+   3,
+   6,
+   1,
+   10,
+   11,
+   12
+  ],
+  "pass": true
+ },
+ "empty_reply_stopped_early": {
+  "out": [
+   2,
+   5,
+   3,
+   1,
+   10,
+   11,
+   12,
+   2,
+   8,
+   3
+  ],
+  "pass": true
+ },
+ "eot_after_user_only": {
+  "out": [
+   2,
+   5,
+   1,
+   2,
+   8,
+   3
+  ],
+  "pass": true
+ },
+ "eot_outside_exchange": {
+  "out": [
+   5,
+   6,
+   1,
+   7,
+   2,
+   8,
+   3
+  ],
+  "pass": true
+ },
+ "open_reply_at_end": {
+  "out": [
+   2,
+   5,
+   3,
+   6
+  ],
+  "pass": true
+ },
+ "pass": true,
+ "reply_stopped_early": {
+  "out": [
+   2,
+   5,
+   3,
+   6,
+   7,
+   1,
+   10,
+   11,
+   12,
+   2,
+   8,
+   3
+  ],
+  "pass": true
+ },
+ "state_id_after_text": {
+  "pass": true,
+  "refused": "state id 10 at position 4 is not part of a complete state block directly after an <|endoftext|> that ends an assistant reply"
+ },
+ "state_id_after_unclosing_eot": {
+  "pass": true,
+  "refused": "state id 10 at position 2 is not part of a complete state block directly after an <|endoftext|> that ends an assistant reply"
+ },
+ "state_id_past_k": {
+  "pass": true,
+  "refused": "the state block after the <|endoftext|> at position 4 is not the 3 ids 10 .. 12 in order"
+ },
+ "two_closed_replies": {
+  "out": [
+   2,
+   5,
+   3,
+   6,
+   1,
+   10,
+   11,
+   12,
+   2,
+   7,
+   3,
+   8,
+   1,
+   10,
+   11,
+   12,
+   2,
+   9,
+   3
+  ],
+  "pass": true
+ }
+}

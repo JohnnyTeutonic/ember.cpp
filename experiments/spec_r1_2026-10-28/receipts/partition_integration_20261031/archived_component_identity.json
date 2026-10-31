@@ -1,0 +1,7 @@
+{
+  "zip_sha256": "192962161a01bb7f2caffabe79416dec1d7cdb2216e895f842787f00dd281f14",
+  "member": "candidate/profile",
+  "member_sha256": "6a717a15eb781da68eb22ea61cc151da82efdaf9d77dd43b6eadeb29084fc3bb",
+  "recorded_nvcc": "12.4.131",
+  "local_compile_nvcc": "12.6.85"
+}

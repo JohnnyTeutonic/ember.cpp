@@ -439,6 +439,7 @@ class TinyLlamaModel {
   // computes for n rows at once with the same arithmetic (experiments/spec_r1_2026-10-28). EMBER_DECODE_LINEAR =
   // cublas | fixed, read on first use; unset (or empty), cublas (fixed is opt-in until its on-device ROUNDING gate).
   bool decode_linear_fixed();
+  int decode_pick_parts();  // explicit experimental partitions, 0 or 4; read once
   void decode_matvec(const float* W, const float* x, float* y, int O, int I, cudaStream_t st);
   // Per-op GPU time of the last batched prefill, filled only when
   // EMBER_OP_TIMING=1 (docs/TTFT.md); empty otherwise.
@@ -649,6 +650,9 @@ class TinyLlamaModel {
   void* decode_cublas_ws_ = nullptr;
   bool decode_graph_disabled_ = false;
   bool decode_graph_has_pick_ = false;
+  int decode_graph_pick_parts_ = 0;
+  int decode_pick_parts_ = -1;
+  ember_verify::RowPick* decode_pick_parts_dev_ = nullptr;  // 4 records, capture lifetime
   ember_verify::RowPick* decode_pick_dev_ = nullptr;
   ember_verify::RowPick* decode_pick_host_ = nullptr;  // pinned, one 20-byte record
 

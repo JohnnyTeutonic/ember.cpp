@@ -1,0 +1,33 @@
+[  3%] Building CXX object CMakeFiles/tinyllama_core.dir/model.cpp.o
+[  6%] Building CXX object CMakeFiles/tinyllama_core.dir/speculative_verify.cpp.o
+[ 10%] Building CXX object CMakeFiles/tinyllama_core.dir/model_config.cpp.o
+[ 13%] Building CXX object CMakeFiles/tinyllama_core.dir/kv_cache.cpp.o
+[ 17%] Building CXX object CMakeFiles/tinyllama_core.dir/weight_management.cpp.o
+[ 20%] Building CXX object CMakeFiles/tinyllama_core.dir/cpu_attention.cpp.o
+[ 24%] Building CXX object CMakeFiles/tinyllama_core.dir/model_utils.cpp.o
+[ 27%] Building CXX object CMakeFiles/tinyllama_core.dir/gpu_initialization.cpp.o
+[ 31%] Building CXX object CMakeFiles/tinyllama_core.dir/gpu_memory_optimization.cpp.o
+[ 34%] Building CXX object CMakeFiles/tinyllama_core.dir/cpu_batch_processor.cpp.o
+[ 37%] Building CXX object CMakeFiles/tinyllama_core.dir/safetensors_loader.cpp.o
+[ 41%] Building CXX object CMakeFiles/tinyllama_core.dir/tokenizer.cpp.o
+[ 44%] Building CXX object CMakeFiles/tinyllama_core.dir/api.cpp.o
+[ 48%] Building CXX object CMakeFiles/tinyllama_core.dir/score.cpp.o
+[ 51%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir.cpp.o
+[ 55%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir_validate.cpp.o
+[ 58%] Linking CXX static library libtinyllama_core.a
+[ 93%] Built target tinyllama_core
+[ 96%] Building CXX object CMakeFiles/tinyllama_server.dir/server.cpp.o
+[100%] Linking CXX executable tinyllama_server
+[100%] Built target tinyllama_server
+[ 93%] Built target tinyllama_core
+[ 96%] Building CXX object CMakeFiles/ir_adapter.dir/tools/ir_adapter.cpp.o
+[100%] Linking CXX executable ir_adapter
+[100%] Built target ir_adapter
+[ 93%] Built target tinyllama_core
+[ 96%] Building CXX object CMakeFiles/ir_numerics_test.dir/tools/ir_numerics_test.cpp.o
+[100%] Linking CXX executable ir_numerics_test
+[100%] Built target ir_numerics_test
+[ 93%] Built target tinyllama_core
+[ 96%] Building CXX object CMakeFiles/state_tokens_test.dir/tools/state_tokens_test.cpp.o
+[100%] Linking CXX executable state_tokens_test
+[100%] Built target state_tokens_test

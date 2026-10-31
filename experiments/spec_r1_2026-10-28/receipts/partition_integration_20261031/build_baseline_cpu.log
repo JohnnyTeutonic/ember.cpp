@@ -1,0 +1,23 @@
+-- nlohmann_json not found via find_package. Fetching with FetchContent.
+-- Using the multi-header code from /home/jonat/ember_publication_build_20261030/_deps/nlohmann_json-src/include/
+-- nlohmann_json fetched via URL. Include directory: /home/jonat/ember_publication_build_20261030/_deps/nlohmann_json-src/include
+-- Attempting to patch httplib.h at: /home/jonat/ember_publication_build_20261030/_deps/cpp-httplib-src/httplib.h to disable Brotli.
+-- Patched /home/jonat/ember_publication_build_20261030/_deps/cpp-httplib-src/httplib.h to disable Brotli code block via '#if 0'.
+-- pybind11 v2.12.0 
+-- HAS_MPI option is OFF. Building without distributed inference support.
+-- Found Boost version: 1.83.0
+-- Boost include directories: /usr/include
+-- Boost regex library: Boost::regex
+-- HAS_CUDA option is OFF. Building CPU-only version.
+-- Found OpenSSL. Enabling SSL support in cpp-httplib for tinyllama_server.
+-- Found OpenMP, enabling parallel execution.
+-- Project source directory: /home/jonat/ember_publication_20261030
+-- Configuring done (15.7s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/jonat/ember_publication_build_20261030
+[  3%] Building CXX object CMakeFiles/tinyllama_core.dir/graph_ir.cpp.o
+[  6%] Linking CXX static library libtinyllama_core.a
+[ 93%] Built target tinyllama_core
+[ 96%] Building CXX object CMakeFiles/tinyllama_server.dir/server.cpp.o
+[100%] Linking CXX executable tinyllama_server
+[100%] Built target tinyllama_server

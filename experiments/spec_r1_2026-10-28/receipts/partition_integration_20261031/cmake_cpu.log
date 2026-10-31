@@ -1,0 +1,34 @@
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- nlohmann_json not found via find_package. Fetching with FetchContent.
+-- Using the multi-header code from /home/jonat/ember_publication_build_20261030/_deps/nlohmann_json-src/include/
+-- nlohmann_json fetched via URL. Include directory: /home/jonat/ember_publication_build_20261030/_deps/nlohmann_json-src/include
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE  
+-- Attempting to patch httplib.h at: /home/jonat/ember_publication_build_20261030/_deps/cpp-httplib-src/httplib.h to disable Brotli.
+-- Patched /home/jonat/ember_publication_build_20261030/_deps/cpp-httplib-src/httplib.h to disable Brotli code block via '#if 0'.
+-- pybind11 v2.12.0 
+-- Found PythonInterp: /usr/bin/python3 (found suitable version "3.12.3", minimum required is "3.6") 
+-- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.12.so
+-- Performing Test HAS_FLTO
+-- Performing Test HAS_FLTO - Success
+-- Found OpenMP_CXX: -fopenmp (found version "4.5") 
+-- Found OpenMP: TRUE (found version "4.5")  
+-- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.83.0/BoostConfig.cmake (found suitable version "1.83.0", minimum required is "1.70.0") found components: regex 
+-- HAS_MPI option is OFF. Building without distributed inference support.
+-- Found Boost version: 1.83.0
+-- Boost include directories: /usr/include
+-- Boost regex library: Boost::regex
+-- HAS_CUDA option is OFF. Building CPU-only version.
+-- Found OpenSSL. Enabling SSL support in cpp-httplib for tinyllama_server.
+-- Found Python: /usr/bin/python3 (found version "3.12.3") found components: Interpreter Development.Module 
+-- Found OpenMP, enabling parallel execution.
+-- Project source directory: /home/jonat/ember_e10_integration_20261031
+-- Configuring done (21.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/jonat/ember_e10_integration_build_20261031

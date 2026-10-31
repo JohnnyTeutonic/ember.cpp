@@ -1279,14 +1279,33 @@ if (prefill_enabled) {
     }
 
     host_phase("host.loop_head");
-    if (!ir_) current_data_host = model_->lookup_embedding(input_token_id);
+    bool want_device_pick = false, defer_host_embedding = false;
+#ifdef HAS_CUDA
+    static const bool device_pick_on = [] {
+      const char* v = std::getenv("EMBER_DECODE_PICK");
+      return v && std::string(v) == "1";
+    }();
+    want_device_pick = !ir_ && config_.num_cpu_offload_layers == 0 && device_pick_on && top_k == 1 &&
+                       !repeat_on && repetition_penalty_ <= 1.0f && pos >= num_prompt_tokens - 1;
+    defer_host_embedding = want_device_pick && model_->decode_pick_parts() == 4;
+#endif
+    bool host_embedding_ready = false;
+    auto ensure_host_embedding = [&]() {
+      if (!host_embedding_ready) {
+        current_data_host = model_->lookup_embedding(input_token_id);
+        host_embedding_ready = true;
+      }
+      return !current_data_host.empty();
+    };
+    if (!ir_ && !defer_host_embedding) ensure_host_embedding();
     if (pos == 14 || pos == 15 || pos == 16) {
+        if (!ir_) ensure_host_embedding();
         log_vector_summary_detailed("[API_CPP GenLoop] current_data_host after lookup_embedding for input_token_id=" + std::to_string(input_token_id),
                                     current_data_host, pos, -100, 8);
     }
     host_phase("host.embed_lookup");
 
-    if (!ir_ && current_data_host.empty()) {
+    if (!ir_ && host_embedding_ready && current_data_host.empty()) {
         Logger::error("Embedding lookup returned empty vector for token ID: " + std::to_string(input_token_id) + " at pos " + std::to_string(pos));
         break; 
     }
@@ -1314,12 +1333,7 @@ if (prefill_enabled) {
 #ifdef HAS_CUDA
       // GPU-only mode: the captured decode graph when it applies, else the
       // per-launch forward.
-      static const bool device_pick_on = [] {
-        const char* v = std::getenv("EMBER_DECODE_PICK");
-        return v && std::string(v) == "1";
-      }();
-      const bool want_pick = device_pick_on && top_k == 1 && !repeat_on && repetition_penalty_ <= 1.0f &&
-                             (pos >= num_prompt_tokens - 1);
+      const bool want_pick = want_device_pick;
       ember_verify::RowPick pick{};
       logits = model_->forward_device_graph(input_token_id, pos, &kv_cache_, want_pick ? &pick : nullptr);
       if (want_pick && pick.first >= 0) {
@@ -1331,6 +1345,10 @@ if (prefill_enabled) {
       }
       host_phase("host.forward_device_graph");
       if (logits.empty() && !picked_on_device) {
+        if (!ensure_host_embedding()) {
+          Logger::error("Embedding lookup returned empty vector on decode graph fallback.");
+          break;
+        }
         gpuErrchk(cudaMemcpy(model_->get_x_dev(), current_data_host.data(), current_data_host.size() * sizeof(float), cudaMemcpyHostToDevice));
         host_phase("host.embed_h2d");
         logits = model_->forward_device(model_->get_x_dev(), pos, &kv_cache_, nullptr);

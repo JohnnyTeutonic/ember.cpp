@@ -466,6 +466,8 @@ __global__ void select_rows_kernel(const float* __restrict__ logits, int vocab, 
   }
 }
 
+#include "row_pick_partitioned.cuh"
+
 void check_launch(const char* what) {
   const cudaError_t e = cudaGetLastError();
   if (e != cudaSuccess) throw std::runtime_error(std::string("verify kernels: ") + what + ": " + cudaGetErrorString(e));
@@ -574,6 +576,18 @@ void select_rows(const float* logits, int n, int vocab, RowPick* picks, cudaStre
   select_rows_kernel<<<n, kSelThreads, 0, st>>>(logits, vocab, picks);
   check_launch("select_rows");
 }
+
+void select_rows_partitioned(const float* logits, int n, int vocab, RowPick* picks,
+                             RowPick* scratch, cudaStream_t st) {
+  if (n < 1 || n > kMaxRows || vocab < 1 || !logits || !picks || !scratch)
+    throw std::invalid_argument("select_rows_partitioned: invalid geometry or buffers");
+  constexpr int parts = 4;
+  partition_rows_kernel<<<dim3(n, parts), kSelThreads, 0, st>>>(logits, vocab, scratch, parts);
+  check_launch("partition_rows");
+  merge_parts<<<n, 32, 0, st>>>(scratch, picks, parts);
+  check_launch("merge_parts");
+}
+
 
 }  // namespace ember_verify
 #endif  // HAS_CUDA
