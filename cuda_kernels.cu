@@ -16,6 +16,7 @@
 
 #include "cuda_kernels.h"
 #include "determinism.h"
+#include "reduction_launch.h"
 #include "logger.h"
 #include "model_macros.h"
 
@@ -2735,100 +2736,14 @@ void update_kv_cache_batch_cuda(
  *
  * This kernel uses warp-level reductions and a shared memory variable for block-wide sum.
  */
-__global__ void rmsnorm_optimized_kernel(const float* __restrict__ x,
-                                       const float* __restrict__ weight,
-                                       float* __restrict__ out,
-                                       int n, float eps) {
-    const int tid_global = threadIdx.x + blockIdx.x * blockDim.x;
-    const int tid_block = threadIdx.x;
 
-    __shared__ float s_block_sum_sq;
-
-    if (tid_block == 0) {
-        s_block_sum_sq = 0.0f;
-    }
-    __syncthreads();
-
-    float thread_partial_sum_sq = 0.0f;
-    for (int i = tid_global; i < n; i += gridDim.x * blockDim.x) {
-        float val = x[i];
-        thread_partial_sum_sq += val * val;
-    }
-
-    // Reduce within warp
-    for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
-        thread_partial_sum_sq += __shfl_down_sync(0xFFFFFFFF, thread_partial_sum_sq, offset);
-    }
-
-    // Warp leaders add to shared memory sum
-    if ((tid_block % warpSize) == 0) {
-        atomicAdd(&s_block_sum_sq, thread_partial_sum_sq);
-    }
-    __syncthreads(); // Ensure all warps have added their sums
-
-    float total_sum_sq = s_block_sum_sq;
-    float rms_scale = rsqrtf(total_sum_sq / n + eps);
-
-    for (int i = tid_global; i < n; i += gridDim.x * blockDim.x) {
-        out[i] = x[i] * weight[i] * rms_scale;
-    }
-}
 
 /**
  * @brief Optimized softmax using shared memory and warp primitives
  *
  * Correctly finds max and sum of exponentials at block level for accurate softmax.
  */
-__global__ void softmax_optimized_kernel(const float* __restrict__ x,
-                                        float* __restrict__ out,
-                                        int n) {
-    const int tid_global = threadIdx.x + blockIdx.x * blockDim.x;
-    const int tid_block = threadIdx.x;
 
-    __shared__ float s_block_max_val;
-    __shared__ float s_block_sum_exp;
-
-    // Initialize shared variables by the first thread of the block
-    if (tid_block == 0) {
-        s_block_max_val = -INFINITY;
-        s_block_sum_exp = 0.0f;
-    }
-    __syncthreads();
-
-    // Phase 1: Find max
-    float thread_max_val = -INFINITY;
-    for (int i = tid_global; i < n; i += gridDim.x * blockDim.x) {
-        thread_max_val = fmaxf(thread_max_val, x[i]);
-    }
-    for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
-        thread_max_val = fmaxf(thread_max_val, __shfl_down_sync(0xFFFFFFFF, thread_max_val, offset));
-    }
-    if ((tid_block % warpSize) == 0) { // Warp leaders
-        atomicMaxFloat(&s_block_max_val, thread_max_val);
-    }
-    __syncthreads();
-    float global_max = s_block_max_val;
-
-    // Phase 2: Compute sum of exp
-    float thread_sum_exp = 0.0f;
-    for (int i = tid_global; i < n; i += gridDim.x * blockDim.x) {
-        thread_sum_exp += expf(x[i] - global_max);
-    }
-    for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
-        thread_sum_exp += __shfl_down_sync(0xFFFFFFFF, thread_sum_exp, offset);
-    }
-    if ((tid_block % warpSize) == 0) { // Warp leaders
-        atomicAddFloat(&s_block_sum_exp, thread_sum_exp);
-    }
-    __syncthreads();
-    float global_sum_exp = s_block_sum_exp;
-
-    // Phase 3: Apply softmax
-    float inv_sum = (global_sum_exp == 0.0f) ? 0.0f : 1.0f / global_sum_exp;
-    for (int i = tid_global; i < n; i += gridDim.x * blockDim.x) {
-        out[i] = expf(x[i] - global_max) * inv_sum;
-    }
-}
 
 /**
  * @brief Corrected and optimized attention kernel
@@ -2836,116 +2751,18 @@ __global__ void softmax_optimized_kernel(const float* __restrict__ x,
  * Uses shared memory for scores and performs a full softmax operation correctly.
  * Each block computes attention for one head.
  */
-__global__ void attention_optimized_kernel(const float* __restrict__ Q_current,      // Base Q for all heads: [num_q_heads, head_dim] (actually, [num_tokens_batch * num_q_heads * head_dim] from model.cpp)
-                                          const float* __restrict__ K_layer_cache_base, // Full K cache: [max_seq_len, num_kv_heads, head_dim]
-                                          const float* __restrict__ V_layer_cache_base, // Full V cache: [max_seq_len, num_kv_heads, head_dim]
-                                          float* __restrict__ out,                    // Output for all heads: [num_q_heads, head_dim]
-                                          int current_seq_len, int head_dim, float scale,
-                                          int cache_num_kv_heads, int num_q_heads,
-                                          const int* step_dev) {
-    // Graph decode: the length comes from device memory (step_dev[1] = pos).
-    if (step_dev) current_seq_len = step_dev[1] + 1;
 
-    const int head_idx = blockIdx.x; // Current Q head index this block is working on
-    const int tid_in_block = threadIdx.x;
-    const int block_dim_x = blockDim.x; // Threads per block (e.g., 256)
-
-    if (head_idx >= num_q_heads) return;
-
-    // Map current Q head to its corresponding KV cache head index (for GQA/MQA)
-    const int heads_per_kv = num_q_heads / cache_num_kv_heads;
-    const int kv_head_idx = head_idx / heads_per_kv;
-
-    // Dynamic shared memory. Layout:
-    // s_scores[current_seq_len]: to store Q.K^T results
-    // s_reduction_val[1]: for block-wide max and sum_exp
-    extern __shared__ float s_data[];
-    float* s_scores = s_data;
-    float* s_reduction_val = &s_data[current_seq_len]; // Single float for block-wide reduction
-
-    // Pointer to the current Q vector for this specific head
-    // Assuming Q_current is already offset for the specific token if in batch generation.
-    // Here, Q_current is expected to be just [head_idx * head_dim] for the current token's Q vector.
-    const float* q_vec = Q_current + head_idx * head_dim;
-
-    // --- 1. Compute Q.K^T scores and store in s_scores ---
-    for (int k_idx = tid_in_block; k_idx < current_seq_len; k_idx += block_dim_x) {
-        // Pointer to the k_idx-th K vector in the cache for the relevant kv_head
-        const float* k_vec = K_layer_cache_base + ((size_t)k_idx * cache_num_kv_heads + kv_head_idx) * head_dim;
-        float score = 0.0f;
-        for (int d = 0; d < head_dim; ++d) {
-            score += q_vec[d] * k_vec[d];
-        }
-        s_scores[k_idx] = score * scale;
-    }
-    __syncthreads(); // Ensure all scores are computed and stored in s_scores
-
-    // --- 2. Softmax calculation on s_scores ---
-    // a. Find max score in s_scores (block-wide reduction)
-    if (tid_in_block == 0) *s_reduction_val = -INFINITY;
-    __syncthreads();
-
-    float thread_max_score = -INFINITY;
-    for (int k_idx = tid_in_block; k_idx < current_seq_len; k_idx += block_dim_x) {
-        thread_max_score = fmaxf(thread_max_score, s_scores[k_idx]);
-    }
-    for (int offset = warpSize / 2; offset > 0; offset >>= 1) thread_max_score = fmaxf(thread_max_score, __shfl_down_sync(0xFFFFFFFF, thread_max_score, offset));
-    if ((tid_in_block % warpSize) == 0) atomicMaxFloat(s_reduction_val, thread_max_score);
-    __syncthreads();
-    float max_score = *s_reduction_val;
-    __syncthreads();  // every thread has read the max before thread 0 reuses the slot
-
-    // b. Subtract max, compute exp, and sum exp (block-wide reduction for sum)
-    if (tid_in_block == 0) *s_reduction_val = 0.0f;
-    __syncthreads();
-
-    float thread_sum_exp = 0.0f;
-    for (int k_idx = tid_in_block; k_idx < current_seq_len; k_idx += block_dim_x) {
-        float val = expf(s_scores[k_idx] - max_score);
-        s_scores[k_idx] = val; // Store exp(score - max)
-        thread_sum_exp += val;
-    }
-    for (int offset = warpSize / 2; offset > 0; offset >>= 1) thread_sum_exp += __shfl_down_sync(0xFFFFFFFF, thread_sum_exp, offset);
-    if ((tid_in_block % warpSize) == 0) atomicAddFloat(s_reduction_val, thread_sum_exp);
-    __syncthreads();
-    float sum_exp = *s_reduction_val;
-    float inv_sum_exp = (sum_exp == 0.0f || sum_exp < 1e-9f) ? 0.0f : 1.0f / sum_exp; // add small epsilon for stability
-
-    // c. Normalize s_scores (they now contain softmax probabilities)
-    for (int k_idx = tid_in_block; k_idx < current_seq_len; k_idx += block_dim_x) {
-        s_scores[k_idx] *= inv_sum_exp;
-    }
-    __syncthreads();
-
-    // --- 3. Multiply by V and accumulate to output ---
-    // Output for this head: out_for_this_head[d_out]
-    float* out_for_this_head = out + head_idx * head_dim;
-
-    for (int d_out = tid_in_block; d_out < head_dim; d_out += block_dim_x) {
-        float weighted_val = 0.0f;
-        for (int k_idx = 0; k_idx < current_seq_len; ++k_idx) { // All threads iterate full k_idx to sum contributions
-            const float* v_vec = V_layer_cache_base + ((size_t)k_idx * cache_num_kv_heads + kv_head_idx) * head_dim;
-            weighted_val += s_scores[k_idx] * v_vec[d_out];
-        }
-        out_for_this_head[d_out] = weighted_val; // Each thread writes to its assigned output dimension part
-    }
-}
 
 // ---------------------------------------------------------------------------
-// Deterministic twins (EMBER_DETERMINISTIC=1, determinism.h). The kernels above
-// add their warp partials into one shared float with atomicAdd (and
-// atomicAddFloat), in whatever order the warps arrive, so the same inputs can
-// round differently from one run to the next. These twins do the same
-// arithmetic, except that each warp leader stores its partial in its own slot
-// and thread 0 adds the slots in warp order, starting from 0 as the atomics
-// do (one of the orders the atomic kernels can produce). The maxima were
-// already order-free; they take the same slots for symmetry. Only the wrappers
-// below choose them, and only under the mode: the kernels above are unchanged.
+// Ordered reductions are the production default. Atomic predecessor bodies are
+// retained only in the source-pinned baseline used by the reduction benchmark.
+// Warp partials have per-warp slots and are accumulated in warp index order.
 // ---------------------------------------------------------------------------
 __global__ void rmsnorm_optimized_det_kernel(const float* __restrict__ x,
                                              const float* __restrict__ weight,
                                              float* __restrict__ out,
                                              int n, float eps) {
+    ember::require_single_block_reduction_launch();
     const int tid_global = threadIdx.x + blockIdx.x * blockDim.x;
     const int tid_block = threadIdx.x;
 
@@ -2982,6 +2799,44 @@ __global__ void rmsnorm_optimized_det_kernel(const float* __restrict__ x,
     for (int i = tid_global; i < n; i += gridDim.x * blockDim.x) {
         out[i] = x[i] * weight[i] * rms_scale;
     }
+}
+
+__global__ void softmax_optimized_det_kernel(const float* __restrict__ x,
+                                               float* __restrict__ out, int n) {
+    ember::require_single_block_reduction_launch();
+    const int tid = threadIdx.x;
+    const int lane = tid & 31, warp = tid >> 5;
+    const int num_warps = blockDim.x / 32;
+    __shared__ float partial[32];
+    __shared__ float block_value;
+    float maximum = -INFINITY;
+    for (int i = tid; i < n; i += blockDim.x) maximum = fmaxf(maximum, x[i]);
+    for (int offset = 16; offset > 0; offset >>= 1)
+        maximum = fmaxf(maximum, __shfl_down_sync(0xffffffff, maximum, offset));
+    if (lane == 0) partial[warp] = maximum;
+    __syncthreads();
+    if (tid == 0) {
+        float value = -INFINITY;
+        for (int w = 0; w < num_warps; ++w) value = fmaxf(value, partial[w]);
+        block_value = value;
+    }
+    __syncthreads();
+    const float global_max = block_value;
+    __syncthreads();
+    float sum = 0.0f;
+    for (int i = tid; i < n; i += blockDim.x) sum += expf(x[i] - global_max);
+    for (int offset = 16; offset > 0; offset >>= 1)
+        sum += __shfl_down_sync(0xffffffff, sum, offset);
+    if (lane == 0) partial[warp] = sum;
+    __syncthreads();
+    if (tid == 0) {
+        float value = 0.0f;
+        for (int w = 0; w < num_warps; ++w) value += partial[w];
+        block_value = value;
+    }
+    __syncthreads();
+    const float inv_sum = block_value == 0.0f ? 0.0f : 1.0f / block_value;
+    for (int i = tid; i < n; i += blockDim.x) out[i] = expf(x[i] - global_max) * inv_sum;
 }
 
 __global__ void attention_optimized_det_kernel(const float* __restrict__ Q_current,
@@ -3083,28 +2938,14 @@ void rmsnorm_vector_cuda_optimized(const float* x_dev, const float* weight_dev,
                                  float* out_dev, int n, float eps,
                                  cudaStream_t stream) {
     if (n <= 0) return;
-    const int block_size = 256;
-    // Ensure grid_size is 1 as the kernel is designed for block-wide reduction.
-    const int grid_size = 1;
-    if (ember::deterministic()) {
-        rmsnorm_optimized_det_kernel<<<grid_size, block_size, 0, stream>>>(x_dev, weight_dev, out_dev, n, eps);
-        gpuErrchk(cudaGetLastError());
-        return;
-    }
-    rmsnorm_optimized_kernel<<<grid_size, block_size, sizeof(float), stream>>>(
-        x_dev, weight_dev, out_dev, n, eps);
+    rmsnorm_optimized_det_kernel<<<1, 256, 0, stream>>>(x_dev, weight_dev, out_dev, n, eps);
     gpuErrchk(cudaGetLastError());
 }
 
 void softmax_vector_cuda_optimized(const float* x_dev, float* out_dev, int n,
                                  cudaStream_t stream) {
     if (n <= 0) return;
-    const int block_size = 256;
-    // Ensure grid_size is 1 as the kernel is designed for block-wide reduction.
-    const int grid_size = 1;
-    // Shared memory: 2 floats (max_val, sum_exp)
-    softmax_optimized_kernel<<<grid_size, block_size, 2 * sizeof(float), stream>>>(
-        x_dev, out_dev, n);
+    softmax_optimized_det_kernel<<<1, 256, 0, stream>>>(x_dev, out_dev, n);
     gpuErrchk(cudaGetLastError());
 }
 
@@ -3328,17 +3169,13 @@ void attention_cuda_optimized(const float* Q_current_dev, const float* K_layer_c
     const int threads_per_block = 256;
     size_t shared_mem_size = (cache_max_seq_len + 1) * sizeof(float);
 
-    if (ember::deterministic()) {
+
         attention_optimized_det_kernel<<<num_heads, threads_per_block, shared_mem_size, stream>>>(
             Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev,
             current_seq_len, head_dim, scale, cache_num_kv_heads, num_heads, nullptr);
         gpuErrchk(cudaGetLastError());
-        return;
-    }
-    attention_optimized_kernel<<<num_heads, threads_per_block, shared_mem_size, stream>>>(
-        Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev,
-        current_seq_len, head_dim, scale, cache_num_kv_heads, num_heads, nullptr);
-    gpuErrchk(cudaGetLastError());
+
+
 }
 
 // New BF16 Tensor Core Matrix-Matrix Operations
@@ -3615,17 +3452,13 @@ void attention_devpos_cuda(const float* Q_current_dev, const float* K_layer_cach
                         /*seq_len=*/0, head_dim, scale, cache_max_seq_len, cache_num_kv_heads, step_dev, stream))
     return;
   const size_t shared_mem_size = (cache_max_seq_len + 1) * sizeof(float);
-  if (ember::deterministic()) {
+
     attention_optimized_det_kernel<<<num_heads, 256, shared_mem_size, stream>>>(
         Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, /*current_seq_len=*/0, head_dim, scale,
         cache_num_kv_heads, num_heads, step_dev);
     gpuErrchk(cudaGetLastError());
-    return;
-  }
-  attention_optimized_kernel<<<num_heads, 256, shared_mem_size, stream>>>(
-      Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, /*current_seq_len=*/0, head_dim, scale,
-      cache_num_kv_heads, num_heads, step_dev);
-  gpuErrchk(cudaGetLastError());
+
+
 }
 
 

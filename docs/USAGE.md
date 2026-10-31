@@ -241,15 +241,16 @@ Operational logs go to `debugging.log` in the working directory.
 
 ### Deterministic CUDA mode (`EMBER_DETERMINISTIC=1`)
 
-By default the CUDA decode is not bit-reproducible run to run: the decode rmsnorm adds its warp sums with
-shared-memory atomics, so logits can move in the last bits (up to ~1e-5) between two runs of the same build, though
-replies rarely change. With `EMBER_DETERMINISTIC=1` (any value but `0`) the decode rmsnorm and the one-block-per-head
-decode attention reduce in a fixed order, and each cuBLAS handle gets `CUBLAS_WORKSPACE_CONFIG=:4096:8` (unless already
-set) and no atomics; every logit at every position is then bit-identical run to run on the same GPU and build, on the
-tuned llama path and the IR interpreter (whose device path was already fixed-order). It costs nothing measurable
-(decode and prefill within 1-2% noise on a T4). Not promised across GPUs, CUDA or cuBLAS versions, or builds. Unset,
-every path is exactly as before (same kernels; `/health` has no `deterministic` field). Receipts:
-`experiments/determinism_2026-10-26/`.
+The tuned CUDA RMSNorm and softmax reductions now use fixed warp-order sums by default, including the
+one-block-per-head attention fallback. The old atomic predecessors are retained only in the pinned benchmark
+baseline; there is no unmeasured production opt-in. The registered default-repeat and performance rerun is
+tracked in `experiments/ordered_reductions_2026-11-01/`; source/compile checks alone do not establish its result.
+
+`EMBER_DETERMINISTIC=1` still additionally fixes cuBLAS workspace/atomics policy and the verification policy below;
+it is not silently enabled by the default reduction change. `/health` reports `deterministic` only when that flag
+is explicitly on. The earlier same-GPU/build deterministic-mode evidence and historical unordered-default failure
+are preserved in `experiments/determinism_2026-10-26/` and the registered E10 receipts. No claim extends across
+GPUs, toolkits, cuBLAS versions, or builds.
 
 With `EMBER_SPEC=k` the mode also selects `EMBER_VERIFY_LINEAR=rows` unless that variable is set: every row of the
 CUDA verification pass is then the decode step's own arithmetic, so speculation's ids, and the logits of every token
