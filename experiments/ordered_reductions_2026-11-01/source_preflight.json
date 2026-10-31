@@ -1,0 +1,30 @@
+{
+  "status": "SOURCE_READY_DEVICE_GATE_PENDING",
+  "base_commit": "1b2789e656dda996efb79490cf689d0eff45eefe",
+  "source_files": {
+    "cuda_kernels.cu": "6005e851998954fd703fa0d1b9767b313c03994981c86a4ee617aff148d741dc",
+    "reduction_launch.h": "365c1c59ac665612a28f585be7f0f65d09e19a42de32f7332fe30b0f5b7f1711",
+    "determinism.h": "67c359489a0482885dfe38347a81a0d470794b2f125321e8ec9274bf1cf8d944"
+  },
+  "scope": "Unconditional ordered RMSNorm, standalone softmax, and both fallback-attention wrappers. Atomic predecessors absent from candidate production; retained only in immutable baseline source. No global deterministic flag workaround.",
+  "compile_only": {
+    "cuda": "12.6.85",
+    "flags": "-c -std=c++17 -O1 -DNDEBUG -DHAS_CUDA -arch=sm_89",
+    "object_sha256": "e15f81f27ea84de518be930a6d2631fb632decceb85f5f47dfb7e0ffd0b729f1",
+    "memory_limit_gib": 1.5,
+    "cpu_budget_cores": 1,
+    "no_local_gpu": true,
+    "release_guards": {
+      "rmsnorm_optimized_det_kernel": "BPT.TRAP present in sm89 -DNDEBUG compile-only SASS",
+      "softmax_optimized_det_kernel": "BPT.TRAP present in sm89 -DNDEBUG compile-only SASS"
+    }
+  },
+  "source_CPU_tests": 5,
+  "actual_device_pending": [
+    "Valid standalone softmax and RMSNorm reference/repeat tests",
+    "Isolated invalid-grid CUDA trap tests",
+    "Old/new same-L4 kernel timing",
+    "Frozen registered pick_e1_L16 default-repeat and speed gate with PARTS0"
+  ],
+  "historical_failure": "Preserved; no default-repeat or throughput pass claimed before new actual device receipts."
+}
