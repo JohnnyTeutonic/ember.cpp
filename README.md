@@ -218,7 +218,7 @@ with capture-safe scratch and lazy host embedding fallback. CPU and CUDA compile
 checks pass; it has no integrated device timing or adoption result and cannot replace
 the original full gate. Defaults remain unchanged.
 [Integration evidence and limits](experiments/spec_r1_2026-10-28/receipts/partition_integration_20261031/validation.json).
-A separately reviewed synthetic two-layer F32 CUDA correctness check is running for the integrated selector: complete row bits, compact record fields, sampling IDs/RNG, capture and scratch transitions. It does not replace registered-model speed or default-repeatability gates. [Frozen packet and limits](experiments/spec_r1_2026-10-28/integrated_gate_20261031/protocol.json).
+A separately reviewed synthetic two-layer F32 L4 check now passes: 96 kernel cases, 240 complete model rows, sampling IDs/RNG, capture/scratch transitions and 48 API fallback requests. Independent archive replay passes. This does not replace registered-model speed or default-repeatability gates. [Result, raw-data availability and limits](experiments/spec_r1_2026-10-28/receipts/integrated_correctness_20261031/README.md).
 The f16 KV-cache gate retained greedy IDs but failed the unchanged CPU/device logit tolerance on
 Qwen3. A complete 48-case L4 diagnosis reproduced the failure in both graph modes,
 found no conversion/cache-write/readback mismatches, and localized a substantial

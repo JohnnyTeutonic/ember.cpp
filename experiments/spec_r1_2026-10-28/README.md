@@ -521,3 +521,7 @@ Preparation passes 31 independent replay/preservation negatives, 12 existing sou
 This packet does not validate the registered `pick_e1_L16`, measure speed, change defaults, or close adoption. The historical default `BASELINE_UNSTABLE` result and deterministic speed pairs (1.15925x and 1.14146x, requiring both at least 1.15x) remain explicit failures of the full adoption requirement. Bounded synthetic correctness, if established, will be reported separately.
 
 The first integrated attempt stopped before model-row forwards because the harness set `EMBER_IR=0`; production interprets that variable as an override pathname. The immutable V1 archive and exact failure are bound in `integrated_gate_20261031/environment_v2_repair.json`. V2 clears the variable in both controller and C++ probe. Actual CPU constructor controls reproduce the old error and accept the corrected environment; model/kernel/row/sampler criteria, all production code, and historical adoption failures are unchanged. V2 remains unlaunched pending parent review.
+
+## Integrated synthetic correctness result, 31 October 2026
+
+The separately bounded V2 L4 gate and independent raw-archive replay pass. See receipts/integrated_correctness_20261031/README.md for exact scope, retained V1 setup failure, complete counts and the distinction between compact public evidence and the canonical local raw archive. This closes the synthetic integrated correctness execution; registered-model speed, default-control stability and adoption remain open.
