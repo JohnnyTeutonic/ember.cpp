@@ -1,0 +1,18 @@
+{
+  "status": "V1_SETUP_FAILURE_HOME_AND_RESOURCES_DELETED",
+  "scientific_legs": 0,
+  "build_started": false,
+  "root_cause": "Nested probe part files were uploaded but top-level-only runner reassembly did not construct their final paths.",
+  "preserved_negative": true,
+  "driver_disabled": true,
+  "owned_pod": "3uiix4g5eu1ndc",
+  "owned_volume": "bpacm4xpaa",
+  "files": {
+    "/home/jonat/ember_ordered_default_20261101_runner/state.json": "9e885415542cbcb5f76723a759b16106cc79534e4362030b97449e5887d18078",
+    "/mnt/c/ml_artifacts/ember_ordered_default_20261101/ordered_default_gate/summary.json": "90c71a83bbe2946c3cb16dfb803da54792b9ba2b2ab108a31b085c5581358504",
+    "/mnt/c/ml_artifacts/ember_ordered_default_20261101/ordered_default_gate/out.zip": "e0bb02516d3f367dece6210afbee233de3e2f547b0c0bcfb61eca61c440b931a",
+    "/mnt/c/ml_artifacts/ember_ordered_default_20261101/ordered_default_gate/vm.log": "544ec1383284961388f8a5ef264497ba14495f27e13111ee303f9738734215a0",
+    "/mnt/c/ml_artifacts/ember_ordered_default_20261101/ordered_default_gate/transport_exit.json": "00d8070d187e95b56fe0aefbf6088c63b006eea82c87d1c9dd549fc080406af1",
+    "/home/jonat/ordered_default_v1_setup_failure_20261101/remote_inventory.json": "a9ecfa50030972ac469b842d2dd98df5b44c31ffb8683f5deb6a396ef111db44"
+  }
+}
