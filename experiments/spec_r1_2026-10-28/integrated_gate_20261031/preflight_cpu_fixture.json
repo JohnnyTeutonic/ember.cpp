@@ -1,0 +1,71 @@
+{
+  "scope": "existing source-4836 CPU server fixture load and two-token forward, no GPU evidence",
+  "health": {
+    "chat_template": {
+      "name": "paperkiln",
+      "version": 1
+    },
+    "chat_template_why": "paperkiln specials at ids 0-3",
+    "context": 128,
+    "hidden_size": 32,
+    "layers": 2,
+    "model": "/home/jonat/ember_e10_gate_local_20261031/synthetic_final.gguf",
+    "status": "ok",
+    "tokenizer": "bpe",
+    "vocab_size": 16384
+  },
+  "reply": {
+    "history_turns_used": 0,
+    "ids": [
+      4369,
+      7128
+    ],
+    "prompt_ids": [
+      2,
+      123,
+      108,
+      101,
+      120,
+      36,
+      109,
+      119,
+      36,
+      120,
+      123,
+      115,
+      36,
+      116,
+      112,
+      121,
+      119,
+      36,
+      120,
+      123,
+      115,
+      36,
+      67,
+      3
+    ],
+    "prompt_tokens": 24,
+    "reply": "token4369token7128",
+    "stop_id": -1,
+    "stop_reason": "length",
+    "tokens": 2,
+    "ttft": {
+      "batch_prefill": true,
+      "first_token": true,
+      "num_prompt_tokens": 24,
+      "prefill_gpu_span_ms": -1.0,
+      "prefill_wall_ms": 17.663724,
+      "prefix_reused_tokens": 0,
+      "queue_ms": 0.000181,
+      "request_to_first_token_ms": 24.840843,
+      "spec_accepted": 0,
+      "spec_drafted": 0,
+      "spec_passes": 0,
+      "ttft_ms": 23.177405
+    }
+  },
+  "model_sha256": "e270235b70fa47369ad7bab19e231dedefd1d5b9d2966f6e2d84562e93250f87",
+  "server_sha256": "b9aa22dc3e98a99eec1ecefdb2204e6e7fa4e2b549376981ec5d817a87d71029"
+}

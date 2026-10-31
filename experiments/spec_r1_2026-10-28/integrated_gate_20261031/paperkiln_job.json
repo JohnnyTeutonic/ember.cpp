@@ -1,0 +1,11 @@
+{
+  "max_parallel": 1,
+  "jobs": [
+    {
+      "name": "e10_integrated_20261031",
+      "cmd": ["python3", "/content/chat/upload/e10_integrated_boot.py", "{out}"],
+      "outputs": ["out.zip", "summary.json"]
+    }
+  ],
+  "_comment": "Synthetic deterministic integrated selector correctness only. No timing/adoption gate. Negative or incomplete science is retained as completed transport, never retried for a pass."
+}

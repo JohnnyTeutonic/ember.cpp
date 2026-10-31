@@ -1,0 +1,59 @@
+{
+  "status": "PREPARED_NOT_LAUNCHED",
+  "production_source_commit": "4836b7de0ce4a96c030d491d942bb265fe393302",
+  "source_files": {
+    "api.cpp": "43e66be5dfaa369a165af8746b6de516b0559f9168a7d9379e019ed16a76b903",
+    "model.cpp": "6c23856da6015306abeefd59af5c6044fc6790779d93bd672614c51b02a0fd6f",
+    "model.h": "974aa758b8eaaf570359d72a1549bcaf5f1495e08f07a25b80cf60a7e684204d",
+    "verify_kernels.cu": "89507d2459f75336be9d453d85df60cf9355702add11a71613223ae754436e3f",
+    "verify_kernels.h": "de5b1edc70bd4ef6349d9203b4d408d6efd3023a6de5ddd23e6f28a05ba4aee1",
+    "row_pick_partitioned.cuh": "a9500fcbdcaa793b12ecbd5d529c6826c669ea4b4ba4630f82a51c1737d27346",
+    "decode_pick_policy.h": "53cd249e1c9ebaf8166a067eacb12a18ed09f0acb2a51cf3bdd028779d169d84",
+    "CMakeLists.txt": "339857345162138b5aec821adef589e3987ea1b10ac21b4cf442d04579d7f6b1"
+  },
+  "model_sha256": "e270235b70fa47369ad7bab19e231dedefd1d5b9d2966f6e2d84562e93250f87",
+  "model_bytes": 4552832,
+  "offline_validation": {
+    "packet_tests": 31,
+    "production_source_tests": 12,
+    "probe_compile_only": "PASS; no local GPU",
+    "cuda_headers": "12.6.85",
+    "host_compiler": "GNU 13.3.0",
+    "cxx_flags": "-std=c++17 -O1 -DHAS_CUDA -fopenmp; source/exact-sampler/CUDA headers",
+    "memory_admission_min_gib": 1.5,
+    "compiler_address_space_max_bytes": 1610612736,
+    "cpu_budget_cores": 1,
+    "cmake_cuda_configure": "PASS; explicit CUDA toolkit import in outer diagnostic scope",
+    "cpu_fixture_server": "PASS; exact 16384 vocabulary, 128 context, 32 hidden, 2 layers, BPE chat and two generated token IDs"
+  },
+  "preflight_corrections_before_freeze": [
+    "Initial word-tokenizer fixture loaded but legacy route did not expose required raw IDs.",
+    "BPE metadata with an empty merge list is refused by production chat loader; one valid byte merge added.",
+    "Loader defaults to 32000 vocabulary without llama.vocab_size; explicit 16384 metadata added and actual health checked.",
+    "Standalone CMake required its own find_package(CUDAToolkit) because subdirectory imported targets are scoped."
+  ],
+  "remote_scope": {
+    "kernel_cases": 96,
+    "full_model_rows": 240,
+    "graph_modes": [
+      "rows",
+      "original",
+      "partition4"
+    ],
+    "capture_key_transitions": "same model/KV: no-pick -> four-part pick -> no-pick, raw row bits equal",
+    "sampler": "exact production function bodies; temperatures .01/.05/.7/1; IDs and full RNG states",
+    "api_fallback": "48 existing frozen requests, outer PARTS=4",
+    "budget_usd_max": 1,
+    "max_hours": 1,
+    "vm_scientific_timeout_seconds": 2100,
+    "launch": "existing watchdog only after parent exact-pin review"
+  },
+  "limitations": [
+    "Synthetic model, not registered pick_e1_L16.",
+    "No timing or 15 percent adoption rerun.",
+    "Historical BASELINE_UNSTABLE and deterministic speed-pair failure remain unchanged.",
+    "CPU compile/load checks are not GPU execution evidence.",
+    "Capture success and persistent scratch exercise a bounded path, not all lifetimes or all models.",
+    "Default nondeterministic full-model repeatability remains unresolved."
+  ]
+}
