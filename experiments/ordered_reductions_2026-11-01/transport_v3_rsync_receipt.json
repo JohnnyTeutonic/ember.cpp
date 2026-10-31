@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "transport_source_sha256": "4e9e99b1642f1e0b88edc6a8180fadef91cf0bd73749898e541429cb1ae70690",
+  "argv_prefix": [
+    "rsync",
+    "--partial-dir=.rsync-partial",
+    "--timeout=180",
+    "-e",
+    "ssh"
+  ],
+  "network_used": false,
+  "rsync_version": "rsync  version 3.2.7  protocol version 31",
+  "symlink_attempt": {
+    "returncode": 0,
+    "destination_exists": false,
+    "stdout": "skipping non-regular file \"staged.bin\"\n",
+    "stderr": ""
+  },
+  "resolved_regular_attempt": {
+    "returncode": 0,
+    "bytes": 4370,
+    "source_sha256": "3036d32c865b84a8006af615a917b9490ba84d811012d21ec0c292331f4a9b08",
+    "destination_sha256": "3036d32c865b84a8006af615a917b9490ba84d811012d21ec0c292331f4a9b08"
+  },
+  "result": "PASS"
+}
