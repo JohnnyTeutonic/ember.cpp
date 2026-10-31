@@ -30,7 +30,7 @@ def test_refuses_existing_evidence(tmp_path):
  assert p.returncode!=0 and old.read_text()=='negative evidence' and len(list(out.iterdir()))==1
 
 def test_server_and_capture_contract():
- s=(HERE/'ordered_vm.py').read_text();probe=(HERE/'kernel_probe.cu').read_text()
+ s=(HERE/'ordered_vm.py').read_text();probe=''.join((HERE/'kernel_probe.cu').read_text().split())
  assert "'tinyllama_server','ordered_probe'" in s and "build/'ember/tinyllama_server'" in s
  assert 'cudaStreamNonBlocking' in probe and 'cudaStreamBeginCapture(stream,' in probe
  assert 'checked_error(out[i],reference[i])' in probe and '"first_output",first' in probe
