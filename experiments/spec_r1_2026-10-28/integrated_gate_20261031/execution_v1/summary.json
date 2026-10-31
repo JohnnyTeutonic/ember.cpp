@@ -1,0 +1,19 @@
+{
+  "scope": "synthetic integrated selector correctness; NO speed/adoption result",
+  "complete": false,
+  "scientific_pass": false,
+  "returncode": 1,
+  "execution": {
+    "complete": false,
+    "scientific_pass": false,
+    "source_commit": "4836b7de0ce4a96c030d491d942bb265fe393302",
+    "scope": "synthetic deterministic correctness; no timing/adoption gate",
+    "error": "command failed (1): ['/content/e10_integrated_out/science_build/integrated_pick_probe', '/content/e10_integrated_out/science/work/synthetic.gguf', '/content/e10_integrated_out/science/work/prepared', '/content/e10_integrated_out/science/rows', 'rows']; see rows.log",
+    "traceback": "Traceback (most recent call last):\n  File \"/content/e10_integrated_src/ember/experiments/spec_r1_2026-10-28/integrated_gate_20261031/vm.py\", line 97, in run\n    command([str(probe), str(fixture_path), str(prepared), str(destination), mode],\n  File \"/content/e10_integrated_src/ember/experiments/spec_r1_2026-10-28/integrated_gate_20261031/vm.py\", line 36, in command\n    raise RuntimeError(f'command failed ({result.returncode}): {argv}; see {log.name}')\nRuntimeError: command failed (1): ['/content/e10_integrated_out/science_build/integrated_pick_probe', '/content/e10_integrated_out/science/work/synthetic.gguf', '/content/e10_integrated_out/science/work/prepared', '/content/e10_integrated_out/science/rows', 'rows']; see rows.log\n",
+    "elapsed_seconds": 214.20592782797758
+  },
+  "status": "FAILED_OR_INCOMPLETE",
+  "checkpoint_errors": [],
+  "archive_sha256": "24f37c62d69f65f665f4ff5efa1c7915904bcf45bcf4459bb4d8e5f9cfe1f724",
+  "archive_bytes": 41569211
+}
