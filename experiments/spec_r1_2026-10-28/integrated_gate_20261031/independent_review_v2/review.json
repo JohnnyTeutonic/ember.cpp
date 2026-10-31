@@ -1,0 +1,32 @@
+{
+  "reviewer": "independent cleanroom_review agent",
+  "reviewed_utc": "2026-10-31T12:29:25.752195+00:00",
+  "recommendation": "READY_FOR_PARENT_AUTHORIZATION_ENVIRONMENT_REPAIR_ONLY",
+  "source_commit": "153f0e9352e14cfbd2b6c7328cb32e8d0f6a7ce5",
+  "archive_sha256": "81f559206add63d17785f0401b6eb4ec05fa7558bff36869389fd90ecaaac3fd",
+  "manifest_sha256": "21f2295458d4a00ee5d4de7fdaaff7ee10326065fa92ef914f004c970284cfd5",
+  "boot_sha256": "502f566d65cd89da2cd7449e6e4c89968b145f7205d70669fc8dfb1478e295a8",
+  "source_files_verified": 3000,
+  "old_failure_archive_sha256": "24f37c62d69f65f665f4ff5efa1c7915904bcf45bcf4459bb4d8e5f9cfe1f724",
+  "old_failure_reproduced_in_preserved_log": true,
+  "protocol_difference": "Only environment.EMBER_IR now null/unset; every criterion/fixture/kernel/sampling/default/performance decision unchanged.",
+  "source_review": "Production find_ir treats every EMBER_IR value as pathname, including0. VM now clears inherited variable, and C++ probe clears before constructor. API fallback children inherit corrected environment.",
+  "CPU_constructor_receipt_sha256": "80f52cd5ecd75058cfeed3c641f0a6777c4e2e1aa496b00742584418bcd610c3",
+  "offline_tests": "...................................                                   [100%]\n35 passed, 3 subtests passed in 11.86s",
+  "blockers": [],
+  "budget": "Parent-enforced0.85USD V2 plus root-reportedV1~0.12 stays below original1USD; original2026-10-31T13:05Z deadline. No spending verification or launch by reviewer.",
+  "limits": [
+    "Prior V1 failure before integrated model rows was harness error, not selector numerical result.",
+    "No GPU outcome or CUDA compile by review; same synthetic-only/no-performance/no-adoption limits."
+  ],
+  "no_GPU_config_build_or_frozen_receipt_edits": true,
+  "independent_actual_CPU_constructor_replay": {
+    "status": "PASS old_error_exit1_new_load_exit0",
+    "receipt_sha256": "80f52cd5ecd75058cfeed3c641f0a6777c4e2e1aa496b00742584418bcd610c3",
+    "loader_sha256": "580b58cc4fe3c3bf4fbf8591baa07523e54a6759e5ac68ca9f78fc031eb45871",
+    "loader_source_sha256": "840744efdf9082a293c0744a7bd913e54beced590aeb3255622db5ff2b35b374",
+    "model_sha256": "e270235b70fa47369ad7bab19e231dedefd1d5b9d2966f6e2d84562e93250f87",
+    "source_bound_record_equal": true
+  },
+  "prior_review_lesson": "V1 review missed pathname semantics of EMBER_IR=0. V2 explicitly verifies production reader semantics and replays actual constructor old-error/new-load behavior; environment flag meanings must be checked at their consumer."
+}

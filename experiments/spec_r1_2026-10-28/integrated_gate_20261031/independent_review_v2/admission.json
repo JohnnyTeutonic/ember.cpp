@@ -1,0 +1,14 @@
+{
+  "status": "APPROVED_ENVIRONMENT_REPAIR_ONLY",
+  "no_active_provider_pods": true,
+  "prior_owned_volume_absent": true,
+  "fresh_balance_above_floor": true,
+  "review_sha256": "6ac5a201104d47201589e727923e23f3a6018e2380ce023ef48eaee471c33b39",
+  "guard_sha256": "937eee223a94aea5100fec750022e57725d5484cd4a6bdb30e33567a33853f9d",
+  "bounds": {
+    "max_usd": 0.85,
+    "max_hours": 1,
+    "deadline_utc": "2026-10-31T13:05:00Z",
+    "process_local_max_pods": 2
+  }
+}

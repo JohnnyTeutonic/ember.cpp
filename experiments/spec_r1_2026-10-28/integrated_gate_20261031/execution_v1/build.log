@@ -1,0 +1,39 @@
+[  6%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/model.cpp.o
+[  6%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/speculative_verify.cpp.o
+[  9%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/model_config.cpp.o
+[ 12%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/kv_cache.cpp.o
+[ 15%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/weight_management.cpp.o
+[ 18%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/cpu_attention.cpp.o
+[ 21%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/model_utils.cpp.o
+[ 24%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/gpu_initialization.cpp.o
+[ 27%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/gpu_memory_optimization.cpp.o
+[ 30%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/cpu_batch_processor.cpp.o
+[ 33%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/utils.cpp.o
+[ 36%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/safetensors_loader.cpp.o
+[ 39%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/tokenizer.cpp.o
+[ 42%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/logger.cpp.o
+[ 45%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/api.cpp.o
+[ 48%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/score.cpp.o
+[ 51%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/gguf_parser.cpp.o
+[ 54%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/quantization.cpp.o
+[ 57%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/graph_ir.cpp.o
+[ 60%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/graph_ir_ops.cpp.o
+[ 63%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/graph_ir_expr.cpp.o
+[ 66%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/graph_ir_mamba.cpp.o
+[ 69%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/graph_ir_recurrence.cpp.o
+[ 72%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/graph_ir_validate.cpp.o
+[ 75%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/ir_digest.cpp.o
+[ 78%] Building CXX object ember/CMakeFiles/tinyllama_core.dir/parallel_for.cpp.o
+[ 81%] Building CUDA object ember/CMakeFiles/tinyllama_core.dir/cuda_kernels.cu.o
+[ 84%] Building CUDA object ember/CMakeFiles/tinyllama_core.dir/graph_ir_cuda.cu.o
+[ 87%] Building CUDA object ember/CMakeFiles/tinyllama_core.dir/verify_kernels.cu.o
+[ 90%] Building CUDA object ember/CMakeFiles/tinyllama_core.dir/kv_quant.cu.o
+[ 93%] Linking CXX static library libtinyllama_core.a
+[ 93%] Built target tinyllama_core
+[ 96%] Building CXX object CMakeFiles/integrated_pick_probe.dir/integrated_probe.cpp.o
+[100%] Linking CXX executable integrated_pick_probe
+[100%] Built target integrated_pick_probe
+[ 93%] Built target tinyllama_core
+[ 96%] Building CXX object ember/CMakeFiles/tinyllama_server.dir/server.cpp.o
+[100%] Linking CXX executable tinyllama_server
+[100%] Built target tinyllama_server
