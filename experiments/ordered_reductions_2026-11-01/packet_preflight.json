@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "tests": 10,
+  "result": "PASS",
+  "cuda_compile_only": {
+    "compiler": "CUDA12.6 nvcc",
+    "target": "sm_89",
+    "defines": [
+      "NDEBUG",
+      "HAS_CUDA",
+      "ORDERED_CANDIDATE"
+    ],
+    "probe_object": "/home/jonat/ember_ordered_compile_20261101/kernel_probe.o",
+    "result": "PASS",
+    "actual_device_execution": false
+  },
+  "production_source": "bca00166f75d53a01094e5ebfa599a004062a21e",
+  "gpu_status": "NOT_LAUNCHED"
+}
