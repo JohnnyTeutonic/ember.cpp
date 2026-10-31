@@ -1,0 +1,69 @@
+{
+  "status": "READY_FOR_PARENT_REVIEW_NOT_LAUNCHED",
+  "packet_commit": "0892c6ecca856f52b23c4224110932332ba76c09",
+  "production_source_commit": "4836b7de0ce4a96c030d491d942bb265fe393302",
+  "branch": "codex/e10-integrated-gpu-gate-20261031",
+  "source_archive": {
+    "path": "/home/jonat/e10_integrated_stage_20261031_v1/e10_integrated_source.tar",
+    "sha256": "8a9948c328b13c5464e102853b377b0102d4140c524738253d34d9d90b861cb7",
+    "bytes": 30443520,
+    "creation": "git archive --format=tar --prefix=ember/ 0892c6ecca856f52b23c4224110932332ba76c09"
+  },
+  "uploads": {
+    "e10_integrated_source.tar": {
+      "path": "/home/jonat/e10_integrated_stage_20261031_v1/e10_integrated_source.tar",
+      "sha256": "8a9948c328b13c5464e102853b377b0102d4140c524738253d34d9d90b861cb7",
+      "bytes": 30443520
+    },
+    "e10_integrated_boot.py": {
+      "path": "/home/jonat/e10_integrated_stage_20261031_v1/e10_integrated_boot.py",
+      "sha256": "502f566d65cd89da2cd7449e6e4c89968b145f7205d70669fc8dfb1478e295a8",
+      "bytes": 5936
+    },
+    "e10_integrated_manifest.json": {
+      "path": "/home/jonat/e10_integrated_stage_20261031_v1/e10_integrated_manifest.json",
+      "sha256": "a16def57bcdf636861758d798e3eaf5f98af6061908f58255ab73e3f52bbb005",
+      "bytes": 415766
+    }
+  },
+  "paperkiln_job": {
+    "path": "/home/jonat/e10_integrated_stage_20261031_v1/paperkiln_job.json",
+    "sha256": "dae84836d29c8ae54cd8b97968c806c237fe54f39f4230f1914aa0997a485674",
+    "registration": "Parent registers this exact JSON in current clean Paperkiln runner; no watchdog changes made by packet author"
+  },
+  "exact_archive_preflight": {
+    "status": "PASS_NO_LOCAL_GPU",
+    "configure_log_sha256": "44be75428614a14159f8b9ad9ff65fe4af1c500dfc74837dd4e629cd45ccd58f",
+    "probe_object_sha256": "d38315e561df9f8ba6bdf31bbd3c311cac621809609fa9e5105878271fe77107",
+    "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "one_core_budget": true,
+    "minimum_mem_available_gib": 1.5,
+    "compiler_address_space_gib": 1.5,
+    "scope": "Fresh archive extraction/configure plus diagnostic TU compile only; full core CUDA link/device execution remain remote"
+  },
+  "proposal": {
+    "gpu": "L4",
+    "cloud": "SECURE",
+    "volume_gb": 10,
+    "image": "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04",
+    "max_usd": 1,
+    "max_hours": 1,
+    "proposed_absolute_deadline_utc": "2026-10-31T13:05:00Z",
+    "state_dir": "/home/jonat/ember_e10_integrated_20261031_runner",
+    "art": "/mnt/c/ml_artifacts/e10_integrated_20261031",
+    "name": "ember-e10-integrated-20261031",
+    "boot_script": "tools/colab_chat/boot_commands_sparse.sh",
+    "scientific_timeout_seconds": 2100,
+    "expected_upload_mb": 31,
+    "expected_raw_archive_mb_max": 50,
+    "expected_cost_usd": "less than 0.65 at L4 0.59/hour plus 10GB storage, hard campaign cap 1.00",
+    "cleanup": "Existing watchdog only; normal HOME relay, verify owned pod and volume deleted, disable only this entry; incomplete or negative science never retried automatically"
+  },
+  "independent_replay": "python3 experiments/spec_r1_2026-10-28/integrated_gate_20261031/check.py EXTRACTED_ZIP/science",
+  "gate_limits": [
+    "Only synthetic deterministic correctness; no timing/speed/adoption gate.",
+    "No registered pick_e1_L16 or historical default-repeatability claim.",
+    "Historical BASELINE_UNSTABLE and paired speed-gate failure remain unchanged.",
+    "No production arithmetic/default/threshold edit."
+  ]
+}
