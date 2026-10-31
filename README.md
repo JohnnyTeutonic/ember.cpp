@@ -213,6 +213,11 @@ A later standalone L4 selector profile found about 8.2 microseconds of avoidable
 time at the pick's 16,384-token vocabulary, with exact tested RowPick fields. That tool leaves
 production unchanged and does not clear the full-model gate.
 [Component measurements and scope](experiments/spec_r1_2026-10-28/README.md#row-selection-component-follow-up-31-october-2026).
+An explicitly experimental four-part selector is now integrated for deterministic mode,
+with capture-safe scratch and lazy host embedding fallback. CPU and CUDA compile-only
+checks pass; it has no integrated device timing or adoption result and cannot replace
+the original full gate. Defaults remain unchanged.
+[Integration evidence and limits](experiments/spec_r1_2026-10-28/receipts/partition_integration_20261031/validation.json).
 The f16 KV-cache gate retained greedy IDs but failed the unchanged CPU/device logit tolerance on
 Qwen3. A complete 48-case L4 diagnosis reproduced the failure in both graph modes,
 found no conversion/cache-write/readback mismatches, and localized a substantial
