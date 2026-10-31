@@ -111,6 +111,16 @@ def main():
                     record=json.loads((science/(name+'.log')).read_text().splitlines()[-1]);record.update(source=source,mode=mode,quartet=quartet,position=position,returncode=rc);kernel_results.append(record)
                     if rc or not record['pass']:raise RuntimeError('kernel semantics '+name)
         atomic_json(science/'kernel_results.json',kernel_results)
+        kernel_pairs=[]
+        for offset in range(0,len(kernel_results),4):
+            group=kernel_results[offset:offset+4]
+            for left,right in [(0,1),(3,2)]:
+                for old,new in zip(group[left]['records'],group[right]['records']):
+                    if (old['kernel'],old['n'],old.get('pattern'))!=(new['kernel'],new['n'],new.get('pattern')):raise ValueError('kernel timing inventory')
+                    old_mean=sum(old['milliseconds'])/len(old['milliseconds']);new_mean=sum(new['milliseconds'])/len(new['milliseconds'])
+                    kernel_pairs.append({'mode':group[left]['mode'],'quartet':group[left]['quartet'],'pair':[left,right],'kernel':old['kernel'],'n':old['n'],'pattern':old.get('pattern'),'old_ms':old_mean,'new_ms':new_mean,'old_over_new_speedup':old_mean/new_mean})
+        atomic_json(science/'kernel_timing_comparison.json',{'scope':'resident component timing only, no automatic production opt-in','pairs':kernel_pairs})
+
         for kernel in ['rms','softmax']:
             for axis in range(3):
                 name=f'trap_{kernel}_{axis}';rc=run([str(probes['candidate']),'trap',kernel,str(axis)],science/(name+'.log'),30)

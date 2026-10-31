@@ -12,7 +12,10 @@
     ],
     "probe_object": "/home/jonat/ember_ordered_compile_20261101/kernel_probe.o",
     "result": "PASS",
-    "actual_device_execution": false
+    "actual_device_execution": false,
+    "probe_source_sha256": "c23e41bfac4510796bf8f9d4c9c1e7fac6e20056c279dddc759233e90549ec47",
+    "probe_object_sha256": "cb1d795d8731463e178098e5435841e3393ffa8ac450d97db2d2646246e5c056",
+    "semantic_helper_sha256": "50e758fabd9b74e61dd9869eabdda00cb50258d663936a96567f9fc6ab566e1c"
   },
   "production_source": "bca00166f75d53a01094e5ebfa599a004062a21e",
   "gpu_status": "NOT_LAUNCHED"
