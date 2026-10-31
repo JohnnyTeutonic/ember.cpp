@@ -1,0 +1,27 @@
+{
+  "status": "ACCEPTABLE_STORAGE_ONLY_AMENDMENT_WITH_DISCLOSED_SCOPE",
+  "reviewer": "Codex independent cleanroom_review",
+  "test_sha256": "22a0aafd7356f73ae1f7fd595411a8e0a3270bef14c6eacab64bf69c0438d331",
+  "fixture_tests": {
+    "passed": 1,
+    "seconds": 0.04
+  },
+  "verified": [
+    "Exact frozen client mkdir/open/unlink operations follow directory/file symlinks",
+    "Unmodified frozen gate load_run validates linked f32 row file geometry",
+    "Exact pack rglob/is_file/z.write includes full f32 bytes at canonical member name and preserves outside server logs with ZIP CRC pass"
+  ],
+  "archive_limit": "rglob does not descend .run directory symlink; ephemeral last dump.txt/debugging/www subtree is omitted; disclose in amendment record",
+  "scientific_scope": "Candidate14 and all future timing legs uniform local placement. Current baseline dump untouched; its baseline repeat becomes local, so baseline partial-control repeat description must disclose mixed physical storage. No numerical/source/model/env/threshold changes or retries.",
+  "required_conditions": [
+    "Immutable before snapshot plus archived amendment record",
+    "Actual local scratch free>=4GiB; owned canonical /tmp targets",
+    "Atomic absent-only no-overwrite links; abort collision and leave active leg untouched",
+    "All unstarted timing legs same local policy",
+    "Retain scratch until final ZIP verification; original deadline and cap remain"
+  ],
+  "runtime_modified": false,
+  "provider_calls": 0,
+  "model_calls": 0,
+  "config_writes": 0
+}

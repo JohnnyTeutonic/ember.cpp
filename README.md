@@ -204,11 +204,20 @@ rows, runtime dispatch and cache wrappers. They exclude loading, tokenization, s
 row writes. This is one model/GPU against eager HF, not a comparison with compiled HF or a
 general engine ranking. [CUDA protocol, raw-trial summaries and independent audit](experiments/hf_cuda_2026-10-30/README.md).
 
-Recent optional decode experiments have not justified changing defaults. Fixed-linear logits
+Recent optional decode acceleration experiments have not justified enabling those paths by default. Fixed-linear logits
 passed the registered rounding tolerance but failed the stronger requirement of being no farther
 from the CPU reference than cuBLAS. Device row selection had an unstable default off/off control;
 its deterministic paired speedups were 1.159x and 1.141x, so only one of the two required pairs
 cleared 1.15x.
+The ordered RMSNorm and softmax candidate now changes reduction routing by default, with release-active
+single-block guards; it does not force explicit deterministic mode or enable compact selection by default.
+Independent raw replay now verifies its complete 14-leg candidate gate: default repeat matches all 3,829 rows,
+and compact/off pairs are 1.1566x/1.1590x by default and 1.2434x/1.1977x in explicit deterministic mode.
+This does not show an absolute old-to-new gain: matched new/old off throughput was 0.9506-0.9698
+(default) and 0.9143-0.9402 (deterministic); on throughput was similar or slightly lower.
+The relative gains partly reflect a slower off path. Baseline ten controls remain partial, compact selection
+remains opt-in, and historical failures are preserved.
+[Actual timing table, storage qualifications and independently verified scope](experiments/ordered_reductions_2026-11-01/README.md).
 A later standalone L4 selector profile found about 8.2 microseconds of avoidable component wall
 time at the pick's 16,384-token vocabulary, with exact tested RowPick fields. That tool leaves
 production unchanged and does not clear the full-model gate.

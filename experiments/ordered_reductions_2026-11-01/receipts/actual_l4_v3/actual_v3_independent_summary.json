@@ -1,0 +1,239 @@
+{
+  "status": "INDEPENDENT_ACTUAL_V3_REPLAY_VERIFIED",
+  "reviewer": "Codex independent cleanroom_review",
+  "candidate_source": "d83d00e96254be214f0b32227f1d3fea8181d148",
+  "production_source": "bca00166f75d53a01094e5ebfa599a004062a21e",
+  "manifest_sha256": "b7f50738edc08228a9be1155964d48afbbfeb482a64e1a63156b3cf56661ee88",
+  "canonical_archive": "/mnt/c/ml_artifacts/ember_ordered_default_20261101_v3/ordered_default_gate/out.zip",
+  "archive_bytes": 2072950310,
+  "archive_sha256": "6b64284e674fec5cb9a371fe792a6686f7809a57a9b4836fc3e77235525b2e67",
+  "crc_hash_members": 170,
+  "device_record": "NVIDIA L4, GPU-04865735-20b6-771e-100f-c7b76b7030f5, 595.91.07\n",
+  "candidate_original_analyzer": {
+    "status": "PASS",
+    "modes": {
+      "default": {
+        "requests": 260,
+        "logit_bits_equal": true,
+        "paired_speedups": [
+          1.1565813877671347,
+          1.1589561643052133
+        ],
+        "throughput_pass": true
+      },
+      "det": {
+        "requests": 260,
+        "logit_bits_equal": true,
+        "paired_speedups": [
+          1.2433520106619422,
+          1.197656218667458
+        ],
+        "throughput_pass": true
+      }
+    },
+    "scope": "E10.3 rows, greedy ids and paired throughput only; fallback/penalty device checks remain separate"
+  },
+  "full_row_metadata": {
+    "science/baseline/default_rows_off.jsonl.meta.json": {
+      "rows": 3829,
+      "vocab": 16384,
+      "bytes": 250937344,
+      "explicit_deterministic_environment": [
+        "EMBER_DETERMINISTIC=0"
+      ],
+      "health_deterministic_field": null
+    },
+    "science/baseline/default_rows_off_repeat.jsonl.meta.json": {
+      "rows": 3829,
+      "vocab": 16384,
+      "bytes": 250937344,
+      "explicit_deterministic_environment": [
+        "EMBER_DETERMINISTIC=0"
+      ],
+      "health_deterministic_field": null
+    },
+    "science/candidate/default_rows_off.jsonl.meta.json": {
+      "rows": 3829,
+      "vocab": 16384,
+      "bytes": 250937344,
+      "explicit_deterministic_environment": [
+        "EMBER_DETERMINISTIC=0"
+      ],
+      "health_deterministic_field": null
+    },
+    "science/candidate/default_rows_off_repeat.jsonl.meta.json": {
+      "rows": 3829,
+      "vocab": 16384,
+      "bytes": 250937344,
+      "explicit_deterministic_environment": [
+        "EMBER_DETERMINISTIC=0"
+      ],
+      "health_deterministic_field": null
+    },
+    "science/candidate/default_rows_on.jsonl.meta.json": {
+      "rows": 3829,
+      "vocab": 16384,
+      "bytes": 250937344,
+      "explicit_deterministic_environment": [
+        "EMBER_DETERMINISTIC=0"
+      ],
+      "health_deterministic_field": null
+    },
+    "science/candidate/det_rows_off.jsonl.meta.json": {
+      "rows": 3829,
+      "vocab": 16384,
+      "bytes": 250937344,
+      "explicit_deterministic_environment": [
+        "EMBER_DETERMINISTIC=1"
+      ],
+      "health_deterministic_field": true
+    },
+    "science/candidate/det_rows_off_repeat.jsonl.meta.json": {
+      "rows": 3829,
+      "vocab": 16384,
+      "bytes": 250937344,
+      "explicit_deterministic_environment": [
+        "EMBER_DETERMINISTIC=1"
+      ],
+      "health_deterministic_field": true
+    },
+    "science/candidate/det_rows_on.jsonl.meta.json": {
+      "rows": 3829,
+      "vocab": 16384,
+      "bytes": 250937344,
+      "explicit_deterministic_environment": [
+        "EMBER_DETERMINISTIC=1"
+      ],
+      "health_deterministic_field": true
+    }
+  },
+  "components": {
+    "cases_replayed": 1584,
+    "maximum_absolute_error": 1.9106984372463387e-07,
+    "candidate_cross_process_row_comparisons": 660
+  },
+  "release_guard_probes": {
+    "count": 6,
+    "all_launch_success_then_expected_device_failure": true
+  },
+  "storage": {
+    "status": "STORAGE_AMENDMENT_VERIFIED",
+    "future_run_links": 23,
+    "future_dump_files": 7,
+    "uniform_local_timing_legs": 16,
+    "scratch_free_bytes_at_start": 31185539072,
+    "runtime_source_sha256": "ac9037a2890fa8538e819bef170b365381bf39b4a5499f66d395d5805a8328bd",
+    "archived_runtime_with_pinned_transport_preamble_sha256": "dea45ef19129b4528f55d492f0dcd533d57d792b4a12df8cd0866c34ae5326af",
+    "runtime_decomposition": "Exact AST-literal ENV_PREAMBLE from frozen transport plus exact reviewed amendment body; no stripping or ignored bytes",
+    "missing_uncompleted_outputs": [],
+    "disclosures": [
+      "First baseline default_rows_off stayed on NFS; its repeat used local scratch. Baseline off/off is mixed-storage and cannot establish a unique causal storage or kernel effect.",
+      "Candidate14 and all16 timing legs used uniform local storage; source, model, numerical gates and dump flags unchanged.",
+      "The23 linked .run directory subtrees were not traversed by rglob; ephemeral last dump.txt/debugging/www contents are excluded. Canonical linked f32 files and outside serverlogs are included by the packer.",
+      "Component20-repeat check remains a recorded executable assertion plus independent cross-process first-row comparisons; all20 outputs were not retained."
+    ]
+  },
+  "descriptive_timing": {
+    "status": "DESCRIPTIVE_TIMING_REPLAY_VERIFIED",
+    "recomputed": {
+      "baseline_default": {
+        "throughput": {
+          "off_a": 819.2931696069153,
+          "on_a": 922.9444274685263,
+          "on_b": 925.7139446325109,
+          "off_b": 824.327686265557
+        },
+        "paired_speedups": [
+          1.1265130257479643,
+          1.1229926642719754
+        ]
+      },
+      "candidate_default": {
+        "throughput": {
+          "off_a": 794.5266748803031,
+          "on_a": 918.9347642510679,
+          "on_b": 908.1200799546191,
+          "off_b": 783.5672374192264
+        },
+        "paired_speedups": [
+          1.1565813877671347,
+          1.1589561643052133
+        ]
+      },
+      "baseline_det": {
+        "throughput": {
+          "off_a": 803.0364786839336,
+          "on_a": 913.240578625671,
+          "on_b": 916.5770363965192,
+          "off_b": 813.5480534906571
+        },
+        "paired_speedups": [
+          1.1372342388758563,
+          1.1266415455900851
+        ]
+      },
+      "candidate_det": {
+        "throughput": {
+          "off_a": 734.2082087075352,
+          "on_a": 912.8792525410167,
+          "on_b": 916.0504428149229,
+          "off_b": 764.8692742848556
+        },
+        "paired_speedups": [
+          1.2433520106619422,
+          1.197656218667458
+        ]
+      }
+    },
+    "matched_candidate_over_baseline_throughput": {
+      "default": {
+        "off_a": 0.9697709005208784,
+        "on_a": 0.9956555745956924,
+        "on_b": 0.9809942749810513,
+        "off_b": 0.950553099786097
+      },
+      "det": {
+        "off_a": 0.9142899833277829,
+        "on_a": 0.9996043473175513,
+        "on_b": 0.9994254780987459,
+        "off_b": 0.9401648384543021
+      }
+    },
+    "scope": "Matched mode/leg new-over-old throughput ratios only. Original protocol interleaving retained. No new acceptance gate, pooling rescue, or isolated causal claim; candidate14 original selector gate remains unchanged."
+  },
+  "performance_interpretation": "Registered selector15percent gate passes in both candidate modes. Candidate off throughput is lower than matched baseline off controls; candidate on throughput is similar/slightly lower. This is not evidence of overall old-to-new throughput gain or a unique causal performance mechanism.",
+  "baseline_scope": {
+    "legs": 10,
+    "default_repeat_bits_equal": false,
+    "scope": "ten controls; not full baseline adoption"
+  },
+  "historical_evidence": "Original historical default101/3829 row equality, BASELINE_UNSTABLE and failed second speed pair remain unchanged; V1/V2 zero-leg setup failures remain preserved. No automatic selector adoption.",
+  "audit_repair": {
+    "first_report": "/home/jonat/review_receipts/ordered_default_20261101/actual_v3_storage_replay.json",
+    "first_status": "STORAGE_AUDIT_ERROR_OR_INCOMPLETE",
+    "first_error": "ValueError('runtime amendment source drift')",
+    "explanation": "Initial verifier expected reviewed body alone; transport archived exact ENV_PREAMBLE plus body. Separate v2 verifier proves byte-exact decomposition from frozen transport and pins full runtime and body. No ignored prefix, scientific rerun or raw edits.",
+    "original_storage_wrapper_sha256": "82383e67b798bd134e2abab575b08f4b9aa961eaea0a3cc54eb26eabbca200eb",
+    "corrected_storage_wrapper_sha256": "297bd097aedb329aae91c9b2d5c4b63308496e59aac763dd2967f58dafdf9f4d",
+    "immutable_v3_numerical_helper_sha256": "0e95d323e711930ad4fefceb85102aeb2677894263fabf2e2ed020f61e3cfca5",
+    "original_fixture_tests": 14,
+    "corrected_fixture_tests": 16
+  },
+  "receipts": {
+    "/home/jonat/review_receipts/ordered_default_20261101/actual_v3_storage_replay_v2.json": "045875e71f42d03c00278a1e29ad8e0ec3b8334c14f4fa0aef48fa3130d9b594",
+    "/home/jonat/review_receipts/ordered_default_20261101/actual_v3_storage_replay_v2.json.numerical_base.json": "2dfc5c19abce63977df05377abbe47e7ef0e90e05d30bd1323588bbb3d1bf6f7",
+    "/home/jonat/review_receipts/ordered_default_20261101/actual_v3_storage_replay.json": "fa7c02a1d24a66696f6edb80d9ef2531068a63857a2e7fe6c495b8d573b75997",
+    "/mnt/c/ml_artifacts/ember_ordered_default_20261101_v3/ordered_default_gate/summary.json": "43a3fde4a9b72de2554107b8a58a56986dcd7704380106d1c681b26dc0d0a721",
+    "/mnt/c/ml_artifacts/ember_ordered_default_20261101_v3/ordered_default_gate/transport_exit.json": "8f02443399b16355ec6762caa4fc701f26323c06480d5053c819d1313ff310a9"
+  },
+  "limits": [
+    "PARTS0 only; no automatic selector adoption, general model or quality claim",
+    "Baseline partial10 controls; first baseline dump NFS versus repeat local, so mixed-storage descriptive comparison",
+    "Component20-repeat equality is captured executable assertion plus independently compared first rows across processes; all20 internal rows not retained",
+    "Fixed-seed HTTP IDs do not establish full RNG-state advancement equivalence",
+    "Server/probe executable hashes are captured metadata; executable bytes are not inside raw ZIP"
+  ],
+  "provider_calls": 0,
+  "model_calls": 0,
+  "config_writes": 0
+}

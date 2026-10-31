@@ -1,0 +1,54 @@
+{
+  "scope": "baseline10 controls; no full baseline adoption",
+  "baseline_default_repeat_bits_equal": false,
+  "timings": {
+    "baseline_default": {
+      "throughput": {
+        "off_a": 819.2931696069153,
+        "on_a": 922.9444274685263,
+        "on_b": 925.7139446325109,
+        "off_b": 824.327686265557
+      },
+      "paired_speedups": [
+        1.1265130257479643,
+        1.1229926642719754
+      ]
+    },
+    "candidate_default": {
+      "throughput": {
+        "off_a": 794.5266748803031,
+        "on_a": 918.9347642510679,
+        "on_b": 908.1200799546191,
+        "off_b": 783.5672374192264
+      },
+      "paired_speedups": [
+        1.1565813877671347,
+        1.1589561643052133
+      ]
+    },
+    "baseline_det": {
+      "throughput": {
+        "off_a": 803.0364786839336,
+        "on_a": 913.240578625671,
+        "on_b": 916.5770363965192,
+        "off_b": 813.5480534906571
+      },
+      "paired_speedups": [
+        1.1372342388758563,
+        1.1266415455900851
+      ]
+    },
+    "candidate_det": {
+      "throughput": {
+        "off_a": 734.2082087075352,
+        "on_a": 912.8792525410167,
+        "on_b": 916.0504428149229,
+        "off_b": 764.8692742848556
+      },
+      "paired_speedups": [
+        1.2433520106619422,
+        1.197656218667458
+      ]
+    }
+  }
+}

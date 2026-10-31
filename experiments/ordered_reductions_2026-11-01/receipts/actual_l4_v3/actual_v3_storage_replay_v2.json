@@ -1,0 +1,94 @@
+{
+  "status": "STORAGE_AND_NUMERICAL_REPLAY_VERIFIED",
+  "provider_calls": 0,
+  "model_calls": 0,
+  "config_writes": 0,
+  "storage": {
+    "status": "STORAGE_AMENDMENT_VERIFIED",
+    "future_run_links": 23,
+    "future_dump_files": 7,
+    "uniform_local_timing_legs": 16,
+    "scratch_free_bytes_at_start": 31185539072,
+    "runtime_source_sha256": "ac9037a2890fa8538e819bef170b365381bf39b4a5499f66d395d5805a8328bd",
+    "archived_runtime_with_pinned_transport_preamble_sha256": "dea45ef19129b4528f55d492f0dcd533d57d792b4a12df8cd0866c34ae5326af",
+    "runtime_decomposition": "Exact AST-literal ENV_PREAMBLE from frozen transport plus exact reviewed amendment body; no stripping or ignored bytes",
+    "missing_uncompleted_outputs": [],
+    "disclosures": [
+      "First baseline default_rows_off stayed on NFS; its repeat used local scratch. Baseline off/off is mixed-storage and cannot establish a unique causal storage or kernel effect.",
+      "Candidate14 and all16 timing legs used uniform local storage; source, model, numerical gates and dump flags unchanged.",
+      "The23 linked .run directory subtrees were not traversed by rglob; ephemeral last dump.txt/debugging/www contents are excluded. Canonical linked f32 files and outside serverlogs are included by the packer.",
+      "Component20-repeat check remains a recorded executable assertion plus independent cross-process first-row comparisons; all20 outputs were not retained."
+    ]
+  },
+  "descriptive_timing": {
+    "status": "DESCRIPTIVE_TIMING_REPLAY_VERIFIED",
+    "recomputed": {
+      "baseline_default": {
+        "throughput": {
+          "off_a": 819.2931696069153,
+          "on_a": 922.9444274685263,
+          "on_b": 925.7139446325109,
+          "off_b": 824.327686265557
+        },
+        "paired_speedups": [
+          1.1265130257479643,
+          1.1229926642719754
+        ]
+      },
+      "candidate_default": {
+        "throughput": {
+          "off_a": 794.5266748803031,
+          "on_a": 918.9347642510679,
+          "on_b": 908.1200799546191,
+          "off_b": 783.5672374192264
+        },
+        "paired_speedups": [
+          1.1565813877671347,
+          1.1589561643052133
+        ]
+      },
+      "baseline_det": {
+        "throughput": {
+          "off_a": 803.0364786839336,
+          "on_a": 913.240578625671,
+          "on_b": 916.5770363965192,
+          "off_b": 813.5480534906571
+        },
+        "paired_speedups": [
+          1.1372342388758563,
+          1.1266415455900851
+        ]
+      },
+      "candidate_det": {
+        "throughput": {
+          "off_a": 734.2082087075352,
+          "on_a": 912.8792525410167,
+          "on_b": 916.0504428149229,
+          "off_b": 764.8692742848556
+        },
+        "paired_speedups": [
+          1.2433520106619422,
+          1.197656218667458
+        ]
+      }
+    },
+    "matched_candidate_over_baseline_throughput": {
+      "default": {
+        "off_a": 0.9697709005208784,
+        "on_a": 0.9956555745956924,
+        "on_b": 0.9809942749810513,
+        "off_b": 0.950553099786097
+      },
+      "det": {
+        "off_a": 0.9142899833277829,
+        "on_a": 0.9996043473175513,
+        "on_b": 0.9994254780987459,
+        "off_b": 0.9401648384543021
+      }
+    },
+    "scope": "Matched mode/leg new-over-old throughput ratios only. Original protocol interleaving retained. No new acceptance gate, pooling rescue, or isolated causal claim; candidate14 original selector gate remains unchanged."
+  },
+  "numerical_base_path": "/home/jonat/review_receipts/ordered_default_20261101/actual_v3_storage_replay_v2.json.numerical_base.json",
+  "numerical_base_sha256": "2dfc5c19abce63977df05377abbe47e7ef0e90e05d30bd1323588bbb3d1bf6f7",
+  "numerical_base_status": "REPLAY_VERIFIED"
+}

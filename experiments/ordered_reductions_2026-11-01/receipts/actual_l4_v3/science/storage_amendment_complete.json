@@ -1,0 +1,194 @@
+{
+  "status": "APPLIED_STORAGE_ONLY",
+  "time_unix": 1793461409.047428,
+  "operations": [
+    {
+      "source": "baseline",
+      "name": "default_off_a",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/baseline/default_off_a.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/baseline/default_off_a",
+      "rows_target": null
+    },
+    {
+      "source": "candidate",
+      "name": "default_off_a",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/default_off_a.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/default_off_a",
+      "rows_target": null
+    },
+    {
+      "source": "baseline",
+      "name": "default_on_a",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/baseline/default_on_a.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/baseline/default_on_a",
+      "rows_target": null
+    },
+    {
+      "source": "candidate",
+      "name": "default_on_a",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/default_on_a.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/default_on_a",
+      "rows_target": null
+    },
+    {
+      "source": "candidate",
+      "name": "default_on_b",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/default_on_b.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/default_on_b",
+      "rows_target": null
+    },
+    {
+      "source": "baseline",
+      "name": "default_on_b",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/baseline/default_on_b.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/baseline/default_on_b",
+      "rows_target": null
+    },
+    {
+      "source": "candidate",
+      "name": "default_off_b",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/default_off_b.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/default_off_b",
+      "rows_target": null
+    },
+    {
+      "source": "baseline",
+      "name": "default_off_b",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/baseline/default_off_b.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/baseline/default_off_b",
+      "rows_target": null
+    },
+    {
+      "source": "baseline",
+      "name": "det_off_a",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/baseline/det_off_a.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/baseline/det_off_a",
+      "rows_target": null
+    },
+    {
+      "source": "candidate",
+      "name": "det_off_a",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/det_off_a.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/det_off_a",
+      "rows_target": null
+    },
+    {
+      "source": "baseline",
+      "name": "det_on_a",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/baseline/det_on_a.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/baseline/det_on_a",
+      "rows_target": null
+    },
+    {
+      "source": "candidate",
+      "name": "det_on_a",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/det_on_a.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/det_on_a",
+      "rows_target": null
+    },
+    {
+      "source": "candidate",
+      "name": "det_on_b",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/det_on_b.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/det_on_b",
+      "rows_target": null
+    },
+    {
+      "source": "baseline",
+      "name": "det_on_b",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/baseline/det_on_b.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/baseline/det_on_b",
+      "rows_target": null
+    },
+    {
+      "source": "candidate",
+      "name": "det_off_b",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/det_off_b.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/det_off_b",
+      "rows_target": null
+    },
+    {
+      "source": "baseline",
+      "name": "det_off_b",
+      "dump": false,
+      "run_link": "/content/chat/ordered_default_gate/science/baseline/det_off_b.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/baseline/det_off_b",
+      "rows_target": null
+    },
+    {
+      "source": "baseline",
+      "name": "default_rows_off_repeat",
+      "dump": true,
+      "run_link": "/content/chat/ordered_default_gate/science/baseline/default_rows_off_repeat.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/baseline/default_rows_off_repeat",
+      "rows_target": "/tmp/ember_ordered_default_v3_fastio/baseline/default_rows_off_repeat/rows.f32"
+    },
+    {
+      "source": "candidate",
+      "name": "default_rows_off",
+      "dump": true,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/default_rows_off.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/default_rows_off",
+      "rows_target": "/tmp/ember_ordered_default_v3_fastio/candidate/default_rows_off/rows.f32"
+    },
+    {
+      "source": "candidate",
+      "name": "default_rows_off_repeat",
+      "dump": true,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/default_rows_off_repeat.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/default_rows_off_repeat",
+      "rows_target": "/tmp/ember_ordered_default_v3_fastio/candidate/default_rows_off_repeat/rows.f32"
+    },
+    {
+      "source": "candidate",
+      "name": "default_rows_on",
+      "dump": true,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/default_rows_on.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/default_rows_on",
+      "rows_target": "/tmp/ember_ordered_default_v3_fastio/candidate/default_rows_on/rows.f32"
+    },
+    {
+      "source": "candidate",
+      "name": "det_rows_off",
+      "dump": true,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/det_rows_off.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/det_rows_off",
+      "rows_target": "/tmp/ember_ordered_default_v3_fastio/candidate/det_rows_off/rows.f32"
+    },
+    {
+      "source": "candidate",
+      "name": "det_rows_off_repeat",
+      "dump": true,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/det_rows_off_repeat.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/det_rows_off_repeat",
+      "rows_target": "/tmp/ember_ordered_default_v3_fastio/candidate/det_rows_off_repeat/rows.f32"
+    },
+    {
+      "source": "candidate",
+      "name": "det_rows_on",
+      "dump": true,
+      "run_link": "/content/chat/ordered_default_gate/science/candidate/det_rows_on.jsonl.run",
+      "run_target": "/tmp/ember_ordered_default_v3_fastio/candidate/det_rows_on",
+      "rows_target": "/tmp/ember_ordered_default_v3_fastio/candidate/det_rows_on/rows.f32"
+    }
+  ],
+  "first_leg_untouched": true,
+  "timing_placement_uniform": true,
+  "source_and_input_bytes_unchanged": true,
+  "retain_scratch_until_verified_final_archive": true
+}

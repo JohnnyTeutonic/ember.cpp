@@ -244,7 +244,12 @@ Operational logs go to `debugging.log` in the working directory.
 The tuned CUDA RMSNorm and softmax reductions now use fixed warp-order sums by default, including the
 one-block-per-head attention fallback. The old atomic predecessors are retained only in the pinned benchmark
 baseline; there is no unmeasured production opt-in. The registered default-repeat and performance rerun is
-tracked in `experiments/ordered_reductions_2026-11-01/`; source/compile checks alone do not establish its result.
+tracked in `experiments/ordered_reductions_2026-11-01/`. Independent raw replay verifies the complete 14-leg candidate
+registered gate, including all 3,829 default-repeat rows and both 1.15 compact/off pairs in each mode.
+This is one pinned model/L4/build result, not all-model repeatability. Matched old/new timing controls show
+slower candidate off throughput and similar/slightly lower on throughput, so the relative gate pass does not
+establish an absolute speed improvement. Compact selection remains opt-in; full timing and storage
+qualifications are in the experiment README.
 
 `EMBER_DETERMINISTIC=1` still additionally fixes cuBLAS workspace/atomics policy and the verification policy below;
 it is not silently enabled by the default reduction change. `/health` reports `deterministic` only when that flag

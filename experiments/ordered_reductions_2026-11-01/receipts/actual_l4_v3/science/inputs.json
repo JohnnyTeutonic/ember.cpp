@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "candidate_source": "d83d00e96254be214f0b32227f1d3fea8181d148",
+  "baseline_source": "1b2789e656dda996efb79490cf689d0eff45eefe",
+  "transport_version": 2,
+  "files": {
+    "candidate.tgz": {
+      "bytes": 5919297,
+      "sha256": "7bf885c1b61ef90f5ad5ebd2a7c10989f5c2e584b869eaf59fcd6dfefa0330ec"
+    },
+    "baseline.tgz": {
+      "bytes": 5907208,
+      "sha256": "7fa110b85499ed7dc515e0f770579b473e313cbfbd8eee2edc31905e4ebd6bd9"
+    },
+    "ordered_vm.py": {
+      "bytes": 12878,
+      "sha256": "900b2fb9879c50beee0a3e8e353ede01422d407a9877eabeb34085dd27411c0a"
+    },
+    "protocol.json": {
+      "bytes": 4285,
+      "sha256": "11a9dacf56a037b740d1dde1f06d92c8ca087421ca00e7ff31b053ac9e8b5174"
+    },
+    "model.gguf": {
+      "bytes": 121925952,
+      "sha256": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9"
+    },
+    "eval100.jsonl": {
+      "bytes": 27784,
+      "sha256": "a25357100c3eb1e59bc94bb26c0629e72e6ae18172b2d4fbbf148ae5168d1740"
+    },
+    "probe_CMakeLists.txt": {
+      "bytes": 635,
+      "sha256": "87c4215a74b6b76e263d814f0a44e20c0c0bccb6aa2abc44e513e41200d45c55"
+    },
+    "probe_kernel_probe.cu": {
+      "bytes": 11437,
+      "sha256": "c23e41bfac4510796bf8f9d4c9c1e7fac6e20056c279dddc759233e90549ec47"
+    },
+    "probe_semantic_check.h": {
+      "bytes": 279,
+      "sha256": "50e758fabd9b74e61dd9869eabdda00cb50258d663936a96567f9fc6ab566e1c"
+    }
+  }
+}
