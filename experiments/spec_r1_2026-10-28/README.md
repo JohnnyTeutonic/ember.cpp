@@ -511,3 +511,11 @@ full-model gate still has unstable default repeated rows and deterministic paire
 1.14146x against the unchanged 1.15x requirement. A deterministic-only integration diagnostic could
 investigate this new route, but cannot replace the original default-plus-deterministic adoption
 matrix or close E10. No such diagnostic or paid rerun is queued by this change.
+
+## Prepared synthetic integrated selector correctness packet (31 October 2026)
+
+`integrated_gate_20261031/protocol.json` freezes a correctness-only L4 packet for production source `4836b7d`. It builds the unchanged production core and a diagnostic translation unit; no production flags or arithmetic are edited. A deterministic synthetic F32 Llama (16,384 vocabulary, two 32-wide layers, GQA 4/2) is generated from source, avoiding a registered-model transfer. The packet compares full raw rows and production sampler IDs/RNG states across no-pick, original selector, and explicit four-part selector; it also checks 96 adversarial production-kernel fixtures, pick-presence graph recapture/persistent scratch, and the existing HTTP fallback matrix.
+
+Preparation passes 31 independent replay/preservation negatives, 12 existing source-bound CPU integration checks, a CUDA-header compile-only check, fresh CUDA CMake configuration, and actual CPU fixture load/forward. See `integrated_gate_20261031/preflight.json`. This is prepared evidence, **not an actual GPU pass**. Parent review of the exact source archive and runner job is required before any paid launch. Raw model rows and fields will remain in one canonical archive; the checker rejects shortened/substituted inventories and CPU/IR fallback.
+
+This packet does not validate the registered `pick_e1_L16`, measure speed, change defaults, or close adoption. The historical default `BASELINE_UNSTABLE` result and deterministic speed pairs (1.15925x and 1.14146x, requiring both at least 1.15x) remain explicit failures of the full adoption requirement. Bounded synthetic correctness, if established, will be reported separately.

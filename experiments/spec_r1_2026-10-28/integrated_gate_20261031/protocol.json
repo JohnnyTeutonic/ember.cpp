@@ -1,0 +1,23 @@
+{
+  "schema": "ember.integrated-pick-correctness.v1",
+  "scope": "Synthetic F32 Llama correctness only. No speed measurement, registered-model validation, or adoption claim.",
+  "source_commit": "4836b7de0ce4a96c030d491d942bb265fe393302",
+  "model_sha256": "e270235b70fa47369ad7bab19e231dedefd1d5b9d2966f6e2d84562e93250f87",
+  "model_bytes": 4552832,
+  "geometry": {"vocab": 16384, "hidden": 32, "layers": 2, "heads": 4, "kv_heads": 2, "ffn": 64, "context": 128},
+  "environment": {"EMBER_DETERMINISTIC": "1", "EMBER_DECODE_GRAPH": "1", "EMBER_SPEC": "0", "EMBER_GEMM_TF32": "0", "EMBER_IR": "0"},
+  "graph_prefixes": [1, 7, 16, 31, 64],
+  "graph_steps": 8,
+  "graph_repeats": 2,
+  "graph_modes": ["rows", "original", "partition4"],
+  "kernel_vocabs": [1, 31, 257, 16384],
+  "kernel_rows": [1, 4],
+  "kernel_cases": ["finite", "ties", "near_tie", "all_nan", "all_negative_inf", "positive_inf", "mixed_nan", "signed_zero", "subnormal", "threshold", "boundary_tie", "last_max"],
+  "comparisons": {"full_rows": "bitwise equality including each F32 payload", "row_picks": "all five fields bitwise original versus partitioned", "ids": "exact source-bound sampler and RNG state; conservative fallback to same full-row sampler", "cpu_oracle": "independent finite/nonfinite semantic fields; signed-zero bits are compared only between actual kernels"},
+  "required_gpu": "Actual CUDA device, all layers GPU, tuned model path, successful graph execution and stable nonnull four-part scratch before capture/replay",
+  "default_preservation": "Source-bound no-opt-in dispatch and existing CPU counters. Runtime deterministic rows/original selectors must match. Default nondeterministic whole-model repeatability is NOT established by this synthetic deterministic packet.",
+  "capture_and_fallback": "Capture succeeds with persistent scratch; exercise pick/no-pick capture-key changes and actual graph-disabled HTTP fallback. Static dispatch counter proof is separate from actual GPU graph proof.",
+  "historical_gates": {"default": "BASELINE_UNSTABLE", "deterministic_speed_pairs": [1.15924656, 1.14146241], "required_each": 1.15, "adoption": "NOT_PASSED; unchanged"},
+  "limits": ["Synthetic model is not pick_e1_L16.", "No timing or performance conclusion.", "No change to default flags or any full-adoption threshold.", "Successful graph capture is evidence of exercised capture safety, not a general memory-lifetime proof.", "Graph-disabled runtime fallback and CPU mocked counters have distinct scopes."],
+  "execution": {"budget_usd_max": 1.0, "gpu": "NVIDIA L4", "max_hours": 1.0, "launch": "existing watchdog only after parent exact-pin review", "outputs": "immutable per-leg files, atomic final report, retained single canonical raw home", "cleanup": "normal relay HOME before owned pod and volume deletion; never clean unrelated resources"}
+}
