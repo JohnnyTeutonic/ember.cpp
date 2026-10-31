@@ -154,9 +154,11 @@
   ],
   "resources": {
     "gpu": "one L4",
-    "cap_usd": 2,
+    "cap_usd": 1.75,
     "max_hours": 3,
-    "absolute_deadline": "admission-owned; immutable once admitted"
+    "absolute_deadline": "2026-11-01T17:30:00Z",
+    "combined_campaign_cap_usd": 2,
+    "v1_spend_allowance_usd": 0.25
   },
   "retries": "No scientific retry after any outcome; preserve all partial and negative evidence; operational readiness errors reported.",
   "scientific_timeout_seconds": 9600,
