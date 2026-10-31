@@ -1,0 +1,23 @@
+{
+  "scope": "Actual existing CPU production API constructor only; no CUDA proof",
+  "source_commit": "4836b7de0ce4a96c030d491d942bb265fe393302",
+  "loader_sha256": "580b58cc4fe3c3bf4fbf8591baa07523e54a6759e5ac68ca9f78fc031eb45871",
+  "model_sha256": "e270235b70fa47369ad7bab19e231dedefd1d5b9d2966f6e2d84562e93250f87",
+  "cases": [
+    {
+      "name": "v1_path_zero",
+      "returncode": 1,
+      "stdout": "",
+      "stderr": "LOADER_EXCEPTION EMBER_IR: cannot read 0\n",
+      "EMBER_IR_present": true
+    },
+    {
+      "name": "v2_cleared_inherited_zero",
+      "returncode": 0,
+      "stdout": "LOADED bpe=1\n",
+      "stderr": "",
+      "EMBER_IR_present": false
+    }
+  ],
+  "status": "PASS_PATHNAME_ENVIRONMENT_REGRESSION"
+}
