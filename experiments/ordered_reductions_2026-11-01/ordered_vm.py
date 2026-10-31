@@ -82,6 +82,7 @@ def main():
         atomic_json(science/'inputs.json',inputs)
         protocol=json.loads((upload/'protocol.json').read_text());atomic_json(science/'protocol.json',protocol)
         if len(protocol['schedule'])!=24 or protocol['parts']!=0:raise ValueError('registered matrix drift')
+        if inputs['files']['model.gguf']['sha256']!=protocol['model_sha256'] or inputs['files']['eval100.jsonl']['sha256']!=protocol['prompts_sha256']:raise ValueError('registered input pins')
         if run(['nvidia-smi','--query-gpu=name,uuid,driver_version','--format=csv,noheader'],science/'device.log',30):raise RuntimeError('device metadata')
         if 'L4' not in (science/'device.log').read_text():raise ValueError('L4 required')
         if run(['apt-get','update','-qq'],science/'apt_update.log',300):raise RuntimeError('build dependency index')
@@ -90,6 +91,14 @@ def main():
         plans={};gates={};binaries={};probes={}
         for source in ['baseline','candidate']:
             root=work/source;extract(upload/(source+'.tgz'),root)
+            if sha(root/'experiments/spec_r1_2026-10-28/decode_pick_gate.py')!=protocol['frozen_checker_sha256']:raise ValueError('frozen checker drift')
+            if sha(root/'experiments/draft_2026-10-27/dr_e2e.py')!=protocol['frozen_client_sha256']:raise ValueError('frozen client drift')
+            if source=='candidate':
+                packet=root/'experiments/ordered_reductions_2026-11-01'
+                for name in ['CMakeLists.txt','kernel_probe.cu','semantic_check.h']:
+                    if sha(packet/name)!=sha(upload/'probe'/name):raise ValueError('diagnostic source/archive mismatch '+name)
+                for name in ['ordered_vm.py','protocol.json']:
+                    if sha(packet/name)!=sha(upload/name):raise ValueError('payload source/archive mismatch '+name)
             build=work/(source+'_build')
             # Baseline immutable archive lacks packet: build the same uploaded diagnostic source against it.
             configure=['cmake','-S',str(upload/'probe'),'-B',str(build),'-DEMBER_SOURCE='+str(root),'-DORDERED_CANDIDATE='+('ON' if source=='candidate' else 'OFF'),'-DHAS_CUDA=ON','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CUDA_ARCHITECTURES=89','-DBUILD_TESTING=OFF']
