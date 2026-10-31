@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/content/chat/upload/ordered_vm.py", line 90, in main
+    if p.stat().st_size!=record['bytes'] or sha(p)!=record['sha256']:raise ValueError('input mismatch '+name)
+       ^^^^^^^^
+  File "/usr/lib/python3.11/pathlib.py", line 1013, in stat
+    return os.stat(self, follow_symlinks=follow_symlinks)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/content/chat/upload/baseline.tgz'
