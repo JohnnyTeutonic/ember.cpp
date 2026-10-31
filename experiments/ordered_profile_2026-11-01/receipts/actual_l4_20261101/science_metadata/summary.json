@@ -1,0 +1,55 @@
+{
+  "status": "PROFILE_COMPLETE",
+  "complete": true,
+  "commands": [
+    {
+      "name": "hardware",
+      "returncode": 0
+    },
+    {
+      "name": "apt_update",
+      "returncode": 0
+    },
+    {
+      "name": "apt_dependencies",
+      "returncode": 0
+    },
+    {
+      "name": "python_dependencies",
+      "returncode": 0
+    },
+    {
+      "name": "toolchain",
+      "returncode": 0
+    },
+    {
+      "name": "baseline_configure",
+      "returncode": 0
+    },
+    {
+      "name": "baseline_build",
+      "returncode": 0
+    },
+    {
+      "name": "candidate_configure",
+      "returncode": 0
+    },
+    {
+      "name": "candidate_build",
+      "returncode": 0
+    },
+    {
+      "name": "profile",
+      "returncode": 0
+    },
+    {
+      "name": "independent_raw_replay",
+      "returncode": 0
+    }
+  ],
+  "scope": "Diagnostic only; not a speed/adoption or isolated causal claim",
+  "source_commits": {
+    "baseline": "1b2789e656dda996efb79490cf689d0eff45eefe",
+    "candidate": "0e364d1a5ac1c393f0c991af0b1fc3dc4cac9946"
+  }
+}

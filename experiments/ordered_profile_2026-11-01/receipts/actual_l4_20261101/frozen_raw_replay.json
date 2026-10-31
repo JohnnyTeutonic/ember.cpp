@@ -1,0 +1,177 @@
+{
+  "status": "PROFILE_REPLAY_VERIFIED",
+  "legs": 80,
+  "primary_legs": 48,
+  "instrumented_legs": 32,
+  "primary_pairs": [
+    {
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "new_over_old_throughput": 1.0166043788280494,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "new_over_old_throughput": 0.9713989286287432,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "default",
+      "pick": 0,
+      "repeat": 1,
+      "new_over_old_throughput": 1.0312290744114248,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "default",
+      "pick": 0,
+      "repeat": 1,
+      "new_over_old_throughput": 0.9784504855498937,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "default",
+      "pick": 0,
+      "repeat": 2,
+      "new_over_old_throughput": 0.9649196785229,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "default",
+      "pick": 0,
+      "repeat": 2,
+      "new_over_old_throughput": 0.9711672872189158,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "default",
+      "pick": 1,
+      "repeat": 0,
+      "new_over_old_throughput": 0.9889309886713067,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "default",
+      "pick": 1,
+      "repeat": 0,
+      "new_over_old_throughput": 1.000293571068634,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "default",
+      "pick": 1,
+      "repeat": 1,
+      "new_over_old_throughput": 1.0016053454837608,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "default",
+      "pick": 1,
+      "repeat": 1,
+      "new_over_old_throughput": 1.0072079752208438,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "default",
+      "pick": 1,
+      "repeat": 2,
+      "new_over_old_throughput": 0.9832764286692598,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "default",
+      "pick": 1,
+      "repeat": 2,
+      "new_over_old_throughput": 0.9900632513640193,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "new_over_old_throughput": 0.9691912630888022,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "new_over_old_throughput": 0.9730947972201558,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 0,
+      "repeat": 1,
+      "new_over_old_throughput": 0.9826681637592561,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 0,
+      "repeat": 1,
+      "new_over_old_throughput": 1.0139174277740803,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 0,
+      "repeat": 2,
+      "new_over_old_throughput": 1.0104530741079607,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 0,
+      "repeat": 2,
+      "new_over_old_throughput": 1.108396991885551,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 1,
+      "repeat": 0,
+      "new_over_old_throughput": 1.0035638564538039,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 1,
+      "repeat": 0,
+      "new_over_old_throughput": 1.0065471114636602,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 1,
+      "repeat": 1,
+      "new_over_old_throughput": 0.9801240092755492,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 1,
+      "repeat": 1,
+      "new_over_old_throughput": 0.9976000505298872,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 1,
+      "repeat": 2,
+      "new_over_old_throughput": 0.9948558660440658,
+      "identical_generated_token_paths": true
+    },
+    {
+      "mode": "det",
+      "pick": 1,
+      "repeat": 2,
+      "new_over_old_throughput": 1.0107970985209878,
+      "identical_generated_token_paths": true
+    }
+  ],
+  "scope": "Diagnostic estimates only; retain all pairs, unmatched-work flags and telemetry. No adoption, overall gain, isolated causal mechanism or statistical significance claimed."
+}

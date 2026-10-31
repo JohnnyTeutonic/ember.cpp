@@ -1,0 +1,27 @@
+{
+  "kind": "COMPACT_ACTUAL_ORDERED_PROFILE_RECEIPT",
+  "raw_zip_published": false,
+  "canonical_local_zip": "/mnt/c/ml_artifacts/ember_ordered_profile_1101/ordered_profile/out.zip",
+  "raw_zip_sha256": "b8b3cb4fa8b4a18df7c60143a19a18663e4654b09fd99c4b2eb40cea7379fdcc",
+  "raw_zip_bytes": 973943,
+  "full_raw_entries": 340,
+  "compact_alone_replays_all_raw_legs": false,
+  "files": {
+    "audit_ordered_profile_actual.py": "2369201db60369c7e95b4d97932bd3099646b729ac3645f4b41a007f1ac0146f",
+    "descriptive_summary.json": "2b7c48d873107bc5338a8471484430415f3bb4c87566c01723d2daf1d920d3ff",
+    "frozen_raw_replay.json": "0d05b496782475ac2fcc34db0021fd0131ba9d8617a49efc1d4c23d9e2058c35",
+    "independent_actual_audit.json": "8a98f24c33799c172ef4af25ed7032c7f8a63028caa98155e83910207894eeb5",
+    "phase_telemetry_coverage.json": "0a6c4c1b466635623cf3a44d0265fc8950463e7bc06906fc8b7e516c06dd58dc",
+    "science_metadata/baseline_configure.log": "f200b7e8646dae79338a6f5c382ca0cca395bf443c8c959ba8969b4c406e1fe5",
+    "science_metadata/binaries.json": "b98cc731623a6e2f66601cf445891c6b50d863a92f765e7a3e9949e10fac1a18",
+    "science_metadata/candidate_configure.log": "04ebe5cb778fdcc15034af7fbcceaf9213a4fd527b2491f1a39f6c4d6fdfb847",
+    "science_metadata/hardware.log": "0908474603909be11d907f48faa9a75d35413a7c39368fef569f082f464df867",
+    "science_metadata/inputs.json": "368d19cb0778b6acf97fdeec69f7b0271d913ee89d655282d8cef6866e3a8d20",
+    "science_metadata/profile/gpu_telemetry.csv": "49ebeb4d09c3151ee7b9258a5ff1c46d4ee5734fd138b474a6ed3c8c9625ff02",
+    "science_metadata/profile/profile_plan.json": "08e7cbcfd02fc98392b58c6040f34575589f23d920ffe637f3003bd368baddef",
+    "science_metadata/profile/subset.jsonl": "947278c5036b60bdae75e1b5a69f86171b81a4b2c425ebcc320a9fe20f17f554",
+    "science_metadata/summary.json": "3ec3b1242f43eb86295aa8e38c651ac1b6b6141b068cf9fdb6ff55f0bbe7114b"
+  },
+  "omitted_from_public_compact_receipt": "Full per-leg raw replies/IDs/timings/serverlogs and duplicate profile summary/checkpoint remain in the canonical hash-bound ZIP. Full source archives and model remain in original canonical homes.",
+  "scope": "Descriptive 8item/16request source comparison only; no adoption, absolute gain, significance or isolated causal claim."
+}

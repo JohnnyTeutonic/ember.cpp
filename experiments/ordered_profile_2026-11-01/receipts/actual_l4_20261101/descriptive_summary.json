@@ -1,0 +1,231 @@
+{
+  "primary_summary": [
+    {
+      "mode": "default",
+      "pick": 0,
+      "new_over_old": {
+        "n": 6,
+        "median": 0.9749247070893184,
+        "min": 0.9649196785229,
+        "max": 1.0312290744114248
+      },
+      "matched_token_paths": 6,
+      "total_pairs": 6,
+      "old_throughput": {
+        "n": 6,
+        "median": 794.2857537581829,
+        "min": 770.7589737288469,
+        "max": 849.3480659343843
+      },
+      "new_throughput": {
+        "n": 6,
+        "median": 796.3744411762486,
+        "min": 747.9109349941231,
+        "max": 831.0450275143614
+      }
+    },
+    {
+      "mode": "default",
+      "pick": 1,
+      "new_over_old": {
+        "n": 6,
+        "median": 0.9951784112163267,
+        "min": 0.9832764286692598,
+        "max": 1.0072079752208438
+      },
+      "matched_token_paths": 6,
+      "total_pairs": 6,
+      "old_throughput": {
+        "n": 6,
+        "median": 934.3466458931356,
+        "min": 923.9127397488078,
+        "max": 936.138142387456
+      },
+      "new_throughput": {
+        "n": 6,
+        "median": 926.6177154242093,
+        "min": 920.4825693878128,
+        "max": 933.404518555215
+      }
+    },
+    {
+      "mode": "det",
+      "pick": 0,
+      "new_over_old": {
+        "n": 6,
+        "median": 0.9965606189336085,
+        "min": 0.9691912630888022,
+        "max": 1.108396991885551
+      },
+      "matched_token_paths": 6,
+      "total_pairs": 6,
+      "old_throughput": {
+        "n": 6,
+        "median": 790.1415051778637,
+        "min": 726.3699715701059,
+        "max": 827.6621305447077
+      },
+      "new_throughput": {
+        "n": 6,
+        "median": 804.6918064520983,
+        "min": 748.1767701267994,
+        "max": 811.5792490533237
+      }
+    },
+    {
+      "mode": "det",
+      "pick": 1,
+      "new_over_old": {
+        "n": 6,
+        "median": 1.0005819534918454,
+        "min": 0.9801240092755492,
+        "max": 1.0107970985209878
+      },
+      "matched_token_paths": 6,
+      "total_pairs": 6,
+      "old_throughput": {
+        "n": 6,
+        "median": 929.2394147013043,
+        "min": 918.071111463565,
+        "max": 938.8508187627818
+      },
+      "new_throughput": {
+        "n": 6,
+        "median": 926.6133845819709,
+        "min": 920.1902285974097,
+        "max": 933.8238111809048
+      }
+    }
+  ],
+  "instrumented_pairs": [
+    {
+      "kind": "graph1_timer_new_over_old",
+      "mode": "default",
+      "pick": 0,
+      "ratio": 0.9989842074356092,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph1_timer_new_over_old",
+      "mode": "default",
+      "pick": 0,
+      "ratio": 1.0268642292203853,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph1_timer_new_over_old",
+      "mode": "default",
+      "pick": 1,
+      "ratio": 1.0126544976247056,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph1_timer_new_over_old",
+      "mode": "default",
+      "pick": 1,
+      "ratio": 0.9929283004386229,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph1_timer_new_over_old",
+      "mode": "det",
+      "pick": 0,
+      "ratio": 1.0826773693493073,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph1_timer_new_over_old",
+      "mode": "det",
+      "pick": 0,
+      "ratio": 1.0502698065242024,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph1_timer_new_over_old",
+      "mode": "det",
+      "pick": 1,
+      "ratio": 1.0004686962285385,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph1_timer_new_over_old",
+      "mode": "det",
+      "pick": 1,
+      "ratio": 1.0012750272703206,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph0_timer_on_over_off",
+      "source": "baseline",
+      "mode": "default",
+      "pick": 0,
+      "ratio": 0.8162544984602318,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph0_timer_on_over_off",
+      "source": "baseline",
+      "mode": "default",
+      "pick": 0,
+      "ratio": 0.8098342536422595,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph0_timer_on_over_off",
+      "source": "baseline",
+      "mode": "det",
+      "pick": 0,
+      "ratio": 0.7427173568103158,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph0_timer_on_over_off",
+      "source": "baseline",
+      "mode": "det",
+      "pick": 0,
+      "ratio": 0.7084714178985243,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph0_timer_on_over_off",
+      "source": "candidate",
+      "mode": "default",
+      "pick": 0,
+      "ratio": 0.9121906953395139,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph0_timer_on_over_off",
+      "source": "candidate",
+      "mode": "default",
+      "pick": 0,
+      "ratio": 0.7128403449017418,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph0_timer_on_over_off",
+      "source": "candidate",
+      "mode": "det",
+      "pick": 0,
+      "ratio": 0.7029818494633351,
+      "same_token_paths": true
+    },
+    {
+      "kind": "graph0_timer_on_over_off",
+      "source": "candidate",
+      "mode": "det",
+      "pick": 0,
+      "ratio": 0.6186225251525307,
+      "same_token_paths": true
+    }
+  ],
+  "telemetry_samples": 189,
+  "all80_legs_have_telemetry": true,
+  "limitations": [
+    "Eight frozenitems/sixteenrequests, not full260request adoption benchmark or allmodelclaim.",
+    "All24primarypairs retained; unmatched tokenpaths are not comparable work and not silently filtered.",
+    "32separate instrumentation/graph diagnostic legs never pooled into primary; phase instrumentation synchronizes and can distort timings.",
+    "Observed timing/clocks/control differences do not isolate unique causal mechanism, prove absolute gain, statistical significance or adoption.",
+    "Binary bytes are not duplicated in evidence; recorded hashes bind actualbuilt binaries and source inventories."
+  ]
+}

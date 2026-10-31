@@ -1,0 +1,14 @@
+{
+  "status": "PHASE_AND_TELEMETRY_COVERAGE_VERIFIED",
+  "all_80legs_telemetry_covered": true,
+  "timer_enabled_legs": 24,
+  "timer_disabled_legs": 56,
+  "enabled_phase_logs_present": 24,
+  "disabled_phase_logs_empty": 56,
+  "instrumentation_diagnostic_legs": 32,
+  "graph1_timer_enabled": 16,
+  "graph0_timer_ABBA_legs": 16,
+  "graph0_timer_enabled": 8,
+  "graph0_timer_disabled_controls": 8,
+  "startup_logger_scope": "Native startup INFO logs are suppressed in these profile serverlogs. ActualGPU execution is source/binary/CUDAconfigure/L4 and commontelemetry-bound; no claim of independent per-leg native init log proof."
+}

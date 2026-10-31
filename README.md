@@ -218,6 +218,10 @@ This does not show an absolute old-to-new gain: matched new/old off throughput w
 The relative gains partly reflect a slower off path. Baseline ten controls remain partial, compact selection
 remains opt-in, and historical failures are preserved.
 [Actual timing table, storage qualifications and independently verified scope](experiments/ordered_reductions_2026-11-01/README.md).
+A subsequent 80-leg, sixteen-request diagnostic found paired new/old median ratios of 0.975/0.995
+(default selector off/on) and 0.997/1.001 (deterministic off/on), with all 24 token paths matched.
+This small-subset result establishes no absolute gain or unique cause; separate timed controls show
+material instrumentation overhead. [Raw-replay audit and limits](experiments/ordered_profile_2026-11-01/README.md).
 A later standalone L4 selector profile found about 8.2 microseconds of avoidable component wall
 time at the pick's 16,384-token vocabulary, with exact tested RowPick fields. That tool leaves
 production unchanged and does not clear the full-model gate.

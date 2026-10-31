@@ -1,0 +1,1097 @@
+{
+  "protocol": {
+    "schema": 1,
+    "scope": "Prospective diagnostic of ordered-default off-path cost; no new adoption gate or unique causal attribution",
+    "baseline_source": "1b2789e656dda996efb79490cf689d0eff45eefe",
+    "candidate_production_source": "db3edc523c4e46fbe8c2554f3e34e8572202a400",
+    "model_sha256": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9",
+    "eval_sha256": "a25357100c3eb1e59bc94bb26c0629e72e6ae18172b2d4fbbf148ae5168d1740",
+    "client_sha256": "5f283994b251e7e4d57e2e3fefc6a4add06cb23d66ccf24ae91b3a07b7830216",
+    "checker_sha256": "416c7edb240385033dee2b80c7d97756583182a4df228304cd1d54a18853f839",
+    "subset_original_indices": [
+      0,
+      1,
+      2,
+      3,
+      40,
+      41,
+      60,
+      61
+    ],
+    "subset_items": 8,
+    "subset_requests": 16,
+    "selector_parts": 0,
+    "primary": "graph1/timer-unset old,new,new,old; three quartets for each default/det x pick0/1 =48 legs",
+    "graph1_instrumented": "timer1 old,new,new,old; one quartet per mode x pick =16 separate diagnostic legs",
+    "graph0_instrumentation_control": "pick0 only; timer0,timer1,timer1,timer0 within each old/new x mode =16 separate diagnostic legs",
+    "timer0_semantics": "EMBER_DECODE_TIMING absent, not string0 (presence enables it)",
+    "bounds": "No performance threshold; preserve all raw outcomes, IDs/token-path comparability and all paired ratios/ranges. Instrumented or graph0 arms cannot be pooled into primary graph1 estimates.",
+    "primary_estimator": "unchanged frozen wall-minus-first-token throughput with warm-pass and no-spec contracts",
+    "telemetry": "one common1Hz nvidia-smi clock/power/temperature/utilization process for all legs; overhead part of this diagnostic, not assumed zero",
+    "phase_limit": "EMBER_DECODE_TIMING synchronizes phase boundaries and changes the workload. Graph0 phases are synchronized wall time, not pure kernel event time; graph1 host/control timing may not expose captured kernel subphases.",
+    "historical_observations": {
+      "default_new_over_old_off": [
+        0.9697709005208784,
+        0.950553099786097
+      ],
+      "det_new_over_old_off": [
+        0.9142899833277829,
+        0.9401648384543021
+      ],
+      "on": "similar/slightly lower; relative selector gate PASS is not absolute acceleration"
+    },
+    "failure_policy": "one scientific attempt; preserve incomplete/negative data, no retry-for-pass, adaptive subset, threshold change, atomic reenable, default selector change or E9 edits",
+    "limits": {
+      "max_usd": 1,
+      "max_hours": 1.25,
+      "science_seconds": 3000,
+      "gpu": "NVIDIA L4",
+      "gpus": 1
+    }
+  },
+  "subset_sha256": "947278c5036b60bdae75e1b5a69f86171b81a4b2c425ebcc320a9fe20f17f554",
+  "schedule": [
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r0_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r0_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r0_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r0_p3_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 1,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r1_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 1,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r1_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 1,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r1_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 1,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r1_p3_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 2,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r2_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 2,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r2_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 2,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r2_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 2,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick0_r2_p3_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 0,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r0_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 0,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r0_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 0,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r0_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 0,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r0_p3_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 1,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r1_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 1,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r1_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 1,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r1_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 1,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r1_p3_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 2,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r2_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 2,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r2_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 2,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r2_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 2,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "default_primary_pick1_r2_p3_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r0_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r0_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r0_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r0_p3_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 1,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r1_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 1,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r1_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 1,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r1_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 1,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r1_p3_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 2,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r2_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 2,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r2_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 2,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r2_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 2,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick0_r2_p3_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 0,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r0_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 0,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r0_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 0,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r0_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 0,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r0_p3_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 1,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r1_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 1,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r1_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 1,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r1_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 1,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r1_p3_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 2,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r2_p0_baseline"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 2,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r2_p1_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 2,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r2_p2_candidate"
+    },
+    {
+      "family": "primary",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 2,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 0,
+      "name": "det_primary_pick1_r2_p3_baseline"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 1,
+      "name": "default_graph1_timer_pick0_r0_p0_baseline"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 1,
+      "name": "default_graph1_timer_pick0_r0_p1_candidate"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 1,
+      "name": "default_graph1_timer_pick0_r0_p2_candidate"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 1,
+      "name": "default_graph1_timer_pick0_r0_p3_baseline"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 0,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 1,
+      "name": "default_graph1_timer_pick1_r0_p0_baseline"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 0,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 1,
+      "name": "default_graph1_timer_pick1_r0_p1_candidate"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 0,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 1,
+      "name": "default_graph1_timer_pick1_r0_p2_candidate"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "default",
+      "pick": 1,
+      "repeat": 0,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 1,
+      "name": "default_graph1_timer_pick1_r0_p3_baseline"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 1,
+      "name": "det_graph1_timer_pick0_r0_p0_baseline"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 1,
+      "name": "det_graph1_timer_pick0_r0_p1_candidate"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 1,
+      "name": "det_graph1_timer_pick0_r0_p2_candidate"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 1,
+      "name": "det_graph1_timer_pick0_r0_p3_baseline"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 0,
+      "position": 0,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 1,
+      "name": "det_graph1_timer_pick1_r0_p0_baseline"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 0,
+      "position": 1,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 1,
+      "name": "det_graph1_timer_pick1_r0_p1_candidate"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 0,
+      "position": 2,
+      "source": "candidate",
+      "graph": 1,
+      "timer": 1,
+      "name": "det_graph1_timer_pick1_r0_p2_candidate"
+    },
+    {
+      "family": "graph1_timer",
+      "mode": "det",
+      "pick": 1,
+      "repeat": 0,
+      "position": 3,
+      "source": "baseline",
+      "graph": 1,
+      "timer": 1,
+      "name": "det_graph1_timer_pick1_r0_p3_baseline"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 0,
+      "source": "baseline",
+      "graph": 0,
+      "timer": 0,
+      "name": "default_graph0_timer_pick0_r0_p0_baseline"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 1,
+      "source": "baseline",
+      "graph": 0,
+      "timer": 1,
+      "name": "default_graph0_timer_pick0_r0_p1_baseline"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 2,
+      "source": "baseline",
+      "graph": 0,
+      "timer": 1,
+      "name": "default_graph0_timer_pick0_r0_p2_baseline"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 3,
+      "source": "baseline",
+      "graph": 0,
+      "timer": 0,
+      "name": "default_graph0_timer_pick0_r0_p3_baseline"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 0,
+      "source": "baseline",
+      "graph": 0,
+      "timer": 0,
+      "name": "det_graph0_timer_pick0_r0_p0_baseline"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 1,
+      "source": "baseline",
+      "graph": 0,
+      "timer": 1,
+      "name": "det_graph0_timer_pick0_r0_p1_baseline"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 2,
+      "source": "baseline",
+      "graph": 0,
+      "timer": 1,
+      "name": "det_graph0_timer_pick0_r0_p2_baseline"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 3,
+      "source": "baseline",
+      "graph": 0,
+      "timer": 0,
+      "name": "det_graph0_timer_pick0_r0_p3_baseline"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 0,
+      "source": "candidate",
+      "graph": 0,
+      "timer": 0,
+      "name": "default_graph0_timer_pick0_r0_p0_candidate"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 1,
+      "source": "candidate",
+      "graph": 0,
+      "timer": 1,
+      "name": "default_graph0_timer_pick0_r0_p1_candidate"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 2,
+      "source": "candidate",
+      "graph": 0,
+      "timer": 1,
+      "name": "default_graph0_timer_pick0_r0_p2_candidate"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "default",
+      "pick": 0,
+      "repeat": 0,
+      "position": 3,
+      "source": "candidate",
+      "graph": 0,
+      "timer": 0,
+      "name": "default_graph0_timer_pick0_r0_p3_candidate"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 0,
+      "source": "candidate",
+      "graph": 0,
+      "timer": 0,
+      "name": "det_graph0_timer_pick0_r0_p0_candidate"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 1,
+      "source": "candidate",
+      "graph": 0,
+      "timer": 1,
+      "name": "det_graph0_timer_pick0_r0_p1_candidate"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 2,
+      "source": "candidate",
+      "graph": 0,
+      "timer": 1,
+      "name": "det_graph0_timer_pick0_r0_p2_candidate"
+    },
+    {
+      "family": "graph0_timer",
+      "mode": "det",
+      "pick": 0,
+      "repeat": 0,
+      "position": 3,
+      "source": "candidate",
+      "graph": 0,
+      "timer": 0,
+      "name": "det_graph0_timer_pick0_r0_p3_candidate"
+    }
+  ],
+  "manifests": {
+    "baseline": {
+      "schema": "profile-only-not-adoption",
+      "inputs": {
+        "binary": "/content/chat/ordered_profile_work/baseline_build/tinyllama_server",
+        "model": "/content/chat/upload/model.gguf",
+        "prompts": "/content/chat/ordered_profile/profile/subset.jsonl"
+      },
+      "sha256": {
+        "binary": "651749fe965d244028db183ab1d34568da782537493d9e3086e1125799c97779",
+        "model": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9",
+        "prompts": "947278c5036b60bdae75e1b5a69f86171b81a4b2c425ebcc320a9fe20f17f554"
+      },
+      "request_keys": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          7,
+          1
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          7,
+          3
+        ],
+        [
+          7,
+          4
+        ],
+        [
+          7,
+          5
+        ]
+      ],
+      "runs": []
+    },
+    "candidate": {
+      "schema": "profile-only-not-adoption",
+      "inputs": {
+        "binary": "/content/chat/ordered_profile_work/candidate_build/tinyllama_server",
+        "model": "/content/chat/upload/model.gguf",
+        "prompts": "/content/chat/ordered_profile/profile/subset.jsonl"
+      },
+      "sha256": {
+        "binary": "71b59b6fccab26298c0d9ded481f3723cadf7b3c6ae9592212e64e50c9d08fab",
+        "model": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9",
+        "prompts": "947278c5036b60bdae75e1b5a69f86171b81a4b2c425ebcc320a9fe20f17f554"
+      },
+      "request_keys": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          7,
+          1
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          7,
+          3
+        ],
+        [
+          7,
+          4
+        ],
+        [
+          7,
+          5
+        ]
+      ],
+      "runs": []
+    }
+  }
+}
