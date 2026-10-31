@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "scope": "Transport-only flat upload repair; production, component probes, registered matrix and thresholds unchanged",
+  "v1_source": "e64c5461fd54d72c5364251748f55d6f26319661",
+  "v1_manifest_sha256": "6ba3b8cdb313cf1dbca6963dff7c72beb61c59911d6121bf7454769d83200dfe",
+  "observed_v1_failure": "FileNotFoundError during initial uploaded-input stat, before build or scientific execution",
+  "cause": "Existing runner reassembly enumerates only upload root; nested probe/*.part00 files are not found, while the wrapper can still emit INPUTS_OK",
+  "repair": "Flat probe_CMakeLists.txt, probe_kernel_probe.cu and probe_semantic_check.h. After all upload hashes verify, copy bytes to work/probe for CMake. Bind flat bytes to candidate archived diagnostic sources.",
+  "regression": "Execute actual existing runner AST-extracted reassembly script with two-part nested and flat uploads; reproduce missing nested file, verify exact flat reassembly and diagnostic directory byte identity",
+  "v1_evidence": "Original V1 stage and driver evidence remain immutable; root handles relay and canonical artifact hashes",
+  "combined_cap_usd": 2,
+  "v2_cap_usd": 1.75,
+  "deadline_utc": "2026-11-01T17:30:00Z",
+  "scientific_retry": false,
+  "tested_existing_runner": {
+    "path": "/home/jonat/pk_publication_20261030/tools/colab_chat/runner_multi.py",
+    "sha256": "2ec1a48f1ea38acdbc2d2503d104390b7017bba3d52f2de2a8a6bf151b2091a2"
+  },
+  "offline_tests": {
+    "passed": 12,
+    "failed": 0
+  }
+}
