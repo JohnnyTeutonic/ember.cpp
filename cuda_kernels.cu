@@ -3168,14 +3168,10 @@ void attention_cuda_optimized(const float* Q_current_dev, const float* K_layer_c
         return;
     const int threads_per_block = 256;
     size_t shared_mem_size = (cache_max_seq_len + 1) * sizeof(float);
-
-
-        attention_optimized_det_kernel<<<num_heads, threads_per_block, shared_mem_size, stream>>>(
-            Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev,
-            current_seq_len, head_dim, scale, cache_num_kv_heads, num_heads, nullptr);
-        gpuErrchk(cudaGetLastError());
-
-
+    attention_optimized_det_kernel<<<num_heads, threads_per_block, shared_mem_size, stream>>>(
+        Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev,
+        current_seq_len, head_dim, scale, cache_num_kv_heads, num_heads, nullptr);
+    gpuErrchk(cudaGetLastError());
 }
 
 // New BF16 Tensor Core Matrix-Matrix Operations
@@ -3452,15 +3448,11 @@ void attention_devpos_cuda(const float* Q_current_dev, const float* K_layer_cach
                         /*seq_len=*/0, head_dim, scale, cache_max_seq_len, cache_num_kv_heads, step_dev, stream))
     return;
   const size_t shared_mem_size = (cache_max_seq_len + 1) * sizeof(float);
-
-    attention_optimized_det_kernel<<<num_heads, 256, shared_mem_size, stream>>>(
-        Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, /*current_seq_len=*/0, head_dim, scale,
-        cache_num_kv_heads, num_heads, step_dev);
-    gpuErrchk(cudaGetLastError());
-
-
+  attention_optimized_det_kernel<<<num_heads, 256, shared_mem_size, stream>>>(
+      Q_current_dev, K_layer_cache_base, V_layer_cache_base, out_dev, /*current_seq_len=*/0, head_dim, scale,
+      cache_num_kv_heads, num_heads, step_dev);
+  gpuErrchk(cudaGetLastError());
 }
-
 
 // ---------------------------------------------------------------------------
 // Mixture-of-experts FFN (see cuda_kernels.h).
