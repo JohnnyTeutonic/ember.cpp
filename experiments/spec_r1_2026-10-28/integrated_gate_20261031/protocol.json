@@ -5,7 +5,7 @@
   "model_sha256": "e270235b70fa47369ad7bab19e231dedefd1d5b9d2966f6e2d84562e93250f87",
   "model_bytes": 4552832,
   "geometry": {"vocab": 16384, "hidden": 32, "layers": 2, "heads": 4, "kv_heads": 2, "ffn": 64, "context": 128},
-  "environment": {"EMBER_DETERMINISTIC": "1", "EMBER_DECODE_GRAPH": "1", "EMBER_SPEC": "0", "EMBER_GEMM_TF32": "0", "EMBER_IR": "0"},
+  "environment": {"EMBER_DETERMINISTIC": "1", "EMBER_DECODE_GRAPH": "1", "EMBER_SPEC": "0", "EMBER_GEMM_TF32": "0", "EMBER_IR": null},
   "graph_prefixes": [1, 7, 16, 31, 64],
   "graph_steps": 8,
   "graph_repeats": 2,

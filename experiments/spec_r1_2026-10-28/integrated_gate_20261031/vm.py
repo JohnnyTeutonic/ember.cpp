@@ -36,6 +36,18 @@ def command(argv, log, timeout, env=None):
         raise RuntimeError(f'command failed ({result.returncode}): {argv}; see {log.name}')
 
 
+def runtime_environment(inherited=None):
+    env = dict(os.environ if inherited is None else inherited, OMP_NUM_THREADS='1', OPENBLAS_NUM_THREADS='1', MKL_NUM_THREADS='1',
+               EMBER_DETERMINISTIC='1', EMBER_DECODE_GRAPH='1', EMBER_SPEC='0',
+               EMBER_GEMM_TF32='0', EMBER_DECODE_PICK_PARTS='4',
+               PYTEST_DISABLE_PLUGIN_AUTOLOAD='1')
+    env.pop('PYTEST_ADDOPTS', None)
+    env.pop('PYTEST_PLUGINS', None)
+    # EMBER_IR names a JSON override file; even '0' and '' are pathnames.
+    env.pop('EMBER_IR', None)
+    return env
+
+
 def run(source, output, manifest):
     source, output = Path(source).resolve(), Path(output).resolve()
     required = {'api.cpp', 'model.cpp', 'model.h', 'verify_kernels.cu', 'verify_kernels.h', 'row_pick_partitioned.cuh', 'decode_pick_policy.h', 'CMakeLists.txt'}
@@ -52,12 +64,7 @@ def run(source, output, manifest):
     work.mkdir()
     logs = output / 'logs'
     logs.mkdir()
-    env = dict(os.environ, OMP_NUM_THREADS='1', OPENBLAS_NUM_THREADS='1', MKL_NUM_THREADS='1',
-               EMBER_DETERMINISTIC='1', EMBER_DECODE_GRAPH='1', EMBER_SPEC='0',
-               EMBER_GEMM_TF32='0', EMBER_IR='0', EMBER_DECODE_PICK_PARTS='4',
-               PYTEST_DISABLE_PLUGIN_AUTOLOAD='1')
-    env.pop('PYTEST_ADDOPTS', None)
-    env.pop('PYTEST_PLUGINS', None)
+    env = runtime_environment()
     started = time.monotonic()
     execution = {'complete': False, 'scientific_pass': False, 'source_commit': check.SOURCE,
                  'scope': 'synthetic deterministic correctness; no timing/adoption gate'}

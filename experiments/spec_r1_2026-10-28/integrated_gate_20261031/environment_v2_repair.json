@@ -1,0 +1,40 @@
+{
+  "status": "PREPARED_V2_ENVIRONMENT_REPAIR_NOT_LAUNCHED",
+  "v1_failure": {
+    "archive": "/mnt/c/ml_artifacts/e10_integrated_20261031/e10_integrated_20261031/out.zip",
+    "sha256": "24f37c62d69f65f665f4ff5efa1c7915904bcf45bcf4459bb4d8e5f9cfe1f724",
+    "log": "science/logs/rows.log",
+    "error": "INTEGRATED_GATE_ERROR: EMBER_IR: cannot read 0",
+    "interpretation": "Harness-only pathname override error before integrated model row forwards; not a selector numerical result",
+    "immutable": true
+  },
+  "repair": [
+    "vm.runtime_environment removes inherited EMBER_IR for every child process",
+    "C++ graph probe calls unsetenv before session construction"
+  ],
+  "unchanged_files_from_v1": [
+    "fixture.py",
+    "check.py",
+    "prepare.py",
+    "boot.py",
+    "paperkiln_job.json",
+    "CMakeLists.txt"
+  ],
+  "protocol_difference": "Only environment.EMBER_IR changes from string 0 to null (unset); all model, kernel, row, sampling and historical adoption criteria byte/JSON-equivalent",
+  "validation": {
+    "offline_tests": 35,
+    "actual_CPU_constructor": "V1 path-zero exit1 reproduced; cleared inherited-zero exit0 using same frozen model",
+    "CUDA_header_TU_compile": "PASS under one-core budget and fixed1.5GiB compiler cap; no localGPU"
+  },
+  "limits": [
+    "No production arithmetic/default edit.",
+    "No registered-model/speed/adoption claim.",
+    "No paid retry or watchdog changes by packet author."
+  ],
+  "proposal_budget": {
+    "fresh_max_usd": 0.85,
+    "cumulative_original_max_usd": 1,
+    "absolute_deadline_utc": "2026-10-31T13:05:00Z",
+    "v1_root_reported_ledger_usd": 0.12
+  }
+}

@@ -124,7 +124,7 @@ static void graph(const fs::path& model, const fs::path& out,
   setenv("EMBER_DECODE_GRAPH", "1", 1);
   setenv("EMBER_SPEC", "0", 1);
   setenv("EMBER_GEMM_TF32", "0", 1);
-  setenv("EMBER_IR", "0", 1);
+  unsetenv("EMBER_IR");  // This variable is a pathname override, not a Boolean.
   setenv("EMBER_DECODE_PICK_PARTS", mode == "partition4" ? "4" : "0", 1);
   tinyllama::TinyLlamaSession s(model.string(), "tokenizer.json", 1, -1, true);
   need(!s.ir_ && s.config_.num_cpu_offload_layers == 0,
