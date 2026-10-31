@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "scope": "Prospective diagnostic of ordered-default off-path cost; no new adoption gate or unique causal attribution",
+  "baseline_source": "1b2789e656dda996efb79490cf689d0eff45eefe",
+  "candidate_production_source": "db3edc523c4e46fbe8c2554f3e34e8572202a400",
+  "model_sha256": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9",
+  "eval_sha256": "a25357100c3eb1e59bc94bb26c0629e72e6ae18172b2d4fbbf148ae5168d1740",
+  "client_sha256": "5f283994b251e7e4d57e2e3fefc6a4add06cb23d66ccf24ae91b3a07b7830216",
+  "checker_sha256": "416c7edb240385033dee2b80c7d97756583182a4df228304cd1d54a18853f839",
+  "subset_original_indices": [
+    0,
+    1,
+    2,
+    3,
+    40,
+    41,
+    60,
+    61
+  ],
+  "subset_items": 8,
+  "subset_requests": 16,
+  "selector_parts": 0,
+  "primary": "graph1/timer-unset old,new,new,old; three quartets for each default/det x pick0/1 =48 legs",
+  "graph1_instrumented": "timer1 old,new,new,old; one quartet per mode x pick =16 separate diagnostic legs",
+  "graph0_instrumentation_control": "pick0 only; timer0,timer1,timer1,timer0 within each old/new x mode =16 separate diagnostic legs",
+  "timer0_semantics": "EMBER_DECODE_TIMING absent, not string0 (presence enables it)",
+  "bounds": "No performance threshold; preserve all raw outcomes, IDs/token-path comparability and all paired ratios/ranges. Instrumented or graph0 arms cannot be pooled into primary graph1 estimates.",
+  "primary_estimator": "unchanged frozen wall-minus-first-token throughput with warm-pass and no-spec contracts",
+  "telemetry": "one common1Hz nvidia-smi clock/power/temperature/utilization process for all legs; overhead part of this diagnostic, not assumed zero",
+  "phase_limit": "EMBER_DECODE_TIMING synchronizes phase boundaries and changes the workload. Graph0 phases are synchronized wall time, not pure kernel event time; graph1 host/control timing may not expose captured kernel subphases.",
+  "historical_observations": {
+    "default_new_over_old_off": [
+      0.9697709005208784,
+      0.950553099786097
+    ],
+    "det_new_over_old_off": [
+      0.9142899833277829,
+      0.9401648384543021
+    ],
+    "on": "similar/slightly lower; relative selector gate PASS is not absolute acceleration"
+  },
+  "failure_policy": "one scientific attempt; preserve incomplete/negative data, no retry-for-pass, adaptive subset, threshold change, atomic reenable, default selector change or E9 edits",
+  "limits": {
+    "max_usd": 1,
+    "max_hours": 1.25,
+    "science_seconds": 3000,
+    "gpu": "NVIDIA L4",
+    "gpus": 1
+  }
+}
