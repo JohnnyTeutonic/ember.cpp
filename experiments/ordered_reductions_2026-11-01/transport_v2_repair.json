@@ -10,7 +10,7 @@
   "v1_evidence": "Original V1 stage and driver evidence remain immutable; root handles relay and canonical artifact hashes",
   "combined_cap_usd": 2,
   "v2_cap_usd": 1.75,
-  "deadline_utc": "2026-11-01T17:30:00Z",
+  "deadline_utc": "2026-10-31T17:30:00Z",
   "scientific_retry": false,
   "tested_existing_runner": {
     "path": "/home/jonat/pk_publication_20261030/tools/colab_chat/runner_multi.py",
