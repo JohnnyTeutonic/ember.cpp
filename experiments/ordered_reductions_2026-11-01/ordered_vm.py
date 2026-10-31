@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 import signal
+import shutil
+import traceback
 import subprocess
 import tarfile
 import threading
@@ -30,6 +32,13 @@ def clean_env(base=None):
         if key.startswith(('EMBER_','TINYLLAMA_')) or key=='CUBLAS_WORKSPACE_CONFIG':env.pop(key)
     env.update(EMBER_DECODE_PICK_PARTS='0',OMP_NUM_THREADS='1',OPENBLAS_NUM_THREADS='1')
     return env
+
+
+def prepare_probe(upload,work):
+    probe=work/'probe';probe.mkdir()
+    for name in ['CMakeLists.txt','kernel_probe.cu','semantic_check.h']:
+        shutil.copyfile(upload/('probe_'+name),probe/name)
+    return probe
 
 
 def extract(archive,destination):
@@ -79,6 +88,7 @@ def main():
         for name,record in inputs['files'].items():
             p=upload/name
             if p.stat().st_size!=record['bytes'] or sha(p)!=record['sha256']:raise ValueError('input mismatch '+name)
+        probe=prepare_probe(upload,work)
         atomic_json(science/'inputs.json',inputs)
         protocol=json.loads((upload/'protocol.json').read_text());atomic_json(science/'protocol.json',protocol)
         if len(protocol['schedule'])!=24 or protocol['parts']!=0:raise ValueError('registered matrix drift')
@@ -96,12 +106,12 @@ def main():
             if source=='candidate':
                 packet=root/'experiments/ordered_reductions_2026-11-01'
                 for name in ['CMakeLists.txt','kernel_probe.cu','semantic_check.h']:
-                    if sha(packet/name)!=sha(upload/'probe'/name):raise ValueError('diagnostic source/archive mismatch '+name)
+                    if sha(packet/name)!=sha(upload/('probe_'+name)):raise ValueError('diagnostic source/archive mismatch '+name)
                 for name in ['ordered_vm.py','protocol.json']:
                     if sha(packet/name)!=sha(upload/name):raise ValueError('payload source/archive mismatch '+name)
             build=work/(source+'_build')
             # Baseline immutable archive lacks packet: build the same uploaded diagnostic source against it.
-            configure=['cmake','-S',str(upload/'probe'),'-B',str(build),'-DEMBER_SOURCE='+str(root),'-DORDERED_CANDIDATE='+('ON' if source=='candidate' else 'OFF'),'-DHAS_CUDA=ON','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CUDA_ARCHITECTURES=89','-DBUILD_TESTING=OFF']
+            configure=['cmake','-S',str(probe),'-B',str(build),'-DEMBER_SOURCE='+str(root),'-DORDERED_CANDIDATE='+('ON' if source=='candidate' else 'OFF'),'-DHAS_CUDA=ON','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CUDA_ARCHITECTURES=89','-DBUILD_TESTING=OFF']
             if run(configure,science/(source+'_configure.log'),600):raise RuntimeError(source+' configure')
             if run(['cmake','--build',str(build),'--target','tinyllama_server','ordered_probe','-j2'],science/(source+'_build.log'),1800):raise RuntimeError(source+' build')
             binaries[source]=build/'ember/tinyllama_server';probes[source]=build/'ordered_probe'
@@ -161,7 +171,8 @@ def main():
             if sha(upload/name)!=record['sha256']:raise ValueError('final input drift '+name)
         summary.update(status=candidate['status'],complete=True,candidate=candidate,baseline_scope='10 controls only; no full baseline adoption',kernel_semantics=True,release_guard=True)
     except BaseException as exc:
-        summary.update(status='ERROR_OR_INCOMPLETE',error=repr(exc),complete=False)
+        summary.update(status='ERROR_OR_INCOMPLETE',error=repr(exc),filename=getattr(exc,'filename',None),complete=False)
+        (science/'exception.txt').write_text(traceback.format_exc())
         with (out/'vm.log').open('a') as f:f.write(repr(exc)+'\n')
     finally:
         stop.set();thread.join(timeout=5);pack()
