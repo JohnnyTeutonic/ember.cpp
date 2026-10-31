@@ -1,0 +1,1 @@
+{"allocation_valid":true,"axis":1,"kernel":"softmax","launch":0,"pass":true,"stage":"actual_guarded_kernel","sync":719}

@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "modes": {
+    "default": {
+      "requests": 260,
+      "logit_bits_equal": true,
+      "paired_speedups": [
+        1.1565813877671347,
+        1.1589561643052133
+      ],
+      "throughput_pass": true
+    },
+    "det": {
+      "requests": 260,
+      "logit_bits_equal": true,
+      "paired_speedups": [
+        1.2433520106619422,
+        1.197656218667458
+      ],
+      "throughput_pass": true
+    }
+  },
+  "scope": "E10.3 rows, greedy ids and paired throughput only; fallback/penalty device checks remain separate"
+}

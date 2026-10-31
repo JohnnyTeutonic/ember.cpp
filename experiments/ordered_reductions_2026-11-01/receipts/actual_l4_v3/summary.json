@@ -1,0 +1,177 @@
+{
+  "status": "PASS",
+  "complete": true,
+  "legs": [
+    {
+      "source": "baseline",
+      "name": "default_rows_off",
+      "returncode": 0,
+      "log_sha256": "95f191bef9dcef2a2afadb8b85804e5eff47b6a759171a1687d7c684f05bc3f5"
+    },
+    {
+      "source": "baseline",
+      "name": "default_rows_off_repeat",
+      "returncode": 0,
+      "log_sha256": "972df4660e4c14a28bf23b8d88f9e1001f0e49fa97dd43c25f3b7bf67511c730"
+    },
+    {
+      "source": "candidate",
+      "name": "default_rows_off",
+      "returncode": 0,
+      "log_sha256": "2cb8a75be24275e06a34dafc00195600834161a2e18e0a3eb4123815b86a57dc"
+    },
+    {
+      "source": "candidate",
+      "name": "default_rows_off_repeat",
+      "returncode": 0,
+      "log_sha256": "f22d2c725b3f0890fbd702df24d4b4c551e33b6518fe0bd818ac33c5af556b04"
+    },
+    {
+      "source": "candidate",
+      "name": "default_rows_on",
+      "returncode": 0,
+      "log_sha256": "722d2eff81d39ac01995efa182590475df72bddb55d37a4cde283b65ef3a6bbe"
+    },
+    {
+      "source": "candidate",
+      "name": "det_rows_off",
+      "returncode": 0,
+      "log_sha256": "4fc6da72dd281565ee3001f9f67636cbc4ecba166d443c9d211eb6808b25f652"
+    },
+    {
+      "source": "candidate",
+      "name": "det_rows_off_repeat",
+      "returncode": 0,
+      "log_sha256": "3d65ad360586ed69f07fbeaeb957a02c82dcb520be2010824567cfba2f9f81da"
+    },
+    {
+      "source": "candidate",
+      "name": "det_rows_on",
+      "returncode": 0,
+      "log_sha256": "4ff29f5653167dce9ff9987381e1f3400fce3b81fc3e57fb68f33058b585776b"
+    },
+    {
+      "source": "baseline",
+      "name": "default_off_a",
+      "returncode": 0,
+      "log_sha256": "759c11208fcb5732a9ccbe27f2528d8928b0e0db730c7b68e85684717a769677"
+    },
+    {
+      "source": "candidate",
+      "name": "default_off_a",
+      "returncode": 0,
+      "log_sha256": "543ab564ea561d344271f664203781298a9628698537bd958e58f6569af1771e"
+    },
+    {
+      "source": "baseline",
+      "name": "default_on_a",
+      "returncode": 0,
+      "log_sha256": "059655eba3d4b9929d526cd2ef3f09836a23a463c6fbb00229168154a2b9fd1c"
+    },
+    {
+      "source": "candidate",
+      "name": "default_on_a",
+      "returncode": 0,
+      "log_sha256": "f364c77698ce2a3560b6b40652ce5d9fc8ae499c30dcba74b8fda7c8c9fe1362"
+    },
+    {
+      "source": "candidate",
+      "name": "default_on_b",
+      "returncode": 0,
+      "log_sha256": "912b17971418279c92efb3ff1d75e55ad6dc0df7cb67531a01b579adb0a6bb0c"
+    },
+    {
+      "source": "baseline",
+      "name": "default_on_b",
+      "returncode": 0,
+      "log_sha256": "2de6866335ce5fd4cb8421fdb373420cfbc7ea2df41e9b7356c50e301c451851"
+    },
+    {
+      "source": "candidate",
+      "name": "default_off_b",
+      "returncode": 0,
+      "log_sha256": "db31656dd62a240c990b234505313f1dbe3ffcd0ecd84b15a22d02c174470179"
+    },
+    {
+      "source": "baseline",
+      "name": "default_off_b",
+      "returncode": 0,
+      "log_sha256": "4990e9e46a6ea33a5abb7cef4123a38e4ba9b3c4d989a0af01b60ca226b4854a"
+    },
+    {
+      "source": "baseline",
+      "name": "det_off_a",
+      "returncode": 0,
+      "log_sha256": "56ab5655ab16094e1821360a88f2fde99f4807a883b3d4951c2feeb8a4cdacc2"
+    },
+    {
+      "source": "candidate",
+      "name": "det_off_a",
+      "returncode": 0,
+      "log_sha256": "1ab51e06312035361102d2a1581f435bcfd9047cf4e901b0c3b6e6e41f6c7b06"
+    },
+    {
+      "source": "baseline",
+      "name": "det_on_a",
+      "returncode": 0,
+      "log_sha256": "a800b7929b4f8c8f7a490dd1642467dfc7d022e10f9ddfc5b7b81fd4ffed27a9"
+    },
+    {
+      "source": "candidate",
+      "name": "det_on_a",
+      "returncode": 0,
+      "log_sha256": "d25103185630d3aa47bc96587906f61b96ae95f4ee81444d26e7036e005bc165"
+    },
+    {
+      "source": "candidate",
+      "name": "det_on_b",
+      "returncode": 0,
+      "log_sha256": "cd444098e1af3ed05058ef2d363f7ff7eac463e09e6c68b17bf0a60b2ae90a59"
+    },
+    {
+      "source": "baseline",
+      "name": "det_on_b",
+      "returncode": 0,
+      "log_sha256": "38bdd15cd9353f450236c5054e2e7879d07625e6cca7001c3da7b39a5b497591"
+    },
+    {
+      "source": "candidate",
+      "name": "det_off_b",
+      "returncode": 0,
+      "log_sha256": "2ec12136dbc993407e1c24b200cfd408a55bbf4215812197f9b7fc56d7c149b1"
+    },
+    {
+      "source": "baseline",
+      "name": "det_off_b",
+      "returncode": 0,
+      "log_sha256": "41b9838bd779fe0755e77fac07a94ca65b6902f0ec8f8e57af226519de4d3351"
+    }
+  ],
+  "candidate": {
+    "status": "PASS",
+    "modes": {
+      "default": {
+        "requests": 260,
+        "logit_bits_equal": true,
+        "paired_speedups": [
+          1.1565813877671347,
+          1.1589561643052133
+        ],
+        "throughput_pass": true
+      },
+      "det": {
+        "requests": 260,
+        "logit_bits_equal": true,
+        "paired_speedups": [
+          1.2433520106619422,
+          1.197656218667458
+        ],
+        "throughput_pass": true
+      }
+    },
+    "scope": "E10.3 rows, greedy ids and paired throughput only; fallback/penalty device checks remain separate"
+  },
+  "baseline_scope": "10 controls only; no full baseline adoption",
+  "kernel_semantics": true,
+  "release_guard": true
+}

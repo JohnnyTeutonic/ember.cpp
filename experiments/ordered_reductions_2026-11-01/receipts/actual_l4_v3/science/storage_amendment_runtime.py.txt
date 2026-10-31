@@ -1,0 +1,60 @@
+import os as _pk_os
+try:
+    for _kv in open('/proc/1/environ', 'rb').read().split(bytes(1)):
+        _k, _s, _v = _kv.decode('utf-8', 'replace').partition('=')
+        if _s and (_k in ('PATH', 'LD_LIBRARY_PATH', 'LIBRARY_PATH') or _k.startswith(('CUDA', 'NV', 'RUNPOD_'))):
+            _pk_os.environ[_k] = _v
+except OSError:
+    pass
+if _pk_os.path.isdir('/usr/local/cuda/bin') and '/usr/local/cuda/bin' not in _pk_os.environ.get('PATH', ''):
+    _pk_os.environ['PATH'] = '/usr/local/cuda/bin:' + _pk_os.environ.get('PATH', '')
+from pathlib import Path
+import os,json,hashlib,time
+b=Path('/content/chat/ordered_default_gate');science=b/'science';upload=Path('/content/chat/upload')
+scratch=Path('/tmp/ember_ordered_default_v3_fastio')
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def new_json(p,v):
+ with p.open('x') as f:json.dump(v,f,indent=2);f.write('\n');f.flush();os.fsync(f.fileno())
+assert sha(upload/'inputs.json')=='b7f50738edc08228a9be1155964d48afbbfeb482a64e1a63156b3cf56661ee88'
+assert sha(upload/'ordered_vm.py')=='900b2fb9879c50beee0a3e8e353ede01422d407a9877eabeb34085dd27411c0a'
+protocol=json.loads((upload/'protocol.json').read_text());schedule=protocol['schedule'];assert len(schedule)==24
+plans={s:json.loads((science/s/'plan.json').read_text()) for s in ['baseline','candidate']}
+first_source,first_name=schedule[0];assert [first_source,first_name]==['baseline','default_rows_off']
+assert (science/'baseline_default_rows_off.log').is_file()
+first=science/'baseline/default_rows_off.jsonl'
+assert not Path(str(first)+'.meta.json').exists()
+assert Path(str(first)+'.rows.f32').is_file() and not Path(str(first)+'.rows.f32').is_symlink()
+assert not (science/'completed_legs.json').exists()
+space=os.statvfs('/tmp');free=space.f_bavail*space.f_frsize;assert free>=4*1024**3
+assert not scratch.exists() and scratch.resolve()==scratch
+cases=[]
+for source,name in schedule[1:]:
+ assert source in plans and '/' not in name and '..' not in name
+ run=next(r for r in plans[source]['runs'] if r['name']==name)
+ out=science/source/(name+'.jsonl')
+ assert out.parent.resolve()==out.parent
+ paths=[Path(str(out)+s) for s in ['', '.meta.json','.run','.server.log','.rows.f32']]
+ assert not (science/(source+'_'+name+'.log')).exists()
+ assert all(not os.path.lexists(p) for p in paths)
+ cases.append({'source':source,'name':name,'dump':run['dump'],'out':str(out)})
+assert len(cases)==23 and sum(not c['dump'] for c in cases)==16
+snapshot={'status':'ROOT_APPROVED_STORAGE_ONLY_START','time_unix':time.time(),'scratch_free_bytes':free,'current_leg_untouched':['baseline','default_rows_off'],'first_dump_bytes':Path(str(first)+'.rows.f32').stat().st_size,'cases':cases,'review':{'status': 'ACCEPTABLE_STORAGE_ONLY_AMENDMENT_WITH_DISCLOSED_SCOPE', 'reviewer': 'Codex independent cleanroom_review', 'test_sha256': '22a0aafd7356f73ae1f7fd595411a8e0a3270bef14c6eacab64bf69c0438d331', 'fixture_tests': {'passed': 1, 'seconds': 0.04}, 'verified': ['Exact frozen client mkdir/open/unlink operations follow directory/file symlinks', 'Unmodified frozen gate load_run validates linked f32 row file geometry', 'Exact pack rglob/is_file/z.write includes full f32 bytes at canonical member name and preserves outside server logs with ZIP CRC pass'], 'archive_limit': 'rglob does not descend .run directory symlink; ephemeral last dump.txt/debugging/www subtree is omitted; disclose in amendment record', 'scientific_scope': 'Candidate14 and all future timing legs uniform local placement. Current baseline dump untouched; its baseline repeat becomes local, so baseline partial-control repeat description must disclose mixed physical storage. No numerical/source/model/env/threshold changes or retries.', 'required_conditions': ['Immutable before snapshot plus archived amendment record', 'Actual local scratch free>=4GiB; owned canonical /tmp targets', 'Atomic absent-only no-overwrite links; abort collision and leave active leg untouched', 'All unstarted timing legs same local policy', 'Retain scratch until final ZIP verification; original deadline and cap remain'], 'runtime_modified': False, 'provider_calls': 0, 'model_calls': 0, 'config_writes': 0},'review_sha256':'3d5cff5486f370d190556704a8797e13172ebd6b93f51e4123f7c5de1eb2745b','scope':'Only fresh output storage links. Scientific inputs, source, environment, schedule and gates unchanged. Candidate14 and all timing legs uniformly local. Baseline off/off has mixed storage and cannot support a unique causal claim. Ephemeral last dump.txt under directory links is omitted from ZIP; every canonical f32 file and server log remains archived.'}
+new_json(science/'storage_amendment_start.json',snapshot)
+(science/'storage_amendment_runtime.py.txt').write_bytes(Path(__file__).read_bytes())
+scratch.mkdir();ops=[]
+# Timing placement is prepared first and symmetrically, before any timing leg can start.
+for c in sorted(cases,key=lambda c:c['dump']):
+ out=Path(c['out']);local=scratch/c['source']/c['name'];local.mkdir(parents=True)
+ assert not (science/(c['source']+'_'+c['name']+'.log')).exists()
+ run=Path(str(out)+'.run');assert not os.path.lexists(run)
+ os.symlink(str(local),str(run),target_is_directory=True)
+ if c['dump']:
+  rows=Path(str(out)+'.rows.f32');target=local/'rows.f32'
+  assert not os.path.lexists(rows)
+  with target.open('xb'):pass
+  os.symlink(str(target),str(rows))
+ ops.append({'source':c['source'],'name':c['name'],'dump':c['dump'],'run_link':str(run),'run_target':str(local),'rows_target':str(local/'rows.f32') if c['dump'] else None})
+assert len(ops)==23 and sum(not c['dump'] for c in ops)==16
+assert sha(upload/'inputs.json')=='b7f50738edc08228a9be1155964d48afbbfeb482a64e1a63156b3cf56661ee88'
+new_json(science/'storage_amendment_complete.json',{'status':'APPLIED_STORAGE_ONLY','time_unix':time.time(),'operations':ops,'first_leg_untouched':True,'timing_placement_uniform':True,'source_and_input_bytes_unchanged':True,'retain_scratch_until_verified_final_archive':True})
+print(json.dumps({'status':'APPLIED_STORAGE_ONLY','future_legs':len(ops),'timing_legs_uniform':16,'future_dump_files':sum(c['dump'] for c in ops),'current_leg_untouched':True}))

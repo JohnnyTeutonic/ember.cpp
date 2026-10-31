@@ -1,0 +1,1025 @@
+{
+  "archive_sha256": "6b64284e674fec5cb9a371fe792a6686f7809a57a9b4836fc3e77235525b2e67",
+  "members": [
+    {
+      "member": "science/apt_install.log",
+      "bytes": 6581,
+      "sha256": "c14ad8644bf69ec227d42600224277b15574570bcd15f396529ab6f85571cc1a",
+      "crc32": "928f508d"
+    },
+    {
+      "member": "science/apt_update.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/baseline/default_off_a.jsonl",
+      "bytes": 181320,
+      "sha256": "d78a6b8925c3de3063d01150606179c78f7f685e50c3d47a9fff81f36f37366b",
+      "crc32": "bf045feb"
+    },
+    {
+      "member": "science/baseline/default_off_a.jsonl.meta.json",
+      "bytes": 1103,
+      "sha256": "0547bbbc06fa2bca6a4e6525b2d76b983b471e7e88a6381d6d9eb347f14e60d5",
+      "crc32": "25526b01"
+    },
+    {
+      "member": "science/baseline/default_off_a.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/baseline/default_off_b.jsonl",
+      "bytes": 181326,
+      "sha256": "8236ce785cf1502d8fb03376e7bef61dc173c8564fd08ea71f39ddcf5b53263b",
+      "crc32": "dc171c87"
+    },
+    {
+      "member": "science/baseline/default_off_b.jsonl.meta.json",
+      "bytes": 1102,
+      "sha256": "2059ce31f2adc9bcfa101ba82e6301e4766977f1b97fd707cf24ff327b74b71c",
+      "crc32": "2e326ccd"
+    },
+    {
+      "member": "science/baseline/default_off_b.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/baseline/default_on_a.jsonl",
+      "bytes": 181306,
+      "sha256": "497233cdcf5d480b5c4eddd3ad747515550f071b44a5223ca0d92015e5354dad",
+      "crc32": "9b3122a1"
+    },
+    {
+      "member": "science/baseline/default_on_a.jsonl.meta.json",
+      "bytes": 1104,
+      "sha256": "104924294d7849702434dc90d06e33ef85f770a4d3d31d0a43c9d54f4616ec42",
+      "crc32": "46456c55"
+    },
+    {
+      "member": "science/baseline/default_on_a.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/baseline/default_on_b.jsonl",
+      "bytes": 181331,
+      "sha256": "1121c19849d0da7343d1caaba377db4859c2426fd2a022be4862cb4513d4786e",
+      "crc32": "857943dd"
+    },
+    {
+      "member": "science/baseline/default_on_b.jsonl.meta.json",
+      "bytes": 1104,
+      "sha256": "4a779ee0106971fdf31611f1e31fb3fa3250a4824062cc6cf04e03ecd112e5c5",
+      "crc32": "6300967f"
+    },
+    {
+      "member": "science/baseline/default_on_b.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/baseline/default_rows_off.jsonl",
+      "bytes": 210042,
+      "sha256": "af08d10c9831e3549552e83eb5f7a1030378c9a133546e435807db4167d4f8d8",
+      "crc32": "defed953"
+    },
+    {
+      "member": "science/baseline/default_rows_off.jsonl.meta.json",
+      "bytes": 1104,
+      "sha256": "407fb9b5ac27b2cb12b1578105dc4f5bef680681ccb3e5862c662fa669d1b2c1",
+      "crc32": "3b25a5de"
+    },
+    {
+      "member": "science/baseline/default_rows_off.jsonl.rows.f32",
+      "bytes": 250937344,
+      "sha256": "7f974c874cff32846df0f42aced55eab56d1afd67c95520946d431635e9b7601",
+      "crc32": "8755cbb3"
+    },
+    {
+      "member": "science/baseline/default_rows_off.jsonl.run/dump.txt",
+      "bytes": 975380,
+      "sha256": "4783ebcbb3c0fc71269ba587ccc538ba3220222d70024956011d4b924e5bf45f",
+      "crc32": "5118d4b2"
+    },
+    {
+      "member": "science/baseline/default_rows_off.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/baseline/default_rows_off_repeat.jsonl",
+      "bytes": 209696,
+      "sha256": "32aeb577abde4fffe18585a0b325aa13d0d8a3b06e210f835bf35453b104b09b",
+      "crc32": "34b768fc"
+    },
+    {
+      "member": "science/baseline/default_rows_off_repeat.jsonl.meta.json",
+      "bytes": 1104,
+      "sha256": "710d0806f3371dc0639549d9b6ce0a5a8801a368478c8ea2ea2813187894502a",
+      "crc32": "a60efefe"
+    },
+    {
+      "member": "science/baseline/default_rows_off_repeat.jsonl.rows.f32",
+      "bytes": 250937344,
+      "sha256": "d76eec018d3314915913365bf5b4be860d9282e011303bba1535ca212681ee01",
+      "crc32": "ad990a94"
+    },
+    {
+      "member": "science/baseline/default_rows_off_repeat.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/baseline/det_off_a.jsonl",
+      "bytes": 181340,
+      "sha256": "7bfb1a70a5249ec366af5b1b720d16262f95d87fe0e5f455376e7146453dd668",
+      "crc32": "bdaa401d"
+    },
+    {
+      "member": "science/baseline/det_off_a.jsonl.meta.json",
+      "bytes": 1128,
+      "sha256": "2362f04ce0dc70920ff4ad4f14c4e2db730135e0d199025c3587f4aaa745f738",
+      "crc32": "bd3159c0"
+    },
+    {
+      "member": "science/baseline/det_off_a.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/baseline/det_off_b.jsonl",
+      "bytes": 181314,
+      "sha256": "05a4ce412b30465bf94eb2e8c57fc21195331bd75f5543604ed5cf53ed23e400",
+      "crc32": "4f8a379e"
+    },
+    {
+      "member": "science/baseline/det_off_b.jsonl.meta.json",
+      "bytes": 1130,
+      "sha256": "3920f89ac24cec7eeebd07d5514275c9a6e4b77a9dce8ce9ba9fc3e6168bbe4a",
+      "crc32": "96fbfff5"
+    },
+    {
+      "member": "science/baseline/det_off_b.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/baseline/det_on_a.jsonl",
+      "bytes": 181335,
+      "sha256": "21b0571adbad927850ed380b7f26213349cafc52a89f5fd629604794e4f89cae",
+      "crc32": "c8adda8a"
+    },
+    {
+      "member": "science/baseline/det_on_a.jsonl.meta.json",
+      "bytes": 1128,
+      "sha256": "3c76f54c8e3c50461c0ea9a955bef357bedfaae13d4c7f69eaaf8597e201cdb0",
+      "crc32": "ba7aca9c"
+    },
+    {
+      "member": "science/baseline/det_on_a.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/baseline/det_on_b.jsonl",
+      "bytes": 181324,
+      "sha256": "ba5b5737392c2c5eb2ae4be2be479b238a44c4603122b87071cee1fb86a0d8c1",
+      "crc32": "946c4d44"
+    },
+    {
+      "member": "science/baseline/det_on_b.jsonl.meta.json",
+      "bytes": 1128,
+      "sha256": "c44ab45ea7d0dd39e49b52e109d67ff82d87f1239e6e4298d84a76883b158d98",
+      "crc32": "9369f9ff"
+    },
+    {
+      "member": "science/baseline/det_on_b.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/baseline/plan.json",
+      "bytes": 23663,
+      "sha256": "0ef92553a1aed1fefb0838f1210e7f5e5f9dbd8179269094c40f0a1c02ae6b31",
+      "crc32": "8c728f34"
+    },
+    {
+      "member": "science/baseline_binary.json",
+      "bytes": 274,
+      "sha256": "1aee8b16e20446a476e14de759217aac90829b6bdfc49512166f6a078cdd9f8a",
+      "crc32": "0c0b675b"
+    },
+    {
+      "member": "science/baseline_build.log",
+      "bytes": 2903,
+      "sha256": "d4c7b476d97c240ed334f814eec80c5172bfe5e18a1939d7e97d3d375c88b03f",
+      "crc32": "f0a63174"
+    },
+    {
+      "member": "science/baseline_comparison.json",
+      "bytes": 1301,
+      "sha256": "91203843321548901536735e647e1bd280c6172bc8379d6b7c8de6c318a00d2d",
+      "crc32": "8e47755d"
+    },
+    {
+      "member": "science/baseline_configure.log",
+      "bytes": 4218,
+      "sha256": "d8bbb3bda0b93ebe94540b0834e176563e7d7c4d5dfadb21015a0fe651b33583",
+      "crc32": "60da2868"
+    },
+    {
+      "member": "science/baseline_default_off_a.log",
+      "bytes": 330,
+      "sha256": "759c11208fcb5732a9ccbe27f2528d8928b0e0db730c7b68e85684717a769677",
+      "crc32": "beb5823f"
+    },
+    {
+      "member": "science/baseline_default_off_b.log",
+      "bytes": 329,
+      "sha256": "4990e9e46a6ea33a5abb7cef4123a38e4ba9b3c4d989a0af01b60ca226b4854a",
+      "crc32": "6951e29c"
+    },
+    {
+      "member": "science/baseline_default_on_a.log",
+      "bytes": 331,
+      "sha256": "059655eba3d4b9929d526cd2ef3f09836a23a463c6fbb00229168154a2b9fd1c",
+      "crc32": "ab299d85"
+    },
+    {
+      "member": "science/baseline_default_on_b.log",
+      "bytes": 331,
+      "sha256": "2de6866335ce5fd4cb8421fdb373420cfbc7ea2df41e9b7356c50e301c451851",
+      "crc32": "b9911d65"
+    },
+    {
+      "member": "science/baseline_default_rows_off.log",
+      "bytes": 330,
+      "sha256": "95f191bef9dcef2a2afadb8b85804e5eff47b6a759171a1687d7c684f05bc3f5",
+      "crc32": "b67c64e9"
+    },
+    {
+      "member": "science/baseline_default_rows_off_repeat.log",
+      "bytes": 330,
+      "sha256": "972df4660e4c14a28bf23b8d88f9e1001f0e49fa97dd43c25f3b7bf67511c730",
+      "crc32": "dee6dc01"
+    },
+    {
+      "member": "science/baseline_det_off_a.log",
+      "bytes": 330,
+      "sha256": "56ab5655ab16094e1821360a88f2fde99f4807a883b3d4951c2feeb8a4cdacc2",
+      "crc32": "e3e3be37"
+    },
+    {
+      "member": "science/baseline_det_off_b.log",
+      "bytes": 332,
+      "sha256": "41b9838bd779fe0755e77fac07a94ca65b6902f0ec8f8e57af226519de4d3351",
+      "crc32": "71f2a051"
+    },
+    {
+      "member": "science/baseline_det_on_a.log",
+      "bytes": 330,
+      "sha256": "a800b7929b4f8c8f7a490dd1642467dfc7d022e10f9ddfc5b7b81fd4ffed27a9",
+      "crc32": "f8d22fc0"
+    },
+    {
+      "member": "science/baseline_det_on_b.log",
+      "bytes": 330,
+      "sha256": "38bdd15cd9353f450236c5054e2e7879d07625e6cca7001c3da7b39a5b497591",
+      "crc32": "8d6980ba"
+    },
+    {
+      "member": "science/candidate/default_off_a.jsonl",
+      "bytes": 181331,
+      "sha256": "e0da8cae4d291723199a468489b33116efe9055714d9ab8970a586a3e455c8f4",
+      "crc32": "931d03e8"
+    },
+    {
+      "member": "science/candidate/default_off_a.jsonl.meta.json",
+      "bytes": 1104,
+      "sha256": "e8e520b860cef7dac91c0018e1bfcfc1414262c3655b6085794f1113db5cf25f",
+      "crc32": "3f74879d"
+    },
+    {
+      "member": "science/candidate/default_off_a.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/default_off_b.jsonl",
+      "bytes": 181344,
+      "sha256": "2afb41ae7f44958a178c65bae1946c9600c08e2249632458457661773d8a1fa8",
+      "crc32": "78f9bfd7"
+    },
+    {
+      "member": "science/candidate/default_off_b.jsonl.meta.json",
+      "bytes": 1104,
+      "sha256": "537058971bd6ebcb78e77e1954680b1c0c6f7a73e8bb49dc9722fddfa7748566",
+      "crc32": "69b4f0b3"
+    },
+    {
+      "member": "science/candidate/default_off_b.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/default_on_a.jsonl",
+      "bytes": 181327,
+      "sha256": "a45144de4b7cd015fffa7d3afa4026e87aa7b1078f8f1ff6056c435f0df9a3b7",
+      "crc32": "0e23941d"
+    },
+    {
+      "member": "science/candidate/default_on_a.jsonl.meta.json",
+      "bytes": 1104,
+      "sha256": "2b4741446b4934110819f51420b73d225203116bb532ea323cb843fb2a173660",
+      "crc32": "f0a90761"
+    },
+    {
+      "member": "science/candidate/default_on_a.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/default_on_b.jsonl",
+      "bytes": 181321,
+      "sha256": "2e15716cba462935aff674c37f278f678ccc33117bb3db4ab7916ef7e7c1861a",
+      "crc32": "2906a091"
+    },
+    {
+      "member": "science/candidate/default_on_b.jsonl.meta.json",
+      "bytes": 1105,
+      "sha256": "5664ab8016f508a8ecbebc27199ce37ae683ee1c98b89e94f2bca1b300c33d70",
+      "crc32": "921c9567"
+    },
+    {
+      "member": "science/candidate/default_on_b.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/default_rows_off.jsonl",
+      "bytes": 209719,
+      "sha256": "5c21970752bb496ab920e3193c1a86d599a1edbddbf9fc31c9f113130a2be58c",
+      "crc32": "b510fd7c"
+    },
+    {
+      "member": "science/candidate/default_rows_off.jsonl.meta.json",
+      "bytes": 1106,
+      "sha256": "0d1fe61f4fda3680f760ed729c7e5dee742e5cd069f2d79568c4457ac03c7789",
+      "crc32": "a2fdb986"
+    },
+    {
+      "member": "science/candidate/default_rows_off.jsonl.rows.f32",
+      "bytes": 250937344,
+      "sha256": "4760870aef6a8f5ff4edd0965660dfa00013e4703630aae0e5bf04ddc4c47cba",
+      "crc32": "da2a89ce"
+    },
+    {
+      "member": "science/candidate/default_rows_off.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/default_rows_off_repeat.jsonl",
+      "bytes": 209723,
+      "sha256": "e6571edd65681cd25e89cd556ba44f64881de2e360acde6c5e4c0803df5d9c00",
+      "crc32": "bc790214"
+    },
+    {
+      "member": "science/candidate/default_rows_off_repeat.jsonl.meta.json",
+      "bytes": 1105,
+      "sha256": "86eb8da882b3b3fa17f58e82983507f2b1bbf595bbded6fa115312724a838ba3",
+      "crc32": "144ea7af"
+    },
+    {
+      "member": "science/candidate/default_rows_off_repeat.jsonl.rows.f32",
+      "bytes": 250937344,
+      "sha256": "4760870aef6a8f5ff4edd0965660dfa00013e4703630aae0e5bf04ddc4c47cba",
+      "crc32": "da2a89ce"
+    },
+    {
+      "member": "science/candidate/default_rows_off_repeat.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/default_rows_on.jsonl",
+      "bytes": 209722,
+      "sha256": "d9e5824a225bfd2f65ccf7d8da38702d46af5e09ee3edc4a9328a4459702374c",
+      "crc32": "87219cc0"
+    },
+    {
+      "member": "science/candidate/default_rows_on.jsonl.meta.json",
+      "bytes": 1105,
+      "sha256": "bc2ca3fc38ef1e03df5511cc49dd7d3b801179687b0d050bd17ea9cdeeeb9e96",
+      "crc32": "6b3e920a"
+    },
+    {
+      "member": "science/candidate/default_rows_on.jsonl.rows.f32",
+      "bytes": 250937344,
+      "sha256": "4760870aef6a8f5ff4edd0965660dfa00013e4703630aae0e5bf04ddc4c47cba",
+      "crc32": "da2a89ce"
+    },
+    {
+      "member": "science/candidate/default_rows_on.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/det_off_a.jsonl",
+      "bytes": 181328,
+      "sha256": "af7f2a04f2eec8ac68f144e30a3ebed65d6a37bdbf9707cb4337862f4512b13c",
+      "crc32": "2809a986"
+    },
+    {
+      "member": "science/candidate/det_off_a.jsonl.meta.json",
+      "bytes": 1129,
+      "sha256": "9fd1994608673f94836bafd97f3bf3df7c821d64d2ae794c9756f00f0c950a68",
+      "crc32": "68b79edf"
+    },
+    {
+      "member": "science/candidate/det_off_a.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/det_off_b.jsonl",
+      "bytes": 181338,
+      "sha256": "426631b5a12011617a085146773810e935dd2067bca35de7cfc01288d25a0349",
+      "crc32": "3a7639d3"
+    },
+    {
+      "member": "science/candidate/det_off_b.jsonl.meta.json",
+      "bytes": 1129,
+      "sha256": "f6c9aadc7cbcae6bc35542308250cdd5c51a8008edb7710b5f919182244e6a15",
+      "crc32": "9f1653d1"
+    },
+    {
+      "member": "science/candidate/det_off_b.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/det_on_a.jsonl",
+      "bytes": 181343,
+      "sha256": "60d4214c5de8cf7d9b678a68b100b1283324a59f5fa43c6e8c49b7a8477633d7",
+      "crc32": "10e14106"
+    },
+    {
+      "member": "science/candidate/det_on_a.jsonl.meta.json",
+      "bytes": 1130,
+      "sha256": "63acfabf0a080816e0be71cda739babafc1dd2028a00f790370ea77370188f1a",
+      "crc32": "365bf76d"
+    },
+    {
+      "member": "science/candidate/det_on_a.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/det_on_b.jsonl",
+      "bytes": 181339,
+      "sha256": "010cb188dffd26024fa1b17f44845b716a5e20e431aecfe3bb0f0c1ac92547e5",
+      "crc32": "a21d396b"
+    },
+    {
+      "member": "science/candidate/det_on_b.jsonl.meta.json",
+      "bytes": 1128,
+      "sha256": "f09025d9175a5a78675322e6c64086b28588a68dd2c413a72bf7bae08861fc3c",
+      "crc32": "676d29bf"
+    },
+    {
+      "member": "science/candidate/det_on_b.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/det_rows_off.jsonl",
+      "bytes": 209741,
+      "sha256": "1ab5abb2e9b4f19dc98058bb11d805306868ac18e6d3393ef354ccc805640661",
+      "crc32": "d136b949"
+    },
+    {
+      "member": "science/candidate/det_rows_off.jsonl.meta.json",
+      "bytes": 1131,
+      "sha256": "ffcce48edfef637b5a1f4e7071d04c26ebc1b8bd343a2b3baa54cc4dcf780128",
+      "crc32": "a20e3a2d"
+    },
+    {
+      "member": "science/candidate/det_rows_off.jsonl.rows.f32",
+      "bytes": 250937344,
+      "sha256": "4760870aef6a8f5ff4edd0965660dfa00013e4703630aae0e5bf04ddc4c47cba",
+      "crc32": "da2a89ce"
+    },
+    {
+      "member": "science/candidate/det_rows_off.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/det_rows_off_repeat.jsonl",
+      "bytes": 209688,
+      "sha256": "ff295b0ec5be8fead1263c2ddca11c019ca1331528f57b8232c3d90f4398205c",
+      "crc32": "ebb4a9e4"
+    },
+    {
+      "member": "science/candidate/det_rows_off_repeat.jsonl.meta.json",
+      "bytes": 1130,
+      "sha256": "efcaa6383730e2d412239ce12a1e24f36fdde36fc60c674e8ca7701185bc417f",
+      "crc32": "b9202c18"
+    },
+    {
+      "member": "science/candidate/det_rows_off_repeat.jsonl.rows.f32",
+      "bytes": 250937344,
+      "sha256": "4760870aef6a8f5ff4edd0965660dfa00013e4703630aae0e5bf04ddc4c47cba",
+      "crc32": "da2a89ce"
+    },
+    {
+      "member": "science/candidate/det_rows_off_repeat.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/det_rows_on.jsonl",
+      "bytes": 209691,
+      "sha256": "1e7b97058ad84671f4455b1d01385d1476e8abe926344533960f593de06b1fa1",
+      "crc32": "97d2c96e"
+    },
+    {
+      "member": "science/candidate/det_rows_on.jsonl.meta.json",
+      "bytes": 1131,
+      "sha256": "692f304940d744184980eeb0562affff96ea2ff1fcf20eced5e2665d849f7b5a",
+      "crc32": "1abdd3fc"
+    },
+    {
+      "member": "science/candidate/det_rows_on.jsonl.rows.f32",
+      "bytes": 250937344,
+      "sha256": "4760870aef6a8f5ff4edd0965660dfa00013e4703630aae0e5bf04ddc4c47cba",
+      "crc32": "da2a89ce"
+    },
+    {
+      "member": "science/candidate/det_rows_on.jsonl.server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "member": "science/candidate/plan.json",
+      "bytes": 23706,
+      "sha256": "3ae7bd56be6e9a87b4170f74ae3ce3f4cd07781cac28bed2d810a235794fe98b",
+      "crc32": "33722d65"
+    },
+    {
+      "member": "science/candidate_analysis.json",
+      "bytes": 547,
+      "sha256": "fc404a7302059903d1cd302bea39d520ff44201c1b8d8df39a320d6bd89e2b52",
+      "crc32": "780fc385"
+    },
+    {
+      "member": "science/candidate_binary.json",
+      "bytes": 274,
+      "sha256": "8f0b44a02d9a55935d1aad5682ebb0539bdc696e3cfe87469c426be70b9bd091",
+      "crc32": "bdca6433"
+    },
+    {
+      "member": "science/candidate_build.log",
+      "bytes": 2903,
+      "sha256": "5c60df0342e6eef092d42863889142a880225924399f08613a6fed798206fd65",
+      "crc32": "ea44923e"
+    },
+    {
+      "member": "science/candidate_configure.log",
+      "bytes": 4227,
+      "sha256": "4e08cd8faef2545a4be367463d0af468e59ef2f6f15eaa5f48f1bc799c138b01",
+      "crc32": "5c8e4f85"
+    },
+    {
+      "member": "science/candidate_default_off_a.log",
+      "bytes": 330,
+      "sha256": "543ab564ea561d344271f664203781298a9628698537bd958e58f6569af1771e",
+      "crc32": "3908a4c1"
+    },
+    {
+      "member": "science/candidate_default_off_b.log",
+      "bytes": 330,
+      "sha256": "db31656dd62a240c990b234505313f1dbe3ffcd0ecd84b15a22d02c174470179",
+      "crc32": "04d7d1a0"
+    },
+    {
+      "member": "science/candidate_default_on_a.log",
+      "bytes": 330,
+      "sha256": "f364c77698ce2a3560b6b40652ce5d9fc8ae499c30dcba74b8fda7c8c9fe1362",
+      "crc32": "3af273b6"
+    },
+    {
+      "member": "science/candidate_default_on_b.log",
+      "bytes": 331,
+      "sha256": "912b17971418279c92efb3ff1d75e55ad6dc0df7cb67531a01b579adb0a6bb0c",
+      "crc32": "e268d179"
+    },
+    {
+      "member": "science/candidate_default_rows_off.log",
+      "bytes": 331,
+      "sha256": "2cb8a75be24275e06a34dafc00195600834161a2e18e0a3eb4123815b86a57dc",
+      "crc32": "081c88f7"
+    },
+    {
+      "member": "science/candidate_default_rows_off_repeat.log",
+      "bytes": 330,
+      "sha256": "f22d2c725b3f0890fbd702df24d4b4c551e33b6518fe0bd818ac33c5af556b04",
+      "crc32": "4f53a8bc"
+    },
+    {
+      "member": "science/candidate_default_rows_on.log",
+      "bytes": 330,
+      "sha256": "722d2eff81d39ac01995efa182590475df72bddb55d37a4cde283b65ef3a6bbe",
+      "crc32": "ee1ceecb"
+    },
+    {
+      "member": "science/candidate_det_off_a.log",
+      "bytes": 330,
+      "sha256": "1ab51e06312035361102d2a1581f435bcfd9047cf4e901b0c3b6e6e41f6c7b06",
+      "crc32": "f6a5f3c0"
+    },
+    {
+      "member": "science/candidate_det_off_b.log",
+      "bytes": 330,
+      "sha256": "2ec12136dbc993407e1c24b200cfd408a55bbf4215812197f9b7fc56d7c149b1",
+      "crc32": "77db2071"
+    },
+    {
+      "member": "science/candidate_det_on_a.log",
+      "bytes": 331,
+      "sha256": "d25103185630d3aa47bc96587906f61b96ae95f4ee81444d26e7036e005bc165",
+      "crc32": "f9e82dd7"
+    },
+    {
+      "member": "science/candidate_det_on_b.log",
+      "bytes": 329,
+      "sha256": "cd444098e1af3ed05058ef2d363f7ff7eac463e09e6c68b17bf0a60b2ae90a59",
+      "crc32": "f29bc366"
+    },
+    {
+      "member": "science/candidate_det_rows_off.log",
+      "bytes": 331,
+      "sha256": "4fc6da72dd281565ee3001f9f67636cbc4ecba166d443c9d211eb6808b25f652",
+      "crc32": "7fc4b1d5"
+    },
+    {
+      "member": "science/candidate_det_rows_off_repeat.log",
+      "bytes": 330,
+      "sha256": "3d65ad360586ed69f07fbeaeb957a02c82dcb520be2010824567cfba2f9f81da",
+      "crc32": "472bd0fe"
+    },
+    {
+      "member": "science/candidate_det_rows_on.log",
+      "bytes": 331,
+      "sha256": "4ff29f5653167dce9ff9987381e1f3400fce3b81fc3e57fb68f33058b585776b",
+      "crc32": "f90151f2"
+    },
+    {
+      "member": "science/completed_legs.json",
+      "bytes": 4088,
+      "sha256": "12c32a60076870048ded00ba9f1b54ee7ba1e09c8c43af18423a82e2d6abe534",
+      "crc32": "2bfe5a99"
+    },
+    {
+      "member": "science/device.log",
+      "bytes": 63,
+      "sha256": "e00289d3201de7797b314b9acbf365e5562a928fa7205a27f312befbc0fc472e",
+      "crc32": "aa9c56cb"
+    },
+    {
+      "member": "science/inputs.json",
+      "bytes": 1430,
+      "sha256": "b7f50738edc08228a9be1155964d48afbbfeb482a64e1a63156b3cf56661ee88",
+      "crc32": "a8e6d880"
+    },
+    {
+      "member": "science/kernel_0_0_0_baseline.log",
+      "bytes": 11144311,
+      "sha256": "bdc8a2267d0699dc7d8b717c7caa9151079c19878c48bdbcaced59b21b379435",
+      "crc32": "a602177e"
+    },
+    {
+      "member": "science/kernel_0_0_1_candidate.log",
+      "bytes": 11144395,
+      "sha256": "b60dadea1f6dedf8073c624c793f17389195b7ee4cee47e305e95cab698d2e57",
+      "crc32": "f0e66507"
+    },
+    {
+      "member": "science/kernel_0_0_2_candidate.log",
+      "bytes": 11144373,
+      "sha256": "29fd084747f59b7a448d0286f962d4e89cd73d7bfd73de7f6051cf98300c5a96",
+      "crc32": "14a4a8e9"
+    },
+    {
+      "member": "science/kernel_0_0_3_baseline.log",
+      "bytes": 11144346,
+      "sha256": "6ff78fb22eb418b805d024950da2af1d65565e3e82f6a68920818f4bfafeca68",
+      "crc32": "0d2c1520"
+    },
+    {
+      "member": "science/kernel_0_1_0_baseline.log",
+      "bytes": 11144323,
+      "sha256": "f052a681a35d2e25a7a4ec7aaa71942f3b6d3f7309570939658218f43afe3ba4",
+      "crc32": "fa2a0507"
+    },
+    {
+      "member": "science/kernel_0_1_1_candidate.log",
+      "bytes": 11144413,
+      "sha256": "db20c57e84ef0bae571a40ef6d09b0846f2daea86c59d428668e436822ac0fe2",
+      "crc32": "0e032319"
+    },
+    {
+      "member": "science/kernel_0_1_2_candidate.log",
+      "bytes": 11144401,
+      "sha256": "b8d696302f1f9cd6d0f2a12bc050efc933e43dd394aa5d576ecbff2ded90d984",
+      "crc32": "7af2f5bf"
+    },
+    {
+      "member": "science/kernel_0_1_3_baseline.log",
+      "bytes": 11144352,
+      "sha256": "81ba063075b99bd1ae8ebd60a05846a1a3642e83a428bbf56b38ef67914ca7fa",
+      "crc32": "150cc9d0"
+    },
+    {
+      "member": "science/kernel_0_2_0_baseline.log",
+      "bytes": 11143361,
+      "sha256": "3588d9afd99398c902d46686887e722aca095d24801e1849680300052a60cfbb",
+      "crc32": "65bb8d70"
+    },
+    {
+      "member": "science/kernel_0_2_1_candidate.log",
+      "bytes": 11144378,
+      "sha256": "fdbbee55c59e2c7c4129986807103dabfbbf80e898dd3507f5f4784ef63ec426",
+      "crc32": "b9155a22"
+    },
+    {
+      "member": "science/kernel_0_2_2_candidate.log",
+      "bytes": 11144380,
+      "sha256": "bd3a32fd99f133cf691e69f1698f80ec6ca0fb96fc5e3029409f2e98ff7f50c6",
+      "crc32": "5fff448d"
+    },
+    {
+      "member": "science/kernel_0_2_3_baseline.log",
+      "bytes": 11144404,
+      "sha256": "2c5a8bb748784d0ec38f87d19f998778ca4793204e8142843b5e3a62c848c296",
+      "crc32": "78ae9466"
+    },
+    {
+      "member": "science/kernel_1_0_0_baseline.log",
+      "bytes": 11144345,
+      "sha256": "bc4680e31ccea1205bfc5091ea4598efd7ab396eff2411645c55dceb1f8ede98",
+      "crc32": "fca986d1"
+    },
+    {
+      "member": "science/kernel_1_0_1_candidate.log",
+      "bytes": 11144398,
+      "sha256": "a4fb13d058d01a494bd667331eab835adcee81001cb00863d6bd5d30a05265f1",
+      "crc32": "582c491a"
+    },
+    {
+      "member": "science/kernel_1_0_2_candidate.log",
+      "bytes": 11144409,
+      "sha256": "da8f4d87cba33b196e08a51f7531a92958cc29dee4b8e7b30db328354d1ff5ed",
+      "crc32": "80e0216d"
+    },
+    {
+      "member": "science/kernel_1_0_3_baseline.log",
+      "bytes": 11143334,
+      "sha256": "150932d365a563979f0a2f3c737d177034507ffbd5da5b672353a14bcab7b1db",
+      "crc32": "602ff31a"
+    },
+    {
+      "member": "science/kernel_1_1_0_baseline.log",
+      "bytes": 11144357,
+      "sha256": "9c33c0ee0f628ed4b3adf8b0799daf426fc43bd8300fa41c5d5321f70d187e54",
+      "crc32": "5c9c9e7f"
+    },
+    {
+      "member": "science/kernel_1_1_1_candidate.log",
+      "bytes": 11144397,
+      "sha256": "580b9b1d7bbed4add2653ab2ef7c13b1cfcded32b77b7477ae3385df9132e358",
+      "crc32": "1431b648"
+    },
+    {
+      "member": "science/kernel_1_1_2_candidate.log",
+      "bytes": 11144383,
+      "sha256": "39e5609930b5b1774a776721b63ad195b81cb2703c6b122b28be12930132ea12",
+      "crc32": "3df73e78"
+    },
+    {
+      "member": "science/kernel_1_1_3_baseline.log",
+      "bytes": 11143377,
+      "sha256": "49d21b72485cfbf31e22c8aa3ca685106e9dbf345985f7390ad030660926d7fa",
+      "crc32": "f69ab9b1"
+    },
+    {
+      "member": "science/kernel_1_2_0_baseline.log",
+      "bytes": 11144346,
+      "sha256": "2d497cbcc403f39264f74206b064781e10626dec6aec7dbd4ecf63c337309aa6",
+      "crc32": "0976fe7b"
+    },
+    {
+      "member": "science/kernel_1_2_1_candidate.log",
+      "bytes": 11144404,
+      "sha256": "8663bf3d603c097fb78c9e6616592b0023732de1feaa9853d91c821337daa200",
+      "crc32": "cc8488eb"
+    },
+    {
+      "member": "science/kernel_1_2_2_candidate.log",
+      "bytes": 11144423,
+      "sha256": "374083a3d41090deccdd976fad30fadb8563518db59ec113570e09cbc33f3fb1",
+      "crc32": "a72b7cf0"
+    },
+    {
+      "member": "science/kernel_1_2_3_baseline.log",
+      "bytes": 11143392,
+      "sha256": "35768faea82360497671b901064fb6c486fa59040f6bba9ba9b2c9e995860f23",
+      "crc32": "12895bc3"
+    },
+    {
+      "member": "science/kernel_results.json",
+      "bytes": 655635673,
+      "sha256": "7f71c37852a805d705b54d15fdc452211878225cc210f2637a64542d8063b027",
+      "crc32": "476248bb"
+    },
+    {
+      "member": "science/kernel_timing_comparison.json",
+      "bytes": 228950,
+      "sha256": "59ffbd77eda7f026bae2dd94c720c2b4558995031bcd7693cafe75d22f40bc38",
+      "crc32": "11bea694"
+    },
+    {
+      "member": "science/kernel_unset_0_0_baseline.log",
+      "bytes": 11143374,
+      "sha256": "c7533d85f9e1f9279a2a4ae0e80a972cbedf9d92ee6b9cefac231f191370140e",
+      "crc32": "ed50cf5a"
+    },
+    {
+      "member": "science/kernel_unset_0_1_candidate.log",
+      "bytes": 11144379,
+      "sha256": "9e1beed2201dafa3f5b68b5be8e27cee8b7642bc8a2958c320fa44888ce9fed7",
+      "crc32": "91dbd9a7"
+    },
+    {
+      "member": "science/kernel_unset_0_2_candidate.log",
+      "bytes": 11144404,
+      "sha256": "f8138504dbafd37e525f522b5d7776d93d1b7c6944a70d8aa63cb8a6f41c6a25",
+      "crc32": "6c9fc46f"
+    },
+    {
+      "member": "science/kernel_unset_0_3_baseline.log",
+      "bytes": 11144291,
+      "sha256": "45d4c17c4e43fe2bc84420d7aff623f6a6a7a3d8ae412b8220d17e73f884c5e6",
+      "crc32": "700de2f2"
+    },
+    {
+      "member": "science/kernel_unset_1_0_baseline.log",
+      "bytes": 11144278,
+      "sha256": "a11b8d4d9d943cfb361d9ac091c4f49bd8a47dba196ed95df66bf7da01294017",
+      "crc32": "6712cb10"
+    },
+    {
+      "member": "science/kernel_unset_1_1_candidate.log",
+      "bytes": 11144420,
+      "sha256": "9731585d7ac6c3c2f60a7fc86c530ac8b0c3cf09c762b13ede19347914e45538",
+      "crc32": "8c84766f"
+    },
+    {
+      "member": "science/kernel_unset_1_2_candidate.log",
+      "bytes": 11144420,
+      "sha256": "6e8d3e7168bfe2c43ea5a97d83ac753f779a3bea8573aba165c71a1fa4bbd01c",
+      "crc32": "35878b8c"
+    },
+    {
+      "member": "science/kernel_unset_1_3_baseline.log",
+      "bytes": 11143378,
+      "sha256": "65a3aa8b40b1f96a66d09bbb7f2b1b39509fb161a428952a5ba83a553b96f22d",
+      "crc32": "72b526c4"
+    },
+    {
+      "member": "science/kernel_unset_2_0_baseline.log",
+      "bytes": 11144344,
+      "sha256": "a5133cd390df56702d9fe0b65969e0be783a08c5accb6f365b5cd7683db8c800",
+      "crc32": "bb28146b"
+    },
+    {
+      "member": "science/kernel_unset_2_1_candidate.log",
+      "bytes": 11144404,
+      "sha256": "5f9f43ebf69877d6d41685c568905d800f60a44dd7ad435de2cb5cb58bf2f165",
+      "crc32": "84f2f178"
+    },
+    {
+      "member": "science/kernel_unset_2_2_candidate.log",
+      "bytes": 11144394,
+      "sha256": "238ce9d0c018e2c5def74caef76506a4a8fcd11b08816577ec280c16578b7e22",
+      "crc32": "50698516"
+    },
+    {
+      "member": "science/kernel_unset_2_3_baseline.log",
+      "bytes": 11144350,
+      "sha256": "78c061b596a20a77a54813fb51434d3bfe463255a42a9f58367e101e2151429e",
+      "crc32": "42aba42c"
+    },
+    {
+      "member": "science/protocol.json",
+      "bytes": 4285,
+      "sha256": "11a9dacf56a037b740d1dde1f06d92c8ca087421ca00e7ff31b053ac9e8b5174",
+      "crc32": "1a61b112"
+    },
+    {
+      "member": "science/storage_amendment_complete.json",
+      "bytes": 7633,
+      "sha256": "c767cd28a6601a6d689a17a3fd81bd5f2162d08cde8f68312b45039d8cec7050",
+      "crc32": "d539adb9"
+    },
+    {
+      "member": "science/storage_amendment_runtime.py.txt",
+      "bytes": 6143,
+      "sha256": "dea45ef19129b4528f55d492f0dcd533d57d792b4a12df8cd0866c34ae5326af",
+      "crc32": "16a5bf2f"
+    },
+    {
+      "member": "science/storage_amendment_start.json",
+      "bytes": 6447,
+      "sha256": "721e663d593a2c99821c2f3a9aec66a07e53ec115e2579a7bf0d2d2f91cd0589",
+      "crc32": "6ac87099"
+    },
+    {
+      "member": "science/toolchain.log",
+      "bytes": 629,
+      "sha256": "27121e89eef0bb9271842466e3e9614d1842e24a5d9e835c960fc836439230f9",
+      "crc32": "d6ff7109"
+    },
+    {
+      "member": "science/trap_rms_0.log",
+      "bytes": 116,
+      "sha256": "e6de582aa86fa40fce210f296ef51d5dd47e499fd830f9653f074bf205273d68",
+      "crc32": "e43f487e"
+    },
+    {
+      "member": "science/trap_rms_1.log",
+      "bytes": 116,
+      "sha256": "5ec0dd4263c5862b317a0993a4d89070c2500f2d615c6ae3c2cde34585fa58f9",
+      "crc32": "be3ce8b1"
+    },
+    {
+      "member": "science/trap_rms_2.log",
+      "bytes": 116,
+      "sha256": "c25572626011f2cf4b33f848139f3edf87894ccfda50aeebade80a81139188f3",
+      "crc32": "503809e0"
+    },
+    {
+      "member": "science/trap_softmax_0.log",
+      "bytes": 120,
+      "sha256": "806a50466dfc63f8830395b4855645734eed667414e9ecf8cb073bc25fbadc7f",
+      "crc32": "7f90f919"
+    },
+    {
+      "member": "science/trap_softmax_1.log",
+      "bytes": 120,
+      "sha256": "476e05f94f10b6e767cbcd6dea583e2c9571bc0b5a5ae1750dc8393b3482022d",
+      "crc32": "2855b100"
+    },
+    {
+      "member": "science/trap_softmax_2.log",
+      "bytes": 120,
+      "sha256": "f40e7648182e05e232db690a0fb12550cc2ab21bd949cd1b5e025ec3be44e33b",
+      "crc32": "d01a692b"
+    },
+    {
+      "member": "summary.json",
+      "bytes": 5161,
+      "sha256": "43a3fde4a9b72de2554107b8a58a56986dcd7704380106d1c681b26dc0d0a721",
+      "crc32": "efd2b7ea"
+    }
+  ]
+}

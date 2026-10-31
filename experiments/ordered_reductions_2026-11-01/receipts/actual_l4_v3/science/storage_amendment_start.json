@@ -1,0 +1,179 @@
+{
+  "status": "ROOT_APPROVED_STORAGE_ONLY_START",
+  "time_unix": 1793461408.7411397,
+  "scratch_free_bytes": 31185539072,
+  "current_leg_untouched": [
+    "baseline",
+    "default_rows_off"
+  ],
+  "first_dump_bytes": 196345856,
+  "cases": [
+    {
+      "source": "baseline",
+      "name": "default_rows_off_repeat",
+      "dump": true,
+      "out": "/content/chat/ordered_default_gate/science/baseline/default_rows_off_repeat.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "default_rows_off",
+      "dump": true,
+      "out": "/content/chat/ordered_default_gate/science/candidate/default_rows_off.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "default_rows_off_repeat",
+      "dump": true,
+      "out": "/content/chat/ordered_default_gate/science/candidate/default_rows_off_repeat.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "default_rows_on",
+      "dump": true,
+      "out": "/content/chat/ordered_default_gate/science/candidate/default_rows_on.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "det_rows_off",
+      "dump": true,
+      "out": "/content/chat/ordered_default_gate/science/candidate/det_rows_off.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "det_rows_off_repeat",
+      "dump": true,
+      "out": "/content/chat/ordered_default_gate/science/candidate/det_rows_off_repeat.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "det_rows_on",
+      "dump": true,
+      "out": "/content/chat/ordered_default_gate/science/candidate/det_rows_on.jsonl"
+    },
+    {
+      "source": "baseline",
+      "name": "default_off_a",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/baseline/default_off_a.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "default_off_a",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/candidate/default_off_a.jsonl"
+    },
+    {
+      "source": "baseline",
+      "name": "default_on_a",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/baseline/default_on_a.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "default_on_a",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/candidate/default_on_a.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "default_on_b",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/candidate/default_on_b.jsonl"
+    },
+    {
+      "source": "baseline",
+      "name": "default_on_b",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/baseline/default_on_b.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "default_off_b",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/candidate/default_off_b.jsonl"
+    },
+    {
+      "source": "baseline",
+      "name": "default_off_b",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/baseline/default_off_b.jsonl"
+    },
+    {
+      "source": "baseline",
+      "name": "det_off_a",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/baseline/det_off_a.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "det_off_a",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/candidate/det_off_a.jsonl"
+    },
+    {
+      "source": "baseline",
+      "name": "det_on_a",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/baseline/det_on_a.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "det_on_a",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/candidate/det_on_a.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "det_on_b",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/candidate/det_on_b.jsonl"
+    },
+    {
+      "source": "baseline",
+      "name": "det_on_b",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/baseline/det_on_b.jsonl"
+    },
+    {
+      "source": "candidate",
+      "name": "det_off_b",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/candidate/det_off_b.jsonl"
+    },
+    {
+      "source": "baseline",
+      "name": "det_off_b",
+      "dump": false,
+      "out": "/content/chat/ordered_default_gate/science/baseline/det_off_b.jsonl"
+    }
+  ],
+  "review": {
+    "status": "ACCEPTABLE_STORAGE_ONLY_AMENDMENT_WITH_DISCLOSED_SCOPE",
+    "reviewer": "Codex independent cleanroom_review",
+    "test_sha256": "22a0aafd7356f73ae1f7fd595411a8e0a3270bef14c6eacab64bf69c0438d331",
+    "fixture_tests": {
+      "passed": 1,
+      "seconds": 0.04
+    },
+    "verified": [
+      "Exact frozen client mkdir/open/unlink operations follow directory/file symlinks",
+      "Unmodified frozen gate load_run validates linked f32 row file geometry",
+      "Exact pack rglob/is_file/z.write includes full f32 bytes at canonical member name and preserves outside server logs with ZIP CRC pass"
+    ],
+    "archive_limit": "rglob does not descend .run directory symlink; ephemeral last dump.txt/debugging/www subtree is omitted; disclose in amendment record",
+    "scientific_scope": "Candidate14 and all future timing legs uniform local placement. Current baseline dump untouched; its baseline repeat becomes local, so baseline partial-control repeat description must disclose mixed physical storage. No numerical/source/model/env/threshold changes or retries.",
+    "required_conditions": [
+      "Immutable before snapshot plus archived amendment record",
+      "Actual local scratch free>=4GiB; owned canonical /tmp targets",
+      "Atomic absent-only no-overwrite links; abort collision and leave active leg untouched",
+      "All unstarted timing legs same local policy",
+      "Retain scratch until final ZIP verification; original deadline and cap remain"
+    ],
+    "runtime_modified": false,
+    "provider_calls": 0,
+    "model_calls": 0,
+    "config_writes": 0
+  },
+  "review_sha256": "3d5cff5486f370d190556704a8797e13172ebd6b93f51e4123f7c5de1eb2745b",
+  "scope": "Only fresh output storage links. Scientific inputs, source, environment, schedule and gates unchanged. Candidate14 and all timing legs uniformly local. Baseline off/off has mixed storage and cannot support a unique causal claim. Ephemeral last dump.txt under directory links is omitted from ZIP; every canonical f32 file and server log remains archived."
+}

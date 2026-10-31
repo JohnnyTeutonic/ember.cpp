@@ -1,0 +1,167 @@
+{
+  "schema": 1,
+  "purpose": "Requested ordered-default correctness and measured reduction/default selector comparison; no tolerance relaxation",
+  "baseline_source": "1b2789e656dda996efb79490cf689d0eff45eefe",
+  "candidate_production_source": "bca00166f75d53a01094e5ebfa599a004062a21e",
+  "model_sha256": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9",
+  "prompts_sha256": "a25357100c3eb1e59bc94bb26c0629e72e6ae18172b2d4fbbf148ae5168d1740",
+  "items": 100,
+  "requests": 260,
+  "candidate_matrix": "full unchanged registered14",
+  "baseline_matrix": "10 controls only; not full baseline adoption",
+  "parts": 0,
+  "schedule": [
+    [
+      "baseline",
+      "default_rows_off"
+    ],
+    [
+      "baseline",
+      "default_rows_off_repeat"
+    ],
+    [
+      "candidate",
+      "default_rows_off"
+    ],
+    [
+      "candidate",
+      "default_rows_off_repeat"
+    ],
+    [
+      "candidate",
+      "default_rows_on"
+    ],
+    [
+      "candidate",
+      "det_rows_off"
+    ],
+    [
+      "candidate",
+      "det_rows_off_repeat"
+    ],
+    [
+      "candidate",
+      "det_rows_on"
+    ],
+    [
+      "baseline",
+      "default_off_a"
+    ],
+    [
+      "candidate",
+      "default_off_a"
+    ],
+    [
+      "baseline",
+      "default_on_a"
+    ],
+    [
+      "candidate",
+      "default_on_a"
+    ],
+    [
+      "candidate",
+      "default_on_b"
+    ],
+    [
+      "baseline",
+      "default_on_b"
+    ],
+    [
+      "candidate",
+      "default_off_b"
+    ],
+    [
+      "baseline",
+      "default_off_b"
+    ],
+    [
+      "baseline",
+      "det_off_a"
+    ],
+    [
+      "candidate",
+      "det_off_a"
+    ],
+    [
+      "baseline",
+      "det_on_a"
+    ],
+    [
+      "candidate",
+      "det_on_a"
+    ],
+    [
+      "candidate",
+      "det_on_b"
+    ],
+    [
+      "baseline",
+      "det_on_b"
+    ],
+    [
+      "candidate",
+      "det_off_b"
+    ],
+    [
+      "baseline",
+      "det_off_b"
+    ]
+  ],
+  "kernel_probe": {
+    "lengths": [
+      1,
+      31,
+      257,
+      320,
+      1024,
+      16384
+    ],
+    "patterns": [
+      "varying",
+      "constant",
+      "extreme"
+    ],
+    "repeats": 20,
+    "semantic_max_abs_error": 1e-05,
+    "reference": "independent binary64 CPU RMSNorm/softmax",
+    "timing": "CUDA events, warmed resident inputs, old/new ABBA; all raw batches retained",
+    "negative": "isolated actual guarded kernel invalid-grid launch under NDEBUG; expected device trap not generic nonzero",
+    "attention_fallback": {
+      "heads": 4,
+      "kv_heads": 2,
+      "head_dim": 32,
+      "lengths": [
+        1,
+        31,
+        257,
+        512
+      ],
+      "wrappers": [
+        "attention_cuda_optimized",
+        "attention_devpos_cuda"
+      ],
+      "routing": "legacy forced only inside separate component process; registered routing untouched"
+    },
+    "raw_semantic_rows": "input/weights/first_output/reference retained per case; attention Q/K/V retained"
+  },
+  "environment": "Clear inherited EMBER_*, TINYLLAMA_* and CUBLAS_WORKSPACE_CONFIG before applying frozen per-leg environment; PARTS=0 explicitly; EMBER_IR absent. Default deterministic=false or absent. No global forcing.",
+  "criteria": "Unmodified frozen candidate analyzer: all exact full rows/IDs/warm-pass and both individual speed pairs>=1.15. Baseline10 reported only in declared scope. Old/new numerical bit identity is not required after arithmetic ordering change. No production atomics retained without measured advantage.",
+  "limitations": [
+    "HTTP seed0/IDs do not prove full RNG state equivalence",
+    "Component reference tolerance does not modify registered exact-row criterion",
+    "Historical BASELINE_UNSTABLE and missed speed gate remain unchanged"
+  ],
+  "resources": {
+    "gpu": "one L4",
+    "cap_usd": 1.75,
+    "max_hours": 3,
+    "absolute_deadline": "2026-10-31T17:30:00Z",
+    "combined_campaign_cap_usd": 2,
+    "v1_spend_allowance_usd": 0.25
+  },
+  "retries": "No scientific retry after any outcome; preserve all partial and negative evidence; operational readiness errors reported.",
+  "scientific_timeout_seconds": 9600,
+  "frozen_checker_sha256": "416c7edb240385033dee2b80c7d97756583182a4df228304cd1d54a18853f839",
+  "frozen_client_sha256": "5f283994b251e7e4d57e2e3fefc6a4add06cb23d66ccf24ae91b3a07b7830216"
+}

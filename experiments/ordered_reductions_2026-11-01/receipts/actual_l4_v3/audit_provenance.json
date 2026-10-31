@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "copied_unchanged_files": {
+    "actual_v3_storage_replay_v2.json": "045875e71f42d03c00278a1e29ad8e0ec3b8334c14f4fa0aef48fa3130d9b594",
+    "actual_v3_storage_replay_v2.json.numerical_base.json": "2dfc5c19abce63977df05377abbe47e7ef0e90e05d30bd1323588bbb3d1bf6f7",
+    "actual_v3_storage_replay.json": "fa7c02a1d24a66696f6edb80d9ef2531068a63857a2e7fe6c495b8d573b75997",
+    "actual_v3_independent_summary.json": "e21d43108d08971c67cb420db27a2f9ad1bcb588f81c1390b75ae6a265e059ff",
+    "replay_raw_v3.py": "0e95d323e711930ad4fefceb85102aeb2677894263fabf2e2ed020f61e3cfca5",
+    "replay_raw_v3_storage.py": "82383e67b798bd134e2abab575b08f4b9aa961eaea0a3cc54eb26eabbca200eb",
+    "replay_raw_v3_storage_v2.py": "297bd097aedb329aae91c9b2d5c4b63308496e59aac763dd2967f58dafdf9f4d",
+    "test_replay_raw_v3_storage.py": "4611db43397807ffb4545347c2d86997bda6f240a165e2dd8c435b1c7aee40ca",
+    "test_replay_raw_v3_storage_v2.py": "e1b7a5bc8b7b2c27410341538b40240572e9df3d2c79abc0b916868ea07eb69e",
+    "test_storage_amendment.py": "22a0aafd7356f73ae1f7fd595411a8e0a3270bef14c6eacab64bf69c0438d331",
+    "storage_amendment_review.json": "3d5cff5486f370d190556704a8797e13172ebd6b93f51e4123f7c5de1eb2745b",
+    "final_cleanup.json": "34f07bd79f5137c650fa9c22bea897c51646518f957c51b6e9a2bcea2a104ff5",
+    "setup_v1_summary.json": "90c71a83bbe2946c3cb16dfb803da54792b9ba2b2ab108a31b085c5581358504",
+    "setup_v2_summary.json": "9ab9c2ae690c31fd54d20b5bae27f79f55332cdf9612247ed5283c53cbe6f0f0"
+  },
+  "archive_sha256": "6b64284e674fec5cb9a371fe792a6686f7809a57a9b4836fc3e77235525b2e67",
+  "no_account_or_launch_snapshots_copied": true,
+  "audit_source_limit": "Immutable original audit sources retain their original canonical local stage/source/launch bindings. Those local provenance artifacts are needed to rerun them unchanged; this compact directory is not a standalone public rerun bundle."
+}

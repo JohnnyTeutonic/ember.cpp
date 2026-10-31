@@ -1,0 +1,44 @@
+{
+  "status": "FINAL_CLEANUP_VERIFIED",
+  "checked_utc": "2026-10-31T16:23:37.954502+00:00",
+  "checks": {
+    "campaign_home": true,
+    "all_jobs_home": true,
+    "local_resources_empty": true,
+    "owned_ledger_pods_stopped": true,
+    "owned_ledger_volumes_deleted": true,
+    "owned_pod_absent": true,
+    "owned_volume_absent": true,
+    "protected_volumes_present": true,
+    "runner_and_guard_exited": true,
+    "exact_watchdog_entry_disabled": true
+  },
+  "provider_readonly_calls": [
+    "list_pods",
+    "list_volumes"
+  ],
+  "provider_payloads_stored": false,
+  "balances_queried": false,
+  "mutations_performed": [],
+  "bindings": {
+    "state_sha256": "c1a359f035c16e6e6c429646f8f9ab548e45d6d49ccbb1ca7976fd7417e86407",
+    "watchdog_config_sha256": "b1c03e25ad980e5f88a8f3baca78e28b9909c2504bd3c02828f75fef159cad01",
+    "independent_storage_replay_sha256": "045875e71f42d03c00278a1e29ad8e0ec3b8334c14f4fa0aef48fa3130d9b594",
+    "independent_numerical_replay_sha256": "2dfc5c19abce63977df05377abbe47e7ef0e90e05d30bd1323588bbb3d1bf6f7"
+  },
+  "relay": {
+    "job_status": "FINISHED",
+    "fetched": [
+      "summary.json",
+      "out.zip",
+      "vm.log",
+      "transport_exit.json",
+      "../ordered_default_gate_train.log"
+    ],
+    "archive_bytes": 2072950310,
+    "archive_sha256": "6b64284e674fec5cb9a371fe792a6686f7809a57a9b4836fc3e77235525b2e67",
+    "archive_integrity_basis": "Root supplied independent 170-member CRC/hash replay; not duplicated in cleanup check."
+  },
+  "scientific_scope": "Cleanup verification only; numerical result audited independently in bound receipts. No new inference/training/paid job.",
+  "publication_note": "An initial receipt assembly used an incorrect numerical receipt filename and failed before writing any receipt. Corrected to the existing .json.numerical_base.json path; no resource or scientific changes."
+}

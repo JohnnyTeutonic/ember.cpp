@@ -1,0 +1,7 @@
+{
+  "status": "STORAGE_AUDIT_ERROR_OR_INCOMPLETE",
+  "provider_calls": 0,
+  "model_calls": 0,
+  "config_writes": 0,
+  "error": "ValueError('runtime amendment source drift')"
+}
