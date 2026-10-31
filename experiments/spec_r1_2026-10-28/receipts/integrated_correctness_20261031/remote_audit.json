@@ -1,0 +1,8 @@
+{
+  "complete": true,
+  "scope": "synthetic deterministic integrated correctness only",
+  "kernel_cases": 96,
+  "graph_legs": 30,
+  "full_rows": 240,
+  "adoption": "NOT_EVALUATED_HISTORICAL_GATE_NOT_PASSED"
+}

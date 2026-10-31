@@ -1,0 +1,7 @@
+{
+  "complete": true,
+  "scientific_pass": true,
+  "source_commit": "4836b7de0ce4a96c030d491d942bb265fe393302",
+  "scope": "synthetic deterministic correctness; no timing/adoption gate",
+  "elapsed_seconds": 270.9375244640396
+}

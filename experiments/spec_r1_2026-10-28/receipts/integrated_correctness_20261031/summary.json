@@ -1,0 +1,23 @@
+{
+  "status": "PASS_SYNTHETIC_INTEGRATED_CORRECTNESS_ONLY",
+  "production_source_commit": "4836b7de0ce4a96c030d491d942bb265fe393302",
+  "packet_source_commit": "153f0e9352e14cfbd2b6c7328cb32e8d0f6a7ce5",
+  "archive_sha256": "d7fa39d85bc8392a4197e90cba1a575fbaec8484ae789b579bb0d32ec034140c",
+  "canonical_LOCAL_zip": "/mnt/c/ml_artifacts/e10_integrated_v2_20261031/e10_integrated_20261031/out.zip",
+  "counts": {
+    "kernel_cases": 96,
+    "graph_legs": 30,
+    "full_float_rows": 240,
+    "sampler_ID_RNG_comparisons": 960,
+    "fallback_requests": 48
+  },
+  "data_availability": "The compact public receipt includes lossless raw kernel record bytes, capture/row hashes, selected IDs and RNG-state hashes, source-contract/device logs, and raw API fallback outputs. Complete float rows and full RNG states remain in the canonical LOCAL ZIP at the published SHA, alongside its build-heavy payload. The compact public receipt alone cannot replay every raw comparison.",
+  "full_local_replay": "python3 experiments/spec_r1_2026-10-28/integrated_gate_20261031/audit_archive.py /mnt/c/ml_artifacts/e10_integrated_v2_20261031/e10_integrated_20261031/out.zip /home/jonat/e10_integrated_stage_20261031_v2 FRESH_EXT4_AUDIT_DIR",
+  "compact_kernel_replay": "python3 experiments/spec_r1_2026-10-28/integrated_gate_20261031/replay_kernel_receipt.py experiments/spec_r1_2026-10-28/receipts/integrated_correctness_20261031/kernel_records.json",
+  "limitations": [
+    "Synthetic F32 model only; registered pick_e1_L16 validation remains separate.",
+    "No speed/full-adoption gate was run, and historical default BASELINE_UNSTABLE plus paired speed failure remain explicit.",
+    "Default flags, arithmetic and tolerances unchanged.",
+    "V1 environment failure remains immutable at archive24f37c62d69f65f665f4ff5efa1c7915904bcf45bcf4459bb4d8e5f9cfe1f724."
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "scope": "Compact public subset only; not complete raw float/RNG data",
+  "files": {
+    "cpu_source_contracts.log": "594f4088366de21aad736cbcd1a634536c215239e9f5c689ce194238ee338668",
+    "device_kernels.json": "1b1f02366e6d80c972ee8fbbfdf0ba959aec15c1d044b54145ff7c14e18279f4",
+    "device_original.json": "1b1f02366e6d80c972ee8fbbfdf0ba959aec15c1d044b54145ff7c14e18279f4",
+    "device_partition4.json": "1b1f02366e6d80c972ee8fbbfdf0ba959aec15c1d044b54145ff7c14e18279f4",
+    "device_rows.json": "1b1f02366e6d80c972ee8fbbfdf0ba959aec15c1d044b54145ff7c14e18279f4",
+    "fallback/graph0_pick0.json": "79235d78fd63853982318dfd3288845e25e70bb8e901755d11118c4bf64b0955",
+    "fallback/graph0_pick1.json": "784e05d70717e4565e6152df64afb27934e158e6adedc70caa798f972456cf82",
+    "fallback/graph1_pick0.json": "ad9493ab35daec61d93bee3b2f2ea21fb857d37ee2272374240dd2ac82521fbf",
+    "fallback/graph1_pick1.json": "450c65b56d6e0b6b03871dd26db7c5855429874bdc99b842f89db637a644dc96",
+    "fallback/summary.json": "b682c46b05580fabaa2e6284f6b67c1e41c407857b764fe6d8531dba7b22f02c",
+    "independent_audit.json": "79003f0de9eb3369b5754ebd6c48469f6524f32ced0956ed9b1912527ba197ed",
+    "kernel_records.json": "54f09081919dcfffca51e4ac1011a3639d5e00b8ad46d01558f2d74d398096ba",
+    "remote_audit.json": "681dd9edd11226a969fe4d702636b2074a5d6e4155b138e1280c530daf686f61",
+    "remote_execution.json": "29bfa6f065dddfbbc93f097fad95f85a09cc6bdcfd86831c3c7521f43145e0ff",
+    "summary.json": "5725aeccb4ea2be0fe879b228237776609d3d7285ef440b8ecd4f595d5ddd718"
+  }
+}

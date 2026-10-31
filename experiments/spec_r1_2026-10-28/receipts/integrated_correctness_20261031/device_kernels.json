@@ -1,0 +1,6 @@
+{
+  "cuda_device_count": 1,
+  "major": 8,
+  "minor": 9,
+  "name": "NVIDIA L4"
+}
