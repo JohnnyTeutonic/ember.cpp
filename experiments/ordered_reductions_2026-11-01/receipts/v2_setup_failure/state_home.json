@@ -1,0 +1,59 @@
+{
+ "endpoint": null,
+ "launches": 1,
+ "jobs": {
+  "ordered_default_gate": {
+   "relayed_step": 0,
+   "status": "FINISHED",
+   "home": true,
+   "failed_seen": 0,
+   "fetched": [
+    "summary.json",
+    "out.zip",
+    "vm.log",
+    "transport_exit.json",
+    "../ordered_default_gate_train.log"
+   ]
+  }
+ },
+ "gpu": "L4",
+ "backend": "runpod",
+ "runpod": {
+  "pod": null,
+  "volume": null,
+  "retired_volumes": [],
+  "ledger": {
+   "pods": [
+    {
+     "id": "n9bvuh7mvq7vgm",
+     "name": "ember-ordered-default-1101-v2",
+     "gpu": "L4",
+     "usd_per_hr": 0.59,
+     "dc": "EU-RO-1",
+     "volume": "508h5bu1fb",
+     "start": 1793458202.9387972,
+     "stop": 1793459051.0534718,
+     "image": "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04",
+     "image_digest": "sha256:61a4aafb0094cd773f11eefa378929d5a687bd775febeb78eac62fc824141fb5",
+     "stopped_by": "runner"
+    }
+   ],
+   "volumes": [
+    {
+     "id": "508h5bu1fb",
+     "dc": "EU-RO-1",
+     "gb": 20,
+     "created": 1793458200.0506377,
+     "name": "ember-ordered-default-1101-v2-vol",
+     "deleted": 1793459051.9835174
+    }
+   ]
+  },
+  "dc_fails": 0,
+  "creating": null
+ },
+ "booted": true,
+ "pending_uploads": [],
+ "gone_ticks": 0,
+ "campaign_home": true
+}

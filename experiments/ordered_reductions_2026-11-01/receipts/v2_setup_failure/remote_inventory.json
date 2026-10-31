@@ -1,0 +1,10 @@
+{
+  "ssh_rc": 0,
+  "remote_output": "{\"upload_files\": [{\"name\": \"candidate.tgz\", \"bytes\": 5919297}, {\"name\": \"eval100.jsonl\", \"bytes\": 27784}, {\"name\": \"inputs.json\", \"bytes\": 1430}, {\"name\": \"model.gguf\", \"bytes\": 121925952}, {\"name\": \"ordered_vm.py\", \"bytes\": 12878}, {\"name\": \"probe_CMakeLists.txt\", \"bytes\": 635}, {\"name\": \"probe_kernel_probe.cu\", \"bytes\": 11437}, {\"name\": \"probe_semantic_check.h\", \"bytes\": 279}, {\"name\": \"protocol.json\", \"bytes\": 4285}], \"summary\": {\"status\": \"ERROR_OR_INCOMPLETE\", \"complete\": false, \"legs\": [], \"error\": \"FileNotFoundError(2, 'No such file or directory')\", \"filename\": \"/content/chat/upload/baseline.tgz\"}, \"vm_log\": \"ordered-default supervised payload starting\\nFileNotFoundError(2, 'No such file or directory')\\n\", \"science_files\": [\"exception.txt\"]}\n",
+  "upload_source": {
+    "path": "/home/jonat/ordered_default_stage_20261101_v2/baseline.tgz",
+    "is_symlink": true,
+    "resolved_path": "/home/jonat/ordered_default_stage_20261101_v1/baseline.tgz"
+  },
+  "cause": "rsync command has no symlink-following option; symbolic-link source skipped with success."
+}

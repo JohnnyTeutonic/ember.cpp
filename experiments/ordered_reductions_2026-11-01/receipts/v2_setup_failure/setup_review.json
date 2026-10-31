@@ -1,0 +1,18 @@
+{
+  "status": "V2_SETUP_FAILURE_HOME_AND_RESOURCES_DELETED",
+  "scientific_legs": 0,
+  "build_started": false,
+  "root_cause": "The baseline archive source was a local symlink skipped by rsync without link following, despite a successful return code.",
+  "preserved_negative": true,
+  "driver_disabled": true,
+  "owned_pod": "n9bvuh7mvq7vgm",
+  "owned_volume": "508h5bu1fb",
+  "files": {
+    "/home/jonat/ember_ordered_default_20261101_v2_runner/state.json": "ab20b2f2d9ca651250b08ff8b8394c2512a7c14911937bec52962c6ed092cce6",
+    "/mnt/c/ml_artifacts/ember_ordered_default_20261101_v2/ordered_default_gate/summary.json": "9ab9c2ae690c31fd54d20b5bae27f79f55332cdf9612247ed5283c53cbe6f0f0",
+    "/mnt/c/ml_artifacts/ember_ordered_default_20261101_v2/ordered_default_gate/out.zip": "a5a9da8ade56965e3f557bc4b9075f622b3609765e63b05b1d6bb2fa0d97c1ba",
+    "/mnt/c/ml_artifacts/ember_ordered_default_20261101_v2/ordered_default_gate/vm.log": "544ec1383284961388f8a5ef264497ba14495f27e13111ee303f9738734215a0",
+    "/mnt/c/ml_artifacts/ember_ordered_default_20261101_v2/ordered_default_gate/transport_exit.json": "00d8070d187e95b56fe0aefbf6088c63b006eea82c87d1c9dd549fc080406af1",
+    "/home/jonat/ordered_default_v2_setup_failure_20261101/remote_inventory.json": "c913cd3b236085fe6b6fee6ed1cc33942d2c9927e3d69d878d51ea1e740884ee"
+  }
+}
