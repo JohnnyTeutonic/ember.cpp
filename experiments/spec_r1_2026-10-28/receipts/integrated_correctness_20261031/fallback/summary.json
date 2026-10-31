@@ -1,0 +1,7 @@
+{
+ "pass": true,
+ "requests_per_leg": 12,
+ "legs": 4,
+ "binary_sha256": "37d61e27588303f4c61ae14d854adb95f60214ded9fd75846f3af3d8cb5dba73",
+ "model_sha256": "e270235b70fa47369ad7bab19e231dedefd1d5b9d2966f6e2d84562e93250f87"
+}
