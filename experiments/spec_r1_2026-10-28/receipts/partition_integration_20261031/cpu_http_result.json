@@ -1,0 +1,37 @@
+{
+  "status": "PASS_CPU_ONLY",
+  "paths": {
+    "baseline": "/home/jonat/ember_publication_build_20261030/tinyllama_server",
+    "candidate": "/home/jonat/ember_e10_integration_build_20261031/tinyllama_server",
+    "model": "/mnt/c/ml_artifacts/tiny_chat/e1/pick_e1_L16/model.gguf"
+  },
+  "sha256": {
+    "baseline": "ba73304a2e73648fad1d52eac05d77022bb0d84ae4bd1efd40230634627902d2",
+    "candidate": "b9aa22dc3e98a99eec1ecefdb2204e6e7fa4e2b549376981ec5d817a87d71029",
+    "model": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9"
+  },
+  "runs": [
+    "baseline",
+    "candidate_off",
+    "candidate_option"
+  ],
+  "requests_per_run": 2,
+  "row_evidence": {
+    "baseline": {
+      "sha256": "86ef97f1822d3f60357accfadb6d16e210000f3b3f4a70d3ecb2985eba074935",
+      "rows": 21,
+      "values": 344064
+    },
+    "candidate_off": {
+      "sha256": "86ef97f1822d3f60357accfadb6d16e210000f3b3f4a70d3ecb2985eba074935",
+      "rows": 21,
+      "values": 344064
+    },
+    "candidate_option": {
+      "sha256": "86ef97f1822d3f60357accfadb6d16e210000f3b3f4a70d3ecb2985eba074935",
+      "rows": 21,
+      "values": 344064
+    }
+  },
+  "scope": "CPU HTTP behaviour and finite float32 row identity only; experimental CUDA dispatch was not executed"
+}

@@ -1,0 +1,13 @@
+{
+  "status": "PASS_COMPILE_ONLY",
+  "existing_functions_equal": 42,
+  "added_functions": [
+    "_ZN12ember_verify50_GLOBAL__N__SOURCEID_17_verify_kernels_cu_7463d6cb11merge_partsEPKNS_7RowPickEPS1_i",
+    "_ZN12ember_verify50_GLOBAL__N__SOURCEID_17_verify_kernels_cu_7463d6cb21partition_rows_kernelEPKfiPNS_7RowPickEi"
+  ],
+  "normalization": "compiler anonymous-namespace identifier only; no instruction changes masked",
+  "inputs": {
+    "baseline": "fbf22a017499393699840cbaf22942c8970abe65335e4c12ea0bdbcfdf2af75f",
+    "candidate": "9556582383f3b76b6828c47d9e18f299b16798c3d28611f1d1bd2b4b2b77cbf1"
+  }
+}

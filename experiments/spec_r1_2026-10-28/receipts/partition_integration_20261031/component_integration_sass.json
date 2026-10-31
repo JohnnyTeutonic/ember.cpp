@@ -1,0 +1,21 @@
+{
+  "scope": "compile-only cross-toolchain comparison; no device execution",
+  "component_nvcc": "12.4.131",
+  "integration_nvcc": "12.6.85",
+  "kernels": {
+    "partition_rows_kernel": {
+      "instructions_identical": false,
+      "component_function": "_Z21partition_rows_kernelPKfiP7RowPicki",
+      "integration_function": "_ZN12ember_verify50_GLOBAL__N__SOURCEID_17_verify_kernels_cu_7463d6cb21partition_rows_kernelEPKfiPNS_7RowPickEi",
+      "component_body_sha256": "6fbce6147462d2e509834402e0177b0b1439066e0c5c5febb67d8350fd44cc96",
+      "integration_body_sha256": "a10215e27938b56082410a142b301d2cd9584dd977ed39f69423d2fd80d21f51"
+    },
+    "merge_parts": {
+      "instructions_identical": false,
+      "component_function": "_Z11merge_partsPK7RowPickPS_i",
+      "integration_function": "_ZN12ember_verify50_GLOBAL__N__SOURCEID_17_verify_kernels_cu_7463d6cb11merge_partsEPKNS_7RowPickEPS1_i",
+      "component_body_sha256": "ad5224408cea6b757fe197d559c9d8cf4a68cb302cb3cfe6941d1cc148f43e85",
+      "integration_body_sha256": "e69a2925226c798914c49083adca14a49b57f13ece108f45ca138695e2b3d2f7"
+    }
+  }
+}

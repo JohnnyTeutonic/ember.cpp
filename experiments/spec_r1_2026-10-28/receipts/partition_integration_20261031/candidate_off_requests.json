@@ -1,0 +1,75 @@
+[
+  {
+    "reply": "One plus two plus two plus two plus two plus two plus",
+    "ids": [
+      2965,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576,
+      858,
+      7576
+    ],
+    "prompt_ids": [
+      2,
+      1225,
+      321,
+      858,
+      7576,
+      858,
+      34,
+      3
+    ],
+    "stop_id": -1,
+    "tokens": 12,
+    "prompt_tokens": 8,
+    "stop_reason": "length"
+  },
+  {
+    "reply": "He was a very famous singer.",
+    "ids": [
+      3272,
+      415,
+      261,
+      976,
+      3870,
+      1911,
+      267,
+      17
+    ],
+    "prompt_ids": [
+      2,
+      5110,
+      1616,
+      321,
+      1298,
+      68,
+      17,
+      3,
+      3668,
+      1298,
+      68,
+      17,
+      1,
+      2,
+      1225,
+      934,
+      311,
+      1393,
+      669,
+      1616,
+      415,
+      34,
+      3
+    ],
+    "stop_id": 1,
+    "tokens": 8,
+    "prompt_tokens": 23,
+    "stop_reason": "eos"
+  }
+]

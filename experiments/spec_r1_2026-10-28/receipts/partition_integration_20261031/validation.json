@@ -1,0 +1,176 @@
+{
+  "status": "CPU_AND_COMPILE_ONLY_INTEGRATION_COMPLETE",
+  "base_commit": "c95c557a8408c01c7b2aaa8c7ee63af3874f310b",
+  "source_sha256": {
+    "api.cpp": "43e66be5dfaa369a165af8746b6de516b0559f9168a7d9379e019ed16a76b903",
+    "model.cpp": "6c23856da6015306abeefd59af5c6044fc6790779d93bd672614c51b02a0fd6f",
+    "model.h": "974aa758b8eaaf570359d72a1549bcaf5f1495e08f07a25b80cf60a7e684204d",
+    "verify_kernels.cu": "89507d2459f75336be9d453d85df60cf9355702add11a71613223ae754436e3f",
+    "verify_kernels.h": "de5b1edc70bd4ef6349d9203b4d408d6efd3023a6de5ddd23e6f28a05ba4aee1",
+    "decode_pick_policy.h": "53cd249e1c9ebaf8166a067eacb12a18ed09f0acb2a51cf3bdd028779d169d84",
+    "row_pick_partitioned.cuh": "a9500fcbdcaa793b12ecbd5d529c6826c669ea4b4ba4630f82a51c1737d27346",
+    "tools/row_pick_profile/test_integration.py": "f0569b85837e75545d68c7f113b380bd333442ced163a235b09888e6cedca1eb",
+    "tools/row_pick_profile/check_integration_sass.py": "de8a298a7c9b92ddece77da40025ba16ed08d6a2463a51c2ab7ae066e65d3548",
+    "tools/row_pick_profile/profile.cu": "6bc7455910ae3648adf868149866d5d7167e7866c3fbbec84d3adf2d45bc32a9",
+    "tools/row_pick_profile/prepare.py": "5c4b9811f921086bff2403f6c400871f9fe1162a6667e55f566aed0648423908",
+    "experiments/spec_r1_2026-10-28/test_decode_pick.py": "bc35bbe5bc3f3a82f9d3bf45924f1c3640291ce7ac2f655eb23d5c5bcb091a4c",
+    "experiments/spec_r1_2026-10-28/cpu_pick_integration_check.py": "f86ba1cdcf14f8864e9fb7e17224567cd1ce7b457fb27408214d3a0e22a9d9c0"
+  },
+  "commands_source_sha256": "0f0322131f61849d0153de627b921f986d273c9332949eb7b4033484a606c3d2",
+  "raw_artifact_home": "/home/jonat/ember_e10_integration_checks_20261031",
+  "checks": {
+    "pytest": {
+      "pass": 54,
+      "fail": 0
+    },
+    "ctest": {
+      "pass": 3,
+      "fail": 0
+    },
+    "ir_conformance": {
+      "PASS": 554,
+      "FAIL": 0,
+      "SKIP": 44,
+      "XFAIL": 0,
+      "XPASS": 0
+    },
+    "native_numerical_cases": 18,
+    "state_template_cases": 17,
+    "cpu_http": {
+      "status": "PASS_CPU_ONLY",
+      "paths": {
+        "baseline": "/home/jonat/ember_publication_build_20261030/tinyllama_server",
+        "candidate": "/home/jonat/ember_e10_integration_build_20261031/tinyllama_server",
+        "model": "/mnt/c/ml_artifacts/tiny_chat/e1/pick_e1_L16/model.gguf"
+      },
+      "sha256": {
+        "baseline": "ba73304a2e73648fad1d52eac05d77022bb0d84ae4bd1efd40230634627902d2",
+        "candidate": "b9aa22dc3e98a99eec1ecefdb2204e6e7fa4e2b549376981ec5d817a87d71029",
+        "model": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9"
+      },
+      "runs": [
+        "baseline",
+        "candidate_off",
+        "candidate_option"
+      ],
+      "requests_per_run": 2,
+      "row_evidence": {
+        "baseline": {
+          "sha256": "86ef97f1822d3f60357accfadb6d16e210000f3b3f4a70d3ecb2985eba074935",
+          "rows": 21,
+          "values": 344064
+        },
+        "candidate_off": {
+          "sha256": "86ef97f1822d3f60357accfadb6d16e210000f3b3f4a70d3ecb2985eba074935",
+          "rows": 21,
+          "values": 344064
+        },
+        "candidate_option": {
+          "sha256": "86ef97f1822d3f60357accfadb6d16e210000f3b3f4a70d3ecb2985eba074935",
+          "rows": 21,
+          "values": 344064
+        }
+      },
+      "scope": "CPU HTTP behaviour and finite float32 row identity only; experimental CUDA dispatch was not executed"
+    },
+    "cuda_host_syntax": [
+      "model.cpp",
+      "api.cpp"
+    ],
+    "cpu_host_syntax": [
+      "model.cpp",
+      "api.cpp"
+    ],
+    "cuda_compile_only": "CUDA 12.6 SM89, verify_kernels.cu baseline and candidate",
+    "existing_kernel_sass": {
+      "status": "PASS_COMPILE_ONLY",
+      "existing_functions_equal": 42,
+      "added_functions": [
+        "_ZN12ember_verify50_GLOBAL__N__SOURCEID_17_verify_kernels_cu_7463d6cb11merge_partsEPKNS_7RowPickEPS1_i",
+        "_ZN12ember_verify50_GLOBAL__N__SOURCEID_17_verify_kernels_cu_7463d6cb21partition_rows_kernelEPKfiPNS_7RowPickEi"
+      ],
+      "normalization": "compiler anonymous-namespace identifier only; no instruction changes masked",
+      "inputs": {
+        "baseline": "fbf22a017499393699840cbaf22942c8970abe65335e4c12ea0bdbcfdf2af75f",
+        "candidate": "9556582383f3b76b6828c47d9e18f299b16798c3d28611f1d1bd2b4b2b77cbf1"
+      }
+    },
+    "cross_toolchain_candidate_comparison": {
+      "scope": "compile-only cross-toolchain comparison; no device execution",
+      "component_nvcc": "12.4.131",
+      "integration_nvcc": "12.6.85",
+      "kernels": {
+        "partition_rows_kernel": {
+          "instructions_identical": false,
+          "component_function": "_Z21partition_rows_kernelPKfiP7RowPicki",
+          "integration_function": "_ZN12ember_verify50_GLOBAL__N__SOURCEID_17_verify_kernels_cu_7463d6cb21partition_rows_kernelEPKfiPNS_7RowPickEi",
+          "component_body_sha256": "6fbce6147462d2e509834402e0177b0b1439066e0c5c5febb67d8350fd44cc96",
+          "integration_body_sha256": "a10215e27938b56082410a142b301d2cd9584dd977ed39f69423d2fd80d21f51"
+        },
+        "merge_parts": {
+          "instructions_identical": false,
+          "component_function": "_Z11merge_partsPK7RowPickPS_i",
+          "integration_function": "_ZN12ember_verify50_GLOBAL__N__SOURCEID_17_verify_kernels_cu_7463d6cb11merge_partsEPKNS_7RowPickEPS1_i",
+          "component_body_sha256": "ad5224408cea6b757fe197d559c9d8cf4a68cb302cb3cfe6941d1cc148f43e85",
+          "integration_body_sha256": "e69a2925226c798914c49083adca14a49b57f13ece108f45ca138695e2b3d2f7"
+        }
+      }
+    },
+    "sampler": "19,830 compact decisions and 5,370 fallbacks; ids and RNG state equal"
+  },
+  "build_environment": {
+    "cxx": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+    "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2024 NVIDIA Corporation\nBuilt on Tue_Oct_29_23:50:19_PDT_2024\nCuda compilation tools, release 12.6, V12.6.85\nBuild cuda_12.6.r12.6/compiler.35059454_0",
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "keramos_commit": "064a70aa7794ace047a11931c7db325256903d9d",
+    "keramos_runner_sha256": "7802a7bb81acb57a088406b01ddff8359971455ad9dfcb4e3b1616a09b2f2a72",
+    "keramos_manifest_sha256": "ed0d29666bf667d65fbc0a2d453d6fcb7183d2c3cb8f092abbf188d0cd8f75e0"
+  },
+  "review": {
+    "independent_reviewer": "extension_run agent",
+    "production_blocker": false,
+    "action": "restored five Unicode comment lines; retained explicit diagnostic lookups at positions 14-16"
+  },
+  "limits": {
+    "new_gpu_execution": false,
+    "new_paid_calls": false,
+    "default_changed": false,
+    "adoption": "NOT_ADOPTED",
+    "historical_default_off_off_stable": false,
+    "historical_paired_speedups": [
+      1.15925,
+      1.14146
+    ],
+    "unchanged_speed_threshold": 1.15,
+    "new_full_model_gain": null,
+    "experimental_route_requires_deterministic_mode": true,
+    "original_default_and_deterministic_matrix_replaced": false,
+    "next_device_work": "separately reviewed integration diagnostic only; original full adoption gate remains unresolved"
+  },
+  "technical_history": "Initial conformance invocation used a nonexistent Keramos publication path. Its error log is retained; corrected and final invocations both passed the complete current suite.",
+  "artifacts": {
+    "cmake_cpu.log": "828dba6e909196e6e79b3d97a33c68b4ce25ddbe7804a187a0e2e4d4f0a6c92f",
+    "build_cpu_final.log": "46887df9c0a32d5d03dd805c50c6ba98bf58e83659885ff75e728c4780f08120",
+    "build_baseline_cpu.log": "200f1dc86a635a65212020f4906f80a5b71402f3c7f73e5031432f12805f4066",
+    "ctest_final.log": "f9a0a4e08cb8be3409affec11f5ac7dcc742ce773ef88def1951bb6a04c9f6e6",
+    "pytest_final.log": "521a993756cdd7a5324c690ffead77dc71a48d093bf766c3475be4a27a8054c2",
+    "pytest_final.xml": "1130c8a615c24065e8d0d7d33f41b6b585c8db915dfa2cd7621c36a7806af391",
+    "ruff_final.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "sampler_final.log": "fa4ad1a53f7e1e131c28fb88ceceb056c9c4266282481b43a3465249c7bbb421",
+    "ir_numerics_final.json": "6a69c4fb55c496dc26bf8e3d3d4d05ce9f9e985b74e3231ff963f8f19e5a9c5b",
+    "state_templates_final.log": "7a9adb197e9e1c6a77f0632cc778866fc7b851bca3142becd703d41d2aa77f1d",
+    "conformance_final.json": "62784813d6c4239e76257ff84c7130a658100c90761e568130b86ef331757a1a",
+    "conformance_final.log": "8d0b30d72c6fa36debe1a06ac82f26c461b786c29cefcfcc21669d2a253231f3",
+    "conformance_invocation_path_failure.log": "534cd36d00c18bb9afba1ad4c3aee52041e88e40bafaa8769faac4f7d2efc3de",
+    "nvcc_baseline.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nvcc_candidate.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sass_identity.json": "40ffa40c11942d23cbbd5d85306ca56345771c144e6bfed69973d45312ad1419",
+    "component_integration_sass.json": "720740a9a706d82029733b9bb651c010b095e08d0e3025b1bc2248f1f3a1f565",
+    "archived_component_identity.json": "4e6539335a139a96c4b2b243f2e3db4d2161964d8ff995b73f955100629904e0",
+    "cuda_host_final_model.cpp.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cuda_host_final_api.cpp.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cpu_host_final_model.cpp.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cpu_host_final_api.cpp.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cpu_http_result.json": "eab30e400cde49a6cc8bc2cb99d0fffb5751179e326d9943ac1f1dafacb5bd56"
+  }
+}

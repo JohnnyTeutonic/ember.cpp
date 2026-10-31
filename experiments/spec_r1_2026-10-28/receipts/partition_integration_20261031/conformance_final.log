@@ -1,0 +1,600 @@
+adapter ember.cpp (backend cpu, exact True); 298 cases
+PASS model/pk_attnres: log-probs worst 8.99e-08; greedy 4/4
+PASS trace/pk_attnres_decode: 6 steps
+PASS model/pk_flex_expr: log-probs worst 1.09e-07; greedy 4/4
+PASS trace/pk_flex_expr_decode: 6 steps
+PASS model/pk_flex_highway: log-probs worst 6.34e-08; greedy 4/4
+PASS trace/pk_flex_highway_decode: 6 steps
+PASS model/pk_flex_mdha: log-probs worst 1.09e-07; greedy 4/4
+PASS trace/pk_flex_mdha_decode: 6 steps
+PASS trace/pk_flex_mdha_snapshot: 5 steps
+PASS model/pk_flex_shaw: log-probs worst 9.36e-08; greedy 4/4
+PASS trace/pk_flex_shaw_decode: 6 steps
+PASS model/pk_flex_t5: log-probs worst 1.06e-07; greedy 4/4
+PASS trace/pk_flex_t5_decode: 6 steps
+PASS model/pk_gpt2: log-probs worst 8.98e-08; greedy 4/4
+PASS trace/pk_gpt2_decode: 6 steps
+PASS model/pk_gpt2_swa: log-probs worst 6.06e-08; greedy 4/4
+PASS trace/pk_gpt2_swa_decode: 6 steps
+PASS model/pk_kimi: log-probs worst 5.62e-08; greedy 4/4
+PASS trace/pk_kimi_decode: 6 steps
+PASS trace/pk_kimi_snapshot: 5 steps
+PASS model/pk_llama: log-probs worst 5.71e-08; greedy 4/4
+PASS trace/pk_llama_decode: 6 steps
+PASS trace/pk_llama_truncate: 3 steps
+PASS model/pk_llama_attnres: log-probs worst 8.98e-08; greedy 4/4
+PASS trace/pk_llama_attnres_decode: 6 steps
+PASS model/pk_llama_attnres_rec: log-probs worst 8.42e-08; greedy 4/4
+PASS trace/pk_llama_attnres_rec_decode: 6 steps
+PASS model/pk_mamba: log-probs worst 9.41e-08; greedy 4/4
+PASS trace/pk_mamba_decode: 6 steps
+PASS trace/pk_mamba_snapshot: 5 steps
+PASS model/pk_moe: log-probs worst 5.84e-08; greedy 4/4
+PASS trace/pk_moe_decode: 6 steps
+PASS model/pk_mor: log-probs worst 1.59e-07; greedy 4/4; depth traces 4/4
+PASS trace/pk_mor_decode: 6 steps
+PASS trace/pk_mor_truncate: 3 steps
+PASS model/pk_recurrence: log-probs worst 9.10e-08; greedy 4/4
+PASS trace/pk_recurrence_decode: 6 steps
+PASS trace/pk_recurrence_snapshot: 5 steps
+PASS model/pk_recursive: log-probs worst 1.09e-07; greedy 4/4
+PASS trace/pk_recursive_decode: 6 steps
+PASS model/pk_srd: log-probs worst 1.14e-07; greedy 4/4
+PASS trace/pk_srd_decode: 6 steps
+PASS trace/pk_srd_snapshot: 5 steps
+PASS model/pk_state: log-probs worst 9.74e-08; greedy 4/4
+PASS trace/pk_state_evict_on: 9 steps
+PASS trace/pk_state_evict_off: 9 steps
+PASS trace/pk_state_rewind_evicted: 3 steps
+PASS trace/pk_state_rewind_current: 3 steps
+PASS trace/pk_state_rewind_at_block: 3 steps
+PASS model/tp_deepseek2: log-probs worst 1.20e-06; greedy 4/4
+PASS trace/tp_deepseek2_decode: 6 steps
+PASS trace/tp_deepseek2_truncate: 3 steps
+PASS model/tp_deepseek3: log-probs worst 5.89e-07; greedy 4/4
+PASS trace/tp_deepseek3_decode: 6 steps
+PASS trace/tp_deepseek3_truncate: 3 steps
+PASS model/tp_gemma2: log-probs worst 1.55e-07; greedy 4/4
+PASS trace/tp_gemma2_decode: 6 steps
+PASS model/tp_gemma3: log-probs worst 6.07e-07; greedy 4/4
+PASS trace/tp_gemma3_decode: 6 steps
+PASS model/tp_gptneox: log-probs worst 2.43e-07; greedy 4/4
+PASS trace/tp_gptneox_decode: 6 steps
+PASS model/tp_llama_hd16: log-probs worst 3.61e-07; greedy 4/4
+PASS trace/tp_llama_hd16_decode: 6 steps
+PASS trace/tp_llama_hd16_truncate: 3 steps
+PASS model/tp_mamba1: log-probs worst 4.53e-07; greedy 4/4
+PASS trace/tp_mamba1_decode: 6 steps
+PASS trace/tp_mamba1_snapshot: 5 steps
+PASS model/tp_mistral: log-probs worst 2.63e-07; greedy 4/4
+PASS trace/tp_mistral_decode: 6 steps
+PASS model/tp_mistral_hd16: log-probs worst 4.76e-07; greedy 4/4
+PASS trace/tp_mistral_hd16_decode: 6 steps
+PASS model/tp_phi3: log-probs worst 5.97e-07; greedy 4/4
+PASS trace/tp_phi3_decode: 6 steps
+PASS trace/tp_phi3_truncate: 3 steps
+PASS model/tp_qwen2moe: log-probs worst 4.83e-07; greedy 4/4
+PASS trace/tp_qwen2moe_decode: 6 steps
+PASS model/tp_qwen3: log-probs worst 3.37e-07; greedy 4/4
+PASS trace/tp_qwen3_decode: 6 steps
+PASS trace/tp_qwen3_truncate: 3 steps
+PASS model/tp_qwen3_hd16: log-probs worst 4.06e-07; greedy 4/4
+PASS trace/tp_qwen3_hd16_decode: 6 steps
+PASS trace/tp_qwen3_hd16_truncate: 3 steps
+PASS model/tp_qwen3moe: log-probs worst 4.48e-07; greedy 4/4
+PASS trace/tp_qwen3moe_decode: 6 steps
+SKIP op/embedding/rows: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/embedding/state_weight: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/pos_embedding/rows: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/linear/bias: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/linear/no_bias: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/linear/tied_to: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/scale/bias: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/scale/no_bias: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+PASS op/split/three: a 0 values differ in their bits; b 0 values differ in their bits; c 0 values differ in their bits
+PASS op/split/groups: a 0 values differ in their bits; b 0 values differ in their bits
+SKIP op/rmsnorm/row: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/rmsnorm/group: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/rmsnorm/weight_offset: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/layernorm/row: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/gelu/tanh: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/gelu/none: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/silu/x: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/sigmoid/x: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/relu/x: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/add/ab: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/mul/ab: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/sub/ab: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/affine/scale_shift: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/mul_col/x_c: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/rms_row/eps: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+PASS op/rope/interleaved: q worst 1.36e-08 of max(1, |ref|); k worst 1.25e-09 of max(1, |ref|)
+PASS op/rope/neox: q worst 3.17e-09 of max(1, |ref|); k worst 0.00e+00 of max(1, |ref|)
+PASS op/rope/neox_partial: q worst 0.00e+00 of max(1, |ref|); k worst 0.00e+00 of max(1, |ref|)
+PASS op/rope/freq_scale: q worst 1.73e-09 of max(1, |ref|); k worst 2.66e-09 of max(1, |ref|)
+PASS op/rope/grouped_query: q worst 1.36e-08 of max(1, |ref|); k worst 4.88e-09 of max(1, |ref|)
+SKIP op/rope/first_head: run_node: rope_heads "first" is not implemented in ember (refused at load by name)
+PASS op/rope/freq_factors: q worst 2.68e-08 of max(1, |ref|); k worst 2.17e-08 of max(1, |ref|)
+PASS op/rope/freq_factors_short: q worst 5.92e-08 of max(1, |ref|); k worst 4.73e-08 of max(1, |ref|)
+PASS op/rope/freq_factors_long: q worst 2.68e-08 of max(1, |ref|); k worst 2.17e-08 of max(1, |ref|)
+PASS op/rope/attn_factor: q worst 4.35e-08 of max(1, |ref|); k worst 6.39e-08 of max(1, |ref|)
+PASS op/rope/freq_factors_partial_attn_factor: q worst 1.05e-07 of max(1, |ref|); k worst 1.38e-07 of max(1, |ref|)
+PASS op/rope/freq_factors_values: q worst 0.00e+00 of max(1, |ref|); k worst 1.25e-09 of max(1, |ref|)
+PASS op/attention/causal: a worst 7.04e-08 of max(1, |ref|)
+PASS op/attention/window_sinks: a worst 7.04e-08 of max(1, |ref|)
+PASS op/attention/grouped_query: a worst 9.89e-08 of max(1, |ref|)
+PASS op/attention/position_bias: a worst 1.60e-07 of max(1, |ref|)
+PASS op/attention/position_bias_window_sinks: a worst 1.59e-07 of max(1, |ref|)
+PASS op/attention/position_bias_grouped_query: a worst 1.10e-07 of max(1, |ref|)
+PASS op/attention/relative_kv: a worst 7.38e-08 of max(1, |ref|)
+PASS op/attention/relative_kv_per_head: a worst 4.19e-08 of max(1, |ref|)
+PASS op/attention/relative_kv_keys_only: a worst 1.27e-07 of max(1, |ref|)
+PASS op/attention/relative_kv_window_sinks: a worst 7.38e-08 of max(1, |ref|)
+PASS op/attention/relative_kv_grouped_query: a worst 1.14e-07 of max(1, |ref|)
+PASS op/attention/relative_kv_distance_zero: a worst 1.19e-07 of max(1, |ref|)
+PASS op/attention/softcap: a worst 1.19e-07 of max(1, |ref|)
+PASS op/attention/softcap_window_sinks: a worst 1.19e-07 of max(1, |ref|)
+PASS op/attention/softcap_position_bias: a worst 1.25e-07 of max(1, |ref|)
+PASS op/moe_ffn/renorm: y worst 2.64e-07 of max(1, |ref|)
+PASS op/moe_ffn/raw: y worst 2.64e-07 of max(1, |ref|)
+PASS op/moe_ffn/sigmoid_renorm: y worst 1.21e-07 of max(1, |ref|)
+PASS op/moe_ffn/sigmoid_bias_groups: y worst 1.26e-07 of max(1, |ref|)
+PASS op/moe_ffn/softmax_bias_raw: y worst 2.74e-07 of max(1, |ref|)
+SKIP op/list/two: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/append/one: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/depth_attend/one_source: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/depth_attend/three_sources: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/depth_attend/eps_default: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+PASS op/expr/gelu_sigmoid: y worst 1.61e-08 of max(1, |ref|)
+PASS op/expr/relu_squared: y worst 0.00e+00 of max(1, |ref|)
+PASS op/expr/where_rowmean: y worst 0.00e+00 of max(1, |ref|)
+PASS op/expr/layer_norm: y worst 0.00e+00 of max(1, |ref|)
+PASS op/expr/rowsum_constant: y worst 0.00e+00 of max(1, |ref|)
+PASS op/expr/depth_200: y worst 0.00e+00 of max(1, |ref|)
+SKIP op/linear_attention/two_heads: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/ssm_scan/n4: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/conv1d_causal/k4: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+SKIP op/selective_scan/d3n2: run_node: ember's adapter runs recurrence, expr, attention, mla_attention, split, rope and moe_ffn nodes only (whole-model methods for the other ops)
+PASS op/recurrence/linear_attention_body: y worst 4.89e-08 of max(1, |ref|); state lin.num worst 2.90e-08 of max(1, |ref|); state lin.den worst 5.87e-08 of max(1, |ref|)
+PASS op/recurrence/ssm_scan_body: y 0 values differ in their bits; state ssm.s 0 values differ in their bits
+PASS op/recurrence/conv1d_causal_body: y 0 values differ in their bits; state conv.x 0 values differ in their bits
+PASS op/recurrence/selective_scan_body: y worst 1.81e-07 of max(1, |ref|); state ssm.s worst 2.47e-08 of max(1, |ref|)
+PASS op/recurrence/rnn_init_offset: y worst 8.28e-08 of max(1, |ref|); state rnn.h worst 5.96e-08 of max(1, |ref|)
+PASS op/recurrence/ema_bias_corrected: y worst 0.00e+00 of max(1, |ref|); state avg.m worst 0.00e+00 of max(1, |ref|); state avg.n worst 0.00e+00 of max(1, |ref|)
+PASS op/recurrence/ema_exact: y 0 values differ in their bits; state avg.m 0 values differ in their bits; state avg.n 0 values differ in their bits
+PASS op/recurrence/square_weight_declaration: y 0 values differ in their bits; state sq.h 0 values differ in their bits
+PASS op/recurrence/read_beyond_declaration: y 0 values differ in their bits; state pad.h 0 values differ in their bits
+PASS op/mla_attention/two_heads: a worst 9.22e-08 of max(1, |ref|)
+PASS op/mla_attention/window_sinks: a worst 9.22e-08 of max(1, |ref|)
+PASS op/mla_attention/one_head: a worst 6.80e-08 of max(1, |ref|)
+PASS refuse/unknown_op: refused: IR op 'warp' (block) has no CPU kernel in ember's interpreter
+PASS refuse/unknown_attribute: refused: IR_SPEC 3.5 (rule 4): doc.block.nodes[5] (attention) has the key 'temperature', which its specification does not define
+PASS refuse/unknown_top_key: refused: IR_SPEC 3.2 (rule 1): doc has the key 'profiles', which its specification does not define
+PASS refuse/version_2: refused: IR version 2 is not supported (ember reads 0 and 1)
+PASS refuse/repeat_ne_n_layers: refused: IR weight 'blk.2.attn_norm.weight' is not in the GGUF
+PASS refuse/model_ctx_missing: refused: IR_SPEC 3.3 (rule 3): doc.model lacks the required key 'ctx'; IR_SPEC 3.3: model.ctx missing or not a positive integer
+PASS refuse/per_layer_wrong_length: refused: IR rope: per-layer 'theta' has 1 entries for 2 blocks
+PASS refuse/per_layer_in_head: refused: IR rmsnorm: a per-layer 'eps' is not implemented in ember
+PASS refuse/add_one_input: refused: IR_SPEC 10.1 rule 7: block[7] add reads 1 value(s), not 2
+PASS refuse/rope_pairing_unknown: refused: IR rope pairing 'halves' is not implemented in ember
+PASS refuse/rope_n_rot_odd: refused: IR rope: n_rot 3 / head_dim 8 (kv state head_dim 8) is not usable
+PASS refuse/attention_not_causal: refused: IR attention with causal=false is not implemented in ember
+PASS refuse/attention_heads_not_multiple: refused: IR attention: heads 3 is not a multiple of kv_heads 2
+PASS refuse/attention_window_differs: refused: IR_SPEC 5.15: attention window 4 (application 0) differs from its kv state kv's 0
+PASS refuse/slot_declared_twice: refused: IR_SPEC 6.1: state slot kv declared twice
+PASS refuse/slot_unread: refused: IR_SPEC 6.1: state slot kv2 is read by no node
+PASS refuse/slot_unknown_kind: refused: IR state kind 'paged' has no CPU implementation in ember
+PASS refuse/attention_no_slot: refused: IR_SPEC 6.1: block: attention reads state 'nowhere', not a declared kv slot; IR_SPEC 6.1: state slot kv is read by no no
+PASS refuse/kv_slot_field_missing: refused: IR_SPEC 6.2 (rule 12): doc.block.state[0] lacks the required key 'max_len'; IR_SPEC 6.2: kv state kv: max_len missing
+PASS refuse/tensor_index_without_weight_index: refused: IR_SPEC 7.2: block[1] linear: tensor_index needs a block with weight_index
+PASS refuse/name_with_i_outside_block: refused: IR weight 'blk.{i}.output_norm.weight' uses {i} outside the block
+PASS refuse/evict_on_causal: refused: IR kv state evict turn_state needs every attention node to have mask turn_state
+PASS refuse/missing_tensor: refused: IR weight 'blk.0.nope.weight' is not in the GGUF
+PASS refuse/gelu_approx_unknown: refused: IR gelu approx 'sigmoid' is not implemented in ember
+PASS refuse/split_count: refused: IR_SPEC 5.5: block[2] split: 2 sizes for 3 outputs
+PASS refuse/expr_does_not_parse: refused: IR expr: expected an operand, got the end at column 7 in "max(x,"
+PASS refuse/moe_top_k_too_large: refused: IR_SPEC 5.16: block[9] moe_ffn: top_k 5 is not in 1 .. n_experts 4
+PASS refuse/moe_gate_norm_unknown: refused: IR moe_ffn gate_norm 'topk' is not implemented
+PASS refuse/recurrent_dtype_f16: refused: IR recurrent state 'lin': dtype must be f32
+PASS refuse/recurrent_shape_mismatch: refused: IR recurrent state 'lin': num is not [heads, head_dim]
+PASS refuse/recurrent_op_mismatch: refused: IR recurrent state 'lin' belongs to op 'ssm_scan', not linear_attention
+PASS refuse/linear_attention_not_causal: refused: IR linear_attention with causal=false is not implemented in ember
+PASS refuse/conv_kernel_one: refused: IR conv1d_causal needs channels >= 1 and kernel >= 2
+PASS refuse/weight_index_wrong_length: refused: IR block weight_index has 3 entries for 4 block applications
+PASS refuse/weight_index_unused_layer: refused: IR block weight_index never uses stored layer 1
+PASS refuse/weight_index_negative: refused: IR block weight_index entries must be integers >= 0
+PASS refuse/mor_route_not_first: refused: IR depth_route must be the block's first node
+PASS refuse/mor_expert_choice: refused: IR depth_route route 'expert_choice' is not implemented in ember (causal token choice only)
+PASS refuse/mor_unequal_steps: refused: IR depth_route step: application 2 has step 0, expected 1 (consecutive, ascending, equal-length steps)
+PASS refuse/mor_steps_descending: refused: IR depth_route step: application 1 has step 2, expected 0 (consecutive, ascending, equal-length steps)
+PASS refuse/mor_step_length_wrong: refused: IR depth_route: per-layer 'step' has 4 entries for 5 blocks
+PASS refuse/mor_no_kv_rows_active: refused: IR depth_route needs a kv state with kv_rows "active"
+PASS refuse/mor_kv_from: refused: IR kv state: kv_from (recursive KV sharing) is not implemented in ember
+PASS refuse/mor_gate_unknown: refused: IR depth_route gate 'sigmoid' is not score or none
+PASS refuse/mor_router_with_i: refused: IR depth_route weight names its tensor in full (no {i})
+PASS refuse/mor_kv_rows_shared: refused: IR kv state: kv_rows '"shared"' is not implemented in ember
+PASS refuse/mor_route_in_head: refused: IR head op 'depth_route' is not row-wise
+PASS refuse/turn_state_with_window: refused: IR attention mask turn_state needs window 0 and sinks 0 (block 0 has window 4, sinks 0)
+PASS refuse/turn_state_without_state_weight: refused: paperkiln.state_tokens.k is 2 but the IR's embedding has no state_weight
+PASS refuse/evict_without_mask: refused: IR kv state evict turn_state needs every attention node to have mask turn_state
+PASS refuse/evict_unknown: refused: IR kv state: evict "oldest" is not implemented in ember (turn_state only)
+PASS refuse/mask_unknown: refused: IR attention mask "sliding" is not implemented in ember (causal or turn_state)
+PASS refuse/state_weight_with_i: refused: IR embedding state_weight names its tensor in full (no {i})
+PASS refuse/two_state_weights: refused: IR: more than one embedding with a state_weight
+PASS refuse/state_weight_wrong_name: refused: IR weight 'nope.weight' is not in the GGUF
+PASS refuse/recurrence_body_does_not_parse: refused: IR_SPEC 6.10 (rule 31): update[1] does not parse: expected an operand at column 22
+PASS refuse/recurrence_name_twice: refused: IR_SPEC 6.10 (rule 31): the name 'num' is declared twice
+PASS refuse/recurrence_rowsum: refused: IR_SPEC 6.10 (rule 31): readout uses rowsum at column 10 (the row reductions are not part of a recurrence body; sum repl
+PASS refuse/recurrence_index_size_zero: refused: IR_SPEC 6.10 (rule 31): index 'e' has size 0, not a positive integer
+PASS refuse/recurrence_index_out_of_scope: refused: IR_SPEC 6.10 (rule 32): readout: sum over index 'h' at column 14, which is already in scope
+PASS refuse/recurrence_init_reads_input: refused: IR_SPEC 6.10 (rule 32): init[0] reads 'q' at column 12, which its section cannot read
+PASS refuse/recurrence_rank_mismatch: refused: IR_SPEC 6.10 (rule 32): update[1] reads 'den' at column 12 with 1 index(es); it has 2 dimension(s)
+PASS refuse/recurrence_index_undeclared: refused: IR_SPEC 6.10 (rule 32): readout: index 'f' at column 16 is not declared
+PASS refuse/recurrence_slot_shape: refused: IR_SPEC 6.10 (rule 33): the slot "lin"'s tensor 'num' has shape [16], the update's is [2,8]
+PASS refuse/recurrence_slot_missing_tensor: refused: IR_SPEC 6.10 (rule 33): the slot "lin" has no tensor 'den' (the update assigns it)
+PASS refuse/recurrence_init_flag: refused: IR_SPEC 6.10 (rule 33): the slot "lin"'s tensor 'num' has init "body", not 0 (the node's init does not assign it)
+PASS refuse/recurrence_weight_size: refused: IR_SPEC 6.10 (rule 34): recurrence weight A reads 'blk.0.ssm_b.weight', which has 8 elements; its declaration has 64
+PASS refuse/recurrence_assignment_repeats_index: refused: IR_SPEC 6.10 (rule 32): readout[0]: the assignment repeats index 'h' at column 5
+PASS refuse/recurrence_bare_undeclared_name: refused: IR_SPEC 6.10 (rule 32): readout: 'foo' at column 21 is not declared
+PASS refuse/reads_unwritten_value: refused: IR_SPEC 3.5 (rule 36): block[7] add reads 'nowhere', which no node before it writes (application 0)
+PASS refuse/embed_writes_no_x: refused: IR_SPEC 3.5 (rule 36): the embed section writes no 'x'; IR_SPEC 3.5 (rule 36): block[0] rmsnorm reads 'x', which no node
+PASS refuse/head_writes_no_logits: refused: IR_SPEC 3.5 (rule 36): the head writes no 'logits'
+PASS refuse/mor_reads_outside_value: refused: IR_SPEC 7.4 (rule 36): block[1] add reads 'e', outside what a depth_route step sees (x, pos and the values written befor
+PASS refuse/mor_step_gap: refused: IR depth_route step: the recursion is not R equal steps
+PASS refuse/mor_reads_tokens: refused: IR_SPEC 3.5: block[1] add reads the graph input 'tokens' as its input 1; IR_SPEC 7.4 (rule 36): block[1] add reads 'toke
+PASS refuse/mor_reads_route_out: refused: IR_SPEC 7.4: block[1] add reads depth_route's out 'rec_depth' (the depth report)
+PASS refuse/position_bias_bucket_negative: refused: IR_SPEC 5.15 (rule 39): doc.block.nodes[5].position_bias.buckets[1] -1 is below the minimum 0; IR_SPEC 5.15 (rule 39): b
+PASS refuse/position_bias_buckets_empty: refused: IR_SPEC 5.15 (rule 39): doc.block.nodes[5].position_bias.buckets needs at least 1 item(s); IR_SPEC 5.15 (rule 39): block
+PASS refuse/position_bias_table_shape: refused: IR_SPEC 5.15 (rule 39): block[5] attention position_bias 'token_embd.weight' (application 0) has ne [16, 15], not {heads
+PASS refuse/position_bias_per_layer: refused: IR attention: a per-layer 'position_bias' is not implemented in ember
+PASS refuse/tensor_index_in_head: refused: IR_SPEC 7.2: head[0] depth_attend: tensor_index needs a block with weight_index
+PASS refuse/tensor_index_value_unknown: refused: IR_SPEC 3.5 (rule 5): doc.block.nodes[0].tensor_index "stored" is not one of ["application"]
+PASS refuse/tensor_index_on_affine: refused: IR_SPEC 3.5 (rule 4): doc.block.nodes[1] (affine) has the key 'tensor_index', which its specification does not define
+PASS refuse/tensor_index_absent_application_tensor: refused: IR weight 'blk.3.attn_norm.weight' is not in the GGUF
+PASS refuse/relative_kv_distance_negative: refused: IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv.max_distance -1 is below the minimum 0
+PASS refuse/relative_kv_without_key: refused: IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv lacks the required key 'key'; IR_SPEC 5.15 (rule 40): block[5] at
+PASS refuse/relative_kv_unknown_field: refused: IR_SPEC 5.15 (rule 40): doc.block.nodes[5].relative_kv has the key 'buckets', which its specification does not define; I
+PASS refuse/relative_kv_key_shape: refused: IR_SPEC 5.15 (rule 40): block[5] attention relative_kv key 'token_embd.weight' (application 0) has ne [16, 15], not {hea
+PASS refuse/relative_kv_value_shape: refused: IR_SPEC 5.15 (rule 40): block[5] attention relative_kv value 'output_norm.weight' (application 0) has ne [16], not {head
+PASS refuse/relative_kv_with_position_bias: refused: IR_SPEC 5.15 (rule 40): block[5] attention: relative_kv and position_bias on one node (revision 1.4 defines each alone);
+PASS refuse/relative_kv_per_layer: refused: IR attention: a per-layer 'relative_kv' is not implemented in ember
+PASS refuse/softcap_not_positive: refused: IR_SPEC 5.15 (rule 10): block[5] attention: softcap 0.0 is not positive
+PASS refuse/attn_factor_not_positive: refused: IR_SPEC 5.14 (rule 10): block[3] rope: attn_factor -1.25 is not positive
+PASS refuse/freq_factors_without_original_ctx: refused: IR_SPEC 5.14 (rule 41): doc.block.nodes[3].freq_factors must be of type "string", not {"long":"rope_factors_long.weight"
+PASS refuse/freq_factors_unknown_field: refused: IR_SPEC 5.14 (rule 41): doc.block.nodes[3].freq_factors must be of type "string", not {"long":"rope_factors_long.weight"
+PASS refuse/freq_factors_tensor_shape: refused: IR_SPEC 5.14 (rule 41): block[3] rope freq_factors 'output_norm.weight' (application 0) has ne [16], not {n_rot / 2} = {
+PASS refuse/freq_factors_per_layer: refused: IR_SPEC 3.8 (rule 6): rope freq_factors is structural and cannot be per-layer
+PASS refuse/split_groups_zero: refused: IR_SPEC 5.5 (rule 10): doc.block.nodes[4].groups 0 is below the minimum 1
+PASS refuse/mla_slot_head_dim: refused: IR_SPEC 5.20 (rule 12): mla_attention reads a kv slot of kv_heads 1 and head_dim 8; it holds c and kr: kv_heads 1, head_
+PASS refuse/mla_slot_kv_heads: refused: IR_SPEC 5.20 (rule 12): mla_attention reads a kv slot of kv_heads 2 and head_dim 10; it holds c and kr: kv_heads 1, head
+PASS refuse/mla_k_b_shape: refused: IR_SPEC 5.20 (rule 42): mla_attention k_b 'blk.0.attn_v_b.weight' is not of ne {4, 6, 2}
+PASS refuse/mla_reads_three: refused: IR_SPEC 10.1 rule 7: block[9] mla_attention reads 3 value(s), not 4
+PASS refuse/mla_without_k_b: refused: IR_SPEC 5.20 (rule 8): mla_attention needs its tensor k_b
+PASS refuse/mla_not_causal: refused: IR_SPEC 5.20 (rule 14): mla_attention causal must be true
+PASS refuse/apply_entries_not_boolean: refused: IR_SPEC 3.8 (rule 43): block linear: apply entry 1 is not true or false
+PASS refuse/apply_outside_block: refused: IR_SPEC 3.8 (rule 43): head[0] rmsnorm: apply outside the block
+PASS refuse/apply_on_attention: refused: IR_SPEC 3.5 (rule 4): doc.block.nodes[7] (mla_attention) has the key 'apply', which its specification does not define
+PASS refuse/apply_leaves_value_unwritten: refused: IR_SPEC 3.5 (rule 36): block[24] add reads 'f', which no node before it writes (application 0)
+PASS refuse/apply_with_depth_route: refused: IR_SPEC 3.8 (rule 43): block[1] rmsnorm: apply in a block with depth_route
+PASS refuse/moe_groups_not_dividing: refused: IR_SPEC 5.16 (rule 10): block[16] moe_ffn: groups {n 3, top 1} do not divide n_experts 8 into groups keeping at least to
+PASS refuse/moe_scoring_unknown: refused: IR_SPEC 3.5 (rule 5): doc.block.nodes[16].scoring "relu" is not one of ["softmax","sigmoid"]
+PASS refuse/moe_selection_bias_shape: refused: IR_SPEC 5.16 (rule 44): moe_ffn selection_bias 'output_norm.weight' is not of ne {n_experts} = {8}
+PASS refuse/freq_factors_values_length: refused: IR_SPEC 5.14 (rule 41): block[6] rope: freq_factors [1.0] is neither a tensor name, {short, long, original_ctx} with two
+PASS refuse/freq_factors_values_not_positive: refused: IR_SPEC 5.14 (rule 41): block[6] rope: freq_factors [1.0,-4.0] is neither a tensor name, {short, long, original_ctx} wit
+PASS refuse/duplicate_member_top: refused: IR_SPEC 3.2 (rule 35): an object holds the member name "family_hint" twice (nesting depth 1): a document names each memb
+PASS refuse/duplicate_member_node: refused: IR_SPEC 3.2 (rule 35): an object holds the member name "causal" twice (nesting depth 4): a document names each member of
+PASS refuse/duplicate_member_prose: refused: IR_SPEC 3.2 (rule 35): an object holds the member name "a" twice (nesting depth 2): a document names each member of an o
+PASS refuse/version_key_mismatch: refused: IR_SPEC 3.1: paperkiln.ir_version 7 does not match the document's ir_version 1
+PASS refuse/state_tokens_k_mismatch: refused: paperkiln.state_tokens.k is 3, the IR's state_weight 'state_embd.weight' has 2 rows
+PASS refuse/state_template_not_v1: refused: IR_SPEC 8.2: state tokens are defined over paperkiln/1 only, not paperkiln/2
+PASS refuse/weight_index_block_count: refused: IR block weight_index uses 3 stored layers, the file's paperkiln.block_count is 9
+PASS refuse/state_tokens_arch_llama: refused: IR_SPEC 8.2: state tokens need architecture paperkiln, not llama; IR_SPEC 3.1 (rule 38): general.architecture 'llama': i
+PASS refuse/duplicate_member_embedded: refused: IR_SPEC 3.2 (rule 35): an object holds the member name "ctx" twice (nesting depth 2): a document names each member of an
+PASS refuse/architecture_kimi_as_gpt2: refused: IR_SPEC 3.1 (rule 38): general.architecture 'gpt2': the embedded document is not the gpt2 graph its metadata describes (
+PASS refuse/architecture_swa_as_gpt2: refused: IR_SPEC 3.1 (rule 38): general.architecture 'gpt2': the embedded document is not the gpt2 graph its metadata describes (
+PASS refuse/architecture_metadata_disagrees: refused: IR_SPEC 3.1 (rule 38): general.architecture 'llama': the embedded document is not the llama graph its metadata describes
+PASS refuse/architecture_without_graph: refused: IR_SPEC 3.1 (rule 38): general.architecture 'falcon' is neither "paperkiln" nor an architecture of section 9.3; a file w
+PASS refuse/architecture_gemma2_softcap_dropped: refused: IR_SPEC 3.1 (rule 38): general.architecture 'gemma2': the embedded document is not the gemma2 graph its metadata describ
+PASS refuse/architecture_substituted_document: refused: IR_SPEC 3.1 (rule 38): general.architecture 'gpt2': the embedded document is not the gpt2 graph its metadata describes (
+PASS digest/vectors/rfc8785_number_0000000000000000: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_0000000000000001: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_8000000000000001: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_7fefffffffffffff: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_ffefffffffffffff: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_4340000000000000: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_c340000000000000: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_4430000000000000: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_44b52d02c7e14af5: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_44b52d02c7e14af6: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_44b52d02c7e14af7: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_444b1ae4d6e2ef4e: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_444b1ae4d6e2ef4f: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_444b1ae4d6e2ef50: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_3eb0c6f7a0b5ed8c: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_3eb0c6f7a0b5ed8d: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_41b3de4355555553: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_41b3de4355555554: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_41b3de4355555555: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_41b3de4355555556: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_41b3de4355555557: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_becbf647612f3696: sha256 equal; canonical equal
+PASS digest/vectors/rfc8785_number_43143ff3c1cb0959: sha256 equal; canonical equal
+PASS digest/vectors/f32_eps: sha256 equal; canonical equal
+PASS digest/vectors/f32_rope_theta: sha256 equal; canonical equal
+PASS digest/vectors/f32_scale: sha256 equal; canonical equal
+PASS digest/vectors/f32_den_floor: sha256 equal; canonical equal
+PASS digest/vectors/integer_2p53: sha256 equal; canonical equal
+PASS digest/vectors/negative_integer: sha256 equal; canonical equal
+PASS digest/vectors/minus_zero_integer_form: sha256 equal; canonical equal
+PASS digest/vectors/exponent_form: sha256 equal; canonical equal
+PASS digest/vectors/string_controls: sha256 equal; canonical equal
+PASS digest/vectors/string_controls_escaped: sha256 equal; canonical equal
+PASS digest/vectors/string_escapes: sha256 equal; canonical equal
+PASS digest/vectors/string_escapes_escaped: sha256 equal; canonical equal
+PASS digest/vectors/string_line_separators: sha256 equal; canonical equal
+PASS digest/vectors/string_line_separators_escaped: sha256 equal; canonical equal
+PASS digest/vectors/string_astral: sha256 equal; canonical equal
+PASS digest/vectors/string_astral_escaped: sha256 equal; canonical equal
+PASS digest/vectors/string_accents: sha256 equal; canonical equal
+PASS digest/vectors/string_accents_escaped: sha256 equal; canonical equal
+PASS digest/vectors/string_names: sha256 equal; canonical equal
+PASS digest/vectors/string_names_escaped: sha256 equal; canonical equal
+PASS digest/vectors/key_order_utf16: sha256 equal; canonical equal
+PASS digest/vectors/nesting: sha256 equal; canonical equal
+PASS digest/vectors/prose_removed: sha256 equal; canonical equal
+PASS digest/vectors/prose_kept_in_serialiser_test: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_attnres: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_flex_expr: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_flex_highway: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_flex_mdha: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_flex_shaw: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_flex_t5: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_gpt2: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_gpt2_swa: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_kimi: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_llama: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_llama_attnres: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_llama_attnres_rec: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_mamba: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_moe: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_mor: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_recurrence: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_recursive: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_srd: sha256 equal; canonical equal
+PASS digest/vectors/document_pk_state: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_deepseek2: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_deepseek3: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_gemma2: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_gemma3: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_gptneox: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_llama_hd16: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_mamba1: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_mistral: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_mistral_hd16: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_phi3: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_qwen2moe: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_qwen3: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_qwen3_hd16: sha256 equal; canonical equal
+PASS digest/vectors/document_tp_qwen3moe: sha256 equal; canonical equal
+PASS digest/vectors/negative_zero: refused
+PASS digest/vectors/integer_beyond_2p53: refused
+PASS digest/vectors/overflow: refused
+PASS digest/vectors/duplicate_key: refused
+PASS digest/vectors/lone_surrogate: refused
+PASS digest/vectors/nan_literal: refused
+PASS digest/vectors/prose_overflow: refused
+PASS digest/vectors/prose_negative_zero: refused
+PASS digest/vectors/prose_integer_beyond_2p53: refused
+PASS digest/vectors/prose_lone_surrogate: refused
+PASS digest/vectors/prose_key_lone_surrogate: refused
+PASS digest/vectors/prose_duplicate_key: refused
+PASS digest/vectors/fraction_form_beyond_2p53: sha256 equal; canonical equal
+PASS digest/vectors/exponent_form_1e300: sha256 equal; canonical equal
+PASS digest/vectors/negative_integer_2p53: sha256 equal; canonical equal
+PASS digest/vectors/negative_integer_beyond_2p53: refused
+PASS dequant/blocks/f32: 0 values differ in their bits
+PASS dequant/blocks/f16: 0 values differ in their bits
+PASS dequant/blocks/q4_0: 0 values differ in their bits
+PASS dequant/blocks/q5_0: 0 values differ in their bits
+PASS dequant/blocks/q5_1: 0 values differ in their bits
+PASS dequant/blocks/q8_0: 0 values differ in their bits
+PASS dequant/blocks/q4_k: 0 values differ in their bits
+PASS dequant/blocks/q5_k: 0 values differ in their bits
+PASS dequant/blocks/q6_k: 0 values differ in their bits
+PASS dequant/blocks/bf16: 0 values differ in their bits
+SKIP grad/recurrence/linear_attention_body: ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)
+SKIP grad/recurrence/ssm_scan_body: ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)
+SKIP grad/recurrence/conv1d_causal_body: ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)
+SKIP grad/recurrence/selective_scan_body: ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)
+SKIP grad/recurrence/rnn_init_offset: ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)
+SKIP grad/recurrence/ema_bias_corrected: ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)
+SKIP grad/recurrence/ema_exact: ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)
+SKIP grad/recurrence/square_weight_declaration: ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)
+SKIP grad/attention/relative_kv: ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)
+SKIP grad/attention/relative_kv_per_head_grouped_query: ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)
+SKIP grad/attention/relative_kv_keys_only: ember is an inference engine: no backward (IR_SPEC 6.10.5 is for training engines)
+PASS trace/pk_kimi_recurrence: 9 steps
+PASS trace/pk_srd_recurrence: 9 steps
+PASS trace/pk_mamba_recurrence: 9 steps
+PASS trace/tp_mamba1_recurrence: 9 steps
+PASS trace/pk_srd_truncate: 3 steps
+PASS trace/tp_mamba1_truncate: 3 steps
+PASS trace/pk_flex_mdha_truncate: 3 steps
+PASS trace/pk_gpt2_swa_rewind_window: 3 steps
+PASS trace/tp_gemma3_rewind_window: 3 steps
+PASS trace/tp_mistral_hd16_rewind_window: 3 steps
+PASS trace/tp_gemma2_rewind_window: 3 steps
+PASS trace/pk_attnres_chunks: 4 steps
+PASS trace/pk_flex_expr_chunks: 4 steps
+PASS trace/pk_flex_highway_chunks: 4 steps
+PASS trace/pk_flex_mdha_chunks: 4 steps
+PASS trace/pk_flex_shaw_chunks: 4 steps
+PASS trace/pk_flex_t5_chunks: 4 steps
+PASS trace/pk_gpt2_chunks: 4 steps
+PASS trace/pk_gpt2_swa_chunks: 4 steps
+PASS trace/pk_kimi_chunks: 4 steps
+PASS trace/pk_llama_chunks: 4 steps
+PASS trace/pk_llama_attnres_chunks: 4 steps
+PASS trace/pk_llama_attnres_rec_chunks: 4 steps
+PASS trace/pk_mamba_chunks: 4 steps
+PASS trace/pk_moe_chunks: 4 steps
+PASS trace/pk_mor_chunks: 4 steps
+PASS trace/pk_recurrence_chunks: 4 steps
+PASS trace/pk_recursive_chunks: 4 steps
+PASS trace/pk_srd_chunks: 4 steps
+PASS trace/pk_state_chunks: 4 steps
+PASS trace/tp_deepseek2_chunks: 4 steps
+PASS trace/tp_deepseek3_chunks: 4 steps
+PASS trace/tp_gemma2_chunks: 4 steps
+PASS trace/tp_gemma3_chunks: 4 steps
+PASS trace/tp_gptneox_chunks: 4 steps
+PASS trace/tp_llama_hd16_chunks: 4 steps
+PASS trace/tp_mamba1_chunks: 4 steps
+PASS trace/tp_mistral_chunks: 4 steps
+PASS trace/tp_mistral_hd16_chunks: 4 steps
+PASS trace/tp_phi3_chunks: 4 steps
+PASS trace/tp_qwen2moe_chunks: 4 steps
+PASS trace/tp_qwen3_chunks: 4 steps
+PASS trace/tp_qwen3_hd16_chunks: 4 steps
+PASS trace/tp_qwen3moe_chunks: 4 steps
+PASS trace/pk_llama_attnres_rec_untagged: 5 steps
+PASS trace/pk_flex_shaw_weight_index: 5 steps
+PASS trace/pk_mor_window: 9 steps
+PASS trace/pk_mor_window_rewind: 3 steps
+PASS accept/documents/model_pk_attnres: accepted
+PASS accept/documents/model_pk_flex_expr: accepted
+PASS accept/documents/model_pk_flex_highway: accepted
+PASS accept/documents/model_pk_flex_mdha: accepted
+PASS accept/documents/model_pk_flex_shaw: accepted
+PASS accept/documents/model_pk_flex_t5: accepted
+PASS accept/documents/model_pk_gpt2: accepted
+PASS accept/documents/model_pk_gpt2_swa: accepted
+PASS accept/documents/model_pk_kimi: accepted
+PASS accept/documents/model_pk_llama: accepted
+PASS accept/documents/model_pk_llama_attnres: accepted
+PASS accept/documents/model_pk_llama_attnres_rec: accepted
+PASS accept/documents/model_pk_mamba: accepted
+PASS accept/documents/model_pk_moe: accepted
+PASS accept/documents/model_pk_mor: accepted
+PASS accept/documents/model_pk_recurrence: accepted
+PASS accept/documents/model_pk_recursive: accepted
+PASS accept/documents/model_pk_srd: accepted
+PASS accept/documents/model_pk_state: accepted
+PASS accept/documents/model_tp_deepseek2: accepted
+PASS accept/documents/model_tp_deepseek3: accepted
+PASS accept/documents/model_tp_gemma2: accepted
+PASS accept/documents/model_tp_gemma3: accepted
+PASS accept/documents/model_tp_gptneox: accepted
+PASS accept/documents/model_tp_llama_hd16: accepted
+PASS accept/documents/model_tp_mamba1: accepted
+PASS accept/documents/model_tp_mistral: accepted
+PASS accept/documents/model_tp_mistral_hd16: accepted
+PASS accept/documents/model_tp_phi3: accepted
+PASS accept/documents/model_tp_qwen2moe: accepted
+PASS accept/documents/model_tp_qwen3: accepted
+PASS accept/documents/model_tp_qwen3_hd16: accepted
+PASS accept/documents/model_tp_qwen3moe: accepted
+PASS accept/documents/rewritten_pk_kimi: accepted
+PASS accept/documents/rewritten_pk_srd: accepted
+PASS accept/documents/rewritten_pk_mamba: accepted
+PASS accept/documents/rewritten_tp_mamba1: accepted
+PASS accept/documents/example_attnres_tiny: accepted
+PASS accept/documents/example_chat_sftfinal: accepted
+PASS accept/documents/example_flex_highway_tiny: accepted
+PASS accept/documents/example_gpt2_tiny: accepted
+PASS accept/documents/example_kimi_tiny: accepted
+PASS accept/documents/example_mamba_tiny: accepted
+PASS accept/documents/example_moe_tiny: accepted
+PASS accept/documents/example_srd_tiny: accepted
+PASS accept/documents/example_swa_tiny: accepted
+PASS accept/documents/substituted_over_duplicate_embedded: accepted
+PASS accept/documents/untagged_application_queries: accepted
+PASS accept/documents/relative_kv_weight_index: accepted
+PASS accept/documents/mor_window: accepted
+PASS chat/render/one user prompt: text equal
+PASS chat/render/system folds into the first user turn: text equal
+PASS chat/render/a lone system message: refused
+PASS chat/render/a system message with no user message: refused
+PASS chat/render/two system messages: refused
+PASS chat/render/a system message mid-conversation: refused
+PASS chat/render/the assistant first: refused
+PASS chat/render/two user messages in a row: refused
+PASS chat/render/a training conversation ending on a user message: refused
+PASS chat/render/a prompt ending on an assistant message: refused
+PASS chat/render/user content holding a role marker: refused
+PASS chat/render/system content holding end-of-text: refused
+PASS chat/render/assistant content holding a marker: refused
+PASS chat/render/<unk> text is ordinary content: text equal
+PASS chat/render/newline-only user content: text equal
+PASS chat/render/newline-only and empty replies in the history: text equal
+PASS chat/render/the tool role is reserved: refused
+PASS chat/render/an unknown role: refused
+PASS chat/render/three exchanges with a system message: text equal
+PASS chat/render/a training conversation with a system message: text equal
+PASS chat/render/loss on a user message: refused
+PASS chat/render/unicode content: text equal
+PASS chat/render/system mode none refuses a system message: refused
+PASS chat/render/system mode none without one: text equal
+PASS chat/render/legacy word-level prompt: text equal
+PASS chat/render/gemma3 trims and folds: text equal
+PASS chat/render/gemma3 trims unicode edge whitespace: text equal
+PASS chat/render/gemma3 trims unicode whitespace in system and history: text equal
+PASS chat/render/gemma3 keeps inner unicode whitespace and zero-width space: text equal
+PASS chat/render/qwen3 strips past reasoning: text equal
+PASS chat/render/qwen2.5 writes its default system turn: text equal
+PASS chat/render/qwen3 thinking off: text equal
+PASS chat/render/v2 one user prompt (v1's text): text equal
+PASS chat/render/v2 user and assistant only (v1's text): text equal
+PASS chat/render/v2 system turn: text equal
+PASS chat/render/v2 empty system message: text equal
+PASS chat/render/v2 system turn and history: text equal
+PASS chat/render/v2 training conversation with a system turn: text equal
+PASS chat/render/v2 system and tool definitions: text equal
+PASS chat/render/v2 tool definitions without a system message: text equal
+PASS chat/render/v2 tool definitions with an empty system message: text equal
+PASS chat/render/v2 unicode tool definition: text equal
+PASS chat/render/v2 a call answered: the prompt ends on the tool message: text equal
+PASS chat/render/v2 a call, its result and the reply: text equal
+PASS chat/render/v2 content before a call: text equal
+PASS chat/render/v2 two calls, two results, a reply, then a user message: text equal
+PASS chat/render/v2 tool_call_id matching the call's id: text equal
+PASS chat/render/v2 a training conversation ending on a call: text equal
+PASS chat/render/v2 empty arguments: text equal
+PASS chat/render/v2 newline-only and empty contents: text equal
+PASS chat/render/v2 a tool message without a call: refused
+PASS chat/render/v2 a tool message first: refused
+PASS chat/render/v2 fewer results than calls: refused
+PASS chat/render/v2 a prompt ending while a call has no result: refused
+PASS chat/render/v2 a reply without its results: refused
+PASS chat/render/v2 tool_call_id not the call's id: refused
+PASS chat/render/v2 tool_call_id when the call has no id: refused
+PASS chat/render/v2 a call name with a newline: refused
+PASS chat/render/v2 an empty call name: refused
+PASS chat/render/v2 arguments holding a control token: refused
+PASS chat/render/v2 arguments that are not a string: refused
+PASS chat/render/v2 a call type other than function: refused
+PASS chat/render/v2 an empty tool_calls list: refused
+PASS chat/render/v2 tool_calls on a user message: refused
+PASS chat/render/v2 user content holding <|system|>: refused
+PASS chat/render/v2 tool content holding a spare token: refused
+PASS chat/render/v2 system content holding <|tool|>: refused
+PASS chat/render/v2 a tool definition holding a control token: refused
+PASS chat/render/v2 a tool definition with a non-integer number: refused
+PASS chat/render/v2 a tool definition that is not an object: refused
+PASS chat/render/v2 a system message mid-conversation: refused
+PASS chat/render/v2 loss on a tool message: refused
+PASS chat/render/v1 refuses tool definitions: refused
+PASS chat/render/v1 refuses tool_calls: refused
+PASS chat/parse_reply/no call: content and calls equal
+PASS chat/parse_reply/content then a call: content and calls equal
+PASS chat/parse_reply/a call alone: content and calls equal
+PASS chat/parse_reply/two calls: content and calls equal
+PASS chat/parse_reply/empty arguments: content and calls equal
+PASS chat/parse_reply/arguments holding a newline: content and calls equal
+PASS chat/parse_reply/the call's text as BPE pieces is content: content and calls equal
+PASS chat/parse_reply/a call without a newline: not parsed
+PASS chat/parse_reply/an empty name: not parsed
+PASS chat/parse_reply/an empty call: not parsed
+PASS chat/parse_reply/one good call and one bad: not parsed
+PASS chat/parse_reply/no ids: content and calls equal
+summary ember.cpp: 554 pass, 0 fail, 44 skip, 0 xfail, 0 xpass; by kind model 33/0/0, trace 99/0/0, op 51/0/33, refuse 129/0/0, digest 96/0/0, dequant 10/0/0, grad 0/0/11, accept 50/0/0, chat 86/0/0 (pass/fail/skip)

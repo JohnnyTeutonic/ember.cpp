@@ -73,6 +73,10 @@ void linear_rows(cublasHandle_t h, VerifyLinear mode, const float* X, const floa
                  cudaStream_t st);
 // picks[r] for logits [n][vocab].
 void select_rows(const float* logits, int n, int vocab, RowPick* picks, cudaStream_t st);
+// Explicit experimental path only; scratch holds 4*n RowPicks, allocated before
+// graph capture. The original select_rows path and all its callers are unchanged.
+void select_rows_partitioned(const float* logits, int n, int vocab, RowPick* picks,
+                             RowPick* scratch, cudaStream_t st);
 
 }  // namespace ember_verify
 
