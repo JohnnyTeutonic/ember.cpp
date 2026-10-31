@@ -1,0 +1,85 @@
+{
+  "status": "READY_V2_ENVIRONMENT_REPAIR_FOR_PARENT_REVIEW_NOT_LAUNCHED",
+  "packet_commit": "153f0e9352e14cfbd2b6c7328cb32e8d0f6a7ce5",
+  "production_source_commit": "4836b7de0ce4a96c030d491d942bb265fe393302",
+  "branch": "codex/e10-integrated-gpu-gate-20261031",
+  "source_archive": {
+    "path": "/home/jonat/e10_integrated_stage_20261031_v2/e10_integrated_source.tar",
+    "sha256": "81f559206add63d17785f0401b6eb4ec05fa7558bff36869389fd90ecaaac3fd",
+    "bytes": 30464000,
+    "creation": "git archive --format=tar --prefix=ember/ 153f0e9352e14cfbd2b6c7328cb32e8d0f6a7ce5"
+  },
+  "uploads": {
+    "e10_integrated_source.tar": {
+      "path": "/home/jonat/e10_integrated_stage_20261031_v2/e10_integrated_source.tar",
+      "sha256": "81f559206add63d17785f0401b6eb4ec05fa7558bff36869389fd90ecaaac3fd",
+      "bytes": 30464000
+    },
+    "e10_integrated_boot.py": {
+      "path": "/home/jonat/e10_integrated_stage_20261031_v2/e10_integrated_boot.py",
+      "sha256": "502f566d65cd89da2cd7449e6e4c89968b145f7205d70669fc8dfb1478e295a8",
+      "bytes": 5936
+    },
+    "e10_integrated_manifest.json": {
+      "path": "/home/jonat/e10_integrated_stage_20261031_v2/e10_integrated_manifest.json",
+      "sha256": "21f2295458d4a00ee5d4de7fdaaff7ee10326065fa92ef914f004c970284cfd5",
+      "bytes": 416543
+    }
+  },
+  "paperkiln_job": {
+    "path": "/home/jonat/e10_integrated_stage_20261031_v2/paperkiln_job.json",
+    "sha256": "dae84836d29c8ae54cd8b97968c806c237fe54f39f4230f1914aa0997a485674",
+    "registration": "Exactly unchanged from registered V1 job; use reviewed current runner/job pin"
+  },
+  "exact_archive_preflight": {
+    "status": "V2_TU_PASS_NO_LOCAL_GPU",
+    "probe_object_sha256": "f6f81d78265fa4181b8028ebf9861b972707e9a3244f36a4d9e276ee6430039e",
+    "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "one_core_budget": true,
+    "minimum_mem_available_gib": 1.5,
+    "compiler_address_space_gib": 1.5,
+    "CMake_asset_preservation": "Every pre-existing archived file remains byte-identical except README, vm.py environment helper, probe unsetenv statement, and protocol ENV declaration. Root/packet CMake and every previous asset are unchanged from the exact V1 fresh configure.",
+    "changed_preexisting_files": [
+      "experiments/spec_r1_2026-10-28/README.md",
+      "experiments/spec_r1_2026-10-28/integrated_gate_20261031/vm.py",
+      "experiments/spec_r1_2026-10-28/integrated_gate_20261031/integrated_probe.cpp",
+      "experiments/spec_r1_2026-10-28/integrated_gate_20261031/protocol.json"
+    ],
+    "source_bound_environment_tests": 4,
+    "packet_tests_total": 35,
+    "actual_cpu_constructor_receipt": "environment_v2_constructor.json"
+  },
+  "proposal": {
+    "gpu": "L4",
+    "cloud": "SECURE",
+    "volume_gb": 10,
+    "image": "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04",
+    "max_usd": 0.85,
+    "max_hours": 1,
+    "proposed_absolute_deadline_utc": "2026-10-31T13:05:00Z",
+    "state_dir": "/home/jonat/ember_e10_integrated_v2_20261031_runner",
+    "art": "/mnt/c/ml_artifacts/e10_integrated_v2_20261031",
+    "name": "ember-e10-integrated-v2-20261031",
+    "boot_script": "tools/colab_chat/boot_commands_sparse.sh",
+    "scientific_timeout_seconds": 2100,
+    "expected_upload_mb": 31,
+    "expected_raw_archive_mb_max": 50,
+    "expected_cost_usd": "fresh hard cap0.85 plus V1 root-reported0.12 remains below original1.00",
+    "cleanup": "Existing watchdog only; normal HOME relay, verify owned pod and volume deleted, disable only this entry; incomplete or negative science never retried automatically"
+  },
+  "independent_replay": "python3 experiments/spec_r1_2026-10-28/integrated_gate_20261031/check.py EXTRACTED_ZIP/science",
+  "gate_limits": [
+    "Only synthetic deterministic correctness; no timing/speed/adoption gate.",
+    "No registered pick_e1_L16 or historical default-repeatability claim.",
+    "Historical BASELINE_UNSTABLE and paired speed-gate failure remain unchanged.",
+    "No production arithmetic/default/threshold edit."
+  ],
+  "previous_attempt": {
+    "archive_sha256": "24f37c62d69f65f665f4ff5efa1c7915904bcf45bcf4459bb4d8e5f9cfe1f724",
+    "archive": "/mnt/c/ml_artifacts/e10_integrated_20261031/e10_integrated_20261031/out.zip",
+    "status": "INCOMPLETE_BEFORE_MODEL_ROWS_PATHNAME_OVERRIDE_ERROR",
+    "preserved": true,
+    "root_reported_ledger_usd": 0.12,
+    "root_reported_cleanup": "owned pod and volume gone"
+  }
+}
