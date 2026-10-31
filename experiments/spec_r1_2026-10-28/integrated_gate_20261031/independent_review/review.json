@@ -1,0 +1,36 @@
+{
+  "recommendation": "READY_FOR_PARENT_AUTHORIZATION_SYNTHETIC_CORRECTNESS_ONLY",
+  "reviewed_utc": "2026-10-31T12:01:11.849528+00:00",
+  "worktree_tip": "eaac8a47767f27d1afac2c48ac7a40f5ceabf843",
+  "execution_packet_commit": "0892c6ecca856f52b23c4224110932332ba76c09",
+  "production_source_commit": "4836b7de0ce4a96c030d491d942bb265fe393302",
+  "archive_sha256": "8a9948c328b13c5464e102853b377b0102d4140c524738253d34d9d90b861cb7",
+  "manifest_sha256": "a16def57bcdf636861758d798e3eaf5f98af6061908f58255ab73e3f52bbb005",
+  "boot_sha256": "502f566d65cd89da2cd7449e6e4c89968b145f7205d70669fc8dfb1478e295a8",
+  "protocol_sha256": "71f28f1adabc292b3a73e5cdfbee3fe24522406864afa181a71a40572351b9d2",
+  "job_sha256": "dae84836d29c8ae54cd8b97968c806c237fe54f39f4230f1914aa0997a485674",
+  "source_files_verified": 2995,
+  "archive_commit_comment_and_member_inventory": "PASS",
+  "production_pins_against_commit": "PASS",
+  "fixture_regeneration": "PASS",
+  "exact_archive_configure_and_compile_artifact_hashes": "PASS; existing artifacts only, no build executed",
+  "offline_tests": "...............................                                          [100%]\n31 passed in 13.58s",
+  "offline_tests_log_sha256": "a09e1e4e2581276d2dd2e06b6dcd931890ce80e07170d5576f18578374ce7717",
+  "blockers": [],
+  "findings": [
+    "Actual production forward_device_graph path refuses CPU-layer offload, unavailable optimized kernels, graph-disabled or invalid KV shapes; probe also requires no IR and nonnull graph execution.",
+    "Full-model rows are compared bitwise across rows/original/partition4 and repeats; capture presence transitions retain scratch pointer and compare current row payloads.",
+    "Registered kernel inputs regenerate exactly; both actual selector outputs compare all five fields bytewise and against a separate Python semantic summary.",
+    "Sampler checks copy exact pinned production function bodies, compare full-row versus compact/fallback ID and serialized mt19937 states at four temperatures.",
+    "VM retains per-leg artifacts/logs; scientific failure and timeout are archived by boot with false status and transport success, preventing automatic retry-for-pass.",
+    "Source archive, all file hashes, boot, job and model generator bindings verified independently."
+  ],
+  "limits": [
+    "No GPU execution, kernel link or production performance validation performed by this review.",
+    "Full model probe is synthetic two-layer F32 Llama, not registered pick_e1_L16; deterministic correctness cannot close historical baseline instability or failed speed/adoption gates.",
+    "CPU oracle covers kernel semantic fields; signed-zero payloads rely on actual original-versus-partitioned GPU bit equality. Model arithmetic and general-temperature sampler semantics have source-bound comparisons rather than an independent model/sampler implementation.",
+    "Capture success/stable scratch exercises this bounded lifetime and mode transition, not every future model/lifetime.",
+    "Serial launch only after existing L4 gate cleanup; parent owns budget1USD/hour1 watchdog authorization."
+  ],
+  "no_launch_no_watchdog_edits_no_dependency_installs_no_heavy_builds": true
+}

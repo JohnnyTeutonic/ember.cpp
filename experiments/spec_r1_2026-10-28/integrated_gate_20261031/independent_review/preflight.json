@@ -1,0 +1,18 @@
+{
+  "status": "PASS_NO_PROVIDER_CALL",
+  "valid_exact_arguments": true,
+  "argument_mutants_rejected": 3,
+  "guard_sha256": "4bff1aca83a37f2b06ecfd052e57cdf79fe3d14b517b4368b69af9bb4dbefcb3",
+  "pins": {
+    "/home/jonat/pk_publication_20261030/tools/colab_chat/runner_multi.py": "273abf725d9ec79c3d43a5fa485ae282cb76671d808c1b8fa9893239e017b3ea",
+    "/home/jonat/pk_publication_20261030/tools/colab_chat/runpod_api.py": "e0812f37b743e7c60a20c18a9b97b63b5a2fe692541ec3a6442bb361e5065e3b",
+    "/home/jonat/pk_publication_20261030/tools/colab_chat/runpod_transport.py": "4e9e99b1642f1e0b88edc6a8180fadef91cf0bd73749898e541429cb1ae70690",
+    "/home/jonat/pk_publication_20261030/tools/colab_chat/boot_commands_sparse.sh": "9bc4abc080b2b6bb0ac1811b54db57da245450e11ef453752c39b0c2ff08cfe6",
+    "/home/jonat/pk_publication_20261030/tools/colab_chat/jobs_vm.py": "db8c6c3d9370cda09723b6421a4363d707d6fa2ba8c1fc3deeb87c23f8b558ae",
+    "/home/jonat/pk_publication_20261030/tools/colab_chat/ember_e10_integrated_20261031.json": "dae84836d29c8ae54cd8b97968c806c237fe54f39f4230f1914aa0997a485674",
+    "/home/jonat/e10_launch_v1_20261031/launch_review.json": "5afbd4956083e29a80dffc6e61e6326a9cacfb4d748053639388fcee03ade1ef",
+    "/home/jonat/e10_integrated_stage_20261031_v1/e10_integrated_source.tar": "8a9948c328b13c5464e102853b377b0102d4140c524738253d34d9d90b861cb7",
+    "/home/jonat/e10_integrated_stage_20261031_v1/e10_integrated_boot.py": "502f566d65cd89da2cd7449e6e4c89968b145f7205d70669fc8dfb1478e295a8",
+    "/home/jonat/e10_integrated_stage_20261031_v1/e10_integrated_manifest.json": "a16def57bcdf636861758d798e3eaf5f98af6061908f58255ab73e3f52bbb005"
+  }
+}
