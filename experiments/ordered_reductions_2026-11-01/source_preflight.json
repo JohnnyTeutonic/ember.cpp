@@ -17,7 +17,8 @@
     "release_guards": {
       "rmsnorm_optimized_det_kernel": "BPT.TRAP present in sm89 -DNDEBUG compile-only SASS",
       "softmax_optimized_det_kernel": "BPT.TRAP present in sm89 -DNDEBUG compile-only SASS"
-    }
+    },
+    "source_commit": "326c0986cd2b150ee1dd2eccea94be39adf25906"
   },
   "source_CPU_tests": 5,
   "actual_device_pending": [
@@ -26,5 +27,6 @@
     "Old/new same-L4 kernel timing",
     "Frozen registered pick_e1_L16 default-repeat and speed gate with PARTS0"
   ],
-  "historical_failure": "Preserved; no default-repeat or throughput pass claimed before new actual device receipts."
+  "historical_failure": "Preserved; no default-repeat or throughput pass claimed before new actual device receipts.",
+  "later_whitespace_only_commit": "bca00166f75d53a01094e5ebfa599a004062a21e"
 }

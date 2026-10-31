@@ -84,6 +84,9 @@ def main():
         if len(protocol['schedule'])!=24 or protocol['parts']!=0:raise ValueError('registered matrix drift')
         if run(['nvidia-smi','--query-gpu=name,uuid,driver_version','--format=csv,noheader'],science/'device.log',30):raise RuntimeError('device metadata')
         if 'L4' not in (science/'device.log').read_text():raise ValueError('L4 required')
+        if run(['apt-get','update','-qq'],science/'apt_update.log',300):raise RuntimeError('build dependency index')
+        if run(['apt-get','install','-y','-q','libboost-regex-dev','python3-dev'],science/'apt_install.log',300):raise RuntimeError('build dependencies')
+        if run(['bash','-lc','nvcc --version; cmake --version; g++ --version; python3 --version; dpkg-query -W libboost-regex-dev python3-dev'],science/'toolchain.log',30):raise RuntimeError('toolchain inventory')
         plans={};gates={};binaries={};probes={}
         for source in ['baseline','candidate']:
             root=work/source;extract(upload/(source+'.tgz'),root)
