@@ -1,0 +1,104 @@
+{
+  "kind": "PROSPECTIVE_PARTS4_DETERMINISTIC_GREEDY_MODEL_PROTOCOL_V1",
+  "status": "DESIGN_ONLY_UNLAUNCHED_COLLECTOR_NOT_PREPARED",
+  "question": "Does the existing four-part selector preserve complete model behaviour and earn deterministic-greedy opt-in use over the existing PARTS0 selector?",
+  "candidate_source": "3ada969788f4d5ea65f5b81b29c22c30b7f25c97",
+  "source_files_sha256": {
+    "decode_pick_policy.h": "53cd249e1c9ebaf8166a067eacb12a18ed09f0acb2a51cf3bdd028779d169d84",
+    "api.cpp": "43e66be5dfaa369a165af8746b6de516b0559f9168a7d9379e019ed16a76b903",
+    "model.cpp": "6c23856da6015306abeefd59af5c6044fc6790779d93bd672614c51b02a0fd6f",
+    "row_pick_partitioned.cuh": "a9500fcbdcaa793b12ecbd5d529c6826c669ea4b4ba4630f82a51c1737d27346"
+  },
+  "input_pins": {
+    "model_sha256": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9",
+    "prompts_sha256": "a25357100c3eb1e59bc94bb26c0629e72e6ae18172b2d4fbbf148ae5168d1740",
+    "items": 100,
+    "requests": 260
+  },
+  "relationship_to_prior_gate": {
+    "ordered_protocol_sha256": "11a9dacf56a037b740d1dde1f06d92c8ca087421ca00e7ff31b053ac9e8b5174",
+    "original_default_PARTS0_gate": "Unchanged and historically passing; this is a separate prospective question, not relabelling or replacing it"
+  },
+  "scope": {
+    "model": "Original registered pick_e1_L16 exact model and eval100 requests",
+    "gpu": "One L4",
+    "deterministic": true,
+    "sampler": "Registered greedy-only requests",
+    "KV": "Default f32, no E9 f16 override",
+    "global_default_adoption_eligible": false,
+    "reason_default_ineligible": "PARTS4 explicitly requires EMBER_DETERMINISTIC=1 and must not silently enable that mode. A passing diagnostic cannot broaden this contract."
+  },
+  "arms": {
+    "host": "Compact picking disabled; PARTS0; deterministic1",
+    "parts0": "Compact picking enabled; PARTS0; deterministic1",
+    "parts4": "Compact picking enabled; PARTS4; deterministic1"
+  },
+  "correctness": {
+    "row_legs": [
+      "host_a",
+      "host_b",
+      "parts0_a",
+      "parts0_b",
+      "parts4_a",
+      "parts4_b"
+    ],
+    "inventory": "Original complete registered request and row inventory; assert exact shapes/counts before comparison",
+    "required": "Complete finite logit row bits, prompt IDs, selected IDs, replies, stop reasons and token counts equal across repeats and arms; original fallback/capture/scratch tests retained",
+    "control_failure": "Missing or invalid host/control evidence, incomplete inventories, or source/input/hardware/config failures are operationally inconclusive. Candidate-only nonfinite output with valid controls is a correctness failure."
+  },
+  "performance": {
+    "storage": "Uniform local scratch across all timing arms; row dumps disabled for timing; bind complete separate row evidence",
+    "schedule_pairs": [
+      [
+        "host_a",
+        "parts0_a",
+        "parts4_a"
+      ],
+      [
+        "parts4_b",
+        "parts0_b",
+        "host_b"
+      ]
+    ],
+    "warmup_and_request_procedure": "Use unchanged registered R1 collector procedure and validity predicates, version/hash-bound when the collector is prepared",
+    "eligibility_predicates": [
+      "Each of the two individual parts4/host throughput ratios is at least1.15",
+      "Each of the two individual parts4/parts0 throughput ratios is at least1.0",
+      "All correctness/repeat/source/request/capture validity predicates pass; no pooling can rescue a failed pair",
+      "Validated actual dispatch evidence proves each requested arm; no silent PARTS4 fallback"
+    ],
+    "threshold_rationale": "Retain the existing1.15 compact-selector eligibility hurdle against the host path, and require no observed regression versus the already-passing PARTS0 path in either order-balanced pair. This is a conservative engineering eligibility decision for added integration complexity, not a statistical proof of general speed superiority.",
+    "uncertainty": "Two pairs do not establish a population confidence bound or a speed plateau. Report both raw ratios and timings. A failed eligibility predicate does not prove general inferiority; uncertain performance can remain scientifically inconclusive while opt-in adoption is rejected."
+  },
+  "stopping": {
+    "endpoint": "Exactly the complete prespecified six row legs and two ordered timing triples; no automatic extra repeats after seeing results",
+    "pass": "Supports only tested deterministic-greedy model-specific opt-in eligibility; no automatic global/default enablement",
+    "operational_failure": "Preserve partial evidence; require diagnosed repair or a discriminating separately versioned diagnostic before retry",
+    "reopen": "A substantive candidate/configuration change or decision-relevant unresolved mechanism with a prospective protocol; not a desire to obtain a pass",
+    "correctness_or_repeatability_failure": "Preserve evidence and reject/disable this candidate from supported opt-in use until a reviewed repair passes a new prospective gate. Candidate-only nonfinite output with valid controls is included.",
+    "performance_only_miss_or_uncertainty": "Preserve evidence. A correctness-passing candidate may remain experimental, without adoption or claims of general inferiority; no tuning source, threshold or subset within this run."
+  },
+  "not_established": [
+    "Stochastic sampler RNG-state equivalence",
+    "Other models or architectures",
+    "Default nondeterministic-mode PARTS4 support",
+    "SoTA or broad model-quality/speed superiority"
+  ],
+  "admission": {
+    "authorized": false,
+    "gpu_or_provider_calls": 0,
+    "requirements": [
+      "Separate reviewed collector/checker packet, frozen before outcomes",
+      "Actual source/input/flag/refusal checks",
+      "Existing serial GPU queue, fresh financial cap/deadline/owner probe and watchdog",
+      "Complete safe home replay and resource cleanup"
+    ]
+  },
+  "candidate_source_role": "Design basis only. Any dispatch-observability patch requires separate review and a new frozen source pin before collection.",
+  "dispatch_evidence": {
+    "required": "Prove the actual dispatch route for every arm using validated per-arm counters, logs or equivalent evidence; requested flags alone are insufficient. Inventory every fallback and refusal.",
+    "preparation": "No existing dispatch observability is presumed sufficient. Review any required instrumentation patch separately and re-pin source before freezing the collector.",
+    "timing": "Use dedicated untimed route-proof legs and establish equivalence to timing configuration. Disable tracing during timing and disclose instrumentation overhead. Do not change numerical operations to collect evidence.",
+    "missing_proof": "Inconclusive and ineligible for adoption, even if numerical and timing comparisons pass."
+  }
+}
