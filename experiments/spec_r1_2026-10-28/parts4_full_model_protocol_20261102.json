@@ -99,6 +99,14 @@
     "required": "Prove the actual dispatch route for every arm using validated per-arm counters, logs or equivalent evidence; requested flags alone are insufficient. Inventory every fallback and refusal.",
     "preparation": "No existing dispatch observability is presumed sufficient. Review any required instrumentation patch separately and re-pin source before freezing the collector.",
     "timing": "Use dedicated untimed route-proof legs and establish equivalence to timing configuration. Disable tracing during timing and disclose instrumentation overhead. Do not change numerical operations to collect evidence.",
-    "missing_proof": "Inconclusive and ineligible for adoption, even if numerical and timing comparisons pass."
+    "missing_proof": "Inconclusive and ineligible for adoption, even if numerical and timing comparisons pass.",
+    "minimum_inventory": [
+      "Per request/token, distinguish prefill from eligible sampled decode positions",
+      "Record requested arm, effective partition count, graph capture/replay and per-launch fallback separately",
+      "Account for API eligibility exclusions: IR, CPU offload, non-greedy sampling and repetition penalties",
+      "Distinguish compact pick execution from host-row selection after near ties, nonfinite records or debug row capture",
+      "Prove selector execution on CUDA graph replay, not only graph capture; graph construction counters alone are insufficient",
+      "Tie route evidence and timing arms to the same source/input/configuration; record intended debug-row-induced host fallback rather than treating it as normal compact consumption"
+    ]
   }
 }
