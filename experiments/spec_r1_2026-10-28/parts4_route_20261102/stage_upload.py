@@ -3,7 +3,8 @@
   python3 stage_upload.py --commit SHA --model MODEL.gguf --prompts eval100.jsonl --out UPLOAD_DIR
 
 candidate.tgz is `git archive` of the commit; packet.json and parts4_vm.py come from the same commit. The model
-and prompts are hard-linked when they share a filesystem (no second copy), else copied. The preflight repeats
+and prompts are hard-linked when they share a filesystem, else symlinked to the canonical file; never copied.
+Transport must send resolved regular files (the payload refuses links). The preflight repeats
 every pre-device check parts4_vm.py makes, on the extracted archive: manifest bytes and hashes, registered input
 pins, source pins, frozen collector, the packet tests and the trace header's C++ test. Prints the manifest SHA-256
 for --manifest-sha256 and writes preflight.json beside the upload.
@@ -14,7 +15,6 @@ import io
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tarfile
@@ -36,12 +36,14 @@ def git(repo, *args):
 
 
 def place(source, target):
+    """A hard link on the same filesystem, else a symlink to the canonical file: never a second copy. Transport
+    must send the resolved regular file (ordered_reductions TRANSPORT_REPAIRS.md, V3); the payload refuses links."""
     try:
         os.link(source, target)
         return "hardlink"
     except OSError:
-        shutil.copyfile(source, target)
-        return "copy"
+        os.symlink(source, target)
+        return "symlink"
 
 
 def stage(repo, commit, model, prompts, out):
@@ -67,7 +69,8 @@ def preflight(upload):
     inputs = json.loads((upload / "inputs.json").read_text())
     for name, rec in inputs["files"].items():
         p = upload / name
-        if p.is_symlink() or p.stat().st_size != rec["bytes"] or sha(p) != rec["sha256"]:
+        if (p.is_symlink() and name not in ("model.gguf", "eval100.jsonl")) or not p.resolve().is_file() \
+                or p.stat().st_size != rec["bytes"] or sha(p) != rec["sha256"]:
             raise ValueError("input mismatch " + name)
     packet = json.loads((upload / "packet.json").read_text())
     if (inputs["files"]["model.gguf"]["sha256"] != packet["input_pins"]["model_sha256"]

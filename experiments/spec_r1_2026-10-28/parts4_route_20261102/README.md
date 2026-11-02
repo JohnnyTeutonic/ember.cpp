@@ -34,7 +34,7 @@ Tracing changes no arithmetic. Before each replay of a graph that holds a select
   - manifest checked byte for byte, cleaned environment, one L4, a 9,600 s deadline, a zip checkpoint every two minutes, no retry for a pass;
   - on device it builds, then runs the CPU contracts, the retained handcrafted records and `decode_pick_fallback.py` under PARTS0 and PARTS4, the matrix, and the 17 legs, each verified at once by `load_run`;
   - all legs write to one local output directory, so storage is uniform across the timing arms.
-- `stage_upload.py`: stages the upload from a commit and repeats every pre-device check offline. The model and prompts are hard-linked, not copied.
+- `stage_upload.py`: stages the upload from a commit and repeats every pre-device check offline. The model and prompts are hard-linked or symlinked to their canonical files, never copied. Transport must send the resolved regular files, as the V3 transport does.
 - `make_packet.py`: writes `packet.json` (source, collector and input pins; schedule; test count).
 
 ## Commands
