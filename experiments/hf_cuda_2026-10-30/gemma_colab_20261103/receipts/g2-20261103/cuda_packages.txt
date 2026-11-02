@@ -1,0 +1,57 @@
+ii  cuda-cccl-12-6                     12.6.77-1                            amd64        CUDA CCCL
+ii  cuda-cccl-13-0                     13.0.85-1                            amd64        CUDA CCCL
+ii  cuda-command-line-tools-13-0       13.0.3-1                             amd64        CUDA command-line tools
+ii  cuda-compat-13-0                   580.126.20-1ubuntu1                  amd64        CUDA Compatibility Platform
+ii  cuda-compiler-12-6                 12.6.3-1                             amd64        CUDA compiler
+ii  cuda-compiler-13-0                 13.0.3-1                             amd64        CUDA compiler
+ii  cuda-crt-12-6                      12.6.85-1                            amd64        CUDA crt
+ii  cuda-crt-13-0                      13.0.88-1                            amd64        CUDA crt
+ii  cuda-cudart-12-6                   12.6.77-1                            amd64        CUDA Runtime native Libraries
+ii  cuda-cudart-13-0                   13.0.96-1                            amd64        CUDA Runtime native Libraries
+ii  cuda-cudart-dev-12-6               12.6.77-1                            amd64        CUDA Runtime native dev links, headers
+ii  cuda-cudart-dev-13-0               13.0.96-1                            amd64        CUDA Runtime native dev links, headers
+ii  cuda-culibos-dev-13-0              13.0.85-1                            amd64        CUDA DEV culibos is a Math Libraries fork of the cuos library
+ii  cuda-cuobjdump-12-6                12.6.77-1                            amd64        CUDA cuobjdump
+ii  cuda-cuobjdump-13-0                13.0.85-1                            amd64        CUDA cuobjdump
+ii  cuda-cupti-13-0                    13.0.85-1                            amd64        CUDA profiling tools runtime libs.
+ii  cuda-cupti-dev-13-0                13.0.85-1                            amd64        CUDA profiling tools interface.
+ii  cuda-cuxxfilt-12-6                 12.6.77-1                            amd64        CUDA cuxxfilt
+ii  cuda-cuxxfilt-13-0                 13.0.85-1                            amd64        CUDA cuxxfilt
+ii  cuda-driver-dev-12-6               12.6.77-1                            amd64        CUDA Driver native dev stub library
+ii  cuda-driver-dev-13-0               13.0.96-1                            amd64        CUDA Driver native dev stub library
+ii  cuda-gdb-13-0                      13.0.85-1                            amd64        CUDA-GDB
+ii  cuda-keyring                       1.1-1                                all          GPG keyring for the CUDA repository
+ii  cuda-libraries-13-0                13.0.3-1                             amd64        CUDA Libraries 13.0 meta-package
+ii  cuda-libraries-dev-13-0            13.0.3-1                             amd64        CUDA Libraries 13.0 development meta-package
+ii  cuda-minimal-build-12-6            12.6.3-1                             amd64        Minimal CUDA 12.6 toolkit build packages.
+ii  cuda-minimal-build-13-0            13.0.3-1                             amd64        Minimal CUDA 13.0 toolkit build packages.
+ii  cuda-nsight-compute-13-0           13.0.3-1                             amd64        NVIDIA Nsight Compute
+ii  cuda-nvcc-12-6                     12.6.85-1                            amd64        CUDA nvcc
+ii  cuda-nvcc-13-0                     13.0.88-1                            amd64        CUDA nvcc
+ii  cuda-nvdisasm-13-0                 13.0.85-1                            amd64        CUDA disassembler
+ii  cuda-nvml-dev-13-0                 13.0.87-1                            amd64        NVML native dev links, headers
+ii  cuda-nvprune-12-6                  12.6.77-1                            amd64        CUDA nvprune
+ii  cuda-nvprune-13-0                  13.0.85-1                            amd64        CUDA nvprune
+ii  cuda-nvrtc-13-0                    13.0.88-1                            amd64        NVRTC native runtime libraries
+ii  cuda-nvrtc-dev-13-0                13.0.88-1                            amd64        NVRTC native dev links, headers
+ii  cuda-nvtx-13-0                     13.0.85-1                            amd64        NVIDIA Tools Extension
+ii  cuda-nvvm-12-6                     12.6.85-1                            amd64        CUDA nvvm
+ii  cuda-opencl-13-0                   13.0.85-1                            amd64        CUDA OpenCL native Libraries
+ii  cuda-profiler-api-12-6             12.6.77-1                            amd64        CUDA Profiler API
+ii  cuda-profiler-api-13-0             13.0.85-1                            amd64        CUDA Profiler API
+ii  cuda-sandbox-dev-13-0              13.0.85-1                            amd64        nvsandboxutils native dev links, headers
+ii  cuda-sanitizer-13-0                13.0.85-1                            amd64        CUDA Sanitizer
+ii  cuda-toolkit-12-6-config-common    12.6.77-1                            all          Common config package for CUDA Toolkit 12.6.
+ii  cuda-toolkit-12-config-common      12.9.79-1                            all          Common config package for CUDA Toolkit 12.
+ii  cuda-toolkit-13-0-config-common    13.0.96-1                            all          Common config package for CUDA Toolkit 13.0.
+ii  cuda-toolkit-13-config-common      13.0.96-1                            all          Common config package for CUDA Toolkit 13.
+ii  cuda-toolkit-config-common         13.0.96-1                            all          Common config package for CUDA Toolkit.
+ii  libcublas-12-6                     12.6.4.1-1                           amd64        CUBLAS native runtime libraries
+hi  libcublas-13-0                     13.1.1.3-1                           amd64        CUBLAS native runtime libraries
+ii  libcublas-dev-12-6                 12.6.4.1-1                           amd64        CUBLAS native dev links, headers
+hi  libcublas-dev-13-0                 13.1.1.3-1                           amd64        CUBLAS native dev links, headers
+hi  libcudnn9-cuda-13                  9.14.0.64-1                          amd64        cuDNN runtime libraries for CUDA 13.0
+ii  libcudnn9-dev-cuda-13              9.14.0.64-1                          amd64        cuDNN development libraries for CUDA 13.0
+ii  libcudnn9-headers-cuda-13          9.14.0.64-1                          amd64        cuDNN header files for CUDA 13.0
+hi  libnccl-dev                        2.28.3-1+cuda13.0                    amd64        NVIDIA Collective Communication Library (NCCL) Development Files
+hi  libnccl2                           2.28.3-1+cuda13.0                    amd64        NVIDIA Collective Communication Library (NCCL) Runtime

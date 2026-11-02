@@ -9,7 +9,7 @@ import unittest
 
 HERE = Path(__file__).resolve().parent
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
-SOURCE = "5bfda89345b3bcf1f0352eee555f0fd4eb73ac7d"
+SOURCE = "4d276ff91ab9b191be8556010b05d74cd4cb2520"
 CANONICAL = "0a174d42ccd7de15688e50dc044ea8006db31ee3bc6dc7e838f8a360ca46cdaa"
 CONTROLLER = "ddd3104489dd2935187271d48dfabe77501a2b3c5fa02350aad1ca5e54a2f04c"
 REQUIRED = {"analyze", "benchmark", "build", "checkout", "contract", "environment", "inputs", "packages", "provenance",
@@ -21,7 +21,7 @@ if [ "$1" = clone ]; then d="${@: -1}/experiments/hf_cuda_2026-10-30/gemma_colab
 dir=.; if [ "$1" = -C ]; then dir=$2; shift 2; fi
 case "$1" in
   worktree) mkdir -p "${@: -2:1}/experiments/hf_cuda_2026-10-30"; echo x > "${@: -2:1}/experiments/hf_cuda_2026-10-30/benchmark.py";;
-  rev-parse) case "$dir" in *src) echo 5bfda89345b3bcf1f0352eee555f0fd4eb73ac7d;; *) echo "${STUB_HEAD:-0123456789abcdef0123456789abcdef01234567}";; esac;;
+  rev-parse) case "$dir" in *src) case "$2" in *tree*) echo "${STUB_SOURCE_TREE:-ee183b61772737b9b6f659ddc25f34d1a75ba332}";; *) echo 4d276ff91ab9b191be8556010b05d74cd4cb2520;; esac;; *) echo "${STUB_HEAD:-0123456789abcdef0123456789abcdef01234567}";; esac;;
   status) true;;
   *) [ "$FAIL_AT" = checkout ] && exit 5; true;;
 esac''',
@@ -61,6 +61,10 @@ echo "dpkg-deb $*" >> "$VM_ROOT/apt.calls"
     "nproc": "#!/usr/bin/env bash\necho 2",
     "cmake": r'''#!/usr/bin/env bash
 [ "$FAIL_AT" = build ] && exit 4
+root=""; for a in "$@"; do case "$a" in -DCUDA_TOOLKIT_ROOT_DIR=*) root=${a#*=};; esac; done
+# FindCUDA reports the root it used; without CUDA_TOOLKIT_ROOT_DIR it falls back to /usr/local/cuda (CUDA 13 on Colab)
+[ -n "$root" ] && echo "-- Found CUDA: $root (found version \"${STUB_FINDCUDA_VERSION:-12.6}\")" \
+  || echo '-- Found CUDA: /usr/local/cuda (found version "13.0")'
 echo "-- CUDA toolkit and cuBLAS found"''',
     "make": "#!/usr/bin/env bash\nmkdir -p build && echo bin > build/ir_hf_cuda_bench",
     "tar": "#!/usr/bin/env bash\nmkdir -p conv/converter && echo x > conv/converter/convert_hf_to_gguf.py",
@@ -307,6 +311,17 @@ class VmGemmaTests(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertNotEqual(s["gates"]["build"], 0)
         self.assertNotIn("benchmark", s["gates"])
+
+    def test_findcuda_on_another_toolkit_fails_the_build(self):
+        # g2-20261103: the legacy FindCUDA found /usr/local/cuda (13.0) and its headers broke the 12.6 compile
+        rc, s, _, _ = self.run_vm(extra={"STUB_FINDCUDA_VERSION": "13.0"})
+        self.assertEqual(rc, 1)
+        self.assertNotEqual(s["gates"]["build"], 0)
+        self.assertNotIn("benchmark", s["gates"])
+
+    def test_a_source_tree_other_than_the_frozen_one_fails_checkout(self):
+        rc, s, _, _ = self.run_vm(extra={"STUB_SOURCE_TREE": "f" * 40})
+        self.assertEqual((rc, s["gates"]["checkout"]), (1, 99))
 
     def test_wrong_head_fails_checkout(self):
         rc, s, _, _ = self.run_vm(head="f" * 40)

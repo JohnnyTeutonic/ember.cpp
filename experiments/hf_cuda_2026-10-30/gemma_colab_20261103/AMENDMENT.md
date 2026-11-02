@@ -11,6 +11,13 @@ had changed: Python 3.13.16 and only the CUDA 13.0 toolkit. Torch 2.4.1 and nump
 wheels, so an unchanged rerun would have failed the same way. Version 2 changes the interpreter and toolkit
 installation (below) and nothing in the scientific protocol.
 
+Version 2's first run, `g2-20261103` (ember `5bb80cb`, now `c18ff6f` after the purge), passed the toolkit, packages
+and environment gates. It failed at the build, and the controller never started (`receipts/g2-20261103/`). Ember's
+legacy FindCUDA had found the image's CUDA 13 at `/usr/local/cuda`, and CUDA 13's `crt/host_runtime.h` broke
+nvcc 12.6's generated stubs (`__cudaLaunch` arity). The build now sets FindCUDA's root and checks it (engine build,
+below). That failure was a property of the packet, not a transient one, so the next run is the revised packet's
+first run, reviewed again, and not version 2's rerun.
+
 ## What is unchanged
 
 - **Controller.** `benchmark.py`, SHA-256 `ddd3104489dd2935…` (the same at ember `5bfda893` and at main
@@ -26,7 +33,9 @@ installation (below) and nothing in the scientific protocol.
   set after the packages are installed and before download and conversion, as the frozen wrapper did: one thread,
   TF32 off, one visible device, `EMBER_IR_BUILD=1`, `EMBER_IR_CTX=1024`.
 - **Native backend.** It must report CUDA, one thread, a 1,024 context and an all-F32 tensor inventory.
-- **Engine source.** Ember `5bfda893`, the compiled source of the Smol result.
+- **Engine source.** The compiled source of the Smol result: ember `5bfda893`, which the 3 Nov history purge
+  renamed `4d276ff9`. Its tree, the source content, is unchanged (`ee183b61…`), and the VM checks both the commit
+  and the tree.
 - **Canonical input.** The F32 GGUF must equal `0a174d42ccd7de15688e50dc044ea8006db31ee3bc6dc7e838f8a360ca46cdaa`
   byte for byte before any forward, or no forward is permitted.
 
@@ -76,8 +85,11 @@ installation (below) and nothing in the scientific protocol.
     packages are recorded (`apt_reconcile.json`, `apt_nvidia_sources_after.txt`, `cuda_packages.txt`). APT still
     resolves the two packages' dependencies, which are recorded rather than pinned.
 - **Engine build.** A new build, not the archived Smol executable.
-  - Toolkit: `/usr/local/cuda-12.6` (also passed as `CUDAToolkit_ROOT`), whose `nvcc --version` must report release
-    12.6 and is recorded. Release, `CMAKE_CUDA_ARCHITECTURES=89`, target `ir_hf_cuda_bench`, as the frozen v1/v2 VM
+  - Toolkit: `/usr/local/cuda-12.6`, whose `nvcc --version` must report release 12.6 and is recorded. It is passed
+    as `CUDAToolkit_ROOT` and as `CUDA_TOOLKIT_ROOT_DIR`, because ember's CMakeLists also uses the legacy FindCUDA.
+    Without that flag, FindCUDA took `/usr/local/cuda`, which is CUDA 13 on the image, and its headers broke the
+    12.6 compile. The build requires cmake to report `Found CUDA: /usr/local/cuda-12.6 (found version "12.6")`;
+    a local configure of the source prints exactly that. Release, `CMAKE_CUDA_ARCHITECTURES=89`, target `ir_hf_cuda_bench`, as the frozen v1/v2 VM
     scripts built it.
   - The libraries the executable resolves at load time are recorded with the loader environment (`ldd.txt`).
     This is evidence, not a gate: a failing `ldd` is recorded and the build continues. Libraries opened later
@@ -155,7 +167,7 @@ installation (below) and nothing in the scientific protocol.
     no stop needed), unconfirmed, or not observed (no PID file after a minute). Anything but interrupted or
     completed means the archive may hold outputs still being written, so the run can exit no better than 2
     (transport or receipt failure).
-  - Local tests (44) cover:
+  - Local tests (46) cover:
     - a stop during the controller, a stop between fork and registration, a stop before the controller's group
       exists, and a writer left behind by the controller, each checking that the writer's last write came before
       `status.json` was published;
@@ -166,6 +178,7 @@ installation (below) and nothing in the scientific protocol.
       - pins not offered after reconciliation;
       - a failed keyring download;
       - a wrong nvcc release;
+      - FindCUDA reporting another toolkit; a source tree other than the frozen one;
     - `apt_reconcile.py` on its own (7 tests): slash variants, longer paths and `http://` left alone, entries in
       `sources.list` itself, mixed and multi-URI deb822 files, already-disabled stanzas, and idempotence;
     - an unconfirmed quiescence.

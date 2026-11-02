@@ -9,7 +9,10 @@
 set -u
 COMMIT=${1:-}
 RUN=${2:-}
-SOURCE=5bfda89345b3bcf1f0352eee555f0fd4eb73ac7d          # ember compiled source of the frozen comparison
+# ember compiled source of the frozen comparison: 5bfda893 before the 3 Nov history purge renamed its commit; the
+# tree, which is the source content, is unchanged and is checked as well
+SOURCE=4d276ff91ab9b191be8556010b05d74cd4cb2520
+SOURCE_TREE=ee183b61772737b9b6f659ddc25f34d1a75ba332
 CANONICAL=0a174d42ccd7de15688e50dc044ea8006db31ee3bc6dc7e838f8a360ca46cdaa
 CONTROLLER=ddd3104489dd2935187271d48dfabe77501a2b3c5fa02350aad1ca5e54a2f04c
 MIRROR=unsloth/gemma-3-270m-it
@@ -103,6 +106,7 @@ git clone -q https://github.com/JohnnyTeutonic/ember.cpp.git branch > "$O/clone.
 git -C branch -c advice.detachedHead=false checkout -q --detach "$COMMIT" >> "$O/clone.log" 2>&1 || fail checkout $?
 git -C branch worktree add -q --detach "$W/src" "$SOURCE" >> "$O/clone.log" 2>&1 || fail checkout $?
 { [ "$(git -C branch rev-parse HEAD)" = "$COMMIT" ] && [ "$(git -C src rev-parse HEAD)" = "$SOURCE" ] \
+  && [ "$(git -C src rev-parse 'HEAD^{tree}')" = "$SOURCE_TREE" ] \
   && [ -z "$(git -C branch status --porcelain)" ] && [ -z "$(git -C src status --porcelain)" ] \
   && [ "$(sha256sum src/$E/benchmark.py | cut -c1-64)" = "$CONTROLLER" ]; } || fail checkout 99
 # the evidence bundle keeps the exact controller, amendment, contract and manifests (the frozen run kept its inputs)
@@ -227,8 +231,10 @@ CUDA_HOME=/usr/local/cuda-12.6
     && "$CUDA_HOME/bin/nvcc" --version > "$O/nvcc.txt" \
     && grep -q 'release 12\.6' "$O/nvcc.txt" \
     && cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=89 \
-        -DCMAKE_CUDA_COMPILER="$CUDA_HOME/bin/nvcc" -DCUDAToolkit_ROOT="$CUDA_HOME" > "$O/cmake.log" \
+        -DCMAKE_CUDA_COMPILER="$CUDA_HOME/bin/nvcc" -DCUDAToolkit_ROOT="$CUDA_HOME" \
+        -DCUDA_TOOLKIT_ROOT_DIR="$CUDA_HOME" > "$O/cmake.log" \
     && grep -q 'CUDA toolkit and cuBLAS found' "$O/cmake.log" \
+    && grep -qF "Found CUDA: $CUDA_HOME (found version \"12.6" "$O/cmake.log" \
     && make -C build -j"$(nproc)" ir_hf_cuda_bench > "$O/make.log" \
     && { echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}"; ldd build/ir_hf_cuda_bench || echo "ldd exit $?"; true; } \
         > "$O/ldd.txt" 2>&1 \
