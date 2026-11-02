@@ -100,6 +100,8 @@ def main():
 
     def pack(reason="periodic"):
         with lock:
+            if reason == "periodic" and quiet.is_set():
+                return  # rechecked under the lock: a periodic pack that waited for it never runs during timing
             summary["checkpoints"].append({"utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "reason": reason})
             atomic_json(out / "summary.json", summary)
             tmp = out / "out.zip.tmp"
@@ -121,17 +123,30 @@ def main():
                 (out / "vm.log").open("a").write("CHECKPOINT_ERROR " + str(e) + "\n")
 
     def kill_group(process):
-        """Terminate the command's whole process group (a client and the server it started), then reap it."""
-        for sig, wait in ((signal.SIGTERM, 20), (signal.SIGKILL, 10)):
+        """Terminate the command's whole process group (a client and the server it started). Survivors are
+        checked on the group, not the leader: a server that outlives its client is escalated to SIGKILL."""
+        def alive():
+            process.poll()  # reap the leader so it does not count as a survivor
+            try:
+                os.killpg(process.pid, 0)
+                return True
+            except ProcessLookupError:
+                return False
+            except PermissionError:
+                return True
+
+        for sig, grace in ((signal.SIGTERM, 20), (signal.SIGKILL, 10)):
+            if not alive():
+                return
             try:
                 os.killpg(process.pid, sig)
             except ProcessLookupError:
                 return
-            try:
-                process.wait(wait)
-                return
-            except subprocess.TimeoutExpired:
-                continue
+            end = time.monotonic() + grace
+            while time.monotonic() < end and alive():
+                time.sleep(0.2)
+        if alive():
+            raise RuntimeError("process group survived SIGKILL: GPU work may still be running")
 
     def run(cmd, log, timeout=1800, env=None, cwd=None, stderr_log=None):
         remaining = deadline - time.monotonic()
@@ -270,10 +285,9 @@ def main():
         registered = gate.registered_gate()
         for leg in plan["runs"]:
             log = science / ("leg_" + leg["name"] + ".log")
-            if leg["kind"] == "timing":
-                if not quiet.is_set():
-                    pack("before timing legs")
-                    quiet.set()
+            if leg["kind"] == "timing" and not quiet.is_set():
+                quiet.set()  # first, so no periodic pack can start once this one is done
+                pack("before timing legs")
             started = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             rc = run(leg["command"], log, 1800)
             summary["steps"][-1].update(leg=leg["name"], started_utc=started,

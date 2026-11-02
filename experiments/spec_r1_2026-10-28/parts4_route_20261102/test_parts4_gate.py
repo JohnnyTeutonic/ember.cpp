@@ -181,14 +181,18 @@ def build_matrix(out, manifest):
             for p, prompt in enumerate(m.PROMPTS):
                 n += 1
                 ids = [30 + i, 40 + p]
-                rows.append({"config": i, "prompt": prompt, "reply": "x", "ids": ids, "prompt_ids": [1, 2, 3 + p],
-                             "stop_id": 2, "tokens": 3})
+                rows.append({"config": i, "prompt": prompt, "body": m.body(i, prompt), "reply": "x", "ids": ids,
+                             "prompt_ids": [1, 2, 3 + p], "stop_id": 2, "tokens": 3})
                 generated = ids + [2]
                 env = {k: None for k in g.TRACE_ENV_KEYS}
                 env.update({k: v for k, v in m.leg_env(graph, arm, "").items() if k in env})
+                penalty = b.get("repeat_penalty")
                 lines.append({"ev": "request", "request": n, "prompt_ids": [1, 2, 3 + p], "num_prompt_tokens": 3,
                               "temperature": float(b["temperature"]), "top_k": b["top_k"], "top_p": 1.0,
-                              "repeat_on": "repeat_penalty" in m.CONFIGS[i], "debug_rows": False, "forced": False,
+                              "repeat_on": penalty is not None,
+                              "repeat_penalty": g.f32(m.gate_bits(penalty)) if penalty else 1.0,
+                              "repeat_last_n": b.get("repeat_last_n", 64), "max_new_tokens": b["max_new_tokens"],
+                              "debug_rows": False, "forced": False,
                               "spec": False, "ir": False, "cpu_offload_layers": 0, "deterministic": True,
                               "prefill": True, "prefill_sampled": generated[:1], "env": env})
                 for j, tok in enumerate(generated[1:]):
@@ -625,6 +629,106 @@ def test_matrix_positions_cannot_be_dropped(receipts):
         x for x in lines if x["ev"] == "token" and x["exclusions"] in ("top_k", "repeat_penalty")]])
     result = m.analyze(matrix)
     assert not result["pass"] and any("generated ids" in p for p in result["problems"])
+
+
+def test_candidate_failure_survives_a_missing_sibling_leg(receipts):
+    out, matrix = receipts
+    rows_edit(out, "det_rows_parts4_a", lambda r: r.__setitem__(5, r[5] + 1))
+    (out / "det_rows_parts4_b.jsonl").unlink()
+    result = g.analyze(out, matrix)
+    assert result["status"] == "CORRECTNESS_FAIL", failures(result)
+    assert "det_rows_parts4_a: logit row bits differ" in failures(result) and "parts4_b" in failures(result)
+
+
+def test_wrong_record_survives_a_later_malformed_event(receipts):
+    out, matrix = receipts
+
+    def change(lines):
+        tokens = [x for x in lines if x["ev"] == "token"]
+        tokens[0]["check"]["record_value"] = False
+        next(x for x in lines if x["ev"] == "request" and x["request"] == 5)["num_prompt_tokens"] = None
+    edit_trace(out, "det_route_parts4", change)
+    result = g.analyze(out, matrix)
+    assert result["status"] == "CORRECTNESS_FAIL", failures(result)
+    assert "demonstrably wrong" in failures(result) and "TypeError" in failures(result)
+
+
+def test_matrix_wrong_parts4_record_is_a_correctness_failure(receipts):
+    out, matrix = receipts
+    edit_tokens(matrix, "graph1_parts4", lambda ev: ev["check"].update(record_value=False),
+                lambda i, ev: ev["eligible"] and i == 0)
+    result = g.analyze(out, matrix)
+    assert result["status"] == "CORRECTNESS_FAIL" and "matrix: 1 PARTS4 selector records" in failures(result)
+
+
+def test_matrix_wrong_parts0_record_is_evidence_failure(receipts):
+    out, matrix = receipts
+    edit_tokens(matrix, "graph1_parts0", lambda ev: ev["check"].update(record_value=False),
+                lambda i, ev: ev["eligible"] and i == 0)
+    assert g.analyze(out, matrix)["status"] == "INCONCLUSIVE"
+
+
+def test_executed_client_must_be_the_frozen_client(receipts, tmp_path):
+    out, matrix = receipts
+    other = tmp_path / "other" / "dr_e2e.py"
+    other.parent.mkdir()
+    other.write_text("print('not the registered client')\n")
+    plan = json.loads((out / "plan.json").read_text())
+    plan["client"] = str(other)
+    for run in plan["runs"]:
+        run["command"][run["command"].index("run") - 1] = str(other)
+    (out / "plan.json").write_text(json.dumps(plan))
+    result = g.analyze(out, matrix)
+    assert result["status"] == "INCONCLUSIVE" and "frozen client" in failures(result)
+    # A client at a path that no longer exists replays only with an explicit relocation to the frozen bytes.
+    other.unlink()
+    assert "frozen client" in failures(g.analyze(out, matrix))
+    assert g.analyze(out, matrix, {"client": str(g.CLIENT)})["status"] == "PASS"
+
+
+def test_matrix_request_parameters_must_be_the_ones_sent(receipts):
+    _, matrix = receipts
+    edit_trace(matrix, "graph1_parts4", lambda lines: next(
+        x for x in lines if x["ev"] == "request" and x["repeat_on"]).update(repeat_last_n=8))
+    result = m.analyze(matrix)
+    assert not result["pass"] and any("configuration sent" in p for p in result["problems"])
+
+
+def test_matrix_request_body_must_be_the_one_specified(receipts):
+    out, matrix = receipts
+    path = matrix / "graph1_parts4.json"
+    leg = json.loads(path.read_text())
+    leg["rows"][3]["body"]["repeat_penalty"] = 1.05
+    path.write_text(json.dumps(leg))
+    result = g.analyze(out, matrix)
+    assert result["status"] == "INCONCLUSIVE" and "request body" in failures(result)
+
+
+def test_matrix_allows_only_true_immediate_stops_without_positions(receipts):
+    _, matrix = receipts
+    for name in [m.leg_name(gr, a) for gr, a in m.legs()]:
+        path = matrix / (name + ".json")
+        leg = json.loads(path.read_text())
+        leg["rows"][0]["ids"] = []
+        path.write_text(json.dumps(leg))
+
+        def stop_first(lines):
+            req = next(x for x in lines if x["ev"] == "request" and x["request"] == 1)
+            req["prefill_sampled"] = [2]
+            for x in [x for x in lines if x["ev"] == "token" and x["request"] == 1]:
+                lines.remove(x)
+            next(x for x in lines if x["ev"] == "end" and x["request"] == 1)["generated"] = [2]
+            # the next capture-holding position now opens the leg's first capture
+            first = next(x for x in lines if x["ev"] == "token")
+            if first["graph"] == "replay" and not first["captured"]:
+                first.update(captured=True, replay_index=1, inventory=inventory(
+                    first["graph_parts"] == 4 and "parts4" or first["graph_has_pick"] and "parts0" or "host"))
+                for x in [x for x in lines if x["ev"] == "token" and x["capture_id"] == first["capture_id"]][1:]:
+                    x["replay_index"] -= 2
+        edit_trace(matrix, name, stop_first)
+    result = m.analyze(matrix)
+    assert result["pass"], result["problems"]
+    assert result["counts"]["graph1_parts4"]["immediate_stops"] == 1
 
 
 def test_matrix_parts4_response_difference_is_a_correctness_failure(receipts):

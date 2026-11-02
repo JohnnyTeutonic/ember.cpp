@@ -1150,7 +1150,8 @@ if (prefill_enabled) {
     ember::route_trace::emit(nlohmann::json{
         {"ev", "request"}, {"request", trace_request}, {"prompt_ids", tokens},
         {"num_prompt_tokens", num_prompt_tokens}, {"temperature", temperature}, {"top_k", top_k}, {"top_p", top_p},
-        {"repetition_penalty", repetition_penalty_}, {"repeat_on", repeat_on}, {"ir", ir_ != nullptr},
+        {"repetition_penalty", repetition_penalty_}, {"repeat_on", repeat_on}, {"repeat_penalty", repeat_penalty_},
+        {"repeat_last_n", repeat_last_n_}, {"max_new_tokens", steps}, {"ir", ir_ != nullptr},
         {"cpu_offload_layers", config_.num_cpu_offload_layers}, {"spec", spec_on}, {"prefill", prefill_enabled},
         {"prefix_reused", prefill_from}, {"start_pos", start_pos_for_loop}, {"total_steps", total_steps},
         {"prefill_sampled", generated_token_ids}, {"deterministic", ember::deterministic()},

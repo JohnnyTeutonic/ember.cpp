@@ -15,7 +15,7 @@
   },
   "instrumentation": "Trace-only additions behind EMBER_ROUTE_TRACE; removing them reproduces the protocol source byte for byte (test_source_reduction.py). The selector kernels, the policy header and api.cpp's dispatch are unchanged.",
   "source_files_sha256": {
-    "api.cpp": "942807fcd5a942184e20bb1234b20ed9d4df1c6e9440521a6755331a265ec046",
+    "api.cpp": "15665eec7601016882047609fa9cfb666d244674a7ceb532fc2503df537f87c2",
     "model.cpp": "abcd860ad9ed9017d6efbabb43c708aa1e44ef5583a4c87250ecd2363459b40c",
     "model.h": "bb965d96475424e94226c0e0a011dc83dc1e4df224e0149c481628daca0d591b",
     "verify_kernels.cu": "298030626cc4974377fc8747a65f3ae38bce0e0ef02f4f34723ab612fb30b32e",
@@ -29,11 +29,11 @@
     "CMakeLists.txt": "339857345162138b5aec821adef589e3987ea1b10ac21b4cf442d04579d7f6b1"
   },
   "frozen_collector_sha256": {
-    "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_vm.py": "7e32b08c9bdc4f21ee288cc26f428e8ab5acf6e20c2645386d35862481b0dffa",
-    "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_gate.py": "f40c228c852a2817e1b7aa7ae8849574ed0857f8b10c3d7f43553ae1d5159c47",
-    "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_route_matrix.py": "b56abdf0465fa256ce28d28a0ed44d1daa3b77d41affa99282e49ea95cc83655",
-    "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_parts4_gate.py": "940ab33a5704865beb38243cc2f02b0df01d69bcb71280b2883a66dffdd9cf35",
-    "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_source_reduction.py": "83c6ff527c8b975ba05e97ecc7e1e0cab6792247da3afaffdc23364caabf33f6",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_vm.py": "8f40331ce5354dfe37f4d75cc21b3fdb0bd8ca397dd8079e5c7418e747670a8c",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_gate.py": "f7d7becb98a553a665d8fcdb5caf08584c842ca52cde2d834a447fcc743f58da",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_route_matrix.py": "e6d85f13a2b746ff91665748dde164ebfadefb3bf40ff6c6bb329acf3f98a387",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_parts4_gate.py": "aca6e801b1fce668207b2c9e86f95f94b1e64937a9e39890cdbb9369c4c1c219",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_source_reduction.py": "b6c8f0125c8ddad72fd6d38cc931239d04f3847d3522f2582bde8400cf40ccf5",
     "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_route_trace.cpp": "8b2afd0e20257869f4c5c33b4112841b833d22cfb51b0213908616fa75214b71",
     "experiments/spec_r1_2026-10-28/decode_pick_gate.py": "416c7edb240385033dee2b80c7d97756583182a4df228304cd1d54a18853f839",
     "experiments/spec_r1_2026-10-28/decode_pick_fallback.py": "924fc8784208cdb45839357bb2f325743ff2b562475e697cb10af4b091a0db35",
@@ -83,7 +83,7 @@
     "parts4_over_host": 1.15,
     "parts4_over_parts0": 1.0
   },
-  "packet_test_count": 76,
+  "packet_test_count": 87,
   "admission": {
     "authorized": false,
     "gpu_or_provider_calls": 0,

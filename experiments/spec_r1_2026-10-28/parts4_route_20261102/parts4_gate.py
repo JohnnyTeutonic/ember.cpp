@@ -123,7 +123,7 @@ def plan(binary, model, prompts, output, port=8080):
     manifest = {"schema": SCHEMA, "inputs": paths, "sha256": {k: sha(v) for k, v in paths.items()},
                 "frozen_sha256": {k: sha(v) for k, v in frozen_files().items()},
                 "request_keys": gate.request_keys(paths["prompts"]), "thresholds": THRESHOLDS, "port": port,
-                "runs": []}
+                "client": str(CLIENT), "runs": []}
     for name, arm, kind, dump, trace, forced in LEGS:
         env = leg_env(name, arm, trace, forced, out)
         manifest["runs"].append({"name": name, "arm": arm, "kind": kind, "dump": dump, "trace": trace,
@@ -139,18 +139,23 @@ class Inconclusive(Exception):
     """Operational, control, inventory or evidence failure: no scientific verdict."""
 
 
-def check_plan(manifest):
+def check_plan(manifest, relocate=None):
     """Every leg's environment and command are exactly the canonical ones: no appended override (a later
-    NAME=VALUE wins in the client), no duplicate, no other client, inputs or port."""
+    NAME=VALUE wins in the client), no duplicate, no other client, inputs or port. The executed client is the
+    plan's recorded client, whose bytes must be the frozen client's: hashed where it was recorded (on the VM), or,
+    offline, at relocate["client"]."""
     if manifest.get("schema") != SCHEMA or [r["name"] for r in manifest["runs"]] != [leg[0] for leg in LEGS]:
         raise Inconclusive("incomplete or unknown plan")
     if manifest.get("thresholds") != THRESHOLDS or not manifest.get("request_keys"):
         raise Inconclusive("altered thresholds or empty request inventory")
     first = manifest["runs"][0]["command"]
     recorded_out = Path(first[first.index("run") + 6]).parent  # run BIN GGUF 999 PORT PROMPTS OUT.jsonl
-    client = first[first.index("run") - 1]
-    if Path(client).name != "dr_e2e.py" or not isinstance(manifest.get("port"), int):
+    client = manifest.get("client")
+    if not isinstance(client, str) or Path(client).name != "dr_e2e.py" or not isinstance(manifest.get("port"), int):
         raise Inconclusive("plan client or port altered")
+    where = (relocate or {}).get("client", client)
+    if not Path(where).is_file() or sha(where) != manifest["frozen_sha256"].get("dr_e2e.py"):
+        raise Inconclusive("the executed client is not the frozen client (offline: relocate client=PATH)")
     for run, leg in zip(manifest["runs"], LEGS):
         if (run["arm"], run["kind"], run["dump"], run["trace"], run["forced"]) != leg[1:]:
             raise Inconclusive("plan leg altered: " + run["name"])
@@ -348,9 +353,10 @@ def check_position(ev, arm, dump, forced, counts, vocab):
     return proof, wrong
 
 
-def check_route(out, run, records, vocab=None):
+def check_route(out, run, records, vocab=None, wrong=None):
     """The route evidence of one route leg against its client records. The trace is read beside the leg's
-    records, so an archived output directory replays wherever it is unpacked."""
+    records, so an archived output directory replays wherever it is unpacked. Demonstrated-wrong selector output
+    is appended to `wrong` as it is found, so it survives an exception raised by a later event."""
     path = Path(out) / (run["name"] + ".trace.jsonl")
     if not path.is_file():
         raise Inconclusive(run["name"] + ": no route trace")
@@ -364,7 +370,8 @@ def check_route(out, run, records, vocab=None):
               "replays_not_capturing": 0, "compact": 0, "near_ties": 0, "nonfinite_records": 0,
               "forced_decidable": 0, "forced_decision_agrees": 0, "record_bits_equal": 0, "routes": {},
               "inventories": []}
-    proof, wrong = [], []
+    proof = []
+    wrong = [] if wrong is None else wrong
     continuity = Continuity()
     for k, rec in enumerate(records):
         for t in (requests[2 * k], requests[2 * k + 1]):  # the warm pass, then the recorded request
@@ -424,14 +431,17 @@ def same_record(rec, oracle):
             and (rec["first"], rec["last"], rec["nan"]) == (oracle["first"], oracle["last"], oracle["nan"]))
 
 
-def check_dumped_records(out, run, records, vocab):
+def check_dumped_records(out, run, records, vocab, wrong):
     """For the dumping PARTS4 route leg: every recorded request's records and partition records, recomputed in
     NumPy from the rows the client dumped (row 0 of a request is the prefill's, then one per decode position).
-    Independent of the C++ oracle the trace reports. Returns (checked positions, demonstrated-wrong problems)."""
+    Independent of the C++ oracle the trace reports. Appends demonstrated-wrong problems to `wrong` as found;
+    returns the number of positions checked."""
     import numpy as np
     rows = np.memmap(Path(out) / (run["name"] + ".jsonl.rows.f32"), dtype=np.float32, mode="r").reshape(-1, vocab)
     requests = read_trace(Path(out) / (run["name"] + ".trace.jsonl"))
-    checked, wrong = 0, []
+    if len(requests) != 2 * len(records):
+        raise Inconclusive(f"{run['name']}: {len(requests)} traced requests for {len(records)} records")
+    checked = 0
     for k, rec in enumerate(records):
         tokens = requests[2 * k + 1]["tokens"]
         if rec["rows"] != len(tokens) + 1:
@@ -445,7 +455,7 @@ def check_dumped_records(out, run, records, vocab):
                 if not same_record(ev["scratch"][p], row_oracle(row, bounds[p], bounds[p + 1])):
                     wrong.append(f"record {k} pos {ev['pos']}: partition {p} differs from its dumped row")
             checked += 1
-    return checked, wrong
+    return checked
 
 
 def rows_finite(path, vocab):
@@ -480,7 +490,7 @@ def analyze(output, matrix=None, relocate=None):
 
     try:
         manifest = json.loads((out / "plan.json").read_text(encoding="utf-8"))
-        check_plan(manifest)
+        check_plan(manifest, relocate)
         for name, path in frozen_files().items():
             if sha(path) != manifest["frozen_sha256"].get(name):
                 raise Inconclusive("frozen collector file changed: " + name)
@@ -513,31 +523,37 @@ def analyze(output, matrix=None, relocate=None):
     vocab = {}
 
     def correctness():
-        """Controls first; a candidate failure is recorded only against valid controls."""
-        missing = [n for n in CONTROL_ROWS + CANDIDATE_ROWS if n not in loaded]
+        """Controls first, on their own; then each loaded candidate leg separately against them. A missing or
+        invalid candidate leg is an evidence failure that hides nothing about the others."""
+        missing = [n for n in CONTROL_ROWS if n not in loaded]
         if missing:
-            raise Inconclusive("row legs not loaded: " + ", ".join(missing))
-        gate_ids, shapes = gate.ids, {n: [r["rows"] for r in loaded[n][0]] for n in CONTROL_ROWS + CANDIDATE_ROWS}
+            raise Inconclusive("control row legs not loaded: " + ", ".join(missing))
+        gate_ids = gate.ids
         v = loaded["det_rows_host_a"][1]["vocab"]
-        if any(loaded[n][1]["vocab"] != v for n in CONTROL_ROWS + CANDIDATE_ROWS):
-            raise Inconclusive("dump vocabularies differ")
-        vocab["v"] = v
-        if any(shapes[n] != shapes["det_rows_host_a"] for n in CONTROL_ROWS):
+        shape = [r["rows"] for r in loaded["det_rows_host_a"][0]]
+        if any(loaded[n][1]["vocab"] != v or [r["rows"] for r in loaded[n][0]] != shape for n in CONTROL_ROWS):
             raise Inconclusive("control row inventories differ")
-        finite = {n: rows_finite(out / (n + ".jsonl.rows.f32"), v) for n in CONTROL_ROWS + CANDIDATE_ROWS}
-        digest = {n: sha(out / (n + ".jsonl.rows.f32")) for n in CONTROL_ROWS + CANDIDATE_ROWS}
-        result["rows"] = {"vocab": v, "rows_per_leg": sum(shapes["det_rows_host_a"]), "sha256": digest,
-                          "finite": finite}
-        if not all(finite[n] for n in CONTROL_ROWS):
+        digest = {n: sha(out / (n + ".jsonl.rows.f32")) for n in CONTROL_ROWS}
+        finite = {n: rows_finite(out / (n + ".jsonl.rows.f32"), v) for n in CONTROL_ROWS}
+        result["rows"] = {"vocab": v, "rows_per_leg": sum(shape), "sha256": digest, "finite": finite}
+        if not all(finite.values()):
             raise Inconclusive("nonfinite control logits")
         reference = gate_ids(loaded["det_rows_host_a"][0])
-        if len({digest[n] for n in CONTROL_ROWS}) != 1 or any(gate_ids(loaded[n][0]) != reference for n in CONTROL_ROWS):
+        if len(set(digest.values())) != 1 or any(gate_ids(loaded[n][0]) != reference for n in CONTROL_ROWS):
             raise Inconclusive("control legs (host and PARTS0 repeats) differ: comparison inconclusive")
+        vocab.update(v=v, reference=True)
         result["reference_ids_sha256"] = hashlib.sha256(json.dumps(reference).encode()).hexdigest()
         for n in CANDIDATE_ROWS:
-            if shapes[n] != shapes["det_rows_host_a"]:
+            if n not in loaded:
+                op.append(n + ": candidate row leg not loaded")
+                continue
+            rows = out / (n + ".jsonl.rows.f32")
+            digest[n] = sha(rows)
+            if loaded[n][1]["vocab"] != v or [r["rows"] for r in loaded[n][0]] != shape:
                 sci.append(n + ": row inventory differs from the controls (generation changed)")
-            elif digest[n] != digest["det_rows_host_a"]:
+                continue
+            finite[n] = rows_finite(rows, v)
+            if digest[n] != digest["det_rows_host_a"]:
                 sci.append(n + ": logit row bits differ from the controls")
             if not finite[n]:
                 sci.append(n + ": nonfinite candidate logits with finite controls")
@@ -547,10 +563,14 @@ def analyze(output, matrix=None, relocate=None):
                     sci.append(name + ": replies, ids, stops, prompt ids or token counts differ from the controls")
                 else:
                     op.append(name + ": control leg ids differ")
-        vocab["reference"] = True
     section("correctness", correctness)
 
     routes = result.setdefault("routes", {})
+
+    def demonstrated(name, arm, wrong, what):
+        """Demonstrated-wrong selector output is a candidate failure against valid controls, else evidence."""
+        if wrong:
+            (sci if arm == "parts4" and "reference" in vocab else op).append(f"{name}: {len(wrong)} {what}")
 
     def route_legs():
         for run in manifest["runs"]:
@@ -559,27 +579,29 @@ def analyze(output, matrix=None, relocate=None):
             if run["name"] not in loaded:
                 op.append(run["name"] + ": route leg not loaded")
                 continue
+            sink = []  # filled as positions are checked, so a later malformed event cannot discard it
             try:
-                r = check_route(out, run, loaded[run["name"]][0], vocab.get("v"))
-            except Inconclusive as exc:
-                op.append(run["name"] + ": " + str(exc))
-                continue
-            routes[run["name"]] = r
-            if r["proof_count"]:
-                op.append(run["name"] + f": {r['proof_count']} route-evidence problems")
-            if r["wrong_count"]:
-                (sci if run["arm"] == "parts4" and "reference" in vocab else op).append(
-                    run["name"] + f": {r['wrong_count']} selector records demonstrably wrong")
+                r = check_route(out, run, loaded[run["name"]][0], vocab.get("v"), sink)
+                routes[run["name"]] = r
+                if r["proof_count"]:
+                    op.append(run["name"] + f": {r['proof_count']} route-evidence problems")
+            except Exception as exc:
+                op.append(run["name"] + ": " + (str(exc) if isinstance(exc, Inconclusive) else repr(exc)))
+            demonstrated(run["name"], run["arm"], sink, "selector records demonstrably wrong")
         name = "det_route_parts4_rows"
         if name in loaded and "v" in vocab:
-            checked, wrong = check_dumped_records(out, runs[name], loaded[name][0], vocab["v"])
-            routes["dumped_record_oracle"] = {"positions": checked, "wrong": wrong[:50], "wrong_count": len(wrong)}
-            if wrong:
-                (sci if "reference" in vocab else op).append(name + ": records differ from their dumped rows")
-            if checked == 0:
-                op.append(name + ": no dumped decode position to check")
-            if sha(out / (name + ".jsonl.rows.f32")) != result["rows"]["sha256"]["det_rows_parts4_a"]:
-                op.append(name + ": traced rows differ from untraced PARTS4 rows")
+            sink = []
+            try:
+                checked = check_dumped_records(out, runs[name], loaded[name][0], vocab["v"], sink)
+                routes["dumped_record_oracle"] = {"positions": checked, "wrong": sink[:50], "wrong_count": len(sink)}
+                if checked == 0:
+                    op.append(name + ": no dumped decode position to check")
+            except Exception as exc:
+                op.append(name + ": dumped-row oracle: " + (str(exc) if isinstance(exc, Inconclusive) else repr(exc)))
+            demonstrated(name, "parts4", sink, "records differ from their dumped rows")
+            ref = result["rows"]["sha256"].get("det_rows_parts4_a")
+            if ref is None or sha(out / (name + ".jsonl.rows.f32")) != ref:
+                op.append(name + ": traced rows differ from untraced PARTS4 rows (or no untraced rows to compare)")
         # One binary: graphs differ only by the selector nodes, whatever cuBLAS nodes the runtime cannot name.
         firsts = {a: (routes.get("det_route_" + a) or {}).get("counts", {}).get("inventories", [None])[0]
                   for a in ARMS}
@@ -601,7 +623,10 @@ def analyze(output, matrix=None, relocate=None):
                                                 "model": manifest["sha256"]["model"]})
         for d in routes["matrix"].get("response_differences", []):
             (sci if d.startswith("parts4") and "reference" in vocab else op).append("matrix: " + d)
-        if not routes["matrix"].get("pass"):
+        n = routes["matrix"].get("candidate_wrong_count", 0)
+        if n:
+            (sci if "reference" in vocab else op).append(f"matrix: {n} PARTS4 selector records demonstrably wrong")
+        if routes["matrix"].get("problem_count"):
             op.append("matrix: exclusion and graph-off route evidence failed")
     section("matrix", matrix_check)
 

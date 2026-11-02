@@ -3,9 +3,9 @@ candidate source byte for byte.
 
 Every insertion is whole lines. Removing (a) each statement guarded by the trace flag, (b) the flag definitions
 and includes, and (c) the named trace helpers and declarations yields files whose SHA-256 equals the protocol
-pins (api.cpp, model.cpp) or the protocol commit 41b6cd5 (the others). A removable guard must be a conjunction
-with the bare flag as one conjunct and only side-effect-free others (no assignment, increment or call), so a
-negated, disjunctive or side-effecting guard is refused rather than deleted.
+pins (api.cpp, model.cpp) or the protocol commit 41b6cd5 (the others). A removable guard must be one of five audited
+conditions (the bare flag, or the flag conjoined with reads of locals and members); any other guard, negated,
+disjunctive, calling or otherwise, is refused rather than deleted.
 
 This is a source-difference proof, not a semantic one. With EMBER_ROUTE_TRACE unset the patched build also runs
 the cached flag reads, the trace_request initialisation and the untaken branches' conditions, and TinyLlamaModel
@@ -103,17 +103,23 @@ def conjuncts(cond):
     return parts + [cur.strip()]
 
 
-SIDE_EFFECT = re.compile(r"(?<![=!<>])=(?!=)|\+\+|--|[A-Za-z_]\w*\s*\(")
+# The audited guards, exactly: the bare flag, or the flag conjoined with reads of locals and members. A syntactic
+# side-effect test can be bypassed (a template call, an overloaded operator), so nothing else is accepted.
+AUDITED_GUARDS = {
+    "trace",
+    "tracing",
+    "trace && pick",
+    "trace && (!enabled || decode_graph_disabled_)",
+    "e == cudaSuccess && trace",
+}
 
 
 def check_guard(cond):
-    """A removable guard: the bare flag is one conjunct, and the others have no side effects."""
-    parts = conjuncts(cond)
-    if not any(p in ("trace", "tracing") for p in parts):
-        raise ValueError("trace guard without the bare flag as a conjunct: " + cond)
-    for p in parts:
-        if p not in ("trace", "tracing") and SIDE_EFFECT.search(p):
-            raise ValueError("side effect in a trace guard: " + cond)
+    """A removable guard is one of the audited guards; any other condition is refused, not deleted."""
+    normal = " ".join(cond.split())
+    conjuncts(normal)  # a top-level disjunction is reported as such
+    if normal not in AUDITED_GUARDS:
+        raise ValueError("unaudited trace guard: " + normal)
 
 
 def reduce(name, text):
@@ -163,6 +169,9 @@ def test_selector_and_policy_sources_unchanged():
     "  if (trace && (n = 4)) x = 1;",
     "  if (trace && i++) x = 1;",
     "  if (pick) record(trace);",
+    "  if (refill_cache<int>() && trace) x = 1;",
+    "  if ((*hook)() && trace) x = 1;",
+    "  if (trace && pick && refill) x = 1;",
 ])
 def test_unsafe_guards_are_refused_not_deleted(statement):
     source = (ROOT / "model.cpp").read_text(encoding="utf-8")

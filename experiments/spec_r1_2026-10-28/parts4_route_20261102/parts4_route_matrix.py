@@ -96,10 +96,11 @@ def run(binary, model, out):
                 rows = []
                 for i in range(len(CONFIGS)):
                     for prompt in PROMPTS:
-                        r = request(f"http://127.0.0.1:{PORT}/chat", body(i, prompt))
+                        sent = body(i, prompt)
+                        r = request(f"http://127.0.0.1:{PORT}/chat", sent)
                         if not r.get("prompt_ids") or not isinstance(r.get("ids"), list):
                             raise ValueError(name + ": missing ids")
-                        rows.append({"config": i, "prompt": prompt,
+                        rows.append({"config": i, "prompt": prompt, "body": sent,
                                      **{k: r.get(k) for k in ("reply", "ids", "prompt_ids", "stop_id", "tokens")}})
                 (out / (name + ".json")).write_text(json.dumps(
                     {"health": health, "rows": rows, "env": leg_env(graph, arm, trace)}, indent=1) + "\n")
@@ -133,17 +134,27 @@ def request_problems(q, graph, arm, config):
     bad = []
     if q.get("env") != want_env:
         bad.append("server environment differs from the leg")
+    penalty = b.get("repeat_penalty")
     if (q.get("temperature") != float(b["temperature"]) or q.get("top_k") != b["top_k"] or q.get("top_p") != 1.0
-            or q.get("repeat_on") is not ("repeat_penalty" in CONFIGS[config]) or q.get("debug_rows") is not False
-            or q.get("forced") is not False or q.get("spec") is not False or q.get("ir") is not False
-            or q.get("cpu_offload_layers") != 0 or q.get("deterministic") is not True):
+            or q.get("repeat_on") is not (penalty is not None) or q.get("max_new_tokens") != b["max_new_tokens"]
+            or (penalty is not None and (q.get("repeat_penalty") != gate.f32(gate_bits(penalty))
+                                         or q.get("repeat_last_n") != b["repeat_last_n"]))
+            or q.get("debug_rows") is not False or q.get("forced") is not False or q.get("spec") is not False
+            or q.get("ir") is not False or q.get("cpu_offload_layers") != 0 or q.get("deterministic") is not True):
         bad.append("traced request is not the configuration sent")
     return bad
 
 
+def gate_bits(x):
+    """The float32 bits of a JSON number, as the server stores it."""
+    import struct
+    return struct.unpack("<I", struct.pack("<f", x))[0]
+
+
 def check_position(ev, graph, arm, config, temperature):
+    """(proof problems, demonstrated-wrong selector output) for one sampled decode position."""
     eligible, excl, routes = expected(graph, arm, config)
-    bad = []
+    bad, wrong = [], []
     if ev.get("eligible") is not eligible or ev.get("exclusions") != excl or ev.get("route") not in routes:
         bad.append(f"route {ev.get('route')} exclusions '{ev.get('exclusions')}' (wanted {sorted(routes)} '{excl}')")
     if not ev.get("eligibility_consistent") or ev.get("forced"):
@@ -155,28 +166,32 @@ def check_position(ev, graph, arm, config, temperature):
         if not ev.get("graph_has_pick") or ev.get("graph_parts") != gate.PARTS[arm]:
             bad.append("replayed graph lacks the arm's selector")
         check = ev.get("check") or {}
-        if not (check.get("record_written") and check.get("record_value")):
-            bad.append("record not written by this replay or differs from its row")
-        if gate.PARTS[arm] == 4 and (check.get("parts_written") != 4 or check.get("parts_value") != 4
-                                    or not check.get("merge_value")):
-            bad.append("partition records not written by this replay or differ from their oracles")
+        if not check.get("record_written"):
+            bad.append("record not written by this replay")
+        elif not check.get("record_value"):
+            wrong.append("written record differs from its replay's row")
+        if gate.PARTS[arm] == 4:
+            if check.get("parts_written") != 4:
+                bad.append("partition records not written by this replay")
+            elif check.get("parts_value") != 4 or not check.get("merge_value"):
+                wrong.append("written partition records differ from their oracles or do not merge to the record")
         try:
             decided, why = gate.recompute(ev["record"], temperature)
         except (KeyError, TypeError):
-            return bad + ["record missing from the event"]
+            return bad + ["record missing from the event"], wrong
         want = {"none": "compact", "near_tie": "host_after_near_tie", "nonfinite": "host_after_nonfinite"}[why]
         if (ev.get("decision"), ev.get("undecided")) != (decided, why) or ev.get("route") != want \
                 or bool(ev.get("picked_on_device")) is not (want == "compact"):
             bad.append(f"route {ev.get('route')} or decision is not the record's ({want}, {decided})")
         elif want == "compact" and ev.get("token") != decided:
-            bad.append("compact token is not the record's decision")
+            wrong.append("compact token is not the record's decision")
         if temperature < 0.05 and why != "none":
             bad.append("below temperature 0.05 the record always decides")
     elif ev.get("record_returned") or ev.get("picked_on_device"):
         bad.append("record consumed where no compact pick applies")
     if ev.get("captured"):
         bad.extend(gate.inventory_problems(ev.get("inventory") or {}, arm if (graph and eligible) else "host"))
-    return bad
+    return bad, wrong
 
 
 def analyze(out, expect=None):
@@ -188,7 +203,8 @@ def analyze(out, expect=None):
         raise ValueError("matrix leg inventory incomplete or altered")
     if expect and (receipt.get("binary_sha256") != expect["binary"] or receipt.get("model_sha256") != expect["model"]):
         raise ValueError("matrix receipt is from another binary or model")
-    records, problems, differences, counts = {}, [], [], {}
+    records, problems, differences, candidate_wrong, counts = {}, [], [], [], {}
+    # The responses first, from the receipts alone: a PARTS4 difference from host is reported whatever the traces.
     for graph, arm in legs():
         name = leg_name(graph, arm)
         leg = json.loads((out / (name + ".json")).read_text())
@@ -202,49 +218,66 @@ def analyze(out, expect=None):
                 or leg["health"].get("model") != receipt.get("model")):
             raise ValueError(name + ": environment, mode or model differs")
         rows = leg["rows"]
-        if [(r["config"], r["prompt"]) for r in rows] != [(i, p) for i in range(len(CONFIGS)) for p in PROMPTS]:
-            raise ValueError(name + ": incomplete request inventory")
+        if [(r["config"], r["prompt"], r.get("body")) for r in rows] != [
+                (i, p, body(i, p)) for i in range(len(CONFIGS)) for p in PROMPTS]:
+            raise ValueError(name + ": incomplete request inventory, or a request body other than the one specified")
         records[(graph, arm)] = rows
-        traced_requests = gate.read_trace(out / (name + ".trace.jsonl"))
-        if len(traced_requests) != len(rows):
-            raise ValueError(f"{name}: {len(traced_requests)} traced requests for {len(rows)} requests")
-        c = counts.setdefault(name, {"positions": 0, "per_config": [0] * len(CONFIGS), "routes": {}, "captures": 0})
-        continuity = gate.Continuity()
-        for row, t in zip(rows, traced_requests):
-            config = row["config"]
-            q = t["request"]
-            where = f"{name} config {config} '{row['prompt']}'"
-            problems.extend(where + ": " + b for b in request_problems(q, graph, arm, config))
-            if q.get("prompt_ids") != row["prompt_ids"] or not gate.generated_matches(
-                    t["end"].get("generated"), row["ids"], row["stop_id"]):
-                problems.append(where + ": trace differs from the response")
-            bad = gate.composition_problems(t)
-            problems.extend(where + ": " + b for b in bad)
-            if bad:
-                continue
-            for ev in t["tokens"]:
-                c["positions"] += 1
-                c["per_config"][config] += 1
-                c["routes"][ev.get("route")] = c["routes"].get(ev.get("route"), 0) + 1
-                c["captures"] += bool(ev.get("captured"))
-                at = f"{where} pos {ev.get('pos')}: "
-                if graph:
-                    problems.extend(at + b for b in continuity.step(ev))
-                problems.extend(at + b for b in check_position(ev, graph, arm, config, q["temperature"]))
     for graph in (0, 1):
         base = records[(graph, "host")]
         for arm in ("parts0", "parts4"):
             for x, y in zip(base, records[(graph, arm)]):
                 if x != y:
                     differences.append(f"{arm} graph{graph} config {x['config']} '{x['prompt']}': response differs from host")
+    for graph, arm in legs():
+        name = leg_name(graph, arm)
+        rows = records[(graph, arm)]
+        c = counts.setdefault(name, {"positions": 0, "per_config": [0] * len(CONFIGS), "routes": {}, "captures": 0,
+                                     "immediate_stops": 0})
+        try:
+            traced_requests = gate.read_trace(out / (name + ".trace.jsonl"))
+            if len(traced_requests) != len(rows):
+                raise ValueError(f"{len(traced_requests)} traced requests for {len(rows)} requests")
+            continuity = gate.Continuity()
+            for row, t in zip(rows, traced_requests):
+                config = row["config"]
+                q = t["request"]
+                where = f"{name} config {config} '{row['prompt']}'"
+                problems.extend(where + ": " + b for b in request_problems(q, graph, arm, config))
+                if q.get("prompt_ids") != row["prompt_ids"] or not gate.generated_matches(
+                        t["end"].get("generated"), row["ids"], row["stop_id"]):
+                    problems.append(where + ": trace differs from the response")
+                bad = gate.composition_problems(t)
+                problems.extend(where + ": " + b for b in bad)
+                if bad:
+                    continue
+                if not t["tokens"]:
+                    # Only a reply that stopped on its first (prefill) token has no decode position.
+                    if t["end"].get("generated") == [row["stop_id"]] and row["ids"] == []:
+                        c["immediate_stops"] += 1
+                    else:
+                        problems.append(where + ": no decode position traced")
+                for ev in t["tokens"]:
+                    c["positions"] += 1
+                    c["per_config"][config] += 1
+                    c["routes"][ev.get("route")] = c["routes"].get(ev.get("route"), 0) + 1
+                    c["captures"] += bool(ev.get("captured"))
+                    at = f"{where} pos {ev.get('pos')}: "
+                    if graph:
+                        problems.extend(at + b for b in continuity.step(ev))
+                    bad, wrong = check_position(ev, graph, arm, config, q["temperature"])
+                    problems.extend(at + b for b in bad)
+                    (candidate_wrong if arm == "parts4" else problems).extend(at + w for w in wrong)
+        except (ValueError, KeyError, TypeError, gate.Inconclusive) as exc:
+            problems.append(name + ": trace unusable: " + str(exc))
     for name, c in counts.items():
         if any(n == 0 for n in c["per_config"]):
             problems.append(name + ": a configuration has no sampled decode position")
     for arm in ("parts0", "parts4"):
         if counts[leg_name(1, arm)]["routes"].get("compact", 0) == 0:
             problems.append(arm + ": no compact route with the graph on")
-    return {"pass": not problems and not differences, "counts": counts, "problems": problems[:50],
+    return {"pass": not (problems or differences or candidate_wrong), "counts": counts, "problems": problems[:50],
             "problem_count": len(problems), "response_differences": differences,
+            "candidate_wrong": candidate_wrong[:50], "candidate_wrong_count": len(candidate_wrong),
             "binary_sha256": receipt.get("binary_sha256"), "model_sha256": receipt.get("model_sha256"),
             "scope": "exclusion and graph-off routes for the three arms; IR and CPU offload are not executed"}
 
