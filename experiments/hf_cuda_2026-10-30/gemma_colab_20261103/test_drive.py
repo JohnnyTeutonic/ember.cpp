@@ -41,10 +41,23 @@ if cmd == "stop":
     sys.exit(0)
 if cmd == "exec":
     f = args[args.index("-f") + 1]
-    m = re.match(r".*claude_scan_(.+)_(launch|poll|pack\d|mkdir|stop_workload)\.py$", f); run, label = m.group(1), m.group(2)
-    if label == "mkdir":
+    m = re.match(r".*claude_scan_(.+)_(launch_probe\d|launch_retry|launch|poll|pack\d|mkdir\d|stop_workload\d)\.py$", f)
+    run, label = m.group(1), m.group(2)
+    calls = st.setdefault("calls", {}); calls[label] = calls.get(label, 0) + 1; save()
+    if label.startswith("mkdir"):
+        # a hung call is killed by the driver; here it is simply a failed call
+        if mode == "mkdir_flaky" and label == "mkdir1": sys.exit(1)
         print("MADE"); sys.exit(0)
-    if label == "stop_workload":
+    if label.startswith("launch_probe"):
+        print("STARTED" if (content / f"run_{run}").exists() else "ABSENT"); sys.exit(0)
+    if label == "launch_retry" and mode == "launch_lost_absent":
+        label = "launch"
+        mode = "normal"
+    elif label == "launch_retry":
+        sys.exit(1)
+    if label == "launch" and mode == "launch_lost_absent": sys.exit(1)  # nothing started
+    if label.startswith("stop_workload"):
+        if mode == "stop_flaky" and label == "stop_workload1": sys.exit(1)
         st["stopped"] = True; save()
         if mode == "stop_unconfirmed": print('STOP_REPLY {"result": "unconfirmed", "stop": null}'); sys.exit(0)
         if mode == "stop_not_observed": print('STOP_REPLY {"result": "not_observed"}'); sys.exit(0)
@@ -63,9 +76,9 @@ if cmd == "exec":
              "pass": mode != "gate_fail", "gates": gates}
         (out / "status.json").write_text(json.dumps(s))
         if mode == "not_quiescent": (out / "QUIESCENCE_UNCONFIRMED").write_text("")
-        if mode not in ("never_done", "stop_unconfirmed", "stop_not_observed", "stop_garbled", "launch_ack_lost"):
+        if mode not in ("never_done", "stop_unconfirmed", "stop_not_observed", "stop_garbled", "launch_ack_lost", "stop_flaky"):
             (out / "DONE").write_text(run)
-        if mode != "launch_ack_lost": print("LAUNCHED")
+        if mode not in ("launch_ack_lost", "launch_lost_started"): print("LAUNCHED")
     elif label == "poll":
         print("DONE" if (out / "DONE").exists() else "RUNNING")
     else:
@@ -74,6 +87,8 @@ if cmd == "exec":
     sys.exit(0)
 if cmd == "upload":
     if mode == "upload_fail": sys.exit(1)
+    if mode == "upload_flaky" and args[-1] not in st.setdefault("upload_tried", []):
+        st["upload_tried"].append(args[-1]); save(); sys.exit(1)
     st.setdefault("uploads", []).append(args[-1]); save(); sys.exit(0)
 if cmd == "download":
     src, dst = args[-2], args[-1]
@@ -230,9 +245,29 @@ class DriveTests(unittest.TestCase):
     def test_lost_launch_acknowledgement_still_stops_the_script(self):
         rc, state, log, _, _ = self.run_drive("launch_ack_lost")
         self.assertTrue(state.get("stopped"), log)
-        self.assertIn("launched False", log)
-        self.assertEqual(rc, 2, log)
+        self.assertIn("launch: no acknowledgement; the VM script is started", log)
+        self.assertNotIn("launch_retry", state["calls"])  # never launched twice
+        self.assertEqual(rc, 2, log)  # no DONE before the deadline
         self.assertEqual(state["sessions"], {})
+
+    def test_lost_acknowledgement_of_a_started_launch_is_reconciled(self):
+        rc, state, log, _, _ = self.run_drive("launch_lost_started")
+        self.assertIn("the VM script is started", log)
+        self.assertNotIn("launch_retry", state["calls"])
+        self.assertEqual(rc, 0, log)
+
+    def test_launch_shown_absent_is_tried_once_more(self):
+        rc, state, log, _, _ = self.run_drive("launch_lost_absent")
+        self.assertIn("launch: no acknowledgement; the VM script is absent", log)
+        self.assertEqual(state["calls"]["launch_retry"], 1)
+        self.assertEqual(rc, 0, log)
+
+    def test_idempotent_calls_are_retried(self):
+        for mode in ("mkdir_flaky", "upload_flaky"):
+            rc, state, log, _, _ = self.run_drive(mode)
+            self.assertEqual(rc, 0, (mode, log))
+        rc, state, log, _, _ = self.run_drive("stop_flaky")
+        self.assertEqual(state["calls"]["stop_workload2"], 1, log)
 
     def test_bad_arguments_are_refused(self):
         r = subprocess.run([sys.executable, str(HERE / "drive.py"), "main", "x"], capture_output=True, text=True)

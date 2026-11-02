@@ -36,6 +36,30 @@ Every CUDA header the source includes comes from these packages (`cuda_runtime.h
 from cudart-dev, `cublas_v2.h` from libcublas-dev, `nvtx3/nvToolsExt.h` from nvtx). This is the packet's next first
 run, reviewed again.
 
+That revision's first run, `g5-20261103` (ember `ace27ef`, round 9 RUN), lost its launch call to the same
+intermittent Colab CLI hang. Hangs have now hit every attempt on some call: the first pack in g1 and g2, `mkdir`
+in g3, a poll in g4 and the launch in g5. Nothing was launched in g5:
+- the stop helper found no PID file within 60 seconds, and retrieval found no run directory;
+- the VM was stopped less than 5 minutes after the launch call, while the script needs about 20 minutes of gates
+  before the controller.
+
+So the controller cannot have started. The driver logged the stop as not observed, as it must when it cannot see
+the VM (`receipts/g5-20261103/driver.log`).
+
+The present revision changes only how the driver survives these hangs; the VM-side science is untouched:
+- `mkdir` and each upload are tried up to three times, and the stop helper twice, all within the existing
+  deadlines. All of them are idempotent.
+- A launch call without acknowledgement is reconciled, never blindly repeated. A probe (read-only, retried up to
+  three times) waits up to 90 seconds for the script's PID file or run directory:
+  - started: the run goes on;
+  - shown absent: the launch is tried once more;
+  - unknown: the driver never launches again, and the stop path reconciles.
+- `vm_gemma.sh` now claims its run directory with an atomic `mkdir`. A delayed first launch and the retry therefore
+  cannot both run: the second exits before installing traps, publishing a PID or doing any work. The launch log is
+  appended to, not truncated.
+
+The rule on reruns is unchanged: no attempt that reached the controller is repeated.
+
 ## What is unchanged
 
 - **Controller.** `benchmark.py`, SHA-256 `ddd3104489dd2935…` (the same at ember `5bfda893` and at main
@@ -87,7 +111,7 @@ run, reviewed again.
     to combine with a second entry, or the image may have edited the keyring package's own list file, which dpkg
     would not restore. So no package manages the entry here. Every NVIDIA source entry is recorded first
     (`apt_nvidia_sources_before.txt`).
-  - "Offered" means `apt-cache madison` lists both exact versions and a simulated install of them succeeds. If
+  - "Offered" means `apt-cache madison` lists all three exact versions and a simulated install of them succeeds. If
     the image's own configuration offers them after `apt-get update`, it is used unchanged.
   - Otherwise:
     - The keyring is taken from NVIDIA's keyring package (`cuda-keyring_1.1-1_all.deb`, SHA-256 `d2a6b11c…`; the
@@ -102,7 +126,7 @@ run, reviewed again.
   - An `http://` or longer-path variant is a different APT source, cannot conflict on `Signed-By`, and is left as
     it is. Unrelated repositories, stanzas and files are untouched. The resulting entries and the installed CUDA
     packages are recorded (`apt_reconcile.json`, `apt_nvidia_sources_after.txt`, `cuda_packages.txt`). APT still
-    resolves the two packages' dependencies, which are recorded rather than pinned.
+    resolves the three packages' dependencies, which are recorded rather than pinned.
 - **Engine build.** A new build, not the archived Smol executable.
   - Toolkit: `/usr/local/cuda-12.6`, whose `nvcc --version` must report release 12.6 and is recorded. It is passed
     as `CUDAToolkit_ROOT` and as `CUDA_TOOLKIT_ROOT_DIR`, because ember's CMakeLists also uses the legacy FindCUDA.
@@ -155,7 +179,7 @@ run, reviewed again.
     Each reviewed packet revision gets one first run and at most one unchanged retry, and only when the earlier
     attempt is shown not to have reached the controller. A repair for a packet defect is a new revision, reviewed
     before its first run. Every attempt stays in the ledger: `g1` (version 1), `g2` (version 2), `g3` and `g4`
-    (round-8 revision, first run and retry). None reached the controller.
+    (round-8 revision, first run and retry), `g5` (round-9 revision, first run). None reached the controller.
   - A run that reached the controller is never repeated: its outputs are retrieved and reported as complete,
     incomplete or negative. A transport failure after that point makes the result incomplete; it does not make it
     eligible for another attempt.
@@ -190,7 +214,10 @@ run, reviewed again.
     no stop needed), unconfirmed, or not observed (no PID file after a minute). Anything but interrupted or
     completed means the archive may hold outputs still being written, so the run can exit no better than 2
     (transport or receipt failure).
-  - Local tests (46) cover:
+  - Local tests (51) cover:
+    - the driver's hang handling: a flaky `mkdir`, upload and stop helper; a lost acknowledgement of a launch that
+      started (reconciled, never relaunched); a launch shown absent (relaunched once); a second launch of the same
+      run (exits before doing anything); only NVTX not offered;
     - a stop during the controller, a stop between fork and registration, a stop before the controller's group
       exists, and a writer left behind by the controller, each checking that the writer's last write came before
       `status.json` was published;

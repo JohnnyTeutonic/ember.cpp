@@ -48,6 +48,7 @@ case "$APT_SCENARIO" in
     [ "$APT_SCENARIO" != unoffered ] && grep -qs "^deb " "$VM_APT_ETC/sources.list.d/vm-gemma-cuda-12-6.list" || exit 0;;
 esac
 [ "$FAIL_AT" = toolkit ] && exit 0
+[ "$APT_SCENARIO" = nvtx_missing ] && [ "$2" = cuda-nvtx-12-6 ] && exit 0
 echo " $2 | 12.6.3-1 | https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64 Packages"
 echo " $2 | 12.6.4.1-1 | https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64 Packages"
 echo " $2 | 12.6.77-1 | https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64 Packages"''',
@@ -307,6 +308,11 @@ class VmGemmaTests(unittest.TestCase):
         self.assertNotIn("packages", s["gates"])
         self.assertNotIn("install -y", (tmp / "apt.calls").read_text())
 
+    def test_toolkit_fails_closed_when_only_nvtx_is_not_offered(self):
+        rc, s, _, tmp = self.run_vm(extra={"APT_SCENARIO": "nvtx_missing"}, with_tmp=True)
+        self.assertEqual((rc, s["gates"]["toolkit"]), (1, 98))
+        self.assertNotIn("install -y", (tmp / "apt.calls").read_text())
+
     def test_a_toolkit_other_than_12_6_fails_the_build(self):
         rc, s, _, _ = self.run_vm(extra={"STUB_NVCC_RELEASE": "13.0"})
         self.assertEqual(rc, 1)
@@ -323,6 +329,18 @@ class VmGemmaTests(unittest.TestCase):
     def test_a_source_tree_other_than_the_frozen_one_fails_checkout(self):
         rc, s, _, _ = self.run_vm(extra={"STUB_SOURCE_TREE": "f" * 40})
         self.assertEqual((rc, s["gates"]["checkout"]), (1, 99))
+
+    def test_a_second_launch_of_the_same_run_exits_before_doing_anything(self):
+        # the driver may retry a launch it found absent; a delayed first call must then do nothing
+        def prepare(tmp):
+            (tmp / "run_g1" / "out").mkdir(parents=True)
+            (tmp / "run_g1" / "out" / "marker").write_text("first")
+        rc, s, done, tmp = self.run_vm(prepare=prepare, with_tmp=True)
+        self.assertEqual(rc, 2)
+        self.assertIsNone(s)
+        self.assertIsNone(done)
+        self.assertFalse((tmp / "vm_g1.pid").exists())
+        self.assertEqual(sorted(p.name for p in (tmp / "run_g1" / "out").iterdir()), ["marker"])
 
     def test_wrong_head_fails_checkout(self):
         rc, s, _, _ = self.run_vm(head="f" * 40)

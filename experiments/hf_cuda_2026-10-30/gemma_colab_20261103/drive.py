@@ -215,7 +215,29 @@ class Driver:
         return self.call([COL, "exec", "-s", self.name, "-f", str(p), "--timeout", str(max(30, want - 60))],
                          want, deadline, label)
 
+    def launch_state(self):
+        """After a launch call without acknowledgement: 'started' when the VM script has claimed its run directory
+        or published its PID within 90 s, 'absent' when neither appears, None when the probe itself keeps failing.
+        The probe only reads, so it is retried."""
+        code = ("import os, time\n"
+                f"pid, run = '/content/vm_{self.run}.pid', '/content/run_{self.run}'\n"
+                "for _ in range(90):\n"
+                "    if os.path.exists(pid) or os.path.isdir(run):\n"
+                "        print('STARTED'); raise SystemExit\n"
+                "    time.sleep(1)\n"
+                "print('ABSENT')\n")
+        for attempt in (1, 2, 3):
+            self.check()
+            rc, out = self.exec_py(code, 200, self.work_end, f"launch_probe{attempt}")
+            if rc == 0 and ("STARTED" in out.split() or "ABSENT" in out.split()):
+                return "started" if "STARTED" in out.split() else "absent"
+        return None
+
     def launch(self):
+        """Fetch vm_gemma.sh at the commit and start it detached. The Colab CLI sometimes hangs on a call, so a launch
+        call without acknowledgement is reconciled, never blindly repeated: if the script has started, the run goes
+        on; only if it is shown absent is the launch tried once more. vm_gemma.sh claims its run directory with an
+        atomic mkdir, so a delayed first launch and the retry cannot both run (the second exits before doing anything)."""
         url = (f"https://raw.githubusercontent.com/JohnnyTeutonic/ember.cpp/{self.commit}/"
                "experiments/hf_cuda_2026-10-30/gemma_colab_20261103/vm_gemma.sh")
         code = (
@@ -223,23 +245,40 @@ class Driver:
             f"src = urllib.request.urlopen({url!r}).read()\n"
             f"open('/content/vm_run_{self.run}.sh', 'wb').write(src.replace(b'\\r\\n', b'\\n'))\n"
             f"subprocess.Popen('nohup bash /content/vm_run_{self.run}.sh {self.commit} {self.run} "
-            f"> /content/vm_run_{self.run}.log 2>&1 &', shell=True)\n"
+            f">> /content/vm_run_{self.run}.log 2>&1 &', shell=True)\n"
             "print('LAUNCHED')\n")
         self.launch_attempted = True  # from here the script may be running, whatever the acknowledgement says
-        rc, out = self.exec_py(code, 200, self.work_end, "launch")
-        return rc == 0 and "LAUNCHED" in out
+        for label in ("launch", "launch_retry"):
+            rc, out = self.exec_py(code, 200, self.work_end, label)
+            if rc == 0 and "LAUNCHED" in out:
+                return True
+            state = self.launch_state()
+            self.log(f"{label}: no acknowledgement; the VM script is {state or 'unknown'}")
+            if state == "started":
+                return True
+            if state is None:
+                return False  # unknown: never launch again; the stop path reconciles
+        return False
 
     def upload(self):
-        """The Google files and converter to /content/upload_RUN/; vm_gemma.sh checks them against inputs.sha256."""
-        rc, out = self.exec_py(f"import os\nos.makedirs('/content/upload_{self.run}', exist_ok=True)\nprint('MADE')\n",
-                               120, self.work_end, "mkdir")
-        if rc != 0 or "MADE" not in out:
+        """The Google files and converter to /content/upload_RUN/; vm_gemma.sh checks them against inputs.sha256.
+        Both steps are idempotent, so each is tried up to three times (the Colab CLI sometimes hangs on a call)."""
+        code = f"import os\nos.makedirs('/content/upload_{self.run}', exist_ok=True)\nprint('MADE')\n"
+        for attempt in (1, 2, 3):
+            self.check()
+            rc, out = self.exec_py(code, 120, self.work_end, f"mkdir{attempt}")
+            if rc == 0 and "MADE" in out:
+                break
+        else:
             return False
         for name, src in UPLOAD_SOURCES.items():
-            self.check()
-            rc, _ = self.call([COL, "upload", "-s", self.name, src, f"/content/upload_{self.run}/{name}"], 600,
-                              self.work_end, f"upload {name}")
-            if rc != 0:
+            for attempt in (1, 2, 3):
+                self.check()
+                rc, _ = self.call([COL, "upload", "-s", self.name, src, f"/content/upload_{self.run}/{name}"], 600,
+                                  self.work_end, f"upload {name} ({attempt})")
+                if rc == 0:
+                    break
+            else:
                 return False
         return True
 
@@ -309,15 +348,20 @@ class Driver:
             "    reply('completed', signalled=ours)\n"
             "gone = s.get('controller_group_gone') is True or s.get('controller_started') is False\n"
             "reply('interrupted' if gone else 'unconfirmed', stop=s, signalled=ours)\n")
-        rc, out = self.exec_py(code, 260, self.retrieve_end, "stop_workload")
-        reply = None
-        for line in out.splitlines():
-            if line.startswith("STOP_REPLY "):
-                try:
-                    reply = json.loads(line[len("STOP_REPLY "):])
-                except ValueError:
-                    reply = None
-        result = reply.get("result") if rc == 0 and isinstance(reply, dict) else None
+        # idempotent (it signals only a live script without DONE), so a hung call is tried once more
+        result, out = None, ""
+        for attempt in (1, 2):
+            rc, out = self.exec_py(code, 260, self.retrieve_end, f"stop_workload{attempt}")
+            reply = None
+            for line in out.splitlines():
+                if line.startswith("STOP_REPLY "):
+                    try:
+                        reply = json.loads(line[len("STOP_REPLY "):])
+                    except ValueError:
+                        reply = None
+            result = reply.get("result") if rc == 0 and isinstance(reply, dict) else None
+            if result is not None:
+                break
         confirmed = result in ("interrupted", "completed")
         self.log("workload stop:", f"confirmed ({result})" if confirmed else
                  f"NOT CONFIRMED ({result}): the archive may hold outputs still being written", out.strip()[-300:])

@@ -25,7 +25,9 @@ signal_point() { [ "${VM_TEST_HARNESS:-}" = 1 ] && [ "${VM_TEST_SIGNAL_AT:-}" = 
 W=$ROOT/run_$RUN
 O=$W/out
 U=$ROOT/upload_$RUN
-[ -e "$W" ] && { echo "$W exists: refusing to reuse a run directory" >&2; exit 2; }
+# claim the run directory atomically: a second launch of the same run (the driver retries a launch only after its
+# probe found no script; a delayed first call may still arrive) exits here, before traps, PID or any work
+mkdir "$W" 2>/dev/null || { echo "$W exists: refusing to reuse a run directory" >&2; exit 2; }
 mkdir -p "$O/binaries" "$O/inputs" || exit 2
 declare -A G=()
 REQUIRED="analyze benchmark build checkout contract environment inputs packages provenance regenerate toolkit weights"
@@ -141,7 +143,7 @@ G[provenance]=0
 # minutes, not the torch download. The image may already configure NVIDIA's repository, possibly with another
 # Signed-By, which APT refuses to combine with a second entry, and dpkg would not restore a package-owned list file
 # the image has edited. So no package manages the entry here:
-# - every NVIDIA source entry is recorded first; if the image's own configuration offers both pinned versions
+# - every NVIDIA source entry is recorded first; if the image's own configuration offers all three pinned versions
 #   exactly and a simulated install of them succeeds, it is used unchanged;
 # - otherwise the keyring is taken from NVIDIA's keyring package (package and keyring both checked by hash) and
 #   installed under a name of our own, and apt_reconcile.py sets aside only the entries for this exact repository
@@ -226,11 +228,12 @@ G[environment]=0
 
 # engine build at the frozen source with the toolkit installed above (/usr/local/cuda-12.6, nvcc release 12.6);
 # sm_89; Release. A new build: the executable is archived and its hash recorded.
-CUDA_HOME=/usr/local/cuda-12.6
-[ "${VM_TEST_HARNESS:-}" = 1 ] && CUDA_HOME=${VM_CUDA_HOME:-$CUDA_HOME}   # test harness only
-# evidence: compiler and loader search variables inherited from the image
+# evidence: compiler and loader search variables as inherited, before this script sets CUDA_HOME (cuda_home.txt
+# records the root chosen)
 env | grep -E '^(CPATH|C_INCLUDE_PATH|CPLUS_INCLUDE_PATH|LIBRARY_PATH|LD_LIBRARY_PATH|CUDA_PATH|CUDA_HOME|CUDACXX|NVCC_[A-Z_]*|CFLAGS|CXXFLAGS|LDFLAGS)=' \
     > "$O/build_env.txt" 2>&1
+CUDA_HOME=/usr/local/cuda-12.6
+[ "${VM_TEST_HARNESS:-}" = 1 ] && CUDA_HOME=${VM_CUDA_HOME:-$CUDA_HOME}   # test harness only
 {
     echo "$CUDA_HOME" > "$O/cuda_home.txt" \
     && "$CUDA_HOME/bin/nvcc" --version > "$O/nvcc.txt" \
@@ -238,7 +241,7 @@ env | grep -E '^(CPATH|C_INCLUDE_PATH|CPLUS_INCLUDE_PATH|LIBRARY_PATH|LD_LIBRARY
     && cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=89 \
         -DCMAKE_CUDA_COMPILER="$CUDA_HOME/bin/nvcc" -DCUDAToolkit_ROOT="$CUDA_HOME" \
         -DCUDA_TOOLKIT_ROOT_DIR="$CUDA_HOME" > "$O/cmake.log" \
-    && { cp build/CMakeCache.txt "$O/CMakeCache.txt"; true; } \
+    && { cp build/CMakeCache.txt "$O/CMakeCache.txt" || echo "WARNING: CMakeCache.txt not kept" >&2; true; } \
     && grep -q 'CUDA toolkit and cuBLAS found' "$O/cmake.log" \
     && grep -qF "Found CUDA: $CUDA_HOME (found version \"12.6" "$O/cmake.log" \
     && make -C build -j"$(nproc)" ir_hf_cuda_bench > "$O/make.log" \
