@@ -1,0 +1,1 @@
+{"run_id": "g4-20261103", "commit": "1cb4ff6909d75fd749162ef584bc54d54099ac5e", "head": "1cb4ff6909d75fd749162ef584bc54d54099ac5e", "source": "4d276ff91ab9b191be8556010b05d74cd4cb2520", "science_started": false, "shell_status": 1, "exit_status": 1, "pass": false, "gates": {"build": 2, "checkout": 0, "environment": 0, "packages": 0, "provenance": 0, "toolkit": 0}}

@@ -154,12 +154,14 @@ APT_ETC=/etc/apt KEYRINGS=/usr/share/keyrings SYS_PY=python3
 if [ "${VM_TEST_HARNESS:-}" = 1 ]; then   # test harness only
     APT_ETC=${VM_APT_ETC:-$APT_ETC} KEYRINGS=${VM_KEYRINGS:-$KEYRINGS} SYS_PY=${VM_SYS_PYTHON:-$SYS_PY}
 fi
-CUDA_PINS="cuda-minimal-build-12-6=12.6.3-1 libcublas-dev-12-6=12.6.4.1-1"
+# cuda-nvtx-12-6: ember includes nvtx3/nvToolsExt.h (header-only), which the minimal build lacks (g4-20261103)
+CUDA_PINS="cuda-minimal-build-12-6=12.6.3-1 libcublas-dev-12-6=12.6.4.1-1 cuda-nvtx-12-6=12.6.77-1"
 offered() {   # package, exact version: listed by apt-cache madison
     apt-cache madison "$1" | awk -F'|' -v v="$2" '{gsub(/ /, "", $2)} $2 == v {f = 1} END {exit !f}'
 }
 pinned_available() {
     offered cuda-minimal-build-12-6 12.6.3-1 && offered libcublas-dev-12-6 12.6.4.1-1 \
+        && offered cuda-nvtx-12-6 12.6.77-1 \
         && apt-get install --simulate -q --no-install-recommends $CUDA_PINS > "$O/apt_simulate.txt"
 }
 toolkit_gate() {
@@ -226,6 +228,9 @@ G[environment]=0
 # sm_89; Release. A new build: the executable is archived and its hash recorded.
 CUDA_HOME=/usr/local/cuda-12.6
 [ "${VM_TEST_HARNESS:-}" = 1 ] && CUDA_HOME=${VM_CUDA_HOME:-$CUDA_HOME}   # test harness only
+# evidence: compiler and loader search variables inherited from the image
+env | grep -E '^(CPATH|C_INCLUDE_PATH|CPLUS_INCLUDE_PATH|LIBRARY_PATH|LD_LIBRARY_PATH|CUDA_PATH|CUDA_HOME|CUDACXX|NVCC_[A-Z_]*|CFLAGS|CXXFLAGS|LDFLAGS)=' \
+    > "$O/build_env.txt" 2>&1
 {
     echo "$CUDA_HOME" > "$O/cuda_home.txt" \
     && "$CUDA_HOME/bin/nvcc" --version > "$O/nvcc.txt" \
@@ -233,6 +238,7 @@ CUDA_HOME=/usr/local/cuda-12.6
     && cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=89 \
         -DCMAKE_CUDA_COMPILER="$CUDA_HOME/bin/nvcc" -DCUDAToolkit_ROOT="$CUDA_HOME" \
         -DCUDA_TOOLKIT_ROOT_DIR="$CUDA_HOME" > "$O/cmake.log" \
+    && { cp build/CMakeCache.txt "$O/CMakeCache.txt"; true; } \
     && grep -q 'CUDA toolkit and cuBLAS found' "$O/cmake.log" \
     && grep -qF "Found CUDA: $CUDA_HOME (found version \"12.6" "$O/cmake.log" \
     && make -C build -j"$(nproc)" ir_hf_cuda_bench > "$O/make.log" \

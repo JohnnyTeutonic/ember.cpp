@@ -49,7 +49,8 @@ case "$APT_SCENARIO" in
 esac
 [ "$FAIL_AT" = toolkit ] && exit 0
 echo " $2 | 12.6.3-1 | https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64 Packages"
-echo " $2 | 12.6.4.1-1 | https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64 Packages"''',
+echo " $2 | 12.6.4.1-1 | https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64 Packages"
+echo " $2 | 12.6.77-1 | https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64 Packages"''',
     "curl": "#!/usr/bin/env bash\n[ \"$FAIL_AT\" = toolkit ] && exit 22; while [ $# -gt 0 ]; do [ \"$1\" = -o ] && echo deb > \"$2\"; shift; done; exit 0",
     "dpkg": r'''#!/usr/bin/env bash
 [ "$1" = -l ] && { echo 'ii  cuda-minimal-build-12-6 12.6.3-1'; exit 0; }
@@ -257,7 +258,7 @@ class VmGemmaTests(unittest.TestCase):
         self.assertNotIn("dpkg-deb", calls)  # no keyring, no change to the sources
         self.assertIn("apt-get install --simulate", calls)
         self.assertFalse((tmp / "apt" / "sources.list.d" / "vm-gemma-cuda-12-6.list").exists())
-        self.assertIn("cuda-minimal-build-12-6=12.6.3-1 libcublas-dev-12-6=12.6.4.1-1", calls)
+        self.assertIn("cuda-minimal-build-12-6=12.6.3-1 libcublas-dev-12-6=12.6.4.1-1 cuda-nvtx-12-6=12.6.77-1", calls)
         log = (tmp / "run_g1" / "out" / "toolkit.log").read_text()
         self.assertIn("image's own APT configuration", log)
 

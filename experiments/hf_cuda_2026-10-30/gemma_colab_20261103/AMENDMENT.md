@@ -18,6 +18,24 @@ nvcc 12.6's generated stubs (`__cudaLaunch` arity). The build now sets FindCUDA'
 below). That failure was a property of the packet, not a transient one, so the next run is the revised packet's
 first run, reviewed again, and not version 2's rerun.
 
+That revised packet (round 8, ember `1cb4ff6`) ran twice, and neither run reached the controller:
+- `g3-20261103`: the first remote call (`mkdir`) hung until its limit. Nothing was launched, and the VM was
+  stopped after about 3 minutes. Only the driver log exists (`receipts/g3-20261103/`).
+- `g4-20261103`: its one unchanged retry. FindCUDA now reported `/usr/local/cuda-12.6`, version 12.6, but the build
+  needed `nvtx3/nvToolsExt.h`, which `cuda-minimal-build-12-6` does not ship (`receipts/g4-20261103/`).
+
+So this packet adds `cuda-nvtx-12-6=12.6.77-1`. To find any further gap before paying for a run, the exact pins and
+their CUDA dependency closure (19 NVIDIA packages) were extracted into a private root on WSL, and
+`ir_hf_cuda_bench` was built from the frozen source against that root alone:
+- the build succeeded;
+- FindCUDA, FindCUDAToolkit and cudart resolved inside the root;
+- cuBLAS loaded from it;
+- the compile and link files contain no reference to any other CUDA install.
+
+Every CUDA header the source includes comes from these packages (`cuda_runtime.h`, `cuda_fp16.h` and `cuda_bf16.h`
+from cudart-dev, `cublas_v2.h` from libcublas-dev, `nvtx3/nvToolsExt.h` from nvtx). This is the packet's next first
+run, reviewed again.
+
 ## What is unchanged
 
 - **Controller.** `benchmark.py`, SHA-256 `ddd3104489dd2935…` (the same at ember `5bfda893` and at main
@@ -60,7 +78,8 @@ first run, reviewed again, and not version 2's rerun.
   - Results are measurements in the recorded Colab environment. They are not an environment-controlled comparison
     with the Smol run.
 - **CUDA toolkit (v2).** The image had only CUDA 13.0 on 3 Nov. A `toolkit` gate installs
-  `cuda-minimal-build-12-6=12.6.3-1` (nvcc, cudart, CCCL) and `libcublas-dev-12-6=12.6.4.1-1` from NVIDIA's
+  `cuda-minimal-build-12-6=12.6.3-1` (nvcc, cudart, CCCL), `libcublas-dev-12-6=12.6.4.1-1` and
+  `cuda-nvtx-12-6=12.6.77-1` (the header-only NVTX the source includes) from NVIDIA's
   ubuntu2404 repository. It runs right after provenance, before the interpreter and packages, so an APT problem
   costs minutes rather than the torch download. The frozen pod's nvcc was 12.4; 12.4 has no Ubuntu 24.04 packages,
   and 12.6 is the toolkit under which ember `5bfda893` was verified to compile.
@@ -91,6 +110,8 @@ first run, reviewed again, and not version 2's rerun.
     12.6 compile. The build requires cmake to report `Found CUDA: /usr/local/cuda-12.6 (found version "12.6")`;
     a local configure of the source prints exactly that. Release, `CMAKE_CUDA_ARCHITECTURES=89`, target `ir_hf_cuda_bench`, as the frozen v1/v2 VM
     scripts built it.
+  - `CMakeCache.txt` and the inherited compiler and loader search variables (`build_env.txt`) are kept as
+    evidence.
   - The libraries the executable resolves at load time are recorded with the loader environment (`ldd.txt`).
     This is evidence, not a gate: a failing `ldd` is recorded and the build continues. Libraries opened later
     with `dlopen` are not covered.
@@ -131,8 +152,10 @@ first run, reviewed again, and not version 2's rerun.
   retrieved.
   - A fresh rerun, once and unchanged, is allowed only if the run did not reach the controller.
     `SCIENCE_STARTED` is written immediately before it starts, and `status.json` reports `science_started`.
-    `g1-20261103` (version 1) did not reach it. Its failure was a property of the image, not a transient one, so
-    the next run is version 2's first run, reviewed again before launch. Version 2 has its own single rerun.
+    Each reviewed packet revision gets one first run and at most one unchanged retry, and only when the earlier
+    attempt is shown not to have reached the controller. A repair for a packet defect is a new revision, reviewed
+    before its first run. Every attempt stays in the ledger: `g1` (version 1), `g2` (version 2), `g3` and `g4`
+    (round-8 revision, first run and retry). None reached the controller.
   - A run that reached the controller is never repeated: its outputs are retrieved and reported as complete,
     incomplete or negative. A transport failure after that point makes the result incomplete; it does not make it
     eligible for another attempt.
