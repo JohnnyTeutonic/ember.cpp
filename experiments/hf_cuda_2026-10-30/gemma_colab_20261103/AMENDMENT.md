@@ -38,25 +38,33 @@ run, reviewed again.
 
 That revision's first run, `g5-20261103` (ember `ace27ef`, round 9 RUN), lost its launch call to the same
 intermittent Colab CLI hang. Hangs have now hit every attempt on some call: the first pack in g1 and g2, `mkdir`
-in g3, a poll in g4 and the launch in g5. Nothing was launched in g5:
+in g3, a poll in g4 and the launch in g5. No VM-script startup was observed in g5:
 - the stop helper found no PID file within 60 seconds, and retrieval found no run directory;
-- the VM was stopped less than 5 minutes after the launch call, while the script needs about 20 minutes of gates
-  before the controller.
+- the VM was stopped and certified gone less than 5 minutes after the launch call. The script's gates before the
+  controller (toolkit, interpreter, packages, build) are expected to take about 20 minutes.
 
-So the controller cannot have started. The driver logged the stop as not observed, as it must when it cannot see
-the VM (`receipts/g5-20261103/driver.log`).
+The lost acknowledgement cannot prove that no launch request existed. These observations do support the
+conclusion, for this ledger, that the controller was not reached. The driver logged the stop as not observed, as it
+must when it cannot see the VM (`receipts/g5-20261103/driver.log`).
 
 The present revision changes only how the driver survives these hangs; the VM-side science is untouched:
 - `mkdir` and each upload are tried up to three times, and the stop helper twice, all within the existing
   deadlines. All of them are idempotent.
 - A launch call without acknowledgement is reconciled, never blindly repeated. A probe (read-only, retried up to
-  three times) waits up to 90 seconds for the script's PID file or run directory:
+  three times) looks for the script's PID file or run directory. Each probe that runs waits up to 90 seconds; three
+  failing probe calls can take up to 10 minutes, all within the work deadline:
   - started: the run goes on;
   - shown absent: the launch is tried once more;
   - unknown: the driver never launches again, and the stop path reconciles.
-- `vm_gemma.sh` now claims its run directory with an atomic `mkdir`. A delayed first launch and the retry therefore
-  cannot both run: the second exits before installing traps, publishing a PID or doing any work. The launch log is
+- Each launch call writes the script to its own temporary file and renames it over `/content/vm_run_RUN.sh`. It
+  never rewrites the file in place, so a delayed duplicate cannot alter a script a running bash is still reading.
+- `vm_gemma.sh` claims its run directory with an atomic `mkdir`, so a delayed first launch and the retry cannot
+  both run: the second exits before installing traps, publishing a PID or doing any work. The launch log is
   appended to, not truncated.
+- A launch is never submitted after cancellation. A cancellation once a launch has been attempted still goes
+  through the stop helper and retrieval before cleanup.
+- A local test runs the real launch code twice: the duplicate arrives while the first script runs, replaces the
+  file (a new inode) without touching it, and exits at the claim, and the first script completes.
 
 The rule on reruns is unchanged: no attempt that reached the controller is repeated.
 
@@ -214,7 +222,7 @@ The rule on reruns is unchanged: no attempt that reached the controller is repea
     no stop needed), unconfirmed, or not observed (no PID file after a minute). Anything but interrupted or
     completed means the archive may hold outputs still being written, so the run can exit no better than 2
     (transport or receipt failure).
-  - Local tests (51) cover:
+  - Local tests (52) cover:
     - the driver's hang handling: a flaky `mkdir`, upload and stop helper; a lost acknowledgement of a launch that
       started (reconciled, never relaunched); a launch shown absent (relaunched once); a second launch of the same
       run (exits before doing anything); only NVTX not offered;

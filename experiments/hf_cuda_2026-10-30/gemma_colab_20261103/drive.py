@@ -63,6 +63,24 @@ REQUIRED_GATES = {"analyze", "benchmark", "build", "checkout", "contract", "envi
                   "provenance", "regenerate", "toolkit", "weights"}
 
 
+def launch_code(url, commit, run, root="/content"):
+    """The VM-side launch: fetch vm_gemma.sh and start it detached. A delayed duplicate of this call may arrive while
+    an earlier launch's bash is still reading the script, so the script is never rewritten in place: each call
+    writes its own temporary file and renames it over the final path, and a bash that already opened the old file
+    keeps reading it. vm_gemma.sh's atomic run-directory claim then lets only one launch do any work.
+    (`root` is for tests only.)"""
+    return (
+        "import os, subprocess, tempfile, urllib.request\n"
+        f"src = urllib.request.urlopen({url!r}).read().replace(b'\\r\\n', b'\\n')\n"
+        f"fd, tmp = tempfile.mkstemp(prefix='vm_run_{run}.', suffix='.tmp', dir={root!r})\n"
+        "with os.fdopen(fd, 'wb') as f:\n"
+        "    f.write(src)\n"
+        f"os.replace(tmp, '{root}/vm_run_{run}.sh')\n"
+        f"subprocess.Popen('nohup bash {root}/vm_run_{run}.sh {commit} {run} "
+        f">> {root}/vm_run_{run}.log 2>&1 &', shell=True)\n"
+        "print('LAUNCHED')\n")
+
+
 class Stop(Exception):
     pass
 
@@ -240,15 +258,10 @@ class Driver:
         atomic mkdir, so a delayed first launch and the retry cannot both run (the second exits before doing anything)."""
         url = (f"https://raw.githubusercontent.com/JohnnyTeutonic/ember.cpp/{self.commit}/"
                "experiments/hf_cuda_2026-10-30/gemma_colab_20261103/vm_gemma.sh")
-        code = (
-            "import subprocess, urllib.request\n"
-            f"src = urllib.request.urlopen({url!r}).read()\n"
-            f"open('/content/vm_run_{self.run}.sh', 'wb').write(src.replace(b'\\r\\n', b'\\n'))\n"
-            f"subprocess.Popen('nohup bash /content/vm_run_{self.run}.sh {self.commit} {self.run} "
-            f">> /content/vm_run_{self.run}.log 2>&1 &', shell=True)\n"
-            "print('LAUNCHED')\n")
-        self.launch_attempted = True  # from here the script may be running, whatever the acknowledgement says
+        code = launch_code(url, self.commit, self.run)
         for label in ("launch", "launch_retry"):
+            self.check()  # never submit a launch after cancellation; main() still stops and retrieves
+            self.launch_attempted = True  # from here the script may be running, whatever the acknowledgement says
             rc, out = self.exec_py(code, 200, self.work_end, label)
             if rc == 0 and "LAUNCHED" in out:
                 return True
@@ -532,6 +545,12 @@ class Driver:
             valid = self.validate() if transport else None
         except Stop as e:
             self.log("stopped:", e)
+            if self.launch_attempted and not self.done:
+                # a cancelled or failed run that may have started: stop the script and keep its diagnostics, as
+                # the normal path does (neither call raises Stop; both are bounded by the retrieval deadline)
+                self.stop_confirmed = self.stop_workload()
+                transport = self.retrieve()
+                valid = self.validate() if transport else None
         except Exception as e:
             self.log("error:", repr(e))
         finally:
