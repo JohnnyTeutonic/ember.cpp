@@ -316,6 +316,17 @@ def main():
         (science / "exception.txt").write_text(traceback.format_exc())
         with (out / "vm.log").open("a") as f:
             f.write(repr(exc) + "\n")
+        # Collection is incomplete, but legs already collected may demonstrate a candidate failure: analyze what
+        # exists (missing legs are evidence failures there), keeping it apart from the incomplete status.
+        try:
+            if (science / "gate" / "plan.json").exists():
+                frozen = load(work / "src" / PACKET / "parts4_gate.py", "parts4_gate_partial")
+                matrix = science / "matrix"
+                partial = frozen.analyze(science / "gate", matrix if (matrix / "run.json").exists() else None)
+                atomic_json(science / "gate_summary_partial.json", partial)
+                summary["partial_gate_status"] = partial["status"]
+        except BaseException as again:
+            summary["partial_gate_error"] = repr(again)
     finally:
         stop.set()
         thread.join(timeout=5)

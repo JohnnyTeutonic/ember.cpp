@@ -89,7 +89,39 @@ Its should-fix findings are also resolved:
 
 Its notes on test independence are answered by the dumped-row NumPy oracle and the real-row fixtures, and the C++ property test now generates `+inf`.
 
-The raw review is kept outside the stack repositories, in the workspace's `AI_ML/e10_parts4_claude/`.
+Round 2 (`80560d9`) advised against admission again, with three blocking findings:
+
+- a missing sibling leg or a malformed later event could still mask a demonstrated candidate failure;
+- demonstrated-wrong PARTS4 records in the matrix were only evidence failures;
+- the executed client was checked by basename only.
+
+All three are resolved:
+
+- controls are established first, then each candidate leg is compared separately;
+- demonstrated failures are committed as they are found;
+- the matrix has a candidate track;
+- the recorded client's bytes must hash to the frozen client.
+
+Its should-fix findings are also resolved:
+
+- coverage is per request, with true immediate stops classified;
+- the matrix records the request body sent, and the trace records the penalty, window and token limit the server applied;
+- group survivors are checked independently of the leader;
+- the quiet flag is set before the last pre-timing pack and rechecked under the lock;
+- guards must be one of five exact audited forms.
+
+Round 3 (`b35319f`) resolved all of those but one partly. It found that the matrix compared the server's float32 temperature (0.049 serializes as 0.04899999871850014) with a Python double, which would have made every real low-temperature request fail. It also found that a malformed trace tail or an unrelated missing matrix receipt could still hide a demonstrated failure, and that an aborted collection skipped analysis.
+
+All are resolved:
+
+- the comparison uses float32, and the fixtures carry the serialized value;
+- traces are read incrementally, so every complete request before a bad tail is checked;
+- each matrix leg loads on its own;
+- an aborted payload writes `gate_summary_partial.json`.
+
+The seed is not traced, because the session does not store it; the matrix's recorded request bodies carry it.
+
+The raw reviews are kept outside the stack repositories, in the workspace's `AI_ML/e10_parts4_claude/`.
 
 ## Not established here
 

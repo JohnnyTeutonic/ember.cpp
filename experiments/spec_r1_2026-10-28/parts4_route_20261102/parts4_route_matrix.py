@@ -135,7 +135,9 @@ def request_problems(q, graph, arm, config):
     if q.get("env") != want_env:
         bad.append("server environment differs from the leg")
     penalty = b.get("repeat_penalty")
-    if (q.get("temperature") != float(b["temperature"]) or q.get("top_k") != b["top_k"] or q.get("top_p") != 1.0
+    # The trace serializes the server's float32 values (0.049 arrives as 0.04899999871850014).
+    if (q.get("temperature") != gate.f32(gate_bits(b["temperature"])) or q.get("top_k") != b["top_k"]
+            or q.get("top_p") != 1.0
             or q.get("repeat_on") is not (penalty is not None) or q.get("max_new_tokens") != b["max_new_tokens"]
             or (penalty is not None and (q.get("repeat_penalty") != gate.f32(gate_bits(penalty))
                                          or q.get("repeat_last_n") != b["repeat_last_n"]))
@@ -204,39 +206,49 @@ def analyze(out, expect=None):
     if expect and (receipt.get("binary_sha256") != expect["binary"] or receipt.get("model_sha256") != expect["model"]):
         raise ValueError("matrix receipt is from another binary or model")
     records, problems, differences, candidate_wrong, counts = {}, [], [], [], {}
-    # The responses first, from the receipts alone: a PARTS4 difference from host is reported whatever the traces.
+    # The responses first, from the receipts alone, each leg on its own: a PARTS4 difference from host is reported
+    # whatever the traces or the other legs hold.
     for graph, arm in legs():
         name = leg_name(graph, arm)
-        leg = json.loads((out / (name + ".json")).read_text())
-        # The trace is read beside the leg (an archive replays wherever it is unpacked); its recorded path must
-        # name that file.
-        env = dict(leg["env"])
-        traced = Path(env.pop("EMBER_ROUTE_TRACE", "")).name
-        want = leg_env(graph, arm, "")
-        want.pop("EMBER_ROUTE_TRACE")
-        if (env != want or traced != name + ".trace.jsonl" or not leg["health"].get("deterministic")
-                or leg["health"].get("model") != receipt.get("model")):
-            raise ValueError(name + ": environment, mode or model differs")
-        rows = leg["rows"]
-        if [(r["config"], r["prompt"], r.get("body")) for r in rows] != [
-                (i, p, body(i, p)) for i in range(len(CONFIGS)) for p in PROMPTS]:
-            raise ValueError(name + ": incomplete request inventory, or a request body other than the one specified")
-        records[(graph, arm)] = rows
+        try:
+            leg = json.loads((out / (name + ".json")).read_text())
+            # The trace is read beside the leg (an archive replays wherever it is unpacked); its recorded path must
+            # name that file.
+            env = dict(leg["env"])
+            traced = Path(env.pop("EMBER_ROUTE_TRACE", "")).name
+            want = leg_env(graph, arm, "")
+            want.pop("EMBER_ROUTE_TRACE")
+            if (env != want or traced != name + ".trace.jsonl" or not leg["health"].get("deterministic")
+                    or leg["health"].get("model") != receipt.get("model")):
+                raise ValueError("environment, mode or model differs")
+            rows = leg["rows"]
+            if [(r["config"], r["prompt"], r.get("body")) for r in rows] != [
+                    (i, p, body(i, p)) for i in range(len(CONFIGS)) for p in PROMPTS]:
+                raise ValueError("incomplete request inventory, or a request body other than the one specified")
+            records[(graph, arm)] = rows
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            problems.append(f"{name}: receipt unusable: {exc}")
     for graph in (0, 1):
-        base = records[(graph, "host")]
+        base = records.get((graph, "host"))
         for arm in ("parts0", "parts4"):
+            if base is None or (graph, arm) not in records:
+                continue
             for x, y in zip(base, records[(graph, arm)]):
                 if x != y:
                     differences.append(f"{arm} graph{graph} config {x['config']} '{x['prompt']}': response differs from host")
     for graph, arm in legs():
         name = leg_name(graph, arm)
-        rows = records[(graph, arm)]
         c = counts.setdefault(name, {"positions": 0, "per_config": [0] * len(CONFIGS), "routes": {}, "captures": 0,
                                      "immediate_stops": 0})
+        if (graph, arm) not in records:
+            continue
+        rows = records[(graph, arm)]
         try:
-            traced_requests = gate.read_trace(out / (name + ".trace.jsonl"))
-            if len(traced_requests) != len(rows):
-                raise ValueError(f"{len(traced_requests)} traced requests for {len(rows)} requests")
+            traced_requests, error = gate.read_trace_partial(out / (name + ".trace.jsonl"))
+            if error:
+                problems.append(name + ": " + error)
+            elif len(traced_requests) != len(rows):
+                problems.append(f"{name}: {len(traced_requests)} traced requests for {len(rows)} requests")
             continuity = gate.Continuity()
             for row, t in zip(rows, traced_requests):
                 config = row["config"]
@@ -267,8 +279,8 @@ def analyze(out, expect=None):
                     bad, wrong = check_position(ev, graph, arm, config, q["temperature"])
                     problems.extend(at + b for b in bad)
                     (candidate_wrong if arm == "parts4" else problems).extend(at + w for w in wrong)
-        except (ValueError, KeyError, TypeError, gate.Inconclusive) as exc:
-            problems.append(name + ": trace unusable: " + str(exc))
+        except (OSError, ValueError, KeyError, TypeError, gate.Inconclusive) as exc:
+            problems.append(name + ": trace unusable: " + repr(exc))
     for name, c in counts.items():
         if any(n == 0 for n in c["per_config"]):
             problems.append(name + ": a configuration has no sampled decode position")

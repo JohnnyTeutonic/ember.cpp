@@ -188,7 +188,8 @@ def build_matrix(out, manifest):
                 env.update({k: v for k, v in m.leg_env(graph, arm, "").items() if k in env})
                 penalty = b.get("repeat_penalty")
                 lines.append({"ev": "request", "request": n, "prompt_ids": [1, 2, 3 + p], "num_prompt_tokens": 3,
-                              "temperature": float(b["temperature"]), "top_k": b["top_k"], "top_p": 1.0,
+                              # as the server serializes it: float32 (0.049 -> 0.04899999871850014)
+                              "temperature": g.f32(m.gate_bits(b["temperature"])), "top_k": b["top_k"], "top_p": 1.0,
                               "repeat_on": penalty is not None,
                               "repeat_penalty": g.f32(m.gate_bits(penalty)) if penalty else 1.0,
                               "repeat_last_n": b.get("repeat_last_n", 64), "max_new_tokens": b["max_new_tokens"],
@@ -653,6 +654,37 @@ def test_wrong_record_survives_a_later_malformed_event(receipts):
     assert "demonstrably wrong" in failures(result) and "TypeError" in failures(result)
 
 
+def test_wrong_record_survives_a_truncated_trace_tail(receipts):
+    out, matrix = receipts
+
+    def change(lines):
+        next(x for x in lines if x["ev"] == "token")["check"]["record_value"] = False
+        del lines[-1]  # the final request loses its end event
+    edit_trace(out, "det_route_parts4", change)
+    result = g.analyze(out, matrix)
+    assert result["status"] == "CORRECTNESS_FAIL", failures(result)
+    assert "truncated final request" in " ".join(result["routes"]["det_route_parts4"]["problems"])
+
+
+def test_matrix_difference_survives_an_unrelated_missing_receipt(receipts):
+    out, matrix = receipts
+    path = matrix / "graph0_parts4.json"
+    leg = json.loads(path.read_text())
+    leg["rows"][4]["ids"] = [1, 1]
+    path.write_text(json.dumps(leg))
+    (matrix / "graph1_parts0.json").unlink()
+    result = g.analyze(out, matrix)
+    assert result["status"] == "CORRECTNESS_FAIL" and "differs from host" in failures(result)
+
+
+def test_matrix_temperature_is_the_servers_float32(receipts):
+    _, matrix = receipts
+    edit_trace(matrix, "graph1_parts4", lambda lines: next(
+        x for x in lines if x["ev"] == "request" and abs(x["temperature"] - 0.049) < 1e-6).update(temperature=0.049))
+    result = m.analyze(matrix)
+    assert not result["pass"] and any("configuration sent" in p for p in result["problems"])
+
+
 def test_matrix_wrong_parts4_record_is_a_correctness_failure(receipts):
     out, matrix = receipts
     edit_tokens(matrix, "graph1_parts4", lambda ev: ev["check"].update(record_value=False),
@@ -701,7 +733,8 @@ def test_matrix_request_body_must_be_the_one_specified(receipts):
     leg["rows"][3]["body"]["repeat_penalty"] = 1.05
     path.write_text(json.dumps(leg))
     result = g.analyze(out, matrix)
-    assert result["status"] == "INCONCLUSIVE" and "request body" in failures(result)
+    assert result["status"] == "INCONCLUSIVE"
+    assert any("request body" in p for p in result["routes"]["matrix"]["problems"])
 
 
 def test_matrix_allows_only_true_immediate_stops_without_positions(receipts):

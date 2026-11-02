@@ -165,20 +165,27 @@ def check_plan(manifest, relocate=None):
             raise Inconclusive("leg environment or command is not canonical: " + run["name"])
 
 
-def read_trace(path):
+def read_trace_partial(path):
+    """The trace's complete requests, in order, up to the first malformed line: (requests, error or None). The
+    requests before an error remain checkable, so a demonstrated failure in them is never lost to a bad tail."""
     requests, current = [], None
     for n, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
             continue
-        ev = json.loads(line)
-        kind = ev.get("ev")
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            return requests, f"{path}:{n}: unreadable event"
+        kind = ev.get("ev") if isinstance(ev, dict) else None
         if kind == "request":
             if current is not None:
-                raise Inconclusive(f"{path}:{n}: request without end")
+                return requests, f"{path}:{n}: request without end"
+            if ev.get("request") != len(requests) + 1:
+                return requests, f"{path}:{n}: request sequence is not 1..n"
             current = {"request": ev, "tokens": []}
         elif kind in ("token", "end"):
             if current is None or ev.get("request") != current["request"]["request"]:
-                raise Inconclusive(f"{path}:{n}: event outside its request")
+                return requests, f"{path}:{n}: event outside its request"
             if kind == "token":
                 current["tokens"].append(ev)
             else:
@@ -186,11 +193,16 @@ def read_trace(path):
                 requests.append(current)
                 current = None
         else:
-            raise Inconclusive(f"{path}:{n}: unknown event")
+            return requests, f"{path}:{n}: unknown event"
     if current is not None:
-        raise Inconclusive(f"{path}: truncated final request")
-    if [r["request"]["request"] for r in requests] != list(range(1, len(requests) + 1)):
-        raise Inconclusive(f"{path}: request sequence is not 1..n")
+        return requests, f"{path}: truncated final request"
+    return requests, None
+
+
+def read_trace(path):
+    requests, error = read_trace_partial(path)
+    if error:
+        raise Inconclusive(error)
     return requests
 
 
@@ -360,9 +372,7 @@ def check_route(out, run, records, vocab=None, wrong=None):
     path = Path(out) / (run["name"] + ".trace.jsonl")
     if not path.is_file():
         raise Inconclusive(run["name"] + ": no route trace")
-    requests = read_trace(path)
-    if len(requests) != 2 * len(records):
-        raise Inconclusive(f"{run['name']}: {len(requests)} traced requests for {len(records)} records (warm + recorded)")
+    requests, error = read_trace_partial(path)
     arm, dump, forced = run["arm"], run["dump"], run["forced"]
     canonical = dict(e.split("=", 1) for e in BASE_ENV + ARMS[arm])
     want_env = {k: canonical.get(k) for k in TRACE_ENV_KEYS}
@@ -372,8 +382,13 @@ def check_route(out, run, records, vocab=None, wrong=None):
               "inventories": []}
     proof = []
     wrong = [] if wrong is None else wrong
+    if error:
+        proof.append(run["name"] + ": " + error)
+    if len(requests) != 2 * len(records) and not error:
+        proof.append(f"{run['name']}: {len(requests)} traced requests for {len(records)} records (warm + recorded)")
     continuity = Continuity()
-    for k, rec in enumerate(records):
+    # Every complete warm/recorded pair is checked, even when the trace is short or has a malformed tail.
+    for k, rec in enumerate(records[:len(requests) // 2]):
         for t in (requests[2 * k], requests[2 * k + 1]):  # the warm pass, then the recorded request
             q = t["request"]
             where = f"{run['name']} record {k} request {q['request']}"
@@ -438,11 +453,9 @@ def check_dumped_records(out, run, records, vocab, wrong):
     returns the number of positions checked."""
     import numpy as np
     rows = np.memmap(Path(out) / (run["name"] + ".jsonl.rows.f32"), dtype=np.float32, mode="r").reshape(-1, vocab)
-    requests = read_trace(Path(out) / (run["name"] + ".trace.jsonl"))
-    if len(requests) != 2 * len(records):
-        raise Inconclusive(f"{run['name']}: {len(requests)} traced requests for {len(records)} records")
+    requests, error = read_trace_partial(Path(out) / (run["name"] + ".trace.jsonl"))
     checked = 0
-    for k, rec in enumerate(records):
+    for k, rec in enumerate(records[:len(requests) // 2]):
         tokens = requests[2 * k + 1]["tokens"]
         if rec["rows"] != len(tokens) + 1:
             raise Inconclusive(f"{run['name']} record {k}: {rec['rows']} dumped rows for {len(tokens)} decode positions")
@@ -455,6 +468,8 @@ def check_dumped_records(out, run, records, vocab, wrong):
                 if not same_record(ev["scratch"][p], row_oracle(row, bounds[p], bounds[p + 1])):
                     wrong.append(f"record {k} pos {ev['pos']}: partition {p} differs from its dumped row")
             checked += 1
+    if error or len(requests) != 2 * len(records):
+        raise Inconclusive(f"{run['name']}: trace incomplete after {checked} checked positions: {error or len(requests)}")
     return checked
 
 
