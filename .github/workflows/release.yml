@@ -65,13 +65,13 @@ jobs:
       matrix:
         include:
           - os_name: Ubuntu-latest-CPU
-            os_runner: ubuntu-latest
+            os_runner: ubuntu-24.04
             build_type: cpu
             artifact_name: tinyllama-linux-cpu-ubuntu-latest
             asset_name: tinyllama-linux-cpu-ubuntu-latest.tar.gz
             cmake_flags: "-DHAS_CUDA=OFF"
           - os_name: Ubuntu-latest-CUDA
-            os_runner: ubuntu-latest
+            os_runner: ubuntu-24.04
             build_type: cuda
             artifact_name: tinyllama-linux-cuda-ubuntu-latest
             asset_name: tinyllama-linux-cuda-ubuntu-latest.tar.gz
@@ -134,7 +134,7 @@ jobs:
           nvcc --version
 
       - name: Install Dependencies (Linux)
-        if: runner.os == 'Linux' # Applies to both CPU and CUDA on ubuntu-latest
+        if: runner.os == 'Linux' # Applies to both CPU and CUDA on ubuntu-24.04
         run: |
           sudo apt-get update
           # Install a specific GCC/G++ version (e.g., g++-11) for better GLIBC compatibility and nvcc compatibility
@@ -197,7 +197,7 @@ jobs:
           Write-Host "All Chocolatey packages installed successfully."
 
       - name: Configure CMake (Linux)
-        if: runner.os == 'Linux' # Applies to both CPU and CUDA on ubuntu-latest
+        if: runner.os == 'Linux' # Applies to both CPU and CUDA on ubuntu-24.04
         env:
           CC: ${{ env.CC }} # Should now be /usr/bin/gcc-11
           CXX: ${{ env.CXX }} # Should now be /usr/bin/g++-11

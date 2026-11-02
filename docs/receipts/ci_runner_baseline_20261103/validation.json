@@ -1,0 +1,21 @@
+{
+  "status": "WORKFLOW_STATIC_VALIDATION_PASS_NOT_HOSTED_CI_RESULT",
+  "files": [
+    {
+      "file": ".github/workflows/build-wheels.yml",
+      "before_sha256": "78ac6e687bb493a8ddc4b1f5a2319b40450660c44af89688aa380d9a4cdb6f2d",
+      "after_sha256": "26d4a1294609cd6f36091acc36be3fdddb2810e24a0a7ed5cb59ad09d1c29e0b"
+    },
+    {
+      "file": ".github/workflows/release.yml",
+      "before_sha256": "057d1db0e96b630d7934772ca510e000db908ce2582c68e01bba38da67374475",
+      "after_sha256": "64d7e6faf6d84eb0511955eda105d95fb8830f23f22252e72bec421eca5626f7"
+    }
+  ],
+  "yaml_parse": true,
+  "linux_matrix_condition_matches": true,
+  "release_asset_names_preserved": true,
+  "gcc15_support_claimed": false,
+  "keramos_workflows": "No .github/workflows directory in inspected workspace checkout",
+  "original_line_endings_preserved": true
+}
