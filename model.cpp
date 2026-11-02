@@ -1,5 +1,6 @@
 #include "model.h"
 #include "decode_pick_policy.h"
+#include "decode_route_trace.h"
 
 #ifdef HAS_CUDA
 #include "cuda_kernels.h"
@@ -1218,6 +1219,13 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
     const char* o = std::getenv("EMBER_DECODE_OPT");  // the graph uses the optimized kernels
     return !(v && std::string(v) == "0") && !(o && std::string(o) == "0");
   }();
+  const bool trace = ember::route_trace::on();
+  if (trace) {
+    decode_route_.graph = "unavailable";
+    decode_route_.captured = false;
+    decode_route_.row.clear();
+  }
+  if (trace && (!enabled || decode_graph_disabled_)) decode_route_.graph = enabled ? "disabled" : "off";
   if (!enabled || decode_graph_disabled_) return {};
   const int hs = config_.hidden_size, vs = config_.vocab_size, is = config_.intermediate_size;
   const int n_heads = config_.num_attention_heads, n_kv = config_.num_key_value_heads;
@@ -1286,6 +1294,7 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
       cudaGetLastError();
       cublasSetStream(cublas_handle_, 0);
       decode_graph_disabled_ = true;
+      if (trace) decode_route_.graph = "capture_failed";
       Logger::warning("[decode graph] stream capture unavailable; using per-launch decode.");
       return {};
     }
@@ -1330,11 +1339,13 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
     cudaError_t e = cudaStreamEndCapture(st, &graph);
     cublasSetStream(cublas_handle_, 0);
     if (e == cudaSuccess) e = cudaGraphInstantiateWithFlags(&decode_graph_exec_, graph, 0);
+    if (e == cudaSuccess && trace) trace_graph_inventory(graph);
     if (graph) cudaGraphDestroy(graph);
     if (e != cudaSuccess) {
       cudaGetLastError();
       decode_graph_exec_ = nullptr;
       decode_graph_disabled_ = true;
+      if (trace) decode_route_.graph = "capture_failed";
       Logger::warning(std::string("[decode graph] capture failed (") + cudaGetErrorString(e) +
                       "); using per-launch decode.");
       return {};
@@ -1342,6 +1353,11 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
     decode_graph_key_ = key;
     decode_graph_has_pick_ = pick != nullptr;
     decode_graph_pick_parts_ = parts;
+    if (trace) {
+      decode_route_.captured = true;
+      decode_route_.capture_id = ++decode_capture_count_;
+      decode_replay_count_ = 0;
+    }
     Logger::info("[decode graph] captured the decode step (" + std::to_string(L) + " layers).");
   }
 
@@ -1349,15 +1365,85 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
   decode_step_host_[1] = pos;
   gpuErrchk(cudaMemcpyAsync(decode_step_dev_, decode_step_host_, 2 * sizeof(int), cudaMemcpyHostToDevice,
                             decode_stream_));
+  if (trace && pick) {
+    // The sentinel the replayed selector must overwrite (decode_route_trace.h).
+    gpuErrchk(cudaMemsetAsync(decode_pick_dev_, 0xFF, sizeof(ember_verify::RowPick), decode_stream_));
+    if (decode_graph_pick_parts_ == 4)
+      gpuErrchk(cudaMemsetAsync(decode_pick_parts_dev_, 0xFF, 4 * sizeof(ember_verify::RowPick), decode_stream_));
+  }
   gpuErrchk(cudaGraphLaunch(decode_graph_exec_, decode_stream_));
+  if (trace) {
+    decode_route_.graph = "replay";
+    decode_route_.replay_index = ++decode_replay_count_;
+    decode_route_.has_pick = decode_graph_has_pick_;
+    decode_route_.parts = decode_graph_pick_parts_;
+  }
   if (pick) {
     gpuErrchk(cudaMemcpyAsync(decode_pick_host_, decode_pick_dev_, sizeof(ember_verify::RowPick),
                               cudaMemcpyDeviceToHost, decode_stream_));
     gpuErrchk(cudaStreamSynchronize(decode_stream_));
     *pick = *decode_pick_host_;
+    if (trace) {
+      decode_route_.record = *pick;
+      if (decode_graph_pick_parts_ == 4)
+        gpuErrchk(cudaMemcpy(decode_route_.scratch, decode_pick_parts_dev_, 4 * sizeof(ember_verify::RowPick),
+                             cudaMemcpyDeviceToHost));
+      decode_route_.row = decode_row_logits();
+      // Fault injection (decode_route_trace.h): the caller gets a copy its greedy rule cannot decide (the
+      // nonfinite flag), so it samples this replay's row on the host; the route record keeps the true record.
+      if (ember::route_trace::force_undecidable()) pick->nan = 1;
+    }
     return {};
   }
   return decode_row_logits();
+}
+
+// Route tracing's inventory of a captured decode graph: its kernel nodes, and which of them are the selector
+// kernels (ember_verify::selector_kernels), with the partition kernel's grid.
+void TinyLlamaModel::trace_graph_inventory(cudaGraph_t graph) {
+  DecodeRoute& r = decode_route_;
+  r.nodes_kernel = r.nodes_unidentified = r.nodes_select = r.nodes_partition = r.nodes_merge = -1;
+  r.partition_grid[0] = r.partition_grid[1] = r.partition_grid[2] = 0;
+  r.merge_grid = 0;
+  size_t n = 0;
+  if (cudaGraphGetNodes(graph, nullptr, &n) != cudaSuccess) {
+    cudaGetLastError();
+    return;
+  }
+  std::vector<cudaGraphNode_t> nodes(n);
+  if (n && cudaGraphGetNodes(graph, nodes.data(), &n) != cudaSuccess) {
+    cudaGetLastError();
+    return;
+  }
+  const ember_verify::SelectorKernels k = ember_verify::selector_kernels();
+  r.nodes_kernel = r.nodes_unidentified = r.nodes_select = r.nodes_partition = r.nodes_merge = 0;
+  for (cudaGraphNode_t node : nodes) {
+    cudaGraphNodeType type;
+    if (cudaGraphNodeGetType(node, &type) != cudaSuccess) {
+      cudaGetLastError();
+      ++r.nodes_unidentified;
+      continue;
+    }
+    if (type != cudaGraphNodeTypeKernel) continue;
+    ++r.nodes_kernel;
+    cudaKernelNodeParams p{};
+    if (cudaGraphKernelNodeGetParams(node, &p) != cudaSuccess) {  // e.g. a node launched through the driver API
+      cudaGetLastError();
+      ++r.nodes_unidentified;
+      continue;
+    }
+    if (p.func == k.select) {
+      ++r.nodes_select;
+    } else if (p.func == k.partition) {
+      ++r.nodes_partition;
+      r.partition_grid[0] = p.gridDim.x;
+      r.partition_grid[1] = p.gridDim.y;
+      r.partition_grid[2] = p.gridDim.z;
+    } else if (p.func == k.merge) {
+      ++r.nodes_merge;
+      r.merge_grid = p.gridDim.x;
+    }
+  }
 }
 
 std::vector<float> TinyLlamaModel::decode_row_logits() {

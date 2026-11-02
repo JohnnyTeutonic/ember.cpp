@@ -405,6 +405,23 @@ class TinyLlamaModel {
   std::vector<float> forward_device_graph(int token_id, int pos, KVCache* kv_cache,
                                          ember_verify::RowPick* pick = nullptr);
   std::vector<float> decode_row_logits();
+  // What the last forward_device_graph call did, filled only while route tracing is on (decode_route_trace.h).
+  struct DecodeRoute {
+    const char* graph = "not_called";  // replay | off | disabled | capture_failed | unavailable
+    bool captured = false;             // this call captured the graph it replayed
+    long long capture_id = 0;          // captures so far, 1-based
+    long long replay_index = 0;        // replays of that capture, this one included
+    bool has_pick = false;             // the replayed graph contains a selector
+    int parts = 0;                     // and its partitions
+    ember_verify::RowPick record{};    // this replay's record, read after the sentinel was written
+    ember_verify::RowPick scratch[4]{};  // this replay's partition records (PARTS4)
+    std::vector<float> row;            // this replay's logits (pick replays only)
+    // Kernel nodes of the captured graph, counted at capture; -1 when the inventory failed.
+    int nodes_kernel = -1, nodes_unidentified = -1, nodes_select = -1, nodes_partition = -1, nodes_merge = -1;
+    unsigned partition_grid[3] = {0, 0, 0};
+    unsigned merge_grid = 0;
+  };
+  const DecodeRoute& decode_route() const { return decode_route_; }
   // Speculative verification: n tokens at positions pos..pos+n-1 (all layers
   // on the GPU, n <= 33), logits for every row ([n][vocab]): FP32 GEMMs and
   // the decode-attention kernel launched once per row, per launch (1.2-5.1
@@ -655,6 +672,9 @@ class TinyLlamaModel {
   ember_verify::RowPick* decode_pick_parts_dev_ = nullptr;  // 4 records, capture lifetime
   ember_verify::RowPick* decode_pick_dev_ = nullptr;
   ember_verify::RowPick* decode_pick_host_ = nullptr;  // pinned, one 20-byte record
+  DecodeRoute decode_route_;
+  long long decode_capture_count_ = 0, decode_replay_count_ = 0;
+  void trace_graph_inventory(cudaGraph_t graph);
 
   float* x_dev_ = nullptr;
   float* x_norm_dev_ = nullptr;

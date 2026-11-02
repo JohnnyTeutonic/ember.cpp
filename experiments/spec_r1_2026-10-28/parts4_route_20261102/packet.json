@@ -1,0 +1,93 @@
+{
+  "kind": "E10_PARTS4_ROUTE_EVIDENCE_AND_FROZEN_COLLECTOR_V1",
+  "status": "PREPARED_UNADMITTED",
+  "protocol": {
+    "path": "experiments/spec_r1_2026-10-28/parts4_full_model_protocol_20261102.json",
+    "commit": "41b6cd5a006ecb828523cee43756f05af9d0835f",
+    "sha256": "69c739f9035a7c2338bd0309e252dadeb348eeefb29253538f3e01502cbe9c54",
+    "candidate_source_design_basis": "3ada969788f4d5ea65f5b81b29c22c30b7f25c97",
+    "candidate_source_files_sha256": {
+      "decode_pick_policy.h": "53cd249e1c9ebaf8166a067eacb12a18ed09f0acb2a51cf3bdd028779d169d84",
+      "api.cpp": "43e66be5dfaa369a165af8746b6de516b0559f9168a7d9379e019ed16a76b903",
+      "model.cpp": "6c23856da6015306abeefd59af5c6044fc6790779d93bd672614c51b02a0fd6f",
+      "row_pick_partitioned.cuh": "a9500fcbdcaa793b12ecbd5d529c6826c669ea4b4ba4630f82a51c1737d27346"
+    }
+  },
+  "instrumentation": "Trace-only additions behind EMBER_ROUTE_TRACE; removing them reproduces the protocol source byte for byte (test_source_reduction.py). The selector kernels, the policy header and api.cpp's dispatch are unchanged.",
+  "source_files_sha256": {
+    "api.cpp": "d60a5b0b43b7c3a48450d94faef9ef473df65b21d4dabebb9ff2a02f45a8bca2",
+    "model.cpp": "b07a83c2d1697afea1bcb6061b197d7024ef4fef5b7dd6b11fa8794f16b7bd7b",
+    "model.h": "4ba6715cbf42938fd5f8e974d6e2f0b4988377fc356ea9025384eae864085678",
+    "verify_kernels.cu": "298030626cc4974377fc8747a65f3ae38bce0e0ef02f4f34723ab612fb30b32e",
+    "verify_kernels.h": "e323f233812618a7c764cbc021d762940e3e6e3e5721a0e5cd19c25360aaa6fe",
+    "decode_route_trace.h": "6f037ca49ec0c90b109b10f9fc97ea9966833c396a8b3331f62c9e588d241a64",
+    "decode_pick_policy.h": "53cd249e1c9ebaf8166a067eacb12a18ed09f0acb2a51cf3bdd028779d169d84",
+    "row_pick_partitioned.cuh": "a9500fcbdcaa793b12ecbd5d529c6826c669ea4b4ba4630f82a51c1737d27346",
+    "determinism.h": "67c359489a0482885dfe38347a81a0d470794b2f125321e8ec9274bf1cf8d944",
+    "speculative_verify.cpp": "7c0e1c08bc4967956e7560d91ba1f3d16539a9043f635582247207c2045b7f56",
+    "server.cpp": "073d6e16482dd63a7b529fddecb6c14221177fc33e0b4a7f980d08bf900c5104",
+    "CMakeLists.txt": "339857345162138b5aec821adef589e3987ea1b10ac21b4cf442d04579d7f6b1"
+  },
+  "frozen_collector_sha256": {
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_vm.py": "360f95a74b0d3fe61dc9c8234c22c89f6d2bc0104daf19fb100c2975361a5a34",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_gate.py": "519777fcffc8f5c308aab67f8d981ce3b158422ead221b99da9983c56375f02a",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_route_matrix.py": "0d89d59ed4391b1c067629829c034c4e4b8953278b88d4aa5d43b834531d9f47",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_parts4_gate.py": "ede1aed221a2450caa66577532493a434199446cd5b6de02e8399b1471253f56",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_source_reduction.py": "fbbc3d80cefccedb97ebdc286e4bda89d6989d8269c1e647e9e77ef13576d81e",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_route_trace.cpp": "5ace00f3bedf4cca91e88307a6d38f2019895cbc8f9644be33037af7d69774ea",
+    "experiments/spec_r1_2026-10-28/decode_pick_gate.py": "416c7edb240385033dee2b80c7d97756583182a4df228304cd1d54a18853f839",
+    "experiments/spec_r1_2026-10-28/decode_pick_fallback.py": "924fc8784208cdb45839357bb2f325743ff2b562475e697cb10af4b091a0db35",
+    "experiments/spec_r1_2026-10-28/decode_pick_rows.cpp": "314c887a23e266e02116776a30ab746f5599aafd4d65a0681a0312f8899ace7b",
+    "experiments/draft_2026-10-27/dr_e2e.py": "5f283994b251e7e4d57e2e3fefc6a4add06cb23d66ccf24ae91b3a07b7830216",
+    "experiments/spec_r1_2026-10-28/parts4_full_model_protocol_20261102.json": "69c739f9035a7c2338bd0309e252dadeb348eeefb29253538f3e01502cbe9c54",
+    "tools/row_pick_profile/test_integration.py": "f0569b85837e75545d68c7f113b380bd333442ced163a235b09888e6cedca1eb"
+  },
+  "input_pins": {
+    "model_sha256": "96f6afdcbbcf1a4cf53ad6c0e451e75301dc4187f726f3c2218600fbe72a8cc9",
+    "prompts_sha256": "a25357100c3eb1e59bc94bb26c0629e72e6ae18172b2d4fbbf148ae5168d1740",
+    "items": 100,
+    "requests": 260
+  },
+  "schedule": [
+    "det_route_host",
+    "det_route_parts0",
+    "det_route_parts4",
+    "det_route_parts4_forced",
+    "det_route_parts4_rows",
+    "det_rows_host_a",
+    "det_rows_parts0_a",
+    "det_rows_parts4_a",
+    "det_rows_parts4_b",
+    "det_rows_parts0_b",
+    "det_rows_host_b",
+    "det_time_host_a",
+    "det_time_parts0_a",
+    "det_time_parts4_a",
+    "det_time_parts4_b",
+    "det_time_parts0_b",
+    "det_time_host_b"
+  ],
+  "timing_pairs": [
+    {
+      "host": "det_time_host_a",
+      "parts0": "det_time_parts0_a",
+      "parts4": "det_time_parts4_a"
+    },
+    {
+      "host": "det_time_host_b",
+      "parts0": "det_time_parts0_b",
+      "parts4": "det_time_parts4_b"
+    }
+  ],
+  "thresholds": {
+    "parts4_over_host": 1.15,
+    "parts4_over_parts0": 1.0
+  },
+  "packet_test_count": 48,
+  "admission": {
+    "authorized": false,
+    "gpu_or_provider_calls": 0,
+    "gpu": "one L4",
+    "owner": "Codex (serial GPU queue, financial cap, deadline, watchdog, home replay, cleanup)"
+  }
+}

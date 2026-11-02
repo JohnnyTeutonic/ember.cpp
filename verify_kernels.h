@@ -77,6 +77,14 @@ void select_rows(const float* logits, int n, int vocab, RowPick* picks, cudaStre
 // graph capture. The original select_rows path and all its callers are unchanged.
 void select_rows_partitioned(const float* logits, int n, int vocab, RowPick* picks,
                              RowPick* scratch, cudaStream_t st);
+// The selector kernels' host stubs, which a captured graph's kernel nodes name (decode route tracing,
+// model.cpp trace_graph_inventory). Reads addresses only; launches nothing.
+struct SelectorKernels {
+  const void* select;     // select_rows_kernel
+  const void* partition;  // partition_rows_kernel
+  const void* merge;      // merge_parts
+};
+SelectorKernels selector_kernels();
 
 }  // namespace ember_verify
 

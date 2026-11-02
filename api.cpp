@@ -1,5 +1,7 @@
 #include "api.h"
 #include "chat_gguf.h"
+#include "decode_route_trace.h"
+#include "determinism.h"
 #include "draft_table.h"
 #include "gguf_parser.h"
 #include "model_macros.h"
@@ -144,6 +146,20 @@ static int greedy_from_pick(const ember_verify::RowPick& p, float temperature, s
   return p.last;
 }
 #endif
+
+// Route tracing (decode_route_trace.h): one event per sampled position of the plain decode loop. The forward's
+// record and row are checked against each other here; nothing feeds back into sampling.
+static long long next_trace_request() {
+  static std::mutex m;
+  static long long n = 0;
+  std::lock_guard<std::mutex> g(m);
+  return ++n;
+}
+
+static nlohmann::json trace_record_json(const ember::route_trace::Record& r) {
+  return {{"max", r.max}, {"max_bits", ember::route_trace::bits(r.max)}, {"second", r.second},
+          {"second_bits", ember::route_trace::bits(r.second)}, {"first", r.first}, {"last", r.last}, {"nan", r.nan}};
+}
 
 // CTRL-style repetition penalty over recently generated tokens. Tiny
 // word-level models fall into short degenerate cycles ("you are very kind."
@@ -1124,6 +1140,27 @@ if (prefill_enabled) {
   }();
   const ember_draft::DraftTable* draft_table =
       spec_on && draft_table_mode ? corpus_draft_table(config_.vocab_size) : nullptr;
+  const bool tracing = ember::route_trace::on();
+  const long long trace_request = tracing ? next_trace_request() : 0;
+  if (tracing) {
+    auto env = [](const char* k) -> nlohmann::json {
+      const char* v = std::getenv(k);
+      return v ? nlohmann::json(v) : nlohmann::json(nullptr);
+    };
+    ember::route_trace::emit(nlohmann::json{
+        {"ev", "request"}, {"request", trace_request}, {"prompt_ids", tokens},
+        {"num_prompt_tokens", num_prompt_tokens}, {"temperature", temperature}, {"top_k", top_k}, {"top_p", top_p},
+        {"repetition_penalty", repetition_penalty_}, {"repeat_on", repeat_on}, {"ir", ir_ != nullptr},
+        {"cpu_offload_layers", config_.num_cpu_offload_layers}, {"spec", spec_on}, {"prefill", prefill_enabled},
+        {"prefix_reused", prefill_from}, {"start_pos", start_pos_for_loop}, {"total_steps", total_steps},
+        {"prefill_sampled", generated_token_ids}, {"deterministic", ember::deterministic()},
+        {"debug_rows", logits_debug_on()}, {"forced", ember::route_trace::force_undecidable()},
+        {"env", {{"EMBER_DECODE_PICK", env("EMBER_DECODE_PICK")},
+                 {"EMBER_DECODE_PICK_PARTS", env("EMBER_DECODE_PICK_PARTS")},
+                 {"EMBER_DECODE_GRAPH", env("EMBER_DECODE_GRAPH")}, {"EMBER_DECODE_OPT", env("EMBER_DECODE_OPT")},
+                 {"EMBER_DETERMINISTIC", env("EMBER_DETERMINISTIC")}, {"EMBER_SPEC", env("EMBER_SPEC")}}}}
+                                     .dump());
+  }
 
   for (int pos = start_pos_for_loop; pos < total_steps; ++pos) {
     t_phase = ttft_clock::now();
@@ -1371,6 +1408,71 @@ if (prefill_enabled) {
         debug_dump_topk(logits);
         next_token_id = sample_top_k_top_p_temperature(logits, temperature, top_k, top_p, rng_);
       }
+      if (tracing) {
+        namespace rt = ember::route_trace;
+        bool pick_env = false;
+        // The record this position's replay produced (the model keeps it while tracing), if the API asked for one.
+        rt::Record trace_record{};
+        bool trace_record_returned = false;
+#ifdef HAS_CUDA
+        pick_env = device_pick_on;
+        if (!ir_ && config_.num_cpu_offload_layers == 0) {
+          const TinyLlamaModel::DecodeRoute& r = model_->decode_route();
+          trace_record_returned = want_device_pick && std::strcmp(r.graph, "replay") == 0 && r.has_pick;
+          if (trace_record_returned) trace_record = rt::record_of(r.record);
+        }
+#endif
+        const unsigned excl = rt::exclusions(ir_ != nullptr, config_.num_cpu_offload_layers, pick_env, top_k, repeat_on,
+                                             repetition_penalty_, pos, num_prompt_tokens);
+        rt::Undecided why = rt::Undecided::kNone;
+        // The decision of the true record; under fault injection the API was handed an undecidable copy instead.
+        const int decided = trace_record_returned ? rt::decision(trace_record, temperature, &why) : -1;
+        const bool forced = trace_record_returned && !logits_debug_on() && rt::force_undecidable();
+        nlohmann::json ev{{"ev", "token"}, {"request", trace_request}, {"pos", pos},
+                          {"phase", pos >= num_prompt_tokens ? "decode" : "prompt_last"}, {"token", next_token_id},
+                          {"eligible", want_device_pick}, {"exclusions", rt::exclusion_names(excl)},
+                          {"eligibility_consistent", (excl == 0) == want_device_pick},
+                          {"record_returned", trace_record_returned}, {"debug_rows", logits_debug_on()},
+                          {"forced", forced}, {"picked_on_device", picked_on_device},
+                          {"route", rt::route_name(want_device_pick, trace_record_returned, logits_debug_on(), forced,
+                                                   why)}};
+#ifdef HAS_CUDA
+        if (!ir_ && config_.num_cpu_offload_layers == 0) {
+          const TinyLlamaModel::DecodeRoute& r = model_->decode_route();
+          ev["graph"] = r.graph;
+          ev["captured"] = r.captured;
+          ev["capture_id"] = r.capture_id;
+          ev["replay_index"] = r.replay_index;
+          ev["graph_has_pick"] = r.has_pick;
+          ev["graph_parts"] = r.parts;
+          if (r.captured)
+            ev["inventory"] = {{"kernel", r.nodes_kernel}, {"unidentified", r.nodes_unidentified},
+                               {"select", r.nodes_select}, {"partition", r.nodes_partition},
+                               {"partition_grid", {r.partition_grid[0], r.partition_grid[1], r.partition_grid[2]}},
+                               {"merge", r.nodes_merge}, {"merge_grid", r.merge_grid}};
+          if (trace_record_returned) {
+            ev["record"] = trace_record_json(trace_record);
+            ev["decision"] = decided;
+            ev["undecided"] = rt::undecided_name(why);
+            if (r.parts == 4) {
+              nlohmann::json s = nlohmann::json::array();
+              for (const auto& p : r.scratch) s.push_back(trace_record_json(rt::record_of(p)));
+              ev["scratch"] = s;
+            }
+            if (static_cast<int>(r.row.size()) == config_.vocab_size) {
+              rt::Record parts[4];
+              for (int p = 0; p < 4; ++p) parts[p] = rt::record_of(r.scratch[p]);
+              const rt::ReplayCheck c =
+                  rt::check_replay(r.row.data(), config_.vocab_size, trace_record, parts, r.parts);
+              ev["check"] = {{"record_written", c.record_written}, {"record_value", c.record_value},
+                             {"record_bits", c.record_bits}, {"parts_written", c.parts_written},
+                             {"parts_value", c.parts_value}, {"merge_value", c.merge_value}};
+            }
+          }
+        }
+#endif
+        rt::emit(ev.dump());
+      }
       host_phase("host.sample");
 
       // Only add to generated tokens if we're actually generating (not just finishing prompt)
@@ -1434,6 +1536,10 @@ if (prefill_enabled) {
 #endif
   }
 
+  if (tracing)
+    ember::route_trace::emit(nlohmann::json{{"ev", "end"}, {"request", trace_request},
+                                            {"generated", generated_token_ids}, {"decode_steps", decode_steps}}
+                                 .dump());
   // Log all generated IDs before decoding
   std::string generated_ids_str = "[Generated IDs Pre-Decode] ";
   for(int gen_id : generated_token_ids) {
