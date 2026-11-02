@@ -30,9 +30,9 @@
   },
   "frozen_collector_sha256": {
     "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_vm.py": "d9e31c1876676c0b665c12a1690b9fd2a8a997929ffb929699f486812c29e83c",
-    "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_gate.py": "27fd389cb370e7f063f58586d332a489141bb157f0771cffc8a98f30746a4b33",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_gate.py": "7306c2b1b07f85074e85b5dfee7cdda7f45bf3b01ce92aae7d02f106e40690e7",
     "experiments/spec_r1_2026-10-28/parts4_route_20261102/parts4_route_matrix.py": "3f8a4301313a9c81f42046475df5dd24cd149b3d2bcd55f9f15142750b3fee68",
-    "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_parts4_gate.py": "0c81321b9ecf61fdd2bf66f35d1ff2681599ef0b8322487bcf65c960bc088ef1",
+    "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_parts4_gate.py": "cfe6a1664ca15822a16f3472d1fac7f954c571636d856519a96a48b17b080f15",
     "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_source_reduction.py": "b6c8f0125c8ddad72fd6d38cc931239d04f3847d3522f2582bde8400cf40ccf5",
     "experiments/spec_r1_2026-10-28/parts4_route_20261102/test_route_trace.cpp": "8b2afd0e20257869f4c5c33b4112841b833d22cfb51b0213908616fa75214b71",
     "experiments/spec_r1_2026-10-28/decode_pick_gate.py": "416c7edb240385033dee2b80c7d97756583182a4df228304cd1d54a18853f839",
@@ -83,7 +83,7 @@
     "parts4_over_host": 1.15,
     "parts4_over_parts0": 1.0
   },
-  "packet_test_count": 90,
+  "packet_test_count": 91,
   "admission": {
     "authorized": false,
     "gpu_or_provider_calls": 0,

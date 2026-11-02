@@ -387,36 +387,37 @@ def check_route(out, run, records, vocab=None, wrong=None):
     if len(requests) != 2 * len(records) and not error:
         proof.append(f"{run['name']}: {len(requests)} traced requests for {len(records)} records (warm + recorded)")
     continuity = Continuity()
-    # Every complete warm/recorded pair is checked, even when the trace is short or has a malformed tail.
-    for k, rec in enumerate(records[:len(requests) // 2]):
-        for t in (requests[2 * k], requests[2 * k + 1]):  # the warm pass, then the recorded request
-            q = t["request"]
-            where = f"{run['name']} record {k} request {q['request']}"
-            if q.get("env") != want_env:
-                proof.append(where + ": server environment differs from the arm")
-            if (q.get("spec") is not False or q.get("ir") is not False or q.get("cpu_offload_layers") != 0
-                    or q.get("deterministic") is not True or q.get("debug_rows") is not dump
-                    or q.get("forced") is not forced or q.get("top_k") != 1 or q.get("temperature") != 1.0
-                    or q.get("top_p") != 1.0 or q.get("repeat_on") is not False
-                    or not q.get("repetition_penalty", 2.0) <= 1.0):
-                proof.append(where + ": request is not a registered plain greedy all-GPU request")
-            if q.get("prompt_ids") != rec["prompt_ids"]:
-                proof.append(where + ": traced prompt differs from the client's prompt ids")
-            if not generated_matches(t["end"].get("generated"), rec["ids"], rec["stop_id"]):
-                proof.append(where + ": traced tokens differ from the client's ids")
-            bad = composition_problems(t)
-            proof.extend(where + ": " + b for b in bad)
-            if bad:
-                continue
-            counts["prefill_host_tokens"] += 1
-            for ev in t["tokens"]:
-                counts["decode_positions"] += 1
-                ev = dict(ev, temperature_used=q.get("temperature"))
-                at = where + f" pos {ev.get('pos')}: "
-                proof.extend(at + b for b in continuity.step(ev))
-                p, w = check_position(ev, arm, dump, forced, counts, vocab)
-                proof.extend(at + b for b in p)
-                wrong.extend(at + b for b in w)
+    # Every complete request is checked on its own (request j is record j // 2's warm pass when j is even, its
+    # recorded request when odd), even when its partner or the trace's tail is missing or malformed.
+    for j, t in enumerate(requests[:2 * len(records)]):
+        k, rec = j // 2, records[j // 2]
+        q = t["request"]
+        where = f"{run['name']} record {k} request {q['request']}"
+        if q.get("env") != want_env:
+            proof.append(where + ": server environment differs from the arm")
+        if (q.get("spec") is not False or q.get("ir") is not False or q.get("cpu_offload_layers") != 0
+                or q.get("deterministic") is not True or q.get("debug_rows") is not dump
+                or q.get("forced") is not forced or q.get("top_k") != 1 or q.get("temperature") != 1.0
+                or q.get("top_p") != 1.0 or q.get("repeat_on") is not False
+                or not q.get("repetition_penalty", 2.0) <= 1.0):
+            proof.append(where + ": request is not a registered plain greedy all-GPU request")
+        if q.get("prompt_ids") != rec["prompt_ids"]:
+            proof.append(where + ": traced prompt differs from the client's prompt ids")
+        if not generated_matches(t["end"].get("generated"), rec["ids"], rec["stop_id"]):
+            proof.append(where + ": traced tokens differ from the client's ids")
+        bad = composition_problems(t)
+        proof.extend(where + ": " + b for b in bad)
+        if bad:
+            continue
+        counts["prefill_host_tokens"] += 1
+        for ev in t["tokens"]:
+            counts["decode_positions"] += 1
+            ev = dict(ev, temperature_used=q.get("temperature"))
+            at = where + f" pos {ev.get('pos')}: "
+            proof.extend(at + b for b in continuity.step(ev))
+            p, w = check_position(ev, arm, dump, forced, counts, vocab)
+            proof.extend(at + b for b in p)
+            wrong.extend(at + b for b in w)
     if counts["decode_positions"] == 0 or counts["captures"] < 1 or counts["replays_not_capturing"] < 1:
         proof.append(run["name"] + ": no capture or no replay after capture in the trace")
     if arm != "host" and not dump and not forced and counts["compact"] == 0:

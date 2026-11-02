@@ -666,6 +666,18 @@ def test_wrong_record_survives_a_truncated_trace_tail(receipts):
     assert "truncated final request" in " ".join(result["routes"]["det_route_parts4"]["problems"])
 
 
+def test_wrong_record_in_an_unpaired_final_warm_request_is_kept(receipts):
+    out, matrix = receipts
+
+    def change(lines):
+        last_warm = max(x["request"] for x in lines if x["ev"] == "request") - 1  # the final warm pass
+        next(x for x in lines if x["ev"] == "token" and x["request"] == last_warm)["check"]["record_value"] = False
+        del lines[-1]  # its recorded partner loses its end event
+    edit_trace(out, "det_route_parts4", change)
+    result = g.analyze(out, matrix)
+    assert result["status"] == "CORRECTNESS_FAIL", failures(result)
+
+
 def test_matrix_difference_survives_an_unrelated_missing_receipt(receipts):
     out, matrix = receipts
     path = matrix / "graph0_parts4.json"
