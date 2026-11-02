@@ -17,7 +17,7 @@ REQUIRED = {"analyze", "benchmark", "build", "checkout", "contract", "environmen
 
 STUBS = {
     "git": r'''#!/usr/bin/env bash
-if [ "$1" = clone ]; then mkdir -p "${@: -1}/experiments/hf_cuda_2026-10-30/gemma_colab_20261103"; [ "$FAIL_AT" = clone ] && exit 7; exit 0; fi
+if [ "$1" = clone ]; then d="${@: -1}/experiments/hf_cuda_2026-10-30/gemma_colab_20261103"; mkdir -p "$d"; cat "$PACKET_DIR/apt_reconcile.py" > "$d/apt_reconcile.py"; [ "$FAIL_AT" = clone ] && exit 7; exit 0; fi
 dir=.; if [ "$1" = -C ]; then dir=$2; shift 2; fi
 case "$1" in
   worktree) mkdir -p "${@: -2:1}/experiments/hf_cuda_2026-10-30"; echo x > "${@: -2:1}/experiments/hf_cuda_2026-10-30/benchmark.py";;
@@ -44,14 +44,19 @@ exit 0''',
     # in the reconciliation scenarios only after the keyring package is installed
     "apt-cache": r'''#!/usr/bin/env bash
 case "$APT_SCENARIO" in
-  conflict|sources|unoffered) [ -e "$VM_ROOT/keyring_installed" ] && [ "$APT_SCENARIO" != unoffered ] || { echo "  Candidate: (none)"; exit 0; };;
+  conflict|commented|unoffered)
+    [ "$APT_SCENARIO" != unoffered ] && grep -qs "^deb " "$VM_APT_ETC/sources.list.d/vm-gemma-cuda-12-6.list" || exit 0;;
 esac
-[ "$FAIL_AT" = toolkit ] && { echo "  Candidate: (none)"; exit 0; }
-printf "  Candidate: 12.6.3-1\n     12.6.4.1-1 500\n     12.6.3-1 500\n"''',
+[ "$FAIL_AT" = toolkit ] && exit 0
+echo " $2 | 12.6.3-1 | https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64 Packages"
+echo " $2 | 12.6.4.1-1 | https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64 Packages"''',
     "curl": "#!/usr/bin/env bash\n[ \"$FAIL_AT\" = toolkit ] && exit 22; while [ $# -gt 0 ]; do [ \"$1\" = -o ] && echo deb > \"$2\"; shift; done; exit 0",
     "dpkg": r'''#!/usr/bin/env bash
 [ "$1" = -l ] && { echo 'ii  cuda-minimal-build-12-6 12.6.3-1'; exit 0; }
-echo "dpkg $*" >> "$VM_ROOT/apt.calls"; : > "$VM_ROOT/keyring_installed"; exit 0''',
+echo "dpkg $*" >> "$VM_ROOT/apt.calls"; exit 0''',
+    "dpkg-deb": r'''#!/usr/bin/env bash
+echo "dpkg-deb $*" >> "$VM_ROOT/apt.calls"
+[ "$1" = -x ] && mkdir -p "$3/usr/share/keyrings" && echo key > "$3/usr/share/keyrings/cuda-archive-keyring.gpg"''',
     "ldd": "#!/usr/bin/env bash\necho '\tlibcublas.so.12 => /usr/local/cuda-12.6/lib64/libcublas.so.12'",
     "nproc": "#!/usr/bin/env bash\necho 2",
     "cmake": r'''#!/usr/bin/env bash
@@ -100,8 +105,11 @@ def make_tools(tmp):
     nvcc.chmod(0o755)
     (tmp / "apt" / "sources.list.d").mkdir(parents=True)
     (tmp / "apt" / "sources.list").write_text("deb http://archive.ubuntu.com/ubuntu noble main\n")
+    keyrings = tmp / "keyrings"
+    keyrings.mkdir()
     return dict(os.environ, PATH=f"{b}:/usr/bin:/bin", VM_TEST_HARNESS="1", VM_ROOT=str(tmp),
-                VM_CUDA_HOME=str(tmp / "cuda"), VM_APT_ETC=str(tmp / "apt"))
+                VM_CUDA_HOME=str(tmp / "cuda"), VM_APT_ETC=str(tmp / "apt"), VM_KEYRINGS=str(keyrings),
+                VM_SYS_PYTHON="/usr/bin/python3", PACKET_DIR=str(HERE))
 
 
 def alive(pid):
@@ -242,7 +250,9 @@ class VmGemmaTests(unittest.TestCase):
         rc, s, _, tmp = self.run_vm(with_tmp=True)
         self.assertEqual((rc, s["gates"]["toolkit"]), (0, 0))
         calls = (tmp / "apt.calls").read_text()
-        self.assertNotIn("dpkg -i", calls)  # no keyring, no change to the sources
+        self.assertNotIn("dpkg-deb", calls)  # no keyring, no change to the sources
+        self.assertIn("apt-get install --simulate", calls)
+        self.assertFalse((tmp / "apt" / "sources.list.d" / "vm-gemma-cuda-12-6.list").exists())
         self.assertIn("cuda-minimal-build-12-6=12.6.3-1 libcublas-dev-12-6=12.6.4.1-1", calls)
         log = (tmp / "run_g1" / "out" / "toolkit.log").read_text()
         self.assertIn("image's own APT configuration", log)
@@ -260,21 +270,37 @@ class VmGemmaTests(unittest.TestCase):
         self.assertEqual((rc, s["gates"]["toolkit"]), (0, 0))
         d = tmp / "apt" / "sources.list.d"
         self.assertTrue((d / "cuda-old.list").read_text().startswith("# set aside by vm_gemma.sh: deb "))
-        self.assertFalse((d / "cuda-x.sources").exists())
+        self.assertIn("Enabled: no", (d / "cuda-x.sources").read_text())
         self.assertEqual((d / "other.list").read_text(), other)  # unrelated repositories untouched
-        kept = tmp / "run_g1" / "apt_disabled"
+        ours = (d / "vm-gemma-cuda-12-6.list").read_text()
+        self.assertEqual(ours, f"deb [signed-by={tmp / 'keyrings' / 'vm-gemma-cuda-archive-keyring.gpg'}] {repo} /\n")
+        self.assertEqual((tmp / "keyrings" / "vm-gemma-cuda-archive-keyring.gpg").read_text(), "key\n")
+        kept = tmp / "run_g1" / "out" / "apt_disabled"  # retrieved with the evidence
         self.assertEqual(sorted(x.name for x in kept.iterdir()), ["cuda-old.list", "cuda-x.sources"])
         calls = (tmp / "apt.calls").read_text()
-        self.assertIn("dpkg -i --force-confnew", calls)
-        self.assertLess(calls.index("dpkg -i"), calls.index("apt-get install -y -q --no-install-recommends"))
+        self.assertNotIn("dpkg -i", calls)  # no package manages the entry
+        self.assertLess(calls.index("dpkg-deb -x"), calls.index("apt-get install -y -q --no-install-recommends"))
         before = (tmp / "run_g1" / "out" / "apt_nvidia_sources_before.txt").read_text()
         self.assertIn("cuda-old.list", before)
+
+    def test_toolkit_restores_an_entry_when_the_package_owned_list_is_commented_out(self):
+        # round 6: cuda-keyring already installed, its own list commented out, nothing active for the repository
+        repo = "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/"
+        own = f"# deb [signed-by=/usr/share/keyrings/cuda-archive-keyring.gpg] {repo} /\n"
+
+        def prepare(tmp):
+            (tmp / "apt" / "sources.list.d" / "cuda-ubuntu2404-x86_64.list").write_text(own)
+        rc, s, _, tmp = self.run_vm(extra={"APT_SCENARIO": "commented"}, prepare=prepare, with_tmp=True)
+        self.assertEqual((rc, s["gates"]["toolkit"]), (0, 0))
+        d = tmp / "apt" / "sources.list.d"
+        self.assertEqual((d / "cuda-ubuntu2404-x86_64.list").read_text(), own)
+        self.assertTrue((d / "vm-gemma-cuda-12-6.list").read_text().startswith("deb [signed-by="))
 
     def test_toolkit_fails_closed_when_the_pins_are_not_offered_after_reconciliation(self):
         rc, s, _, tmp = self.run_vm(extra={"APT_SCENARIO": "unoffered"}, with_tmp=True)
         self.assertEqual((rc, s["gates"]["toolkit"]), (1, 98))
         self.assertNotIn("packages", s["gates"])
-        self.assertNotIn("--no-install-recommends", (tmp / "apt.calls").read_text())
+        self.assertNotIn("install -y", (tmp / "apt.calls").read_text())
 
     def test_a_toolkit_other_than_12_6_fails_the_build(self):
         rc, s, _, _ = self.run_vm(extra={"STUB_NVCC_RELEASE": "13.0"})

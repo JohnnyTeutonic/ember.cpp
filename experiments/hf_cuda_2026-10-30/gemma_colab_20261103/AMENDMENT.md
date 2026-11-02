@@ -55,23 +55,33 @@ installation (below) and nothing in the scientific protocol.
   ubuntu2404 repository. It runs right after provenance, before the interpreter and packages, so an APT problem
   costs minutes rather than the torch download. The frozen pod's nvcc was 12.4; 12.4 has no Ubuntu 24.04 packages,
   and 12.6 is the toolkit under which ember `5bfda893` was verified to compile.
-  - The image may already configure that repository, possibly with another `Signed-By`, which APT refuses to
-    combine with a second entry. So every NVIDIA source entry is recorded first (`apt_nvidia_sources_before.txt`).
-  - If the image's own configuration already offers both pinned versions after `apt-get update`, it is used
-    unchanged.
-  - Otherwise only the entries for this exact repository are set aside: lines in `.list` files are commented out,
-    `.sources` files are moved, and copies are kept in the run directory. The keyring package
-    (`cuda-keyring_1.1-1_all.deb`, SHA-256 `d2a6b11c…`) is checked before it installs NVIDIA's canonical entry.
-    `apt-get update` and both pinned candidates must then succeed before anything is installed.
-  - Unrelated repositories are untouched. The resulting entries and the installed CUDA packages are recorded
-    (`apt_nvidia_sources_after.txt`, `cuda_packages.txt`). APT still resolves the two packages' dependencies, which
-    are recorded rather than pinned.
+  - The image may already configure that repository. Its entry may use another `Signed-By`, which APT refuses
+    to combine with a second entry, or the image may have edited the keyring package's own list file, which dpkg
+    would not restore. So no package manages the entry here. Every NVIDIA source entry is recorded first
+    (`apt_nvidia_sources_before.txt`).
+  - "Offered" means `apt-cache madison` lists both exact versions and a simulated install of them succeeds. If
+    the image's own configuration offers them after `apt-get update`, it is used unchanged.
+  - Otherwise:
+    - The keyring is taken from NVIDIA's keyring package (`cuda-keyring_1.1-1_all.deb`, SHA-256 `d2a6b11c…`; the
+      keyring inside, SHA-256 `25100d6f…`; both checked) and installed under a name of our own.
+    - `apt_reconcile.py` sets aside only the entries whose URI is exactly this repository (trailing slash
+      ignored). One-line entries are commented out. In deb822 files only the matching stanza gets `Enabled: no`,
+      or only this URI is removed from a stanza that lists others. Copies go to `out/apt_disabled/` and are
+      retrieved.
+    - It then writes one entry signed by our keyring, and fails unless that is the only active entry for the
+      repository.
+    - `apt-get update` and the same checks must pass before anything is installed.
+  - An `http://` or longer-path variant is a different APT source, cannot conflict on `Signed-By`, and is left as
+    it is. Unrelated repositories, stanzas and files are untouched. The resulting entries and the installed CUDA
+    packages are recorded (`apt_reconcile.json`, `apt_nvidia_sources_after.txt`, `cuda_packages.txt`). APT still
+    resolves the two packages' dependencies, which are recorded rather than pinned.
 - **Engine build.** A new build, not the archived Smol executable.
   - Toolkit: `/usr/local/cuda-12.6` (also passed as `CUDAToolkit_ROOT`), whose `nvcc --version` must report release
     12.6 and is recorded. Release, `CMAKE_CUDA_ARCHITECTURES=89`, target `ir_hf_cuda_bench`, as the frozen v1/v2 VM
     scripts built it.
-  - The libraries the executable resolves are recorded with the loader environment (`ldd.txt`); this is evidence,
-    not a gate.
+  - The libraries the executable resolves at load time are recorded with the loader environment (`ldd.txt`).
+    This is evidence, not a gate: a failing `ldd` is recorded and the build continues. Libraries opened later
+    with `dlopen` are not covered.
   - The executable is archived in the evidence (`out/binaries/`) and its hash checked against the one that runs.
 - **Launch contract** (`launch_contract_gemma.py`, against `../launch_contract_v3.py`):
   - provenance is recorded and checked as above instead of the image digest, so `--provenance` is required;
@@ -145,13 +155,19 @@ installation (below) and nothing in the scientific protocol.
     no stop needed), unconfirmed, or not observed (no PID file after a minute). Anything but interrupted or
     completed means the archive may hold outputs still being written, so the run can exit no better than 2
     (transport or receipt failure).
-  - Local tests (36) cover:
+  - Local tests (44) cover:
     - a stop during the controller, a stop between fork and registration, a stop before the controller's group
       exists, and a writer left behind by the controller, each checking that the writer's last write came before
       `status.json` was published;
-    - the toolkit gate: the image's own configuration used unchanged; a conflicting `.list` entry and a deb822
-      `.sources` entry set aside with unrelated repositories untouched; pins not offered after reconciliation; a
-      failed keyring download; a wrong nvcc release;
+    - the toolkit gate:
+      - the image's own configuration used unchanged;
+      - a conflicting `.list` entry and a deb822 stanza set aside, with unrelated repositories untouched;
+      - the keyring package's own list file already commented out;
+      - pins not offered after reconciliation;
+      - a failed keyring download;
+      - a wrong nvcc release;
+    - `apt_reconcile.py` on its own (7 tests): slash variants, longer paths and `http://` left alone, entries in
+      `sources.list` itself, mixed and multi-URI deb822 files, already-disabled stanzas, and idempotence;
     - an unconfirmed quiescence.
   - Packing tolerates files changing while they are read, and pack and download are tried twice within the
     retrieval budget. A failed retrieval is logged as evidence lost before cleanup. In `g1-20261103` the first

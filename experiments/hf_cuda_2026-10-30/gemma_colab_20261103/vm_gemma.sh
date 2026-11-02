@@ -135,45 +135,53 @@ G[provenance]=0
 # CUDA toolkit 12.6 from NVIDIA's ubuntu2404 repository, exact versions (the image had only CUDA 13.0 on 3 Nov; ember
 # 5bfda893 was verified to compile under 12.6). It runs before the interpreter and packages, so an APT problem costs
 # minutes, not the torch download. The image may already configure NVIDIA's repository, possibly with another
-# Signed-By, which APT refuses to combine with a second entry. So every NVIDIA source entry is recorded first; if
-# the image's own configuration already offers both pinned versions, it is used unchanged. Otherwise only the entries
-# for this exact repository are set aside (lines in .list files commented out, .sources files moved; copies kept in
-# $W/apt_disabled), the keyring package (checked by hash) installs NVIDIA's canonical entry, and apt-get update and
-# both pinned candidates must succeed before anything is installed.
-CUDA_KEYRING_SHA=d2a6b11c096396d868758b86dab1823b25e14d70333f1dfa74da5ddaf6a06dba
+# Signed-By, which APT refuses to combine with a second entry, and dpkg would not restore a package-owned list file
+# the image has edited. So no package manages the entry here:
+# - every NVIDIA source entry is recorded first; if the image's own configuration offers both pinned versions
+#   exactly and a simulated install of them succeeds, it is used unchanged;
+# - otherwise the keyring is taken from NVIDIA's keyring package (package and keyring both checked by hash) and
+#   installed under a name of our own, and apt_reconcile.py sets aside only the entries for this exact repository
+#   (copies kept in out/apt_disabled), writes one entry signed by that keyring, and fails unless that entry is the
+#   only active one for the repository; apt-get update and the same exact checks must then pass.
+CUDA_KEYRING_DEB_SHA=d2a6b11c096396d868758b86dab1823b25e14d70333f1dfa74da5ddaf6a06dba
+CUDA_KEYRING_SHA=25100d6f2eccaee7d6719a70e3c0c6145064aa9edc2c32148f693ac4c524a376
 CUDA_REPO=https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64
-APT_ETC=/etc/apt
-[ "${VM_TEST_HARNESS:-}" = 1 ] && APT_ETC=${VM_APT_ETC:-$APT_ETC}   # test harness only
+APT_ETC=/etc/apt KEYRINGS=/usr/share/keyrings SYS_PY=python3
+if [ "${VM_TEST_HARNESS:-}" = 1 ]; then   # test harness only
+    APT_ETC=${VM_APT_ETC:-$APT_ETC} KEYRINGS=${VM_KEYRINGS:-$KEYRINGS} SYS_PY=${VM_SYS_PYTHON:-$SYS_PY}
+fi
+CUDA_PINS="cuda-minimal-build-12-6=12.6.3-1 libcublas-dev-12-6=12.6.4.1-1"
+offered() {   # package, exact version: listed by apt-cache madison
+    apt-cache madison "$1" | awk -F'|' -v v="$2" '{gsub(/ /, "", $2)} $2 == v {f = 1} END {exit !f}'
+}
 pinned_available() {
-    apt-cache policy cuda-minimal-build-12-6 | grep -q '12\.6\.3-1' \
-        && apt-cache policy libcublas-dev-12-6 | grep -q '12\.6\.4\.1-1'
+    offered cuda-minimal-build-12-6 12.6.3-1 && offered libcublas-dev-12-6 12.6.4.1-1 \
+        && apt-get install --simulate -q --no-install-recommends $CUDA_PINS > "$O/apt_simulate.txt"
 }
 toolkit_gate() {
-    local f
     grep -rn -F developer.download.nvidia.com "$APT_ETC/sources.list" "$APT_ETC/sources.list.d" \
         > "$O/apt_nvidia_sources_before.txt" 2>&1
     if apt-get update -q && pinned_available; then
         echo "toolkit source: the image's own APT configuration, unchanged"
     else
-        echo "toolkit source: NVIDIA's keyring entry; existing entries for $CUDA_REPO set aside"
-        mkdir -p "$W/apt_disabled" || return $?
-        for f in $(grep -rl -F "$CUDA_REPO" "$APT_ETC/sources.list" "$APT_ETC/sources.list.d" 2>/dev/null); do
-            cat "$f" > "$W/apt_disabled/$(basename "$f")" || return $?
-            case "$f" in
-                *.sources) rm -f "$f" || return $?;;
-                *) sed -i "\#$CUDA_REPO#s/^[^#]/# set aside by vm_gemma.sh: &/" "$f" || return $?;;
-            esac
-        done
+        echo "toolkit source: our entry for $CUDA_REPO; the image's entries for it set aside"
         curl -sSfL -o "$W/cuda-keyring.deb" "$CUDA_REPO/cuda-keyring_1.1-1_all.deb" || return $?
-        echo "$CUDA_KEYRING_SHA  $W/cuda-keyring.deb" | sha256sum -c - || return $?
-        DEBIAN_FRONTEND=noninteractive dpkg -i --force-confnew "$W/cuda-keyring.deb" || return $?
+        echo "$CUDA_KEYRING_DEB_SHA  $W/cuda-keyring.deb" | sha256sum -c - || return $?
+        dpkg-deb -x "$W/cuda-keyring.deb" "$W/cuda-keyring" || return $?
+        echo "$CUDA_KEYRING_SHA  $W/cuda-keyring/usr/share/keyrings/cuda-archive-keyring.gpg" | sha256sum -c - \
+            || return $?
+        cat "$W/cuda-keyring/usr/share/keyrings/cuda-archive-keyring.gpg" \
+            > "$KEYRINGS/vm-gemma-cuda-archive-keyring.gpg" || return $?
+        "$SYS_PY" "branch/$A/apt_reconcile.py" --apt-etc "$APT_ETC" --uri "$CUDA_REPO" \
+            --keyring "$KEYRINGS/vm-gemma-cuda-archive-keyring.gpg" \
+            --entry "$APT_ETC/sources.list.d/vm-gemma-cuda-12-6.list" --backup "$O/apt_disabled" \
+            > "$O/apt_reconcile.json" || return $?
         apt-get update -q || return $?
         pinned_available || { echo "the pinned CUDA 12.6 versions are not offered after reconciliation"; return 98; }
     fi
     grep -rn -F developer.download.nvidia.com "$APT_ETC/sources.list" "$APT_ETC/sources.list.d" \
         > "$O/apt_nvidia_sources_after.txt" 2>&1
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
-        cuda-minimal-build-12-6=12.6.3-1 libcublas-dev-12-6=12.6.4.1-1 || return $?
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends $CUDA_PINS || return $?
     dpkg -l | grep -E 'cuda|cublas' > "$O/cuda_packages.txt"
 }
 toolkit_gate > "$O/toolkit.log" 2>&1 || fail toolkit $?
@@ -222,7 +230,8 @@ CUDA_HOME=/usr/local/cuda-12.6
         -DCMAKE_CUDA_COMPILER="$CUDA_HOME/bin/nvcc" -DCUDAToolkit_ROOT="$CUDA_HOME" > "$O/cmake.log" \
     && grep -q 'CUDA toolkit and cuBLAS found' "$O/cmake.log" \
     && make -C build -j"$(nproc)" ir_hf_cuda_bench > "$O/make.log" \
-    && { echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}"; ldd build/ir_hf_cuda_bench; } > "$O/ldd.txt" \
+    && { echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}"; ldd build/ir_hf_cuda_bench || echo "ldd exit $?"; true; } \
+        > "$O/ldd.txt" 2>&1 \
     && cp build/ir_hf_cuda_bench "$O/binaries/ir_hf_cuda_bench" \
     && [ "$(sha256sum build/ir_hf_cuda_bench | cut -c1-64)" = "$(sha256sum "$O/binaries/ir_hf_cuda_bench" | cut -c1-64)" ] \
     && sha256sum "$O/binaries/ir_hf_cuda_bench" > "$O/binary.sha256"
