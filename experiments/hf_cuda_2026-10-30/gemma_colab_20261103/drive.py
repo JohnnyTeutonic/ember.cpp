@@ -85,7 +85,8 @@ class Driver:
         self.raised = False
         self.log_failed = False
         self.done = False
-        self.stop_confirmed = None  # None: no stop was needed or the script never started
+        self.stop_confirmed = None  # None: no stop was needed or no launch was attempted
+        self.launch_attempted = False
 
     # ---- logging never raises: the file is the record, the terminal and stderr best effort
     def log(self, *parts):
@@ -224,6 +225,7 @@ class Driver:
             f"subprocess.Popen('nohup bash /content/vm_run_{self.run}.sh {self.commit} {self.run} "
             f"> /content/vm_run_{self.run}.log 2>&1 &', shell=True)\n"
             "print('LAUNCHED')\n")
+        self.launch_attempted = True  # from here the script may be running, whatever the acknowledgement says
         rc, out = self.exec_py(code, 200, self.work_end, "launch")
         return rc == 0 and "LAUNCHED" in out
 
@@ -256,36 +258,66 @@ class Driver:
 
     def stop_workload(self):
         """Polling ended without DONE (or the launch acknowledgement was lost): send SIGTERM to the VM script's
-        recorded PID. Its handler stops the controller's process group, waits until it is gone, writes stop.json and
-        exits through the trap that writes status.json and DONE. The stop counts as confirmed only when DONE exists
-        and stop.json says the controller group is gone (or never started); then nothing is still writing.
-        Returns True, False (not confirmed) or None (the script never started)."""
+        recorded PID, after checking that the PID is still that script. Its handler stops the controller's process
+        group, waits (bounded) until it is gone, writes stop.json and exits through the trap that writes status.json
+        and DONE. The VM side answers with one STOP_REPLY JSON line:
+          interrupted  DONE holds our run id and stop.json says the controller group is gone or never started;
+          completed    DONE holds our run id and there is no stop.json: the script finished on its own (its
+                       controller and any leftover group member had already been stopped before publication);
+          unconfirmed  anything else; not_observed  no PID file after waiting for one.
+        Returns True (interrupted or completed), False (not confirmed, including a launch that was attempted but
+        never observed) or None (no launch was attempted)."""
+        if not self.launch_attempted:
+            self.log("workload stop: no launch was attempted")
+            return None
         code = (
             "import json, os, signal, time\n"
+            f"run, script = {self.run!r}, '/content/vm_run_{self.run}.sh'\n"
             f"pid_file, done, stop = '/content/vm_{self.run}.pid', '/content/run_{self.run}/out/DONE', "
             f"'/content/run_{self.run}/out/stop.json'\n"
-            "if not os.path.exists(pid_file):\n"
-            "    print('NOT_STARTED'); raise SystemExit\n"
-            "pid = int(open(pid_file).read())\n"
-            "try:\n"
-            "    os.kill(pid, signal.SIGTERM)\n"
-            "except ProcessLookupError:\n"
-            "    pass\n"
-            "for _ in range(120):\n"
-            "    if os.path.exists(done):\n"
+            "def reply(result, **kw):\n"
+            "    print('STOP_REPLY ' + json.dumps(dict(result=result, **kw))); raise SystemExit\n"
+            "def done_ok():\n"
+            "    try:\n"
+            "        return open(done).read().strip() == run\n"
+            "    except OSError:\n"
+            "        return False\n"
+            "for _ in range(60):  # a script launched late publishes its PID within seconds of starting\n"
+            "    if os.path.exists(pid_file):\n"
             "        break\n"
             "    time.sleep(1)\n"
-            "s = json.load(open(stop)) if os.path.exists(stop) else {}\n"
+            "else:\n"
+            "    reply('not_observed')\n"
+            "pid = int(open(pid_file).read())\n"
+            "try:\n"
+            "    ours = script.encode() in open(f'/proc/{pid}/cmdline', 'rb').read()\n"
+            "except OSError:\n"
+            "    ours = False\n"
+            "if ours and not done_ok():\n"
+            "    os.kill(pid, signal.SIGTERM)\n"
+            "for _ in range(120):\n"
+            "    if done_ok():\n"
+            "        break\n"
+            "    time.sleep(1)\n"
+            "s = json.load(open(stop)) if os.path.exists(stop) else None\n"
+            "if not done_ok():\n"
+            "    reply('unconfirmed', stop=s, signalled=ours)\n"
+            "if s is None:\n"
+            "    reply('completed', signalled=ours)\n"
             "gone = s.get('controller_group_gone') is True or s.get('controller_started') is False\n"
-            "print('CONFIRMED' if os.path.exists(done) and (gone or not os.path.exists(stop)) else 'UNCONFIRMED', "
-            "json.dumps(s))\n")
-        rc, out = self.exec_py(code, 200, self.retrieve_end, "stop_workload")
-        if rc == 0 and "NOT_STARTED" in out:
-            self.log("workload stop: the VM script never started")
-            return None
-        confirmed = rc == 0 and "CONFIRMED" in out.split()
-        self.log("workload stop:", "confirmed" if confirmed else "NOT CONFIRMED: the archive may hold outputs still "
-                 "being written", out.strip()[-300:])
+            "reply('interrupted' if gone else 'unconfirmed', stop=s, signalled=ours)\n")
+        rc, out = self.exec_py(code, 260, self.retrieve_end, "stop_workload")
+        reply = None
+        for line in out.splitlines():
+            if line.startswith("STOP_REPLY "):
+                try:
+                    reply = json.loads(line[len("STOP_REPLY "):])
+                except ValueError:
+                    reply = None
+        result = reply.get("result") if rc == 0 and isinstance(reply, dict) else None
+        confirmed = result in ("interrupted", "completed")
+        self.log("workload stop:", f"confirmed ({result})" if confirmed else
+                 f"NOT CONFIRMED ({result}): the archive may hold outputs still being written", out.strip()[-300:])
         return confirmed
 
     def retrieve(self):
@@ -306,7 +338,10 @@ class Driver:
                               600, self.retrieve_end, f"download {attempt}")
             if rc != 0 or not archive.is_file():
                 continue
+            # each attempt extracts into its own fresh staging folder; only a complete extraction is promoted
+            stage = self.out / f"extract_{attempt}"
             try:
+                shutil.rmtree(stage, ignore_errors=True)
                 with tarfile.open(archive) as t:
                     members = t.getmembers()
                     bad = [m.name for m in members if not (m.isfile() or m.isdir())
@@ -314,7 +349,9 @@ class Driver:
                     if bad:
                         self.log("refusing archive members", bad[:5])
                         continue
-                    t.extractall(self.out, members=members)
+                    t.extractall(stage, members=members)
+                (stage / f"run_{self.run}").rename(self.out / f"run_{self.run}")
+                shutil.rmtree(stage, ignore_errors=True)
                 return True
             except (tarfile.TarError, OSError) as e:
                 self.log(f"archive attempt {attempt} unreadable:", e)
@@ -328,14 +365,21 @@ class Driver:
             for f in src.iterdir():
                 if f.is_file():
                     shutil.copy2(f, self.receipts / f.name)
-            # Everything retrieved, including out/binaries/ and out/inputs/, hashed into the receipts.
+            # Everything retrieved, including out/binaries/ and out/inputs/, hashed into the receipts (in 1 MiB
+            # chunks; this runs after VM cleanup, so local I/O never holds the VM).
             lines = []
             for f in sorted(p for p in src.rglob("*") if p.is_file()):
-                lines.append(f"{hashlib.sha256(f.read_bytes()).hexdigest()}  {f.relative_to(src).as_posix()}\n")
-            (self.receipts / "archive.sha256").write_text("".join(lines))
+                h = hashlib.sha256()
+                with open(f, "rb") as fh:
+                    for chunk in iter(lambda: fh.read(1 << 20), b""):
+                        h.update(chunk)
+                lines.append(f"{h.hexdigest()}  {f.relative_to(src).as_posix()}\n")
+            tmp = self.receipts / "archive.sha256.tmp"
+            tmp.write_text("".join(lines))
+            tmp.rename(self.receipts / "archive.sha256")
             return True
-        except OSError as e:
-            self.log("receipt copy failed:", e)
+        except Exception as e:  # never let receipt work prevent the exit-code rules
+            self.log("receipt copy failed:", repr(e))
             return False
 
     def validate(self):
@@ -428,7 +472,6 @@ class Driver:
             if not done:  # also when the launch acknowledgement was lost: the script may be running
                 self.stop_confirmed = self.stop_workload()
             transport = self.retrieve()  # also after a launch failure, deadline or signal: diagnostics are evidence
-            receipts = transport and self.copy_receipts()
             valid = self.validate() if transport else None
         except Stop as e:
             self.log("stopped:", e)
@@ -443,7 +486,8 @@ class Driver:
             for label, argv in (("final sessions", [COL, "sessions"]), ("final orphans", REAP)):
                 rc, out = self.call(argv, 120, self.inventory_end, label)
                 self.log(f"{label}:\n" + out.strip())
-            code = 3 if not clean else 2 if not (transport and receipts and valid is not None) else 0 if valid else 1
+            receipts = transport and self.copy_receipts()  # local work only, after the VM is gone
+            code =3 if not clean else 2 if not (transport and receipts and valid is not None) else 0 if valid else 1
             if code == 0 and not self.done:
                 self.log("validated status but no matching DONE marker was seen: exit 2")
                 code = 2

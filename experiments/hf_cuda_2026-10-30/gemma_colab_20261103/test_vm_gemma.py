@@ -53,12 +53,29 @@ case "$*" in
   "-c "*) [ "$FAIL_AT" = imports ] && exit 1; exit 0;;
   *benchmark.py*--analyze*) echo '{"pass": true}'; exit 0;;
   *benchmark.py*) [ "$FAIL_AT" = benchmark ] && exit 1
-    if [ "$FAIL_AT" = slow_controller ]; then trap "" INT; sleep 300 & echo $! > "$VM_ROOT/native_child.pid"; wait; fi
+    # a native-like writer: stamps the time (ns) every 50 ms until it is killed
+    case "$FAIL_AT" in slow_controller|slow_setsid|leftover_writer)
+      trap "" INT
+      (while :; do date +%s%N > "$VM_ROOT/hb.tmp" && mv "$VM_ROOT/hb.tmp" "$VM_ROOT/heartbeat"; sleep 0.05; done) & echo $! > "$VM_ROOT/native_child.pid";;
+    esac
+    case "$FAIL_AT" in slow_controller|slow_setsid) wait;; esac
     exit 0;;
   "- "*) cat > /dev/null; [ "$FAIL_AT" = weights ] && [ "$2" != *provenance* ] && grep -q . /dev/null; exit 0;;
 esac
 exit 0''',
+    # the real setsid, optionally slow to start: the window in which the controller's group does not exist yet
+    "setsid": r'''#!/usr/bin/env bash
+[ "$FAIL_AT" = slow_setsid ] && sleep 3
+exec /usr/bin/setsid "$@"''',
 }
+
+
+def alive(pid):
+    """True for a live, non-zombie process."""
+    try:
+        return Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[0] != "Z"
+    except OSError:
+        return False
 
 
 class VmGemmaTests(unittest.TestCase):
@@ -119,9 +136,7 @@ class VmGemmaTests(unittest.TestCase):
         rc, s, _, _ = self.run_vm("benchmark")
         self.assertTrue(s["science_started"])
 
-    def test_stop_signal_takes_down_the_controller_group_before_status(self):
-        import signal
-        import time
+    def start_vm(self, fail_at, signal_at=""):
         tmp = Path(tempfile.mkdtemp())
         b = tmp / "bin"
         b.mkdir()
@@ -129,29 +144,63 @@ class VmGemmaTests(unittest.TestCase):
             (b / name).write_text(body + "\n")
             (b / name).chmod(0o755)
         (tmp / "upload_s1").mkdir()
-        env = dict(os.environ, PATH=f"{b}:/usr/bin:/bin", VM_TEST_HARNESS="1", VM_ROOT=str(tmp),
-                   FAIL_AT="slow_controller")
+        env = dict(os.environ, PATH=f"{b}:/usr/bin:/bin", VM_TEST_HARNESS="1", VM_ROOT=str(tmp), FAIL_AT=fail_at,
+                   VM_TEST_SIGNAL_AT=signal_at)
         p = subprocess.Popen(["bash", str(HERE / "vm_gemma.sh"), COMMIT, "s1"], env=env,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        out = tmp / "run_s1" / "out"
-        for _ in range(100):  # wait until the controller (and its child) are running
-            if (out / "controller.pid").exists() and (tmp / "native_child.pid").exists():
-                break
-            time.sleep(0.1)
-        child = int((tmp / "native_child.pid").read_text())
-        os.kill(int((tmp / "vm_s1.pid").read_text()), signal.SIGTERM)
+        return p, tmp, tmp / "run_s1" / "out"
+
+    def assert_stopped_before_publication(self, p, tmp, out, child_expected):
         p.wait(timeout=90)
         stop = json.loads((out / "stop.json").read_text())
         self.assertTrue(stop["controller_started"])
         self.assertTrue(stop["controller_group_gone"])
-        with self.assertRaises(ProcessLookupError):  # the native-like child is gone too
-            os.kill(child, 0)
         s = json.loads((out / "status.json").read_text())
         self.assertEqual(s["gates"]["benchmark"], 143)
         self.assertTrue(s["science_started"])
         self.assertFalse(s["pass"])
         self.assertEqual((out / "DONE").read_text().strip(), "s1")
         self.assertEqual(p.returncode, 1)
+        child_file = tmp / "native_child.pid"
+        if child_expected:
+            self.assertTrue(child_file.exists())
+        if child_file.exists():
+            self.assertFalse(alive(int(child_file.read_text())))  # the native-like writer is gone
+        if (tmp / "heartbeat").exists():  # it may have been stopped before its first write
+            # it had stopped writing before status.json was published, not merely by the time we looked
+            self.assertLess(int((tmp / "heartbeat").read_text()), (out / "status.json").stat().st_mtime_ns)
+
+    def test_stop_during_the_controller_takes_down_its_group_before_status(self):
+        import signal
+        import time
+        p, tmp, out = self.start_vm("slow_controller")
+        for _ in range(100):  # wait until the controller (and its child) are running
+            if (out / "controller.pid").exists() and (tmp / "heartbeat").exists():
+                break
+            time.sleep(0.1)
+        os.kill(int((tmp / "vm_s1.pid").read_text()), signal.SIGTERM)
+        self.assert_stopped_before_publication(p, tmp, out, child_expected=True)
+
+    def test_stop_between_fork_and_registration_is_held_then_delivered(self):
+        p, tmp, out = self.start_vm("slow_controller", signal_at="after_fork")
+        self.assert_stopped_before_publication(p, tmp, out, child_expected=False)
+
+    def test_stop_before_the_controller_group_exists(self):
+        # setsid is slow to start, the signal arrives right after registration: the group does not exist yet
+        p, tmp, out = self.start_vm("slow_setsid", signal_at="after_register")
+        self.assert_stopped_before_publication(p, tmp, out, child_expected=False)
+        self.assertFalse((tmp / "heartbeat").exists())  # the controller never ran
+
+    def test_a_writer_left_behind_by_the_controller_is_killed_and_fails_the_gate(self):
+        p, tmp, out = self.start_vm("leftover_writer")
+        p.wait(timeout=90)
+        s = json.loads((out / "status.json").read_text())
+        self.assertEqual(s["gates"]["benchmark"], 97)
+        self.assertFalse(s["pass"])
+        self.assertTrue((out / "leftover_processes.txt").read_text().strip())
+        self.assertFalse(alive(int((tmp / "native_child.pid").read_text())))
+        self.assertLess(int((tmp / "heartbeat").read_text()), (out / "status.json").stat().st_mtime_ns)
+        self.assertEqual((out / "DONE").read_text().strip(), "s1")
 
     def test_wrong_head_fails_checkout(self):
         rc, s, _, _ = self.run_vm(head="f" * 40)

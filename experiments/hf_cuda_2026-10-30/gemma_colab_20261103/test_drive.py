@@ -46,8 +46,12 @@ if cmd == "exec":
         print("MADE"); sys.exit(0)
     if label == "stop_workload":
         st["stopped"] = True; save()
-        if mode == "stop_unconfirmed": print("UNCONFIRMED {}"); sys.exit(0)
-        (content / f"run_{run}" / "out" / "DONE").write_text(run); print("CONFIRMED {}"); sys.exit(0)
+        if mode == "stop_unconfirmed": print('STOP_REPLY {"result": "unconfirmed", "stop": null}'); sys.exit(0)
+        if mode == "stop_not_observed": print('STOP_REPLY {"result": "not_observed"}'); sys.exit(0)
+        if mode == "stop_garbled": print("interrupted CONFIRMED STOP_REPLY {"); sys.exit(0)
+        (content / f"run_{run}" / "out" / "DONE").write_text(run)
+        print('STOP_REPLY {"result": "interrupted", "stop": {"controller_started": true, "controller_group_gone": true}}')
+        sys.exit(0)
     if label.startswith("pack"): label = "pack"
     out = content / f"run_{run}" / "out"
     if label == "launch":
@@ -58,7 +62,8 @@ if cmd == "exec":
         s = {"run_id": run, "commit": commit, "head": commit, "exit_status": 0, "science_started": True,
              "pass": mode != "gate_fail", "gates": gates}
         (out / "status.json").write_text(json.dumps(s))
-        if mode not in ("never_done", "stop_unconfirmed", "launch_ack_lost"): (out / "DONE").write_text(run)
+        if mode not in ("never_done", "stop_unconfirmed", "stop_not_observed", "stop_garbled", "launch_ack_lost"):
+            (out / "DONE").write_text(run)
         if mode != "launch_ack_lost": print("LAUNCHED")
     elif label == "poll":
         print("DONE" if (out / "DONE").exists() else "RUNNING")
@@ -181,9 +186,13 @@ class DriveTests(unittest.TestCase):
     def test_deadline_without_done_stops_the_workload_then_retrieves(self):
         rc, state, log, tmp, _ = self.run_drive("never_done")
         self.assertTrue(state.get("stopped"), log)
-        self.assertIn("workload stop: confirmed", log)
+        self.assertIn("workload stop: confirmed (interrupted)", log)
         manifest = (tmp / "receipts" / "t1" / "archive.sha256").read_text()
         self.assertIn("  status.json", manifest)
+        self.assertIn("  DONE", manifest)
+        self.assertEqual(list((tmp / "art" / "t1").glob("extract_*")), [])  # staging promoted, then removed
+        # receipts are written only after the VM inventory, so local hashing never holds the VM
+        self.assertLess(log.index("final orphans"), log.index("exit 2"))
         self.assertTrue((tmp / "receipts" / "t1" / "status.json").is_file())  # evidence came home
         self.assertEqual(state["sessions"], {})
         self.assertEqual(rc, 2, log)  # no DONE seen: never a validated success
@@ -193,6 +202,22 @@ class DriveTests(unittest.TestCase):
         self.assertIn("NOT CONFIRMED", log)
         self.assertEqual(rc, 2, log)
         self.assertEqual(state["sessions"], {})
+
+    def test_launched_script_never_observed_is_not_confirmed(self):
+        rc, state, log, _, _ = self.run_drive("stop_not_observed")
+        self.assertIn("NOT CONFIRMED (not_observed)", log)
+        self.assertEqual(rc, 2, log)
+        self.assertEqual(state["sessions"], {})
+
+    def test_unstructured_stop_reply_is_not_confirmed(self):
+        rc, state, log, _, _ = self.run_drive("stop_garbled")
+        self.assertIn("NOT CONFIRMED (None)", log)
+        self.assertEqual(rc, 2, log)
+
+    def test_no_launch_attempted_needs_no_stop(self):
+        rc, state, log, _, _ = self.run_drive("upload_fail")
+        self.assertIn("workload stop: no launch was attempted", log)
+        self.assertFalse(state.get("stopped"), log)
 
     def test_lost_launch_acknowledgement_still_stops_the_script(self):
         rc, state, log, _, _ = self.run_drive("launch_ack_lost")

@@ -18,7 +18,7 @@ MIRROR_REV=23cf460f6bb16954176b3ddcc8d4f250501458a9
 [[ "$RUN" =~ ^[A-Za-z0-9_-]{1,32}$ ]] || { echo "RUN_ID: 1-32 letters, digits, - or _" >&2; exit 2; }
 ROOT=/content
 [ "${VM_TEST_HARNESS:-}" = 1 ] && ROOT=${VM_ROOT:-/content}   # test harness only
-echo $$ > "$ROOT/vm_$RUN.pid"   # the driver stops this run through this PID (SIGTERM; see on_stop)
+signal_point() { [ "${VM_TEST_HARNESS:-}" = 1 ] && [ "${VM_TEST_SIGNAL_AT:-}" = "$1" ] && kill -TERM $$; }  # tests
 W=$ROOT/run_$RUN
 O=$W/out
 U=$ROOT/upload_$RUN
@@ -28,6 +28,7 @@ declare -A G=()
 REQUIRED="analyze benchmark build checkout contract environment inputs packages provenance regenerate weights"
 finish() {
     local rc=$? pass=true keys final science=false
+    trap '' TERM INT   # publication is never interrupted; a stop arriving now finds DONE shortly
     keys=$(printf '%s\n' "${!G[@]}" | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//')
     [ "$keys" = "$REQUIRED" ] || pass=false
     for k in "${!G[@]}"; do [ "${G[$k]}" = 0 ] || pass=false; done
@@ -50,27 +51,43 @@ finish() {
 }
 trap finish EXIT
 fail() { G[$1]=$2; exit 1; }
-# Stop on SIGTERM/SIGINT: the controller runs in its own process group (setsid, so its native child is in it too);
-# stop the whole group, wait until no member is left (TERM, then KILL after 60 s), record whether it is gone, then
-# exit through finish, which publishes status.json and DONE. Other children of this shell (pip, make) are stopped too.
+# Stop on SIGTERM/SIGINT. The controller runs in its own process group (setsid), which its native child inherits
+# (the frozen controller starts it with a plain Popen). Containment is by that group: a process that left it on its
+# own would not be seen. Every wait is bounded and nothing waits on a PID:
+# - a stop that arrives while the controller is being forked and registered is held in STOP_PENDING and delivered
+#   right after registration, so CPID is always known once a controller exists;
+# - live() sees any non-zombie process whose PID or process group is CPID, so it covers the child before its
+#   setsid() (when the group does not exist yet) as well as the group and any member the controller left behind;
+# - TERM goes to the group and to CPID itself, repeated every second for up to 60 s, then KILL; stop.json records
+#   whether anything is left. Only then does finish publish status.json and DONE.
+# Other children of this shell (pip, make) are sent TERM too.
 CPID=""
+STOP_PENDING=""
+live() {
+    [ -n "$CPID" ] && ps -eo pid=,pgid=,stat= | awk -v c="$CPID" '($1 == c || $2 == c) && $3 !~ /^Z/ {f = 1} END {exit !f}'
+}
 on_stop() {
     trap '' TERM INT
-    local gone=true
+    local gone=true started=false
     if [ -n "$CPID" ]; then
-        kill -TERM -- -"$CPID" 2>/dev/null
-        for _ in $(seq 60); do kill -0 -- -"$CPID" 2>/dev/null || break; sleep 1; done
-        kill -0 -- -"$CPID" 2>/dev/null && { kill -KILL -- -"$CPID" 2>/dev/null; sleep 2; }
-        kill -0 -- -"$CPID" 2>/dev/null && gone=false
-        wait "$CPID" 2>/dev/null
+        started=true
+        for _ in $(seq 60); do
+            live || break
+            kill -TERM -- -"$CPID" "$CPID" 2>/dev/null
+            sleep 1
+        done
+        if live; then kill -KILL -- -"$CPID" "$CPID" 2>/dev/null; sleep 2; fi
+        live && gone=false
         G[benchmark]=143
     fi
     pkill -TERM -P $$ 2>/dev/null
     printf '{"stopped_at": "%s", "controller_started": %s, "controller_group_gone": %s}\n' \
-        "$(date -u +%FT%TZ)" "$([ -n "$CPID" ] && echo true || echo false)" "$gone" > "$O/stop.json"
+        "$(date -u +%FT%TZ)" "$started" "$gone" > "$O/stop.json"
     exit 1
 }
 trap on_stop TERM INT
+# the driver stops this run through this PID (SIGTERM; see on_stop); published only once the traps are in place
+{ echo $$ > "$ROOT/vm_$RUN.pid.tmp" && mv "$ROOT/vm_$RUN.pid.tmp" "$ROOT/vm_$RUN.pid"; } || exit 2
 cd "$W"
 E=experiments/hf_cuda_2026-10-30
 A=$E/gemma_colab_20261103
@@ -184,14 +201,30 @@ python3 "branch/$A/launch_contract_gemma.py" --out "$O/launch_contract.json" --p
 G[contract]=0
 
 # the frozen controller, unchanged arguments; scientific work starts here. It runs in its own process group and this
-# shell waits on it, so a stop signal is handled at once (bash defers traps while a foreground command runs).
+# shell waits on it, so a stop signal is handled at once (bash defers traps while a foreground command runs). A stop
+# that arrives during the fork and registration is held, then delivered (see on_stop).
+# With job control off (this non-interactive shell), a background child is not a group leader, so setsid(1) calls
+# setsid() and execs in place: $! is the controller and its group id. With job control on it would fork instead.
+case $- in *m*) fail benchmark 95;; esac
+trap 'STOP_PENDING=1' TERM INT
 date -u +%FT%TZ > "$O/SCIENCE_STARTED" || fail benchmark 94
 setsid python3 "src/$E/benchmark.py" --gguf "$W/gemma-3-270m-it-f32.gguf" --binary build/ir_hf_cuda_bench \
     --out "$O/gemma3-270m" --lengths 16 128 512 --steps 32 --cycles 2 > "$O/benchmark.log" 2>&1 &
+signal_point after_fork
 CPID=$!
 echo "$CPID" > "$O/controller.pid"
+trap on_stop TERM INT
+[ -n "$STOP_PENDING" ] && on_stop
+signal_point after_register
 wait "$CPID"
 G[benchmark]=$?
+# Nothing the controller started may outlive it: a member of its group still running now could still be writing.
+if live; then
+    ps -eo pid=,pgid=,stat=,args= | awk -v c="$CPID" '$2 == c' > "$O/leftover_processes.txt"
+    kill -KILL -- -"$CPID" 2>/dev/null; sleep 2
+    live && echo "still present after KILL" >> "$O/leftover_processes.txt"
+    G[benchmark]=97
+fi
 CPID=""
 python3 "src/$E/benchmark.py" --out "$O/gemma3-270m" --analyze > "$O/gate_summary.json" 2> "$O/analyze.log"
 G[analyze]=$?
