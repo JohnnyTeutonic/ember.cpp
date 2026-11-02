@@ -1,9 +1,13 @@
 """Fail before workloads when the Gemma Colab launch contract is incomplete.
 
-../launch_contract_v3.py with two changes, both in AMENDMENT.md: the Colab image is recorded (provenance JSON) instead
-of checked against the RunPod image digest, and the native backend must report Gemma's vocabulary (262,144).
+../launch_contract_v3.py with these changes, all in AMENDMENT.md:
+  - the Colab image is recorded and checked (provider colab, exactly one L4, no failed command) instead of the
+    RunPod image digest; --provenance is therefore required;
+  - any EMBER_* variable other than the two required ones is refused (v3 refused only the six listed overrides);
+  - the native backend must report Gemma's vocabulary (262,144).
 Environment, unset overrides, package versions, CUDA backend, one thread, 1,024 context and an all-F32 tensor
-inventory are checked exactly as before.
+inventory are checked exactly as before. Without --binary it checks the environment only (run right after the
+packages are installed).
 """
 import argparse
 import importlib.metadata
@@ -34,11 +38,18 @@ def validate_environment(environment, versions, provenance):
     for key in UNSET_ENV:
         if key in environment:
             raise ValueError('unexpected inference override: ' + key)
+    extra = sorted(k for k in environment if k.startswith('EMBER_') and k not in REQUIRED_ENV)
+    if extra:  # stricter than v3, which rejected only the six listed overrides
+        raise ValueError('unexpected EMBER_ variables: ' + ', '.join(extra))
     if versions != VERSIONS:
         raise ValueError('installed library versions differ from frozen image recipe')
     missing = [k for k in PROVENANCE_KEYS if not provenance.get(k)]
     if missing:
         raise ValueError('Colab provenance incomplete: ' + ', '.join(missing))
+    if provenance['provider'] != 'colab' or 'L4' not in provenance['gpu'] or '\n' in provenance['gpu']:
+        raise ValueError('provenance must record exactly one NVIDIA L4 on colab')
+    if any(str(v).startswith('error') for v in provenance.values()):
+        raise ValueError('a provenance command failed')
     return {'environment': {k: environment[k] for k in REQUIRED_ENV},
             'unset_overrides': list(UNSET_ENV), 'versions': versions, 'provenance': provenance}
 

@@ -11,8 +11,8 @@ import unittest
 
 HERE = Path(__file__).resolve().parent
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
-GATES = ["analyze", "benchmark", "build", "checkout", "contract", "inputs", "packages", "provenance", "regenerate",
-         "weights"]
+GATES = ["analyze", "benchmark", "build", "checkout", "contract", "environment", "inputs", "packages", "provenance",
+         "regenerate", "weights"]
 
 MOCK = r'''#!/usr/bin/env python3
 import json, os, re, sys, tarfile, time
@@ -41,9 +41,12 @@ if cmd == "stop":
     sys.exit(0)
 if cmd == "exec":
     f = args[args.index("-f") + 1]
-    m = re.match(r".*claude_scan_(.+)_(launch|poll|pack|mkdir)\.py$", f); run, label = m.group(1), m.group(2)
+    m = re.match(r".*claude_scan_(.+)_(launch|poll|pack\d|mkdir|stop_workload)\.py$", f); run, label = m.group(1), m.group(2)
     if label == "mkdir":
         print("MADE"); sys.exit(0)
+    if label == "stop_workload":
+        st["stopped"] = True; save(); print("STOPPED"); sys.exit(0)
+    if label.startswith("pack"): label = "pack"
     out = content / f"run_{run}" / "out"
     if label == "launch":
         out.mkdir(parents=True, exist_ok=True)
@@ -52,7 +55,8 @@ if cmd == "exec":
         commit = os.environ["MOCK_COMMIT"] if mode != "wrong_commit" else "f" * 40
         s = {"run_id": run, "commit": commit, "head": commit, "exit_status": 0,
              "pass": mode != "gate_fail", "gates": gates}
-        (out / "status.json").write_text(json.dumps(s)); (out / "DONE").write_text(run)
+        (out / "status.json").write_text(json.dumps(s))
+        if mode != "never_done": (out / "DONE").write_text(run)
         print("LAUNCHED")
     elif label == "poll":
         print("DONE" if (out / "DONE").exists() else "RUNNING")
@@ -171,6 +175,14 @@ class DriveTests(unittest.TestCase):
         self.assertEqual(state["sessions"], {})
         self.assertIn("CLEANUP OK", log)
         self.assertEqual(rc, 2, log)
+
+    def test_deadline_without_done_stops_the_workload_then_retrieves(self):
+        rc, state, log, tmp, _ = self.run_drive("never_done")
+        self.assertTrue(state.get("stopped"), log)
+        self.assertIn("workload stop: ok", log)
+        self.assertTrue((tmp / "receipts" / "t1" / "status.json").is_file())  # evidence came home
+        self.assertEqual(state["sessions"], {})
+        self.assertEqual(rc, 2, log)  # no DONE seen: never a validated success
 
     def test_bad_arguments_are_refused(self):
         r = subprocess.run([sys.executable, str(HERE / "drive.py"), "main", "x"], capture_output=True, text=True)

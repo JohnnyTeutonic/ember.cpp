@@ -12,8 +12,8 @@ COMMIT = "0123456789abcdef0123456789abcdef01234567"
 SOURCE = "5bfda89345b3bcf1f0352eee555f0fd4eb73ac7d"
 CANONICAL = "0a174d42ccd7de15688e50dc044ea8006db31ee3bc6dc7e838f8a360ca46cdaa"
 CONTROLLER = "ddd3104489dd2935187271d48dfabe77501a2b3c5fa02350aad1ca5e54a2f04c"
-REQUIRED = {"analyze", "benchmark", "build", "checkout", "contract", "inputs", "packages", "provenance", "regenerate",
-            "weights"}
+REQUIRED = {"analyze", "benchmark", "build", "checkout", "contract", "environment", "inputs", "packages", "provenance",
+            "regenerate", "weights"}
 
 STUBS = {
     "git": r'''#!/usr/bin/env bash
@@ -48,7 +48,9 @@ case "$*" in
   *"pip install"*) exit 0;;
   *"pip list"*) echo '[]'; exit 0;;
   *convert_hf_to_gguf.py*) for ((i=1; i<=$#; i++)); do [ "${!i}" = --outfile ] && { j=$((i+1)); echo gguf > "${!j}"; }; done; exit 0;;
-  *launch_contract_gemma.py*) [ "$FAIL_AT" = contract ] && exit 1; exit 0;;
+  *launch_contract_gemma.py*--binary*) [ "$FAIL_AT" = contract ] && exit 1; exit 0;;
+  *launch_contract_gemma.py*) [ "$FAIL_AT" = environment ] && exit 1; exit 0;;
+  "-c "*) [ "$FAIL_AT" = imports ] && exit 1; exit 0;;
   *benchmark.py*--analyze*) echo '{"pass": true}'; exit 0;;
   *benchmark.py*) [ "$FAIL_AT" = benchmark ] && exit 1; exit 0;;
   "- "*) cat > /dev/null; [ "$FAIL_AT" = weights ] && [ "$2" != *provenance* ] && grep -q . /dev/null; exit 0;;
@@ -94,7 +96,8 @@ class VmGemmaTests(unittest.TestCase):
 
     def test_prerequisite_failures_stop_with_their_own_status(self):
         for fail_at, gate, code in (("checkout", "checkout", 5), ("build", "build", 4), ("manifest_inputs", "inputs", 1),
-                                    ("manifest_weights", "weights", 1), ("contract", "contract", 1)):
+                                    ("manifest_weights", "weights", 1), ("contract", "contract", 1),
+                                    ("environment", "environment", 1), ("imports", "packages", 1)):
             rc, s, done, _ = self.run_vm(fail_at)
             self.assertEqual(rc, 1, fail_at)
             self.assertEqual(s["gates"][gate], code, fail_at)
@@ -107,6 +110,12 @@ class VmGemmaTests(unittest.TestCase):
         self.assertNotEqual(s["gates"]["benchmark"], 0)
         self.assertEqual(s["gates"]["analyze"], 0)
         self.assertFalse(s["pass"])
+
+    def test_science_marker_only_once_the_controller_starts(self):
+        rc, s, _, _ = self.run_vm("contract")
+        self.assertFalse(s["science_started"])
+        rc, s, _, _ = self.run_vm("benchmark")
+        self.assertTrue(s["science_started"])
 
     def test_wrong_head_fails_checkout(self):
         rc, s, _, _ = self.run_vm(head="f" * 40)

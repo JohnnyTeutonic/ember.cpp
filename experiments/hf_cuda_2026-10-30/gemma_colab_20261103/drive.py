@@ -57,8 +57,8 @@ RECEIPTS = Path(hook("DRIVE_TEST_RECEIPTS", str(HERE / "receipts")))
 MINUTE = float(hook("DRIVE_TEST_MINUTE_SECONDS", "60"))
 LOG_FAIL_AFTER = int(hook("DRIVE_TEST_LOG_FAIL_AFTER", "0"))   # test: log writes fail after N lines
 RAISE_ON = hook("DRIVE_TEST_RAISE_ON", "")                      # test: first call whose argv has this word raises
-REQUIRED_GATES = {"analyze", "benchmark", "build", "checkout", "contract", "inputs", "packages", "provenance",
-                  "regenerate", "weights"}
+REQUIRED_GATES = {"analyze", "benchmark", "build", "checkout", "contract", "environment", "inputs", "packages",
+                  "provenance", "regenerate", "weights"}
 
 
 class Stop(Exception):
@@ -154,7 +154,26 @@ class Driver:
         return rows
 
     # ---- phases
+    def check_local_inputs(self):
+        """The seven upload sources against the committed inputs.sha256, before any paid session exists."""
+        import hashlib
+        want = {}
+        for line in (HERE / "inputs.sha256").read_text().splitlines():
+            digest, name = line.split()
+            want[name] = digest
+        if set(want) != set(UPLOAD_SOURCES):
+            raise Stop(f"upload set {sorted(UPLOAD_SOURCES)} differs from inputs.sha256 {sorted(want)}")
+        for name, src in UPLOAD_SOURCES.items():
+            try:
+                h = hashlib.sha256(Path(src).read_bytes()).hexdigest()
+            except OSError as e:
+                raise Stop(f"preflight: cannot read {src}: {e}")
+            if h != want[name] and not TEST:
+                raise Stop(f"preflight: {src} is not the committed {name} ({h} != {want[name]})")
+        self.log("local inputs match inputs.sha256" + (" (hash check skipped: test harness)" if TEST else ""))
+
     def preflight(self):
+        self.check_local_inputs()
         rows = self.sessions(self.work_end)
         if rows is None:
             raise Stop("preflight: session listing failed; not creating anything")
@@ -232,18 +251,36 @@ class Driver:
                 return True
         return False
 
+    def stop_workload(self):
+        """Polling ended without DONE: stop the controller and the VM script in a controlled way, so the archive is
+        taken from outputs no longer being written. The VM script's trap still writes status.json and DONE."""
+        code = ("import subprocess, time\n"
+                "subprocess.run('pkill -INT -f [b]enchmark.py', shell=True)\n"
+                "time.sleep(20)\n"
+                f"subprocess.run('pkill -TERM -f [v]m_run_{self.run}.sh', shell=True)\n"
+                "time.sleep(10)\n"
+                "print('STOPPED')\n")
+        rc, out = self.exec_py(code, 120, self.retrieve_end, "stop_workload")
+        self.log("workload stop:", "ok" if rc == 0 and "STOPPED" in out else "not confirmed")
+
     def retrieve(self):
+        # GNU tar exits 1 when a file changed while it was read; the archive is still written and is evidence
         code = ("import subprocess\n"
-                f"subprocess.run('cp /content/vm_run_{self.run}.log /content/run_{self.run}/out/ 2>/dev/null; "
-                f"tar czf /content/scan_{self.run}.tgz -C /content run_{self.run}/out', shell=True, check=True)\n"
-                "print('PACKED')\n")
-        rc, out = self.exec_py(code, 300, self.retrieve_end, "pack")
-        if rc != 0 or "PACKED" not in out:
-            return False
+                f"subprocess.run('cp /content/vm_run_{self.run}.log /content/run_{self.run}/out/ 2>/dev/null', shell=True)\n"
+                f"r = subprocess.run('tar czf /content/scan_{self.run}.tgz --warning=no-file-changed -C /content "
+                f"run_{self.run}/out', shell=True)\n"
+                "print('PACKED' if r.returncode in (0, 1) else 'PACK_FAILED %d' % r.returncode)\n")
         archive = self.out / "scan_out.tgz"
-        rc, _ = self.call([COL, "download", "-s", self.name, f"/content/scan_{self.run}.tgz", str(archive)], 600,
-                          self.retrieve_end, "download")
-        if rc != 0 or not archive.is_file():
+        for attempt in (1, 2):
+            rc, out = self.exec_py(code, 300, self.retrieve_end, f"pack{attempt}")
+            if rc != 0 or "PACKED" not in out:
+                continue
+            rc, _ = self.call([COL, "download", "-s", self.name, f"/content/scan_{self.run}.tgz", str(archive)],
+                              600, self.retrieve_end, f"download {attempt}")
+            if rc == 0 and archive.is_file():
+                break
+        else:
+            self.log("EVIDENCE NOT RETRIEVED: the VM holds the only copy, and cleanup will stop it")
             return False
         prefix = f"run_{self.run}/out"
         try:
@@ -300,6 +337,9 @@ class Driver:
             problems.append("pass is not true")
         self.log("status.json:", json.dumps(s))
         self.log("validation:", "PASS" if not problems else "; ".join(problems))
+        # AMENDMENT.md, outcomes: a run that reached the controller may not be repeated, whatever happened next
+        self.log("science started:", s.get("science_started"),
+                 "(no rerun allowed)" if s.get("science_started") is not False else "(a rerun is allowed)")
         return not problems
 
     def cleanup(self):
@@ -353,6 +393,8 @@ class Driver:
             done = self.poll() if launched else False
             self.done = done
             self.log("launched", launched, "done", done, "cancelled", self.cancel)
+            if launched and not done:
+                self.stop_workload()
             transport = self.retrieve()  # also after a launch failure, deadline or signal: diagnostics are evidence
             receipts = transport and self.copy_receipts()
             valid = self.validate() if transport else None
