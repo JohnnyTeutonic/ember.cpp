@@ -60,7 +60,7 @@ MINUTE = float(hook("DRIVE_TEST_MINUTE_SECONDS", "60"))
 LOG_FAIL_AFTER = int(hook("DRIVE_TEST_LOG_FAIL_AFTER", "0"))   # test: log writes fail after N lines
 RAISE_ON = hook("DRIVE_TEST_RAISE_ON", "")                      # test: first call whose argv has this word raises
 REQUIRED_GATES = {"analyze", "benchmark", "build", "checkout", "contract", "environment", "inputs", "packages",
-                  "provenance", "regenerate", "weights"}
+                  "provenance", "regenerate", "toolkit", "weights"}
 
 
 class Stop(Exception):
@@ -294,7 +294,10 @@ class Driver:
             "except OSError:\n"
             "    ours = False\n"
             "if ours and not done_ok():\n"
-            "    os.kill(pid, signal.SIGTERM)\n"
+            "    try:\n"
+            "        os.kill(pid, signal.SIGTERM)\n"
+            "    except ProcessLookupError:  # it finished in between; DONE and stop evidence decide below\n"
+            "        pass\n"
             "for _ in range(120):\n"
             "    if done_ok():\n"
             "        break\n"
@@ -411,6 +414,16 @@ class Driver:
             problems.append("pass is not true")
         if s["science_started"] is not True:
             problems.append("the controller never started")
+        # a process the VM script could not take down (QUIESCENCE_UNCONFIRMED, or stop.json saying the group is not
+        # gone) means the archive may not be a final snapshot, whatever the stop reply said
+        out = self.out / f"run_{self.run}" / "out"
+        try:
+            stop = json.loads((out / "stop.json").read_text()) if (out / "stop.json").exists() else {}
+        except (OSError, ValueError):
+            stop = {"controller_group_gone": None}
+        if (out / "QUIESCENCE_UNCONFIRMED").exists() or stop.get("controller_group_gone", True) is not True:
+            self.log("quiescence not confirmed by the VM script: the archive may not be final")
+            self.stop_confirmed = False
         self.log("status.json:", json.dumps(s))
         self.log("validation:", "PASS" if not problems else "; ".join(problems))
         # AMENDMENT.md, outcomes: a run that reached the controller may not be repeated, whatever happened next

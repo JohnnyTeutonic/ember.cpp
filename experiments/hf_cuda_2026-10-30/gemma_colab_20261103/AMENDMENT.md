@@ -2,9 +2,14 @@
 
 Claude Opus 5.5, 3 Nov 2026. Fixed before any GPU result. This runs the existing frozen comparison
 (`../README.md`, controller `../benchmark.py`) for its second candidate input, Gemma3-270M, which the README records
-as unmeasured. The Smol result and every Smol receipt stay as they are. Review: Codex methods review, four
-rounds (rounds 1-3 DO NOT RUN, round 4 RUN on 3 Nov), kept in the research workspace
-(`AI_ML/gemma_cuda_claude/reviews/`), not in this repository.
+as unmeasured. The Smol result and every Smol receipt stay as they are. Review: Codex methods review, kept in
+the research workspace (`AI_ML/gemma_cuda_claude/reviews/`), not in this repository.
+
+This is version 2. Version 1 (rounds 1-3 DO NOT RUN, round 4 RUN) ran once, as `g1-20261103` on 3 Nov. It failed
+at its packages gate before the build, and the controller never started (`receipts/g1-20261103/`). Colab's image
+had changed: Python 3.13.16 and only the CUDA 13.0 toolkit. Torch 2.4.1 and numpy 1.26.4 publish no Python 3.13
+wheels, so an unchanged rerun would have failed the same way. Version 2 changes the interpreter and toolkit
+installation (below) and nothing in the scientific protocol.
 
 ## What is unchanged
 
@@ -31,28 +36,38 @@ rounds (rounds 1-3 DO NOT RUN, round 4 RUN on 3 Nov), kept in the research works
   cannot hold. Instead the Colab image is recorded, and checked where this run depends on it: provider colab,
   exactly one NVIDIA L4, no provenance command failed. The record covers GPU, driver, every installed CUDA
   toolkit, Python, OS, CPU and the full `nvidia-smi` output.
-- **Package installation.** The frozen run kept its image's torch; Colab ships a newer one. So torchvision and
-  torchaudio, whose builds pin the image's torch and which this text-only workload does not use, are removed.
-  Torch 2.4.1 comes from the cu124 index and the other eight from PyPI. The import path the controller uses
-  (torch with CUDA, transformers, `AutoModelForCausalLM`, `Gemma3ForCausalLM`) and the environment-only contract
-  are checked immediately after installation, before the build or any download.
+- **Interpreter (v2).** The frozen pod ran CPython 3.11, and its README records that Python 3.12 changes the
+  analyzer's float summation. The run therefore uses CPython 3.11.15, the build uv installs, not the image's own
+  Python. The image's Python records provenance and installs uv 0.11.29 (wheel pinned by SHA-256 `eec03a8b…`).
+  uv installs CPython 3.11.15 into a seeded virtual environment, which comes first on `PATH` for every later step:
+  packages, contract, conversion, controller and analysis. The launch contract refuses any other interpreter.
+- **Package installation.** Into that environment, pip installs torch 2.4.1 from the cu124 index and the other
+  eight from PyPI, as in version 1. Every compiled pin has a cp311 x86-64 wheel. A fresh environment holds no image
+  packages, so nothing is uninstalled. The import path the controller uses (torch with CUDA, transformers,
+  `AutoModelForCausalLM`, `Gemma3ForCausalLM`) and the environment-only contract are checked immediately after
+  installation, before the build or any download.
   - Top-level versions match the frozen recipe. Transitive packages and native libraries need not, and are
-    recorded (`packages.json`).
+    recorded (`packages.json`, `interpreter.txt`).
   - Results are measurements in the recorded Colab environment. They are not an environment-controlled comparison
     with the Smol run.
+- **CUDA toolkit (v2).** The image had only CUDA 13.0 on 3 Nov. Its own gate (`toolkit`, before the build) installs
+  CUDA 12.6 from NVIDIA's ubuntu2404 repository. The repository keyring package (`cuda-keyring_1.1-1_all.deb`,
+  SHA-256 `d2a6b11c…`) is checked before it is trusted. Then `cuda-minimal-build-12-6=12.6.3-1` (nvcc, cudart,
+  CCCL) and `libcublas-dev-12-6=12.6.4.1-1` are installed, and the installed CUDA packages are recorded
+  (`cuda_packages.txt`). The frozen pod's nvcc was 12.4. 12.4 has no Ubuntu 24.04 packages, and 12.6 is the
+  toolkit under which ember `5bfda893` was verified to compile.
 - **Engine build.** A new build, not the archived Smol executable.
-  - Toolkit policy: the newest `/usr/local/cuda-12*` the image has, else `/usr/local/cuda`; `nvcc --version` is
-    recorded. Release, `CMAKE_CUDA_ARCHITECTURES=89`, target `ir_hf_cuda_bench`, as the frozen v1/v2 VM scripts
-    built it.
-  - Ember `5bfda893` compiles under CUDA 12.6 locally.
+  - Toolkit: `/usr/local/cuda-12.6`, whose `nvcc --version` must report release 12.6 and is recorded. Release,
+    `CMAKE_CUDA_ARCHITECTURES=89`, target `ir_hf_cuda_bench`, as the frozen v1/v2 VM scripts built it.
   - The executable is archived in the evidence (`out/binaries/`) and its hash checked against the one that runs.
 - **Launch contract** (`launch_contract_gemma.py`, against `../launch_contract_v3.py`):
   - provenance is recorded and checked as above instead of the image digest, so `--provenance` is required;
   - any `EMBER_*` variable other than the two required is refused (v3 refused only the six listed overrides);
   - the backend vocabulary is Gemma's 262,144 instead of Smol's 49,152;
-  - without `--binary` it checks the environment alone (run right after the packages).
-- **GGUF regeneration.** Verified locally on 3 Nov under Python 3.11 and 3.12 (the VM's version): this recipe
-  reproduces the canonical file byte for byte.
+  - without `--binary` it checks the environment alone (run right after the packages);
+  - (v2) the interpreter running it must be CPython 3.11.15.
+- **GGUF regeneration.** Verified locally on 3 Nov under Python 3.11 and 3.12: this recipe reproduces the canonical
+  file byte for byte.
   - Converter: llama.cpp `convert_hf_to_gguf.py` from the pinned archive `converter.tgz` (SHA-256 `fa607fc3…`, the
     archive the Smol run used), with its bundled gguf-py.
   - Weights: `google/gemma-3-270m-it` revision `ac82b4e8…`. The repository is gated, so the VM takes
@@ -81,6 +96,8 @@ rounds (rounds 1-3 DO NOT RUN, round 4 RUN on 3 Nov), kept in the research works
   retrieved.
   - A fresh rerun, once and unchanged, is allowed only if the run did not reach the controller.
     `SCIENCE_STARTED` is written immediately before it starts, and `status.json` reports `science_started`.
+    `g1-20261103` (version 1) did not reach it. Its failure was a property of the image, not a transient one, so
+    the next run is version 2's first run, reviewed again before launch. Version 2 has its own single rerun.
   - A run that reached the controller is never repeated: its outputs are retrieved and reported as complete,
     incomplete or negative. A transport failure after that point makes the result incomplete; it does not make it
     eligible for another attempt.
@@ -89,8 +106,8 @@ rounds (rounds 1-3 DO NOT RUN, round 4 RUN on 3 Nov), kept in the research works
 
 ## Budget and procedure
 
-- One Colab L4, Claude's lane; expected about 35 minutes (packages about 5, build about 10, regeneration about 2,
-  three shapes of gating and timing).
+- One Colab L4, Claude's lane; expected about 40 minutes (interpreter and packages about 6, toolkit about 3, build
+  about 10, regeneration about 2, three shapes of gating and timing). `g1-20261103` used about 10 L4-minutes.
 - The run goes through `drive.py`, generalised from the reviewed selective-scan driver.
   - Deadlines from the driver's start: polling ends at 60 minutes, retrieval at 75, shutdown attempts at 85, the
     final inventory at 90.
@@ -107,15 +124,24 @@ rounds (rounds 1-3 DO NOT RUN, round 4 RUN on 3 Nov), kept in the research works
     An interrupted controller is benchmark gate 143. A member of the controller's group still running after the
     controller exits on its own is killed and recorded (`leftover_processes.txt`, gate 97), so nothing is still
     writing when the outputs are published.
+  - (v2) Absence is never assumed: a failed or empty process listing counts as a live process. If anything
+    survives SIGKILL, on either path, the script writes `QUIESCENCE_UNCONFIRMED`. The driver then treats the
+    archive as possibly not final (exit at least 2), whatever the stop reply said.
   - The VM side answers the driver with one structured line: interrupted (DONE and a gone group), completed (DONE,
     no stop needed), unconfirmed, or not observed (no PID file after a minute). Anything but interrupted or
     completed means the archive may hold outputs still being written, so the run can exit no better than 2
     (transport or receipt failure).
-  - Local tests (30) cover a stop during the controller, a stop between fork and registration, a stop before the
-    controller's group exists, and a writer left behind by the controller. Each checks that the writer's last
-    write came before `status.json` was published.
+  - Local tests (33) cover:
+    - a stop during the controller, a stop between fork and registration, a stop before the controller's group
+      exists, and a writer left behind by the controller, each checking that the writer's last write came before
+      `status.json` was published;
+    - the toolkit gate and a wrong nvcc release;
+    - an unconfirmed quiescence.
   - Packing tolerates files changing while they are read, and pack and download are tried twice within the
-    retrieval budget. A failed retrieval is logged as evidence lost before cleanup.
+    retrieval budget. A failed retrieval is logged as evidence lost before cleanup. In `g1-20261103` the first
+    pack call hung until its 240-second limit and the second succeeded at once.
+  - Accepted residual: archive extraction (local, seconds for the expected outputs) runs before VM cleanup and has
+    no deadline of its own.
   - Cleanup, receipt and exit-code rules are the reviewed driver's. A validated success also needs the `DONE`
     marker.
   - Its local tests: `test_drive.py` (mock CLI) and `test_vm_gemma.py` (stub tools).

@@ -4,7 +4,9 @@
   - the Colab image is recorded and checked (provider colab, exactly one L4, no failed command) instead of the
     RunPod image digest; --provenance is therefore required;
   - any EMBER_* variable other than the two required ones is refused (v3 refused only the six listed overrides);
-  - the native backend must report Gemma's vocabulary (262,144).
+  - the native backend must report Gemma's vocabulary (262,144);
+  - (v2) the interpreter running the contract, the one the whole run uses, must be CPython 3.11.15, the frozen
+    pod's minor version, not the image's own Python.
 Environment, unset overrides, package versions, CUDA backend, one thread, 1,024 context and an all-F32 tensor
 inventory are checked exactly as before. Without --binary it checks the environment only (run right after the
 packages are installed).
@@ -14,6 +16,7 @@ import importlib.metadata
 import json
 import os
 from pathlib import Path
+import platform
 import subprocess
 
 REQUIRED_ENV = {
@@ -29,9 +32,12 @@ VERSIONS = {'torch': '2.4.1+cu124', 'numpy': '1.26.4', 'transformers': '4.57.0',
             'huggingface-hub': '0.35.3', 'sentencepiece': '0.2.2', 'accelerate': '1.13.0'}
 VOCAB = 262144
 PROVENANCE_KEYS = ('provider', 'gpu', 'driver', 'cuda_toolkit', 'python', 'os')
+INTERPRETER = ('CPython', '3.11.15')
 
 
-def validate_environment(environment, versions, provenance):
+def validate_environment(environment, versions, provenance, interpreter=INTERPRETER):
+    if tuple(interpreter) != INTERPRETER:
+        raise ValueError('interpreter must be %s %s, found %s %s' % (INTERPRETER + tuple(interpreter)))
     for key, expected in REQUIRED_ENV.items():
         if environment.get(key) != expected:
             raise ValueError('launch environment mismatch: ' + key)
@@ -51,7 +57,8 @@ def validate_environment(environment, versions, provenance):
     if any(str(v).startswith('error') for v in provenance.values()):
         raise ValueError('a provenance command failed')
     return {'environment': {k: environment[k] for k in REQUIRED_ENV},
-            'unset_overrides': list(UNSET_ENV), 'versions': versions, 'provenance': provenance}
+            'unset_overrides': list(UNSET_ENV), 'versions': versions, 'provenance': provenance,
+            'interpreter': list(interpreter)}
 
 
 def validate_backend(ready):
@@ -73,7 +80,8 @@ def main():
     parser.add_argument('--gguf')
     args = parser.parse_args()
     versions = {k: importlib.metadata.version(k) for k in VERSIONS}
-    result = validate_environment(os.environ, versions, json.loads(Path(args.provenance).read_text()))
+    result = validate_environment(os.environ, versions, json.loads(Path(args.provenance).read_text()),
+                                  (platform.python_implementation(), platform.python_version()))
     if bool(args.binary) != bool(args.gguf):
         raise ValueError('binary and GGUF must be supplied together')
     if args.binary:

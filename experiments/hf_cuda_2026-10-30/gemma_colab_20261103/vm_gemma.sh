@@ -25,7 +25,7 @@ U=$ROOT/upload_$RUN
 [ -e "$W" ] && { echo "$W exists: refusing to reuse a run directory" >&2; exit 2; }
 mkdir -p "$O/binaries" "$O/inputs" || exit 2
 declare -A G=()
-REQUIRED="analyze benchmark build checkout contract environment inputs packages provenance regenerate weights"
+REQUIRED="analyze benchmark build checkout contract environment inputs packages provenance regenerate toolkit weights"
 finish() {
     local rc=$? pass=true keys final science=false
     trap '' TERM INT   # publication is never interrupted; a stop arriving now finds DONE shortly
@@ -63,8 +63,11 @@ fail() { G[$1]=$2; exit 1; }
 # Other children of this shell (pip, make) are sent TERM too.
 CPID=""
 STOP_PENDING=""
-live() {
-    [ -n "$CPID" ] && ps -eo pid=,pgid=,stat= | awk -v c="$CPID" '($1 == c || $2 == c) && $3 !~ /^Z/ {f = 1} END {exit !f}'
+live() {   # a failed or empty process listing counts as live: absence is never assumed
+    [ -n "$CPID" ] || return 1
+    local t
+    t=$(ps -eo pid=,pgid=,stat=) && [ -n "$t" ] || return 0
+    awk -v c="$CPID" '($1 == c || $2 == c) && $3 !~ /^Z/ {f = 1} END {exit !f}' <<< "$t"
 }
 on_stop() {
     trap '' TERM INT
@@ -77,7 +80,7 @@ on_stop() {
             sleep 1
         done
         if live; then kill -KILL -- -"$CPID" "$CPID" 2>/dev/null; sleep 2; fi
-        live && gone=false
+        live && { gone=false; : > "$O/QUIESCENCE_UNCONFIRMED"; }
         G[benchmark]=143
     fi
     pkill -TERM -P $$ 2>/dev/null
@@ -126,18 +129,42 @@ print(json.dumps({k: v for k, v in p.items() if k != "nvidia_smi"}))
 PY
 G[provenance]=0
 
-# pinned packages: Colab's torch is replaced by 2.4.1+cu124; the vision/audio packages that pin the old torch are
-# removed (text-only workload); then the real import path and the environment-only contract are checked at once
+# Pinned interpreter and packages (AMENDMENT.md, v2). The frozen pod ran CPython 3.11; the Colab image's own Python
+# (3.13 on 3 Nov, for which torch 2.4.1 has no wheel) is used only for provenance and to install uv. uv 0.11.29
+# (wheel pinned by hash) installs its CPython 3.11.15 build into a seeded venv, first on PATH from here on, so every
+# later python3 (packages, contract, conversion, controller, analysis) is that interpreter. The nine pins are
+# installed into it by pip, exactly as before; then the real import path is checked.
+UV_WHEEL_SHA=eec03a8b63d55915694db3af4e91324b39ced49e2aeac7af37851c7eb3f470ea
 {
     apt-get install -y -q libboost-regex-dev \
-    && python3 -m pip uninstall -y -q torchvision torchaudio \
+    && echo "uv==0.11.29 --hash=sha256:$UV_WHEEL_SHA" > "$W/uv.requirements" \
+    && python3 -m pip install -q --require-hashes -r "$W/uv.requirements" \
+    && python3 -m uv python install 3.11.15 \
+    && python3 -m uv venv --seed --python 3.11.15 "$W/venv" \
+    && export PATH="$W/venv/bin:$PATH" VIRTUAL_ENV="$W/venv" \
+    && python3 -c "import sys; assert sys.version_info[:3] == (3, 11, 15) and sys.prefix == '$W/venv', sys.version" \
     && python3 -m pip install -q 'torch==2.4.1' --index-url https://download.pytorch.org/whl/cu124 \
     && python3 -m pip install -q 'numpy==1.26.4' 'transformers==4.57.0' 'tokenizers==0.22.1' 'gguf==0.19.0' \
         'safetensors==0.6.2' 'huggingface-hub==0.35.3' 'sentencepiece==0.2.2' 'accelerate==1.13.0' \
     && python3 -m pip list --format=json > "$O/packages.json" \
+    && python3 -c "import sys; print(sys.version)" > "$O/interpreter.txt" \
     && python3 -c "import torch, transformers; from transformers import AutoModelForCausalLM, Gemma3ForCausalLM; assert torch.cuda.is_available(); print(torch.__version__, torch.version.cuda, transformers.__version__)"
 } > "$O/packages.log" 2>&1 || fail packages $?
 G[packages]=0
+
+# CUDA toolkit 12.6 from NVIDIA's ubuntu2404 repository, exact versions (the image had only CUDA 13.0 on 3 Nov; ember
+# 5bfda893 was verified to compile under 12.6). The repository keyring is checked by hash before it is trusted.
+CUDA_KEYRING_SHA=d2a6b11c096396d868758b86dab1823b25e14d70333f1dfa74da5ddaf6a06dba
+CUDA_REPO=https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64
+{
+    curl -sSfL -o "$W/cuda-keyring.deb" "$CUDA_REPO/cuda-keyring_1.1-1_all.deb" \
+    && echo "$CUDA_KEYRING_SHA  $W/cuda-keyring.deb" | sha256sum -c - \
+    && dpkg -i "$W/cuda-keyring.deb" \
+    && apt-get update -q \
+    && apt-get install -y -q --no-install-recommends cuda-minimal-build-12-6=12.6.3-1 libcublas-dev-12-6=12.6.4.1-1 \
+    && dpkg -l | grep -E 'cuda|cublas' > "$O/cuda_packages.txt"
+} > "$O/toolkit.log" 2>&1 || fail toolkit $?
+G[toolkit]=0
 
 # the frozen launch environment (set where the frozen wrapper set it: after packages, before download/conversion)
 unset EMBER_IR EMBER_KV EMBER_DETERMINISTIC EMBER_DECODE_LINEAR EMBER_DECODE_OPT EMBER_DECODE_PICK
@@ -147,12 +174,14 @@ python3 "branch/$A/launch_contract_gemma.py" --out "$O/environment_contract.json
     > "$O/environment_contract.log" 2>&1 || fail environment $?
 G[environment]=0
 
-# engine build at the frozen source. Toolkit policy (AMENDMENT.md): the newest /usr/local/cuda-12* if the image has
-# one, else /usr/local/cuda; sm_89; Release. A new build: the executable is archived and its hash recorded.
-CUDA_HOME=$(ls -d /usr/local/cuda-12* 2>/dev/null | sort -V | tail -1); CUDA_HOME=${CUDA_HOME:-/usr/local/cuda}
+# engine build at the frozen source with the toolkit installed above (/usr/local/cuda-12.6, nvcc release 12.6);
+# sm_89; Release. A new build: the executable is archived and its hash recorded.
+CUDA_HOME=/usr/local/cuda-12.6
+[ "${VM_TEST_HARNESS:-}" = 1 ] && CUDA_HOME=${VM_CUDA_HOME:-$CUDA_HOME}   # test harness only
 {
     echo "$CUDA_HOME" > "$O/cuda_home.txt" \
     && "$CUDA_HOME/bin/nvcc" --version > "$O/nvcc.txt" \
+    && grep -q 'release 12\.6' "$O/nvcc.txt" \
     && cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=89 \
         -DCMAKE_CUDA_COMPILER="$CUDA_HOME/bin/nvcc" > "$O/cmake.log" \
     && grep -q 'CUDA toolkit and cuBLAS found' "$O/cmake.log" \
@@ -222,7 +251,8 @@ G[benchmark]=$?
 if live; then
     ps -eo pid=,pgid=,stat=,args= | awk -v c="$CPID" '$2 == c' > "$O/leftover_processes.txt"
     kill -KILL -- -"$CPID" 2>/dev/null; sleep 2
-    live && echo "still present after KILL" >> "$O/leftover_processes.txt"
+    # still there: the outputs may still change, so the archive cannot be certified final (drive.py reads this)
+    live && { echo "still present after KILL" >> "$O/leftover_processes.txt"; : > "$O/QUIESCENCE_UNCONFIRMED"; }
     G[benchmark]=97
 fi
 CPID=""

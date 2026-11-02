@@ -13,7 +13,7 @@ SOURCE = "5bfda89345b3bcf1f0352eee555f0fd4eb73ac7d"
 CANONICAL = "0a174d42ccd7de15688e50dc044ea8006db31ee3bc6dc7e838f8a360ca46cdaa"
 CONTROLLER = "ddd3104489dd2935187271d48dfabe77501a2b3c5fa02350aad1ca5e54a2f04c"
 REQUIRED = {"analyze", "benchmark", "build", "checkout", "contract", "environment", "inputs", "packages", "provenance",
-            "regenerate", "weights"}
+            "regenerate", "toolkit", "weights"}
 
 STUBS = {
     "git": r'''#!/usr/bin/env bash
@@ -36,6 +36,8 @@ for f in "$@"; do
 done''',
     "nvidia-smi": "#!/usr/bin/env bash\necho 'NVIDIA L4'",
     "apt-get": "#!/usr/bin/env bash\nexit 0",
+    "curl": "#!/usr/bin/env bash\n[ \"$FAIL_AT\" = toolkit ] && exit 22; while [ $# -gt 0 ]; do [ \"$1\" = -o ] && echo deb > \"$2\"; shift; done; exit 0",
+    "dpkg": "#!/usr/bin/env bash\n[ \"$1\" = -l ] && echo 'ii  cuda-minimal-build-12-6 12.6.3-1'; exit 0",
     "nproc": "#!/usr/bin/env bash\necho 2",
     "cmake": r'''#!/usr/bin/env bash
 [ "$FAIL_AT" = build ] && exit 4
@@ -70,6 +72,21 @@ exec /usr/bin/setsid "$@"''',
 }
 
 
+def make_tools(tmp):
+    """Stub tools on PATH, and a fake CUDA 12.6 toolkit for the build (VM_CUDA_HOME, test harness only)."""
+    b = tmp / "bin"
+    b.mkdir()
+    for name, body in STUBS.items():
+        (b / name).write_text(body + "\n")
+        (b / name).chmod(0o755)
+    nvcc = tmp / "cuda" / "bin" / "nvcc"
+    nvcc.parent.mkdir(parents=True)
+    nvcc.write_text('#!/usr/bin/env bash\necho "Cuda compilation tools, release ${STUB_NVCC_RELEASE:-12.6}, V12.6.85"\n')
+    nvcc.chmod(0o755)
+    return dict(os.environ, PATH=f"{b}:/usr/bin:/bin", VM_TEST_HARNESS="1", VM_ROOT=str(tmp),
+                VM_CUDA_HOME=str(tmp / "cuda"))
+
+
 def alive(pid):
     """True for a live, non-zombie process."""
     try:
@@ -79,15 +96,10 @@ def alive(pid):
 
 
 class VmGemmaTests(unittest.TestCase):
-    def run_vm(self, fail_at="", run="g1", head=None):
+    def run_vm(self, fail_at="", run="g1", head=None, extra=None):
         tmp = Path(tempfile.mkdtemp())
-        b = tmp / "bin"
-        b.mkdir()
-        for name, body in STUBS.items():
-            (b / name).write_text(body + "\n")
-            (b / name).chmod(0o755)
         (tmp / f"upload_{run}").mkdir()  # the driver creates it before launch
-        env = dict(os.environ, PATH=f"{b}:/usr/bin:/bin", VM_TEST_HARNESS="1", VM_ROOT=str(tmp), FAIL_AT=fail_at)
+        env = dict(make_tools(tmp), FAIL_AT=fail_at, **(extra or {}))
         if head:
             env["STUB_HEAD"] = head
         r = subprocess.run(["bash", str(HERE / "vm_gemma.sh"), COMMIT, run], env=env, capture_output=True, text=True,
@@ -138,14 +150,8 @@ class VmGemmaTests(unittest.TestCase):
 
     def start_vm(self, fail_at, signal_at=""):
         tmp = Path(tempfile.mkdtemp())
-        b = tmp / "bin"
-        b.mkdir()
-        for name, body in STUBS.items():
-            (b / name).write_text(body + "\n")
-            (b / name).chmod(0o755)
         (tmp / "upload_s1").mkdir()
-        env = dict(os.environ, PATH=f"{b}:/usr/bin:/bin", VM_TEST_HARNESS="1", VM_ROOT=str(tmp), FAIL_AT=fail_at,
-                   VM_TEST_SIGNAL_AT=signal_at)
+        env = dict(make_tools(tmp), FAIL_AT=fail_at, VM_TEST_SIGNAL_AT=signal_at)
         p = subprocess.Popen(["bash", str(HERE / "vm_gemma.sh"), COMMIT, "s1"], env=env,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return p, tmp, tmp / "run_s1" / "out"
@@ -201,6 +207,20 @@ class VmGemmaTests(unittest.TestCase):
         self.assertFalse(alive(int((tmp / "native_child.pid").read_text())))
         self.assertLess(int((tmp / "heartbeat").read_text()), (out / "status.json").stat().st_mtime_ns)
         self.assertEqual((out / "DONE").read_text().strip(), "s1")
+
+    def test_toolkit_failure_stops_before_the_build(self):
+        rc, s, done, _ = self.run_vm("toolkit")
+        self.assertEqual((rc, s["gates"]["toolkit"]), (1, 22))
+        self.assertNotIn("build", s["gates"])
+        self.assertEqual(s["gates"]["packages"], 0)
+        self.assertFalse(s["science_started"])
+        self.assertEqual(done, "g1")
+
+    def test_a_toolkit_other_than_12_6_fails_the_build(self):
+        rc, s, _, _ = self.run_vm(extra={"STUB_NVCC_RELEASE": "13.0"})
+        self.assertEqual(rc, 1)
+        self.assertNotEqual(s["gates"]["build"], 0)
+        self.assertNotIn("benchmark", s["gates"])
 
     def test_wrong_head_fails_checkout(self):
         rc, s, _, _ = self.run_vm(head="f" * 40)

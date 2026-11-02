@@ -12,7 +12,7 @@ import unittest
 HERE = Path(__file__).resolve().parent
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
 GATES = ["analyze", "benchmark", "build", "checkout", "contract", "environment", "inputs", "packages", "provenance",
-         "regenerate", "weights"]
+         "regenerate", "toolkit", "weights"]
 
 MOCK = r'''#!/usr/bin/env python3
 import json, os, re, sys, tarfile, time
@@ -62,6 +62,7 @@ if cmd == "exec":
         s = {"run_id": run, "commit": commit, "head": commit, "exit_status": 0, "science_started": True,
              "pass": mode != "gate_fail", "gates": gates}
         (out / "status.json").write_text(json.dumps(s))
+        if mode == "not_quiescent": (out / "QUIESCENCE_UNCONFIRMED").write_text("")
         if mode not in ("never_done", "stop_unconfirmed", "stop_not_observed", "stop_garbled", "launch_ack_lost"):
             (out / "DONE").write_text(run)
         if mode != "launch_ack_lost": print("LAUNCHED")
@@ -200,6 +201,13 @@ class DriveTests(unittest.TestCase):
     def test_unconfirmed_stop_is_never_a_success(self):
         rc, state, log, _, _ = self.run_drive("stop_unconfirmed")
         self.assertIn("NOT CONFIRMED", log)
+        self.assertEqual(rc, 2, log)
+        self.assertEqual(state["sessions"], {})
+
+    def test_unconfirmed_quiescence_is_never_a_success(self):
+        # a passing status with DONE, but the VM script could not take down a leftover writer
+        rc, state, log, _, _ = self.run_drive("not_quiescent")
+        self.assertIn("quiescence not confirmed", log)
         self.assertEqual(rc, 2, log)
         self.assertEqual(state["sessions"], {})
 
