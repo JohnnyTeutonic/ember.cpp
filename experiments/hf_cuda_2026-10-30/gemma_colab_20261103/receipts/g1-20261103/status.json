@@ -1,0 +1,1 @@
+{"run_id": "g1-20261103", "commit": "a88cbb96c427813c859cc38dbb5519ad08d6815c", "head": "a88cbb96c427813c859cc38dbb5519ad08d6815c", "source": "5bfda89345b3bcf1f0352eee555f0fd4eb73ac7d", "science_started": false, "shell_status": 1, "exit_status": 1, "pass": false, "gates": {"checkout": 0, "packages": 1, "provenance": 0}}

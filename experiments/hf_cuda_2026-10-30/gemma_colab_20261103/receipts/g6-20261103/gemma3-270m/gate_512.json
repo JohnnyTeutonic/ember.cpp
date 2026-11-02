@@ -1,0 +1,10 @@
+{
+  "rows": 32,
+  "vocab": 262144,
+  "max_abs": 6.008148193359375e-05,
+  "max_relative": 2.1010619954881976e-06,
+  "tolerance": 0.0001,
+  "inputs_sha256": "f2bf0fe2a380094f7910ae36c7c7b00733d359703f6fa3f222b311c2c2be567a",
+  "hf_rows_sha256": "fb75b6e1fffd3b250ada80ad8efb91dc8b7ef055424367f5feb2951d498d5474",
+  "ember_rows_sha256": "b90e53036b516078a8d2cfa8483c4680ccc5eaa84f80e42f6ff43feef5285076"
+}

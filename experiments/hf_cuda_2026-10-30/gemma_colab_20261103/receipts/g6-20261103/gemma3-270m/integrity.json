@@ -1,0 +1,19 @@
+{
+  "protocol_sha256": "0a7972dd1e86a9019d56f9aa1b64cdb7c2e4e2993b3d5d59ff1473fb5a0abd15",
+  "journal_sha256": "3d93d332f39812fde0d300401c5ce241f93676321efc7c065abc5d7d5e328545",
+  "files": {
+    "/content/run_g6-20261103/gemma-3-270m-it-f32.gguf": "0a174d42ccd7de15688e50dc044ea8006db31ee3bc6dc7e838f8a360ca46cdaa",
+    "/content/run_g6-20261103/build/ir_hf_cuda_bench": "57ccb181462dd629409f4b890813cc277ce1c2d85304289f6dc19a0c9fd017c5",
+    "/content/run_g6-20261103/src/experiments/hf_cuda_2026-10-30/benchmark.py": "ddd3104489dd2935187271d48dfabe77501a2b3c5fa02350aad1ca5e54a2f04c",
+    "/content/run_g6-20261103/src/tools/ir_hf_cuda_bench.cpp": "d468bc2a40b841aeb220c93dca8f3a733aad073606081864f73f9ecaf88356b5",
+    "/content/run_g6-20261103/src/graph_ir.cpp": "7d31e3b3777b3a1605b818e35c3f49c85588e92a0e2de367f712f90188107f61",
+    "/content/run_g6-20261103/src/graph_ir.h": "c32a106d87fce531a12e7144dec8d781b560585694196d0ac66ce140b5d6bc2a",
+    "/content/run_g6-20261103/src/CMakeLists.txt": "538c02e17a972587220cf785ea92fa2c5cd3ed2c0041723b78c61f1005654f9e"
+  },
+  "inputs": {
+    "16": "46cbe6535af62c81561f9a7e3796fb1b7e4ae7296a081784f392a5caf21e0f30",
+    "128": "37c65473dd7eb0c22875506b11ab7034faec3796cffabb6c25754177c858676f",
+    "512": "f2bf0fe2a380094f7910ae36c7c7b00733d359703f6fa3f222b311c2c2be567a"
+  },
+  "status": "FINAL_INTEGRITY_VERIFIED"
+}
