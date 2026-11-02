@@ -1,8 +1,9 @@
 // Vendored verbatim from paperkiln (microtorch) include/microtorch/bpe_tokenizer.hpp
 // at paperkiln e70f75d44f6e (include names .hpp -> .h). ember.cpp uses it for GGUFs whose tokenizer.ggml.model
 // is "bpe" (paperkiln byte-level BPE: merges are token-id pairs).
-// Do not edit here: change it in paperkiln (its tests check C++/Python
-// parity) and re-vendor.
+// Canonical implementation now lives in coalfire.cpp include/byte_bpe_tokenizer.hpp
+// (paperkiln vendors it). This snapshot retains its historical source pin above.
+// Change the canonical header, verify token-id/decoding parity, then re-vendor.
 #pragma once
 // Byte-level BPE encoder/decoder: the C++ side of tools/bpe.py (the
 // reference, which also trains). Byte-identical to it: tests/test_bpe.py
