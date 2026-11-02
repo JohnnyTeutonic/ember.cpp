@@ -83,6 +83,7 @@ def preflight(upload):
     # the staged copy of parts4_vm.py, so the preflight cannot drift from what the VM will do.
     spec = importlib.util.spec_from_file_location("parts4_vm_staged", upload / "parts4_vm.py")
     vm = importlib.util.module_from_spec(spec)
+    sys.dont_write_bytecode = True  # the upload holds exactly the manifest's files
     spec.loader.exec_module(vm)
     with tempfile.TemporaryDirectory(prefix="parts4_preflight_") as tmp:
         src = Path(tmp) / "src"
