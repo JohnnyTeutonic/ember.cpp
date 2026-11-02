@@ -1,0 +1,13 @@
+LD_LIBRARY_PATH=/usr/lib64-nvidia
+	linux-vdso.so.1 (0x00007ffd539af000)
+	libgomp.so.1 => /lib/x86_64-linux-gnu/libgomp.so.1 (0x000078f99dc88000)
+	libcublas.so.12 => /usr/local/cuda-12.6/lib64/libcublas.so.12 (0x000078f997200000)
+	libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x000078f996f82000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x000078f99db9f000)
+	libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x000078f99db71000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x000078f996d6f000)
+	/lib64/ld-linux-x86-64.so.2 (0x000078f99e920000)
+	libcublasLt.so.12 => /usr/local/cuda-12.6/lib64/libcublasLt.so.12 (0x000078f975400000)
+	librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x000078f99db6a000)
+	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x000078f99db65000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x000078f99db60000)
