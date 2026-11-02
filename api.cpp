@@ -1449,7 +1449,12 @@ if (prefill_enabled) {
             ev["inventory"] = {{"kernel", r.nodes_kernel}, {"unidentified", r.nodes_unidentified},
                                {"select", r.nodes_select}, {"partition", r.nodes_partition},
                                {"partition_grid", {r.partition_grid[0], r.partition_grid[1], r.partition_grid[2]}},
-                               {"merge", r.nodes_merge}, {"merge_grid", r.merge_grid}};
+                               {"merge", r.nodes_merge},
+                               {"merge_grid", {r.merge_grid[0], r.merge_grid[1], r.merge_grid[2]}},
+                               {"select_vocab", r.select_vocab}, {"select_buffers", r.select_buffers},
+                               {"partition_vocab", r.partition_vocab}, {"partition_parts", r.partition_parts},
+                               {"partition_buffers", r.partition_buffers}, {"merge_count", r.merge_count},
+                               {"merge_buffers", r.merge_buffers}};
           if (trace_record_returned) {
             ev["record"] = trace_record_json(trace_record);
             ev["decision"] = decided;

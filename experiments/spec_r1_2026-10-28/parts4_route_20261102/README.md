@@ -4,38 +4,54 @@ Prepared for Codex's admission; **unadmitted**, with no GPU or provider call mad
 
 ## Instrumentation (source re-pin)
 
-`decode_route_trace.h` and trace-only additions to `api.cpp`, `model.cpp`, `model.h` and `verify_kernels.{h,cu}` record the route of every sampled position when `EMBER_ROUTE_TRACE=<file>` is set. Unset, every added statement sits behind that cached flag. `test_source_reduction.py` removes the trace statements, flags and helpers, and obtains files byte-identical to the protocol's pinned `api.cpp` and `model.cpp` and to `41b6cd5`'s other three. The selector kernels (`row_pick_partitioned.cuh`), the policy header and `api.cpp`'s dispatch fragment are unchanged; the existing 12 selector source contracts (`tools/row_pick_profile/test_integration.py`) pass on the patched tree.
+`decode_route_trace.h` and trace-guarded insertions in `api.cpp`, `model.cpp`, `model.h` and `verify_kernels.{h,cu}` record the route of every sampled position when `EMBER_ROUTE_TRACE=<file>` is set.
 
-Tracing changes no arithmetic. Before each replay of a graph that holds a selector, it fills the record and the four partition records with an all-`0xFF` sentinel the selector cannot write (its NaN flag is 0 or 1). After the replay it reads them back with the row the same replay produced.
+`test_source_reduction.py` removes the guarded statements, the flags and the trace helpers, and obtains files byte-identical to the protocol's pinned `api.cpp` and `model.cpp` and to the other three files at `41b6cd5`. It accepts a guard only when the bare flag is a conjunct and the other conjuncts have no side effects; negated, disjunctive or side-effecting guards are refused, not deleted. This is a source-difference proof. With tracing off, the build still runs:
+
+- the cached flag reads;
+- the `trace_request` initialisation;
+- the untaken branches' conditions.
+
+The model also carries route-state members. All arms run this one binary, so the gate makes no comparison with an uninstrumented build.
+
+The selector kernels (`row_pick_partitioned.cuh`), the policy header and `api.cpp`'s dispatch fragment are unchanged. The 12 existing selector source contracts (`tools/row_pick_profile/test_integration.py`) pass on the patched tree.
+
+Tracing changes no arithmetic. Before each replay of a graph that holds a selector, it fills the record and the four partition records with an all-`0xFF` sentinel the selector cannot write (its NaN flag is 0 or 1), then reads them back with the row the same replay produced. If merge ran before the partitions, it would read the sentinel and its record would fail the oracle, so the per-replay checks also cover kernel order.
 
 | Protocol minimum inventory | Evidence |
 |---|---|
-| Prefill versus eligible sampled decode positions | Request event: `prefill`, `prefill_sampled`, `start_pos`. One token event per decode position, consecutive from the prompt length; the checker composes them into the client's ids |
-| Requested arm, effective partitions, capture/replay, per-launch fallback | Request event: the server's routing environment. Token event: `graph` (`replay`, `off`, `disabled`, `capture_failed`, `unavailable`), `captured`, `capture_id`, `replay_index`, the replayed graph's `graph_has_pick` and `graph_parts`, and route `per_launch_fallback` |
-| API exclusions: IR, CPU offload, non-greedy, repetition penalties | A bit mask mirroring `want_device_pick` (`exclusions`, `eligibility_consistent`). Top-k and the repeat penalty run in the route matrix. IR and CPU offload are named by the mask and unit-tested, not executed: the registered requests are all-GPU and non-IR, and every traced request reports `ir: false, cpu_offload_layers: 0` |
-| Compact pick versus host row after a near tie, nonfinite record or debug rows | Route `compact`, `host_after_near_tie`, `host_after_nonfinite` or `host_after_debug_rows`, and `picked_on_device`. The `det_route_parts4_rows` leg makes the intended debug-row host fallback explicit. The `det_route_parts4_forced` leg hands the API an undecidable copy of every record, so it takes the near-tie/nonfinite branch at every position; the trace keeps the true record, whose decision must equal the host sampler's token wherever it decides |
-| Selector execution on graph replay, not only capture | At capture: a graph inventory naming the selector kernel nodes (`select_rows_kernel`; or `partition_rows_kernel` at grid (1,4,1) plus `merge_parts`). At every replay: sentinel overwritten, the record equal to the whole-row oracle, and for PARTS4 all four partition records equal to their partitions' oracles and merging to the record |
-| Route and timing tied to one source, input and configuration | One binary and one plan. Route legs differ from timing legs only by the trace variables. Ids must match across all 17 legs, and the traced PARTS4 dump must reproduce the untraced PARTS4 row bits. Trace-on throughput is reported as overhead disclosure, never as a ratio input |
+| Prefill versus eligible sampled decode positions | Each request has its prefill token plus one event per decode position, consecutive from the prompt length. Together these must equal the client's ids, for every request in the gate and in the matrix |
+| Requested arm, effective partitions, capture/replay, per-launch fallback | The request event reports the server's routing environment. The token event reports `graph` (`replay`, `off`, `disabled`, `capture_failed` or `unavailable`) and the replayed graph's `graph_has_pick` and `graph_parts`. Capture ids must rise by one at each capture and replay indices by one at each position. A captured graph must hold exactly the arm's selector nodes, with their captured arguments: vocabulary, `parts=4`, `count=4`, grids, and the decode step's own buffers. Across arms, graphs differ only by those nodes (host + 1, host + 2), whatever cuBLAS nodes the runtime cannot name. Route `per_launch_fallback` marks the per-launch path |
+| API exclusions: IR, CPU offload, non-greedy, repetition penalties | A bit mask mirrors `want_device_pick` (`exclusions`, `eligibility_consistent`). Top-k and the repeat penalty run in the route matrix, each request checked against the configuration sent. IR and CPU offload are named by the mask and unit-tested, not executed: every traced registered request must report `ir: false, cpu_offload_layers: 0` |
+| Compact pick versus host row after a near tie, nonfinite record or debug rows | The checker recomputes each decision from the serialized record bits in float32 and requires the reported decision and route to follow from them; a silent host route cannot pass. A non-forced pick leg must consume at least one compact record. `det_route_parts4_rows` records the intended debug-row fallback. `det_route_parts4_forced` tests the plumbing only: it hands the API an undecidable copy of every record, so the host samples each row, and the true record's decision must equal the host's token wherever it decides. Real near-tie, NaN and infinity records are the retained handcrafted kernel cases; natural near ties are counted |
+| Selector execution on graph replay, not only capture | At each replay: the sentinel is overwritten, the record equals the whole-row oracle, and for PARTS4 each partition record equals its partition's oracle and the four merge to the record. These checks are made in C++ on every route-leg replay. For the dumping PARTS4 leg they are also recomputed independently in NumPy from the dumped rows |
+| Route and timing tied to one source, input and configuration | One binary and one plan. Every leg's environment and command must be exactly canonical, so no appended override or duplicate gets through. Route legs differ from timing legs only by the trace variables. Ids must match across all 17 legs, and the traced PARTS4 dump must reproduce the untraced PARTS4 row bits. The matrix must carry the gate's binary and model hashes. Trace-on throughput is overhead disclosure, never a ratio input |
 
 ## Collector
 
-- `parts4_gate.py plan|analyze`. Seventeen legs in this order:
+- **`parts4_gate.py plan|analyze`.** Seventeen legs in this order:
   - five untimed route legs: one per arm, PARTS4 forced, PARTS4 with dumps;
   - the protocol's six row legs;
   - its timing triples `[host_a, parts0_a, parts4_a]` and `[parts4_b, parts0_b, host_b]`.
 
-  The client (`dr_e2e.py`) and every leg predicate (`decode_pick_gate.load_run`, `ids`, `speed`) are the registered ones, imported unchanged and hash-bound. Verdicts:
-  - `PASS`: deterministic-greedy, model-specific opt-in eligibility only;
-  - `PERFORMANCE_MISS`: each pair is judged alone, against 1.15 versus host and 1.0 versus PARTS0;
-  - `CORRECTNESS_FAIL`: PARTS4 rows, ids or finiteness differ while the controls are valid;
-  - `INCONCLUSIVE`: invalid inputs, plan or controls, or incomplete route evidence, which is also ineligible for adoption.
-- `parts4_route_matrix.py`: `decode_pick_fallback.py`'s prompts under five configurations (registered greedy, repeat penalty, top-k 4, temperatures 0 and 0.049), for three arms with the graph on and off, all traced. Ids must agree across arms in each graph mode, and every position's route must be the one its configuration requires.
-- `parts4_vm.py`: the supervised payload, following `ordered_vm.py`'s procedure:
-  - manifest checked byte for byte, cleaned environment, one L4, a 9,600 s deadline, a zip checkpoint every two minutes, no retry for a pass;
-  - on device it builds, then runs the CPU contracts, the retained handcrafted records and `decode_pick_fallback.py` under PARTS0 and PARTS4, the matrix, and the 17 legs, each verified at once by `load_run`;
-  - all legs write to one local output directory, so storage is uniform across the timing arms.
-- `stage_upload.py`: stages the upload from a commit and repeats every pre-device check offline. The model and prompts are hard-linked or symlinked to their canonical files, never copied. Transport must send the resolved regular files, as the V3 transport does.
-- `make_packet.py`: writes `packet.json` (source, collector and input pins; schedule; test count).
+  The client (`dr_e2e.py`) and every leg predicate (`decode_pick_gate.load_run`, `ids`, `speed`) are the registered ones, imported unchanged and hash-bound.
+
+  Analysis keeps two tracks. A candidate failure demonstrated against valid controls is `CORRECTNESS_FAIL`, and later missing evidence never downgrades it. Such failures are:
+  - PARTS4 row bits, ids, row inventory or finiteness;
+  - a written PARTS4 record that disagrees with its row;
+  - a PARTS4 matrix response that differs from host.
+
+  Otherwise, any operational, control, plan or route-evidence failure gives `INCONCLUSIVE`, which is ineligible for adoption. Next comes `PERFORMANCE_MISS`: each pair is judged alone, against 1.15 versus host and 1.0 versus PARTS0. Otherwise `PASS`, which grants deterministic-greedy, model-specific opt-in eligibility only. An archived output replays wherever it is unpacked; `--relocate` names the inputs' new homes and the binary's recorded hash.
+- **`parts4_route_matrix.py`.** It uses `decode_pick_fallback.py`'s prompts under five configurations: registered greedy, repeat penalty, top-k 4, and temperatures 0 and 0.049. It runs three arms with the graph on and off, all traced. Every request must match the configuration sent, with a complete trace and capture continuity, and every position's route must be the one its configuration requires. Responses must agree across arms in each graph mode.
+- **`parts4_vm.py`.** The supervised payload, following `ordered_vm.py`'s procedure:
+  - a byte-checked manifest, a cleaned environment, one L4, and a 9,600 s deadline;
+  - every command runs in its own process group, killed whole on timeout or signal;
+  - a zip checkpoint every two minutes, except while timing legs run;
+  - no retry for a pass.
+
+  On device it builds, then runs the CPU contracts, the retained handcrafted records and `decode_pick_fallback.py` under PARTS0 and PARTS4, the matrix, and the 17 legs, each verified at once by `load_run`. It ends with a sealed `evidence_sha256.json`. All legs write to one local directory.
+- **`stage_upload.py`.** Stages the upload from a commit. Using the staged payload's own helpers, it repeats every pre-device check offline, including the 12 selector contracts. Model and prompts are hard-linked or symlinked to their canonical files, never copied; transport must send the resolved regular files, as the V3 transport does.
+- **`make_packet.py`.** Writes `packet.json`: the source, collector and input pins, the schedule and the test count.
 
 ## Commands
 
@@ -46,9 +62,43 @@ g++ -std=c++17 -O1 -I ../../.. test_route_trace.cpp -o /tmp/test_route_trace && 
 python3 make_packet.py --check
 python3 stage_upload.py --commit <pin> --model <model.gguf> --prompts <eval100.jsonl> --out <upload>
 python3 parts4_vm.py --upload <upload> --manifest-sha256 <sha> --out <out>        # admitted VM only
-python3 parts4_gate.py analyze <out>/science/gate --matrix <out>/science/matrix   # offline replay
+python3 parts4_gate.py analyze <out>/science/gate --matrix <out>/science/matrix \
+    --relocate model=<model.gguf> --relocate prompts=<eval100.jsonl> --relocate binary=sha256:<hex>
 ```
+
+## Review evidence
+
+Codex (GPT; `scripts/codex_review.py`, methods-audit preset with a packet-specific brief) reviewed the first version (`2d89f2d`) on 2 Nov 2026 and advised against admission. Its four blocking findings are resolved here:
+
+- correctness failures could be downgraded to inconclusive;
+- the matrix could pass with positions missing;
+- the matrix was not bound to the gate's binary and model;
+- appended environment overrides were accepted.
+
+Its should-fix findings are also resolved:
+
+- guards are restricted, and the reduction wording is narrowed;
+- capture continuity, kernel arguments and cross-arm node counts are now checked;
+- decisions are recomputed from the record, and a compact minimum is enforced;
+- the forced leg is labelled, with per-position flags;
+- a candidate row-count change is now a correctness failure;
+- commands run in process groups;
+- the preflight repeats the selector contracts;
+- no checkpoints run during timing;
+- the evidence inventory is sealed.
+
+Its notes on test independence are answered by the dumped-row NumPy oracle and the real-row fixtures, and the C++ property test now generates `+inf`.
+
+The raw review is kept outside the stack repositories, in the workspace's `AI_ML/e10_parts4_claude/`.
 
 ## Not established here
 
-Device behaviour of the instrumentation is untested until admission; CPU evidence is the reduction proof, the header's C++ test (9,113 checks), 48 checker tests and a CPU end-to-end trace through the registered client. A trace-disabled instrumented binary is not timed against an uninstrumented one: the reduction proof shows that only untaken trace-flag branches were added. The protocol's `not_established` list applies unchanged: sampler RNG-state equivalence, other models, nondeterministic-mode PARTS4 and broad quality or speed claims.
+The instrumentation's device behaviour is untested until admission. CPU evidence:
+
+- the reduction proof;
+- the header's C++ test, 9,113 checks;
+- the checker's tests (`packet_test_count` in `packet.json`);
+- the 12 selector contracts;
+- a CPU end-to-end trace through the registered client, aligning 8 records (one a five-turn conversation) with 16 traced requests.
+
+The protocol's `not_established` list applies unchanged: sampler RNG-state equivalence, other models, nondeterministic-mode PARTS4, and broad quality or speed claims.

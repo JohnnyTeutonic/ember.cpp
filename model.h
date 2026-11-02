@@ -419,7 +419,11 @@ class TinyLlamaModel {
     // Kernel nodes of the captured graph, counted at capture; -1 when the inventory failed.
     int nodes_kernel = -1, nodes_unidentified = -1, nodes_select = -1, nodes_partition = -1, nodes_merge = -1;
     unsigned partition_grid[3] = {0, 0, 0};
-    unsigned merge_grid = 0;
+    unsigned merge_grid[3] = {0, 0, 0};
+    // The selector nodes' captured arguments: vocabulary and partition count, and whether their buffers are the
+    // decode step's logits, record and partition records.
+    int select_vocab = -1, partition_vocab = -1, partition_parts = -1, merge_count = -1;
+    bool select_buffers = false, partition_buffers = false, merge_buffers = false;
   };
   const DecodeRoute& decode_route() const { return decode_route_; }
   // Speculative verification: n tokens at positions pos..pos+n-1 (all layers

@@ -6,12 +6,14 @@
 decode_pick_fallback.py's requests (its prompts, seed 13, 16 new tokens) under five configurations: the
 registered greedy request, repeat penalty, top_k 4, temperature 0 and 0.049; each served by host, PARTS0 and
 PARTS4 servers (EMBER_DETERMINISTIC=1) with the decode graph on and off, every server traced by
-EMBER_ROUTE_TRACE (decode_route_trace.h). Analyze requires, per graph mode, identical ids across the arms, and
-per sampled position the route each configuration must take: exclusions named, graph off reported as the
-per-launch fallback, and compact records checked against their replay's row. Untimed; changes no default.
+EMBER_ROUTE_TRACE (decode_route_trace.h). Analyze binds the receipt to one binary and model, then requires per
+request the configuration it was sent, a complete trace (prefill token plus one event per decode position),
+capture/replay continuity, and per position the route its configuration requires: exclusions named, graph off
+reported as the per-launch fallback, and compact records checked against their replay's row and recomputed
+decision. Responses must agree across arms in each graph mode; differences are reported separately, since a
+PARTS4 difference is a correctness failure. Untimed; changes no default.
 """
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -27,7 +29,7 @@ import parts4_gate as gate  # noqa: E402
 PROMPTS = ["Repeat the word blue three times.", "What is two plus two?", "Tell me about a garden."]
 CONFIGS = [{}, {"repeat_penalty": 1.2, "repeat_last_n": 64}, {"top_k": 4}, {"temperature": 0.0},
            {"temperature": 0.049}]
-# The exclusions each configuration adds (decode_route_trace.h names), and whether a compact pick applies.
+# The exclusion each configuration adds (decode_route_trace.h names).
 EXCLUDED = ["", "repeat_penalty", "top_k", "", ""]
 ARMS = ("host", "parts0", "parts4")
 PORT = 8098
@@ -55,18 +57,25 @@ def leg_env(graph, arm, trace):
     return env
 
 
+def body(config, prompt):
+    return {"user_input": prompt, "temperature": 1, "top_k": 1, "top_p": 1, "seed": 13, "return_ids": True,
+            "max_new_tokens": 16, **CONFIGS[config]}
+
+
 def run(binary, model, out):
     out = Path(out)
     out.mkdir(exist_ok=False)
-    summary = {"binary_sha256": gate.sha(binary), "model_sha256": gate.sha(model), "legs": []}
+    receipt = {"binary": binary, "model": model, "binary_sha256": gate.sha(binary), "model_sha256": gate.sha(model),
+               "legs": [leg_name(g, a) for g, a in legs()], "completed": []}
     for graph, arm in legs():
         name = leg_name(graph, arm)
         work = out / name
         (work / "www").mkdir(parents=True)
         trace = out / (name + ".trace.jsonl")
         env = dict(os.environ)
-        for k in gate.CLEARED:
-            env.pop(k, None)
+        for k in list(env):
+            if k.startswith(("EMBER_", "TINYLLAMA_")):
+                env.pop(k)
         env.update(leg_env(graph, arm, trace))
         with (work / "server.log").open("w") as log:
             process = subprocess.Popen([binary, model, str(PORT), "127.0.0.1", str(work / "www"), "999"],
@@ -85,11 +94,9 @@ def run(binary, model, out):
                 if health.get("model") != model or not health.get("deterministic"):
                     raise ValueError(name + ": wrong model or mode")
                 rows = []
-                for i, config in enumerate(CONFIGS):
+                for i in range(len(CONFIGS)):
                     for prompt in PROMPTS:
-                        body = {"user_input": prompt, "temperature": 1, "top_k": 1, "top_p": 1, "seed": 13,
-                                "return_ids": True, "max_new_tokens": 16, **config}
-                        r = request(f"http://127.0.0.1:{PORT}/chat", body)
+                        r = request(f"http://127.0.0.1:{PORT}/chat", body(i, prompt))
                         if not r.get("prompt_ids") or not isinstance(r.get("ids"), list):
                             raise ValueError(name + ": missing ids")
                         rows.append({"config": i, "prompt": prompt,
@@ -103,20 +110,35 @@ def run(binary, model, out):
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
-        summary["legs"].append(name)
-    (out / "run.json").write_text(json.dumps(summary, indent=1) + "\n")
+        receipt["completed"].append(name)
+        (out / "run.json").write_text(json.dumps(receipt, indent=1) + "\n")
     return analyze(out)
 
 
 def expected(graph, arm, config):
-    """(eligible, exclusions, route set) for one sampled decode position."""
+    """(eligible, exclusions, allowed routes) for one sampled decode position."""
     excl = ",".join(x for x in (("pick_off" if arm == "host" else ""), EXCLUDED[config]) if x)
-    eligible = excl == ""
-    if not eligible:
+    if excl:
         return False, excl, {"host_ineligible"}
     if graph == 0:
         return True, "", {"per_launch_fallback"}
-    return True, "", {"compact", "host_after_near_tie"}
+    return True, "", {"compact", "host_after_near_tie", "host_after_nonfinite"}
+
+
+def request_problems(q, graph, arm, config):
+    """The traced request is the configuration the matrix sent, on the leg's server."""
+    b = body(config, "")
+    want_env = {k: None for k in gate.TRACE_ENV_KEYS}
+    want_env.update({k: v for k, v in leg_env(graph, arm, "").items() if k in want_env})
+    bad = []
+    if q.get("env") != want_env:
+        bad.append("server environment differs from the leg")
+    if (q.get("temperature") != float(b["temperature"]) or q.get("top_k") != b["top_k"] or q.get("top_p") != 1.0
+            or q.get("repeat_on") is not ("repeat_penalty" in CONFIGS[config]) or q.get("debug_rows") is not False
+            or q.get("forced") is not False or q.get("spec") is not False or q.get("ir") is not False
+            or q.get("cpu_offload_layers") != 0 or q.get("deterministic") is not True):
+        bad.append("traced request is not the configuration sent")
+    return bad
 
 
 def check_position(ev, graph, arm, config, temperature):
@@ -124,8 +146,8 @@ def check_position(ev, graph, arm, config, temperature):
     bad = []
     if ev.get("eligible") is not eligible or ev.get("exclusions") != excl or ev.get("route") not in routes:
         bad.append(f"route {ev.get('route')} exclusions '{ev.get('exclusions')}' (wanted {sorted(routes)} '{excl}')")
-    if not ev.get("eligibility_consistent"):
-        bad.append("eligibility mask disagrees with want_device_pick")
+    if not ev.get("eligibility_consistent") or ev.get("forced"):
+        bad.append("eligibility mask disagrees with want_device_pick, or a forced position")
     want_graph = "replay" if graph else "off"
     if ev.get("graph") != want_graph:
         bad.append(f"graph {ev.get('graph')} (wanted {want_graph})")
@@ -138,66 +160,92 @@ def check_position(ev, graph, arm, config, temperature):
         if gate.PARTS[arm] == 4 and (check.get("parts_written") != 4 or check.get("parts_value") != 4
                                     or not check.get("merge_value")):
             bad.append("partition records not written by this replay or differ from their oracles")
-        if ev.get("route") == "compact" and ev.get("decision") != ev.get("token"):
+        try:
+            decided, why = gate.recompute(ev["record"], temperature)
+        except (KeyError, TypeError):
+            return bad + ["record missing from the event"]
+        want = {"none": "compact", "near_tie": "host_after_near_tie", "nonfinite": "host_after_nonfinite"}[why]
+        if (ev.get("decision"), ev.get("undecided")) != (decided, why) or ev.get("route") != want \
+                or bool(ev.get("picked_on_device")) is not (want == "compact"):
+            bad.append(f"route {ev.get('route')} or decision is not the record's ({want}, {decided})")
+        elif want == "compact" and ev.get("token") != decided:
             bad.append("compact token is not the record's decision")
-        if temperature < 0.05 and ev.get("route") != "compact":
+        if temperature < 0.05 and why != "none":
             bad.append("below temperature 0.05 the record always decides")
     elif ev.get("record_returned") or ev.get("picked_on_device"):
         bad.append("record consumed where no compact pick applies")
     if ev.get("captured"):
-        inventory = ev.get("inventory") or {}
-        want = gate.expected_inventory(arm if eligible else "host")
-        if any(inventory.get(k) != v for k, v in want.items()):
-            bad.append("captured graph's selector nodes differ: " + json.dumps(inventory))
+        bad.extend(gate.inventory_problems(ev.get("inventory") or {}, arm if (graph and eligible) else "host"))
     return bad
 
 
-def analyze(out):
+def analyze(out, expect=None):
+    """expect: {"binary": SHA, "model": SHA} from the gate's plan; the matrix must come from the same ones."""
     out = Path(out)
-    records, problems, counts = {}, [], {}
+    receipt = json.loads((out / "run.json").read_text())
+    names = [leg_name(g, a) for g, a in legs()]
+    if receipt.get("legs") != names or receipt.get("completed") != names:
+        raise ValueError("matrix leg inventory incomplete or altered")
+    if expect and (receipt.get("binary_sha256") != expect["binary"] or receipt.get("model_sha256") != expect["model"]):
+        raise ValueError("matrix receipt is from another binary or model")
+    records, problems, differences, counts = {}, [], [], {}
     for graph, arm in legs():
         name = leg_name(graph, arm)
         leg = json.loads((out / (name + ".json")).read_text())
-        if leg["env"] != leg_env(graph, arm, out / (name + ".trace.jsonl")) or not leg["health"].get("deterministic"):
-            raise ValueError(name + ": environment or mode differs")
+        # The trace is read beside the leg (an archive replays wherever it is unpacked); its recorded path must
+        # name that file.
+        env = dict(leg["env"])
+        traced = Path(env.pop("EMBER_ROUTE_TRACE", "")).name
+        want = leg_env(graph, arm, "")
+        want.pop("EMBER_ROUTE_TRACE")
+        if (env != want or traced != name + ".trace.jsonl" or not leg["health"].get("deterministic")
+                or leg["health"].get("model") != receipt.get("model")):
+            raise ValueError(name + ": environment, mode or model differs")
         rows = leg["rows"]
         if [(r["config"], r["prompt"]) for r in rows] != [(i, p) for i in range(len(CONFIGS)) for p in PROMPTS]:
             raise ValueError(name + ": incomplete request inventory")
         records[(graph, arm)] = rows
-        traced = gate.read_trace(out / (name + ".trace.jsonl"))
-        if len(traced) != len(rows):
-            raise ValueError(f"{name}: {len(traced)} traced requests for {len(rows)} requests")
-        c = counts.setdefault(name, {"positions": 0, "routes": {}})
-        for row, t in zip(rows, traced):
+        traced_requests = gate.read_trace(out / (name + ".trace.jsonl"))
+        if len(traced_requests) != len(rows):
+            raise ValueError(f"{name}: {len(traced_requests)} traced requests for {len(rows)} requests")
+        c = counts.setdefault(name, {"positions": 0, "per_config": [0] * len(CONFIGS), "routes": {}, "captures": 0})
+        continuity = gate.Continuity()
+        for row, t in zip(rows, traced_requests):
             config = row["config"]
-            temperature = CONFIGS[config].get("temperature", 1.0)
             q = t["request"]
             where = f"{name} config {config} '{row['prompt']}'"
+            problems.extend(where + ": " + b for b in request_problems(q, graph, arm, config))
             if q.get("prompt_ids") != row["prompt_ids"] or not gate.generated_matches(
                     t["end"].get("generated"), row["ids"], row["stop_id"]):
                 problems.append(where + ": trace differs from the response")
-            if q.get("spec") or q.get("cpu_offload_layers") != 0 or q.get("ir") or not q.get("deterministic"):
-                problems.append(where + ": not a plain all-GPU deterministic request")
+            bad = gate.composition_problems(t)
+            problems.extend(where + ": " + b for b in bad)
+            if bad:
+                continue
             for ev in t["tokens"]:
-                if ev.get("phase") != "decode":
-                    continue
                 c["positions"] += 1
+                c["per_config"][config] += 1
                 c["routes"][ev.get("route")] = c["routes"].get(ev.get("route"), 0) + 1
-                problems.extend(f"{where} pos {ev.get('pos')}: {b}"
-                                for b in check_position(ev, graph, arm, config, temperature))
+                c["captures"] += bool(ev.get("captured"))
+                at = f"{where} pos {ev.get('pos')}: "
+                if graph:
+                    problems.extend(at + b for b in continuity.step(ev))
+                problems.extend(at + b for b in check_position(ev, graph, arm, config, q["temperature"]))
     for graph in (0, 1):
         base = records[(graph, "host")]
         for arm in ("parts0", "parts4"):
             for x, y in zip(base, records[(graph, arm)]):
                 if x != y:
-                    problems.append(f"graph{graph} {arm} config {x['config']} '{x['prompt']}': response differs from host")
+                    differences.append(f"{arm} graph{graph} config {x['config']} '{x['prompt']}': response differs from host")
     for name, c in counts.items():
-        if c["positions"] == 0:
-            problems.append(name + ": no sampled decode positions")
+        if any(n == 0 for n in c["per_config"]):
+            problems.append(name + ": a configuration has no sampled decode position")
     for arm in ("parts0", "parts4"):
         if counts[leg_name(1, arm)]["routes"].get("compact", 0) == 0:
             problems.append(arm + ": no compact route with the graph on")
-    return {"pass": not problems, "counts": counts, "problems": problems[:50], "problem_count": len(problems),
+    return {"pass": not problems and not differences, "counts": counts, "problems": problems[:50],
+            "problem_count": len(problems), "response_differences": differences,
+            "binary_sha256": receipt.get("binary_sha256"), "model_sha256": receipt.get("model_sha256"),
             "scope": "exclusion and graph-off routes for the three arms; IR and CPU offload are not executed"}
 
 
@@ -210,9 +258,13 @@ if __name__ == "__main__":
     p = sub.add_parser("analyze")
     p.add_argument("out")
     args = parser.parse_args()
-    if args.action == "run":
-        result = run(str(Path(args.binary).resolve()), str(Path(args.model).resolve()), args.out)
-    else:
-        result = analyze(args.out)
+    try:
+        if args.action == "run":
+            result = run(str(Path(args.binary).resolve()), str(Path(args.model).resolve()), args.out)
+        else:
+            result = analyze(args.out)
+    except Exception as exc:  # an execution failure, not a failed route check: exit 3
+        print(json.dumps({"pass": False, "error": repr(exc)}))
+        sys.exit(3)
     print(json.dumps(result, indent=1))
     sys.exit(0 if result["pass"] else 1)

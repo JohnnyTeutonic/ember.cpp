@@ -1402,9 +1402,7 @@ std::vector<float> TinyLlamaModel::forward_device_graph(int token_id, int pos, K
 // kernels (ember_verify::selector_kernels), with the partition kernel's grid.
 void TinyLlamaModel::trace_graph_inventory(cudaGraph_t graph) {
   DecodeRoute& r = decode_route_;
-  r.nodes_kernel = r.nodes_unidentified = r.nodes_select = r.nodes_partition = r.nodes_merge = -1;
-  r.partition_grid[0] = r.partition_grid[1] = r.partition_grid[2] = 0;
-  r.merge_grid = 0;
+  r = DecodeRoute{};  // every inventory field unset (-1) until this capture's nodes are read
   size_t n = 0;
   if (cudaGraphGetNodes(graph, nullptr, &n) != cudaSuccess) {
     cudaGetLastError();
@@ -1432,16 +1430,28 @@ void TinyLlamaModel::trace_graph_inventory(cudaGraph_t graph) {
       ++r.nodes_unidentified;
       continue;
     }
-    if (p.func == k.select) {
+    // Captured argument values: kernelParams[i] points at argument i (no "extra" packing for <<<>>> launches).
+    auto arg_ptr = [&](int i) { return p.kernelParams ? *static_cast<void* const*>(p.kernelParams[i]) : nullptr; };
+    auto arg_int = [&](int i) { return p.kernelParams ? *static_cast<const int*>(p.kernelParams[i]) : -1; };
+    if (p.func == k.select) {  // select_rows_kernel(logits, vocab, picks)
       ++r.nodes_select;
-    } else if (p.func == k.partition) {
+      r.select_vocab = arg_int(1);
+      r.select_buffers = arg_ptr(0) == logits_dev_ && arg_ptr(2) == decode_pick_dev_;
+    } else if (p.func == k.partition) {  // partition_rows_kernel(logits, vocab, picks, parts)
       ++r.nodes_partition;
       r.partition_grid[0] = p.gridDim.x;
       r.partition_grid[1] = p.gridDim.y;
       r.partition_grid[2] = p.gridDim.z;
-    } else if (p.func == k.merge) {
+      r.partition_vocab = arg_int(1);
+      r.partition_parts = arg_int(3);
+      r.partition_buffers = arg_ptr(0) == logits_dev_ && arg_ptr(2) == decode_pick_parts_dev_;
+    } else if (p.func == k.merge) {  // merge_parts(parts, out, count)
       ++r.nodes_merge;
-      r.merge_grid = p.gridDim.x;
+      r.merge_grid[0] = p.gridDim.x;
+      r.merge_grid[1] = p.gridDim.y;
+      r.merge_grid[2] = p.gridDim.z;
+      r.merge_count = arg_int(2);
+      r.merge_buffers = arg_ptr(0) == decode_pick_parts_dev_ && arg_ptr(1) == decode_pick_dev_;
     }
   }
 }

@@ -54,11 +54,12 @@ static void merge_property() {
   for (int vocab : vocabs) {
     for (int t = 0; t < 400; ++t) {
       std::vector<float> row(vocab);
-      std::uniform_int_distribution<int> kind(0, 9), small(-3, 3);
+      std::uniform_int_distribution<int> kind(0, 19), small(-3, 3);
       for (float& v : row) {
         const int k = kind(g);
-        // Small integers make ties (within and across partitions) common.
-        v = k == 0 ? NAN : k == 1 ? -INFINITY : k == 2 ? (g() & 1 ? 0.0f : -0.0f) : static_cast<float>(small(g));
+        // Small integers make ties (within and across partitions) common; +inf is rarer so finite maxima remain.
+        v = k <= 1 ? NAN : k <= 3 ? -INFINITY : k <= 5 ? (g() & 1 ? 0.0f : -0.0f) : k == 6 ? INFINITY
+                                                                                          : static_cast<float>(small(g));
       }
       if (t % 7 == 0)
         for (float& v : row) v = NAN;  // all-NaN row

@@ -91,12 +91,16 @@ def main():
     if work.exists():
         raise ValueError("work directory already exists")
     work.mkdir()
-    summary = {"status": "INCOMPLETE", "complete": False, "steps": [], "legs": []}
+    summary = {"status": "INCOMPLETE", "complete": False, "steps": [], "legs": [], "checkpoints": []}
     lock, stop = threading.Lock(), threading.Event()
+    # Set while a timing leg runs: no checkpoint compression competes with any timing arm.
+    quiet = threading.Event()
     deadline = time.monotonic() + 9600
+    current = {"process": None}
 
-    def pack():
+    def pack(reason="periodic"):
         with lock:
+            summary["checkpoints"].append({"utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "reason": reason})
             atomic_json(out / "summary.json", summary)
             tmp = out / "out.zip.tmp"
             with zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=1,
@@ -109,22 +113,48 @@ def main():
 
     def periodic():
         while not stop.wait(120):
+            if quiet.is_set():
+                continue
             try:
                 pack()
             except Exception as e:
                 (out / "vm.log").open("a").write("CHECKPOINT_ERROR " + str(e) + "\n")
+
+    def kill_group(process):
+        """Terminate the command's whole process group (a client and the server it started), then reap it."""
+        for sig, wait in ((signal.SIGTERM, 20), (signal.SIGKILL, 10)):
+            try:
+                os.killpg(process.pid, sig)
+            except ProcessLookupError:
+                return
+            try:
+                process.wait(wait)
+                return
+            except subprocess.TimeoutExpired:
+                continue
 
     def run(cmd, log, timeout=1800, env=None, cwd=None, stderr_log=None):
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise TimeoutError("scientific deadline")
         with log.open("wb") as f, (stderr_log.open("wb") if stderr_log else open(os.devnull, "wb")) as e:
-            result = subprocess.run(cmd, stdout=f, stderr=e if stderr_log else subprocess.STDOUT,
-                                    env=clean_env() if env is None else env, timeout=min(timeout, remaining), cwd=cwd)
-        summary["steps"].append({"log": log.name, "returncode": result.returncode})
-        return result.returncode
+            process = subprocess.Popen(cmd, stdout=f, stderr=e if stderr_log else subprocess.STDOUT,
+                                       env=clean_env() if env is None else env, cwd=cwd, start_new_session=True)
+            current["process"] = process
+            try:
+                returncode = process.wait(min(timeout, remaining))
+            except BaseException:
+                kill_group(process)
+                raise
+            finally:
+                current["process"] = None
+            kill_group(process)  # a finished client leaves no server behind
+        summary["steps"].append({"log": log.name, "returncode": returncode})
+        return returncode
 
     def terminate(sig, frame):
+        if current["process"] is not None:
+            kill_group(current["process"])
         raise TimeoutError("signal " + str(sig))
 
     signal.signal(signal.SIGTERM, terminate)
@@ -225,6 +255,8 @@ def main():
         atomic_json(science / "retained.json", retained)
 
         matrix_tool = src / PACKET / "parts4_route_matrix.py"
+        # 0: routes pass; 1: the matrix ran and a route check failed (kept; the gate is then inconclusive);
+        # anything else is an execution failure, which stops before the gate's legs.
         if run([sys.executable, str(matrix_tool), "run", str(server), str(upload / "model.gguf"),
                 str(science / "matrix")], science / "matrix.log", 1800) not in (0, 1):
             raise RuntimeError("route matrix execution")
@@ -238,15 +270,27 @@ def main():
         registered = gate.registered_gate()
         for leg in plan["runs"]:
             log = science / ("leg_" + leg["name"] + ".log")
+            if leg["kind"] == "timing":
+                if not quiet.is_set():
+                    pack("before timing legs")
+                    quiet.set()
+            started = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             rc = run(leg["command"], log, 1800)
+            summary["steps"][-1].update(leg=leg["name"], started_utc=started,
+                                        ended_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
             if rc:
                 raise RuntimeError("leg execution " + leg["name"])
             # The registered predicates on the fixed inventory, at once; never a retry.
             registered.load_run(science / "gate", leg, plan)
             summary["legs"].append({"name": leg["name"], "returncode": rc, "log_sha256": sha(log)})
             atomic_json(science / "completed_legs.json", summary["legs"])
+        quiet.clear()
         result = gate.analyze(science / "gate", science / "matrix")
         atomic_json(science / "gate_summary.json", result)
+        # The sealed inventory a home replay checks; the zip checkpoints are live snapshots, not seals.
+        atomic_json(science / "evidence_sha256.json",
+                    {str(p.relative_to(science)): sha(p) for p in sorted(science.rglob("*"))
+                     if p.is_file() and p.name != "evidence_sha256.json"})
         for name, rec in inputs["files"].items():
             if sha(upload / name) != rec["sha256"]:
                 raise ValueError("final input drift " + name)
@@ -261,7 +305,7 @@ def main():
     finally:
         stop.set()
         thread.join(timeout=5)
-        pack()
+        pack("final")
     return 0 if summary["complete"] else 2
 
 

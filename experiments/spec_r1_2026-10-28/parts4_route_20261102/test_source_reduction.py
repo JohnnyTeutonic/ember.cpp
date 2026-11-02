@@ -1,13 +1,22 @@
-"""The route-evidence patch is trace-only: removing it reproduces the protocol's candidate source byte for byte.
+"""The route-evidence patch is a pure insertion of trace-guarded code: removing it reproduces the protocol's
+candidate source byte for byte.
 
-Every insertion is whole lines. Removing (a) each statement whose `if` condition names the trace flag, (b) the
-flag definitions and includes, and (c) the named trace helpers and declarations yields files whose SHA-256 equals
-the protocol pins (api.cpp, model.cpp) or the protocol commit 41b6cd5 (the others). The timing legs, which leave
-EMBER_ROUTE_TRACE unset, therefore execute the candidate's statements plus untaken trace-flag branches only.
+Every insertion is whole lines. Removing (a) each statement guarded by the trace flag, (b) the flag definitions
+and includes, and (c) the named trace helpers and declarations yields files whose SHA-256 equals the protocol
+pins (api.cpp, model.cpp) or the protocol commit 41b6cd5 (the others). A removable guard must be a conjunction
+with the bare flag as one conjunct and only side-effect-free others (no assignment, increment or call), so a
+negated, disjunctive or side-effecting guard is refused rather than deleted.
+
+This is a source-difference proof, not a semantic one. With EMBER_ROUTE_TRACE unset the patched build also runs
+the cached flag reads, the trace_request initialisation and the untaken branches' conditions, and TinyLlamaModel
+carries route-state members (constructed once). All three arms of the gate run this same binary; it is not timed
+against an uninstrumented build.
 """
 import hashlib
 import re
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 PINS = {  # parts4_full_model_protocol_20261102.json source_files_sha256, and git show 41b6cd5:<file>
@@ -66,6 +75,47 @@ def statement_end(lines, i):
     raise AssertionError("unterminated statement at line %d" % (i + 1))
 
 
+def guard(lines, i):
+    """The condition of the `if` starting at lines[i], balanced across lines."""
+    text = "\n".join(lines[i:i + 8])
+    start = text.index("if (") + 3
+    depth = 0
+    for j in range(start, len(text)):
+        depth += (text[j] == "(") - (text[j] == ")")
+        if depth == 0:
+            return text[start + 1:j]
+    raise ValueError("unterminated condition at line %d" % (i + 1))
+
+
+def conjuncts(cond):
+    parts, depth, cur, j = [], 0, "", 0
+    while j < len(cond):
+        c = cond[j]
+        depth += (c == "(") - (c == ")")
+        if depth == 0 and cond.startswith("&&", j):
+            parts.append(cur.strip())
+            cur, j = "", j + 2
+            continue
+        if depth == 0 and cond.startswith("||", j):
+            raise ValueError("top-level disjunction in a trace guard: " + cond)
+        cur += c
+        j += 1
+    return parts + [cur.strip()]
+
+
+SIDE_EFFECT = re.compile(r"(?<![=!<>])=(?!=)|\+\+|--|[A-Za-z_]\w*\s*\(")
+
+
+def check_guard(cond):
+    """A removable guard: the bare flag is one conjunct, and the others have no side effects."""
+    parts = conjuncts(cond)
+    if not any(p in ("trace", "tracing") for p in parts):
+        raise ValueError("trace guard without the bare flag as a conjunct: " + cond)
+    for p in parts:
+        if p not in ("trace", "tracing") and SIDE_EFFECT.search(p):
+            raise ValueError("side effect in a trace guard: " + cond)
+
+
 def reduce(name, text):
     lines = text.split("\n")
     for file, first, last, before, after in RANGES:
@@ -86,6 +136,7 @@ def reduce(name, text):
         if lines[i].strip() in FLAG_LINES or lines[i] in INCLUDES.get(name, ()):
             i += 1
         elif TRACE_IF.match(lines[i]):
+            check_guard(guard(lines, i))
             i = statement_end(lines, i) + 1
         else:
             out.append(lines[i])
@@ -103,6 +154,28 @@ def test_reduction_reproduces_the_protocol_source():
 def test_selector_and_policy_sources_unchanged():
     for name, pin in UNCHANGED.items():
         assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == pin, name
+
+
+@pytest.mark.parametrize("statement", [
+    "  if (!trace) logits_dev_ = nullptr;",
+    "  if (trace || refill_cache()) x = 1;",
+    "  if (trace && refill_cache()) x = 1;",
+    "  if (trace && (n = 4)) x = 1;",
+    "  if (trace && i++) x = 1;",
+    "  if (pick) record(trace);",
+])
+def test_unsafe_guards_are_refused_not_deleted(statement):
+    source = (ROOT / "model.cpp").read_text(encoding="utf-8")
+    anchor = "  if (!enabled || decode_graph_disabled_) return {};"
+    assert source.count(anchor) == 1
+    with pytest.raises(ValueError):
+        reduce("model.cpp", source.replace(anchor, statement + "\n" + anchor))
+
+
+def test_audited_guard_forms_are_accepted():
+    for cond in ("trace", "tracing", "trace && pick", "trace && (!enabled || decode_graph_disabled_)",
+                 "e == cudaSuccess && trace"):
+        check_guard(cond)
 
 
 def test_no_trace_statement_outside_a_trace_branch():

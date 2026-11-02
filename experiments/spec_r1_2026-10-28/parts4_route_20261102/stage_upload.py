@@ -11,10 +11,12 @@ for --manifest-sha256 and writes preflight.json beside the upload.
 """
 import argparse
 import hashlib
+import importlib.util
 import io
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tarfile
@@ -77,14 +79,14 @@ def preflight(upload):
             or inputs["files"]["eval100.jsonl"]["sha256"] != packet["input_pins"]["prompts_sha256"]):
         raise ValueError("registered input pins")
     report = {"source_commit": inputs["source_commit"], "manifest_sha256": sha(upload / "inputs.json")}
+    # The payload's own helpers (extraction with its link and traversal refusals, the cleaned environment), from
+    # the staged copy of parts4_vm.py, so the preflight cannot drift from what the VM will do.
+    spec = importlib.util.spec_from_file_location("parts4_vm_staged", upload / "parts4_vm.py")
+    vm = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(vm)
     with tempfile.TemporaryDirectory(prefix="parts4_preflight_") as tmp:
         src = Path(tmp) / "src"
-        src.mkdir()
-        with tarfile.open(upload / "candidate.tgz") as t:
-            for m in t.getmembers():
-                if not m.isfile() and not m.isdir():
-                    raise ValueError("links/special source archive member")
-            t.extractall(src)
+        vm.extract(upload / "candidate.tgz", src)
         for relative, expected in packet["source_files_sha256"].items():
             if sha(src / relative) != expected:
                 raise ValueError("source pin mismatch " + relative)
@@ -94,18 +96,23 @@ def preflight(upload):
         for relative, expected in packet["frozen_collector_sha256"].items():
             if sha(src / relative) != expected:
                 raise ValueError("frozen collector drift " + relative)
-        env = dict(os.environ, PYTEST_DISABLE_PLUGIN_AUTOLOAD="1")
-        tests = subprocess.run([sys.executable, "-m", "pytest", "-q", "--color=no", "-p", "no:cacheprovider",
-                                "test_source_reduction.py", "test_parts4_gate.py"], cwd=src / PACKET, env=env,
-                               capture_output=True, text=True)
-        tail = tests.stdout.strip().splitlines()[-1] if tests.stdout.strip() else tests.stderr
-        if tests.returncode or f"{packet['packet_test_count']} passed" not in tail:
-            raise ValueError("packet tests: " + tail)
+        env = vm.clean_env()
+
+        def pytest(args, cwd, want):
+            r = subprocess.run([sys.executable, "-m", "pytest", "-q", "--color=no", "-p", "no:cacheprovider", *args],
+                               cwd=cwd, env=env, capture_output=True, text=True)
+            tail = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr
+            if r.returncode or not re.search(r"\b%d passed\b" % want, tail) or "skipped" in tail:
+                raise ValueError(" ".join(args) + ": " + tail)
+            return tail
+        contracts = pytest([str(src / "tools/row_pick_profile/test_integration.py")], src, 12)
+        tail = pytest(["test_source_reduction.py", "test_parts4_gate.py"], src / PACKET, packet["packet_test_count"])
         exe = Path(tmp) / "test_route_trace"
         subprocess.run(["g++", "-std=c++17", "-O1", "-I", str(src), str(src / PACKET / "test_route_trace.cpp"), "-o",
                         str(exe)], check=True)
         header = subprocess.run([str(exe)], capture_output=True, text=True, check=True).stdout.strip()
-        report.update(packet_tests=tail, trace_header_test=json.loads(header), source_pins="match",
+        report.update(selector_contracts=contracts, packet_tests=tail, trace_header_test=json.loads(header),
+                      source_pins="match",
                       frozen_collector="match", input_pins="match", archive_links="none")
     return report
 
