@@ -1,0 +1,29 @@
+{
+  "status": "CPU_RUNTIME_PREPARED_MODEL_NOT_HOME",
+  "source_commit": "41b6cd5a006ecb828523cee43756f05af9d0835f",
+  "has_cuda": false,
+  "binary_sha256": "b9aa22dc3e98a99eec1ecefdb2204e6e7fa4e2b549376981ec5d817a87d71029",
+  "checks": [
+    "built CPU-only native server",
+    "existing state template suite passed",
+    "four explicit k4 insertion/rejection checks passed"
+  ],
+  "model": "/mnt/c/ml_artifacts/tiny_chat/c12_Sfull_r1_cont_v3_20261101/post_c12_Sfull_r1/sft/tc_sft_Sfull_r1.gguf",
+  "model_exists": false,
+  "launch_argv": [
+    "/home/jonat/ember_publication_build_20261030/tinyllama_server",
+    "/mnt/c/ml_artifacts/tiny_chat/c12_Sfull_r1_cont_v3_20261101/post_c12_Sfull_r1/sft/tc_sft_Sfull_r1.gguf",
+    "8081",
+    "127.0.0.1",
+    "/home/jonat/ember_publication_20261030/www",
+    "0"
+  ],
+  "remaining": [
+    "Verify recovered model identity and GGUF tokenizer/template",
+    "Actual Sfull load and health check",
+    "Multi-turn generation smoke and browser UI",
+    "Revalidate source references after purge"
+  ],
+  "provider_calls": 0,
+  "earlier_harness_misuse": "insert mode without required JSON stdin refused; corrected fixture invocation above, not a model failure"
+}

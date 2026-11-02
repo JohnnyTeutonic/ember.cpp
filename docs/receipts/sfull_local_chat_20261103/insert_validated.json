@@ -1,0 +1,85 @@
+{
+  "fixture": {
+    "vocab": 100,
+    "k": 4,
+    "eot": 1,
+    "user": 2,
+    "assistant": 3,
+    "seqs": [
+      [
+        2,
+        10,
+        3,
+        11,
+        1
+      ],
+      [
+        2,
+        10,
+        3,
+        11,
+        2
+      ],
+      [
+        2,
+        10,
+        3,
+        11,
+        1,
+        100,
+        101,
+        102,
+        103
+      ],
+      [
+        100
+      ]
+    ]
+  },
+  "result": [
+    {
+      "out": [
+        2,
+        10,
+        3,
+        11,
+        1,
+        100,
+        101,
+        102,
+        103
+      ]
+    },
+    {
+      "out": [
+        2,
+        10,
+        3,
+        11,
+        1,
+        100,
+        101,
+        102,
+        103,
+        2
+      ]
+    },
+    {
+      "out": [
+        2,
+        10,
+        3,
+        11,
+        1,
+        100,
+        101,
+        102,
+        103
+      ]
+    },
+    {
+      "refused": "state id 100 at position 0 is not part of a complete state block directly after an <|endoftext|> that ends an assistant reply"
+    }
+  ],
+  "expected_checks_passed": 4
+}
