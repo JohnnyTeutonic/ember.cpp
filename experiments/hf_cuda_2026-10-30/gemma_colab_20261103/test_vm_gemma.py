@@ -35,9 +35,24 @@ for f in "$@"; do
   esac
 done''',
     "nvidia-smi": "#!/usr/bin/env bash\necho 'NVIDIA L4'",
-    "apt-get": "#!/usr/bin/env bash\nexit 0",
+    "apt-get": r'''#!/usr/bin/env bash
+echo "apt-get $*" >> "$VM_ROOT/apt.calls"
+if [ "$1" = update ] && grep -qs '^deb ' "$VM_APT_ETC/sources.list.d/cuda-old.list"; then
+  echo "E: Conflicting values set for option Signed-By"; exit 100; fi
+exit 0''',
+    # apt-cache: the pinned versions are offered by the image's configuration unless a scenario says otherwise;
+    # in the reconciliation scenarios only after the keyring package is installed
+    "apt-cache": r'''#!/usr/bin/env bash
+case "$APT_SCENARIO" in
+  conflict|sources|unoffered) [ -e "$VM_ROOT/keyring_installed" ] && [ "$APT_SCENARIO" != unoffered ] || { echo "  Candidate: (none)"; exit 0; };;
+esac
+[ "$FAIL_AT" = toolkit ] && { echo "  Candidate: (none)"; exit 0; }
+printf "  Candidate: 12.6.3-1\n     12.6.4.1-1 500\n     12.6.3-1 500\n"''',
     "curl": "#!/usr/bin/env bash\n[ \"$FAIL_AT\" = toolkit ] && exit 22; while [ $# -gt 0 ]; do [ \"$1\" = -o ] && echo deb > \"$2\"; shift; done; exit 0",
-    "dpkg": "#!/usr/bin/env bash\n[ \"$1\" = -l ] && echo 'ii  cuda-minimal-build-12-6 12.6.3-1'; exit 0",
+    "dpkg": r'''#!/usr/bin/env bash
+[ "$1" = -l ] && { echo 'ii  cuda-minimal-build-12-6 12.6.3-1'; exit 0; }
+echo "dpkg $*" >> "$VM_ROOT/apt.calls"; : > "$VM_ROOT/keyring_installed"; exit 0''',
+    "ldd": "#!/usr/bin/env bash\necho '\tlibcublas.so.12 => /usr/local/cuda-12.6/lib64/libcublas.so.12'",
     "nproc": "#!/usr/bin/env bash\necho 2",
     "cmake": r'''#!/usr/bin/env bash
 [ "$FAIL_AT" = build ] && exit 4
@@ -83,8 +98,10 @@ def make_tools(tmp):
     nvcc.parent.mkdir(parents=True)
     nvcc.write_text('#!/usr/bin/env bash\necho "Cuda compilation tools, release ${STUB_NVCC_RELEASE:-12.6}, V12.6.85"\n')
     nvcc.chmod(0o755)
+    (tmp / "apt" / "sources.list.d").mkdir(parents=True)
+    (tmp / "apt" / "sources.list").write_text("deb http://archive.ubuntu.com/ubuntu noble main\n")
     return dict(os.environ, PATH=f"{b}:/usr/bin:/bin", VM_TEST_HARNESS="1", VM_ROOT=str(tmp),
-                VM_CUDA_HOME=str(tmp / "cuda"))
+                VM_CUDA_HOME=str(tmp / "cuda"), VM_APT_ETC=str(tmp / "apt"))
 
 
 def alive(pid):
@@ -96,10 +113,12 @@ def alive(pid):
 
 
 class VmGemmaTests(unittest.TestCase):
-    def run_vm(self, fail_at="", run="g1", head=None, extra=None):
+    def run_vm(self, fail_at="", run="g1", head=None, extra=None, prepare=None, with_tmp=False):
         tmp = Path(tempfile.mkdtemp())
         (tmp / f"upload_{run}").mkdir()  # the driver creates it before launch
         env = dict(make_tools(tmp), FAIL_AT=fail_at, **(extra or {}))
+        if prepare:
+            prepare(tmp)
         if head:
             env["STUB_HEAD"] = head
         r = subprocess.run(["bash", str(HERE / "vm_gemma.sh"), COMMIT, run], env=env, capture_output=True, text=True,
@@ -107,6 +126,8 @@ class VmGemmaTests(unittest.TestCase):
         out = tmp / f"run_{run}" / "out"
         status = json.loads((out / "status.json").read_text()) if (out / "status.json").exists() else None
         done = (out / "DONE").read_text().strip() if (out / "DONE").exists() else None
+        if with_tmp:
+            return r.returncode, status, done, tmp
         return r.returncode, status, done, r.stderr
 
     def test_success_records_exactly_the_required_gates(self):
@@ -208,13 +229,52 @@ class VmGemmaTests(unittest.TestCase):
         self.assertLess(int((tmp / "heartbeat").read_text()), (out / "status.json").stat().st_mtime_ns)
         self.assertEqual((out / "DONE").read_text().strip(), "s1")
 
-    def test_toolkit_failure_stops_before_the_build(self):
+    def test_toolkit_failure_stops_before_the_packages(self):
+        # the pinned versions are not offered and the keyring download fails: nothing large was installed
         rc, s, done, _ = self.run_vm("toolkit")
         self.assertEqual((rc, s["gates"]["toolkit"]), (1, 22))
+        self.assertNotIn("packages", s["gates"])
         self.assertNotIn("build", s["gates"])
-        self.assertEqual(s["gates"]["packages"], 0)
         self.assertFalse(s["science_started"])
         self.assertEqual(done, "g1")
+
+    def test_toolkit_uses_the_image_apt_configuration_when_it_offers_the_pins(self):
+        rc, s, _, tmp = self.run_vm(with_tmp=True)
+        self.assertEqual((rc, s["gates"]["toolkit"]), (0, 0))
+        calls = (tmp / "apt.calls").read_text()
+        self.assertNotIn("dpkg -i", calls)  # no keyring, no change to the sources
+        self.assertIn("cuda-minimal-build-12-6=12.6.3-1 libcublas-dev-12-6=12.6.4.1-1", calls)
+        log = (tmp / "run_g1" / "out" / "toolkit.log").read_text()
+        self.assertIn("image's own APT configuration", log)
+
+    def test_toolkit_sets_aside_a_conflicting_nvidia_entry(self):
+        repo = "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/"
+        other = "deb http://archive.ubuntu.com/ubuntu noble universe\n"
+
+        def prepare(tmp):
+            d = tmp / "apt" / "sources.list.d"
+            (d / "cuda-old.list").write_text(f"deb [signed-by=/usr/share/keyrings/other.gpg] {repo} /\n")
+            (d / "cuda-x.sources").write_text(f"Types: deb\nURIs: {repo}\nSuites: /\nSigned-By: /x.gpg\n")
+            (d / "other.list").write_text(other)
+        rc, s, _, tmp = self.run_vm(extra={"APT_SCENARIO": "conflict"}, prepare=prepare, with_tmp=True)
+        self.assertEqual((rc, s["gates"]["toolkit"]), (0, 0))
+        d = tmp / "apt" / "sources.list.d"
+        self.assertTrue((d / "cuda-old.list").read_text().startswith("# set aside by vm_gemma.sh: deb "))
+        self.assertFalse((d / "cuda-x.sources").exists())
+        self.assertEqual((d / "other.list").read_text(), other)  # unrelated repositories untouched
+        kept = tmp / "run_g1" / "apt_disabled"
+        self.assertEqual(sorted(x.name for x in kept.iterdir()), ["cuda-old.list", "cuda-x.sources"])
+        calls = (tmp / "apt.calls").read_text()
+        self.assertIn("dpkg -i --force-confnew", calls)
+        self.assertLess(calls.index("dpkg -i"), calls.index("apt-get install -y -q --no-install-recommends"))
+        before = (tmp / "run_g1" / "out" / "apt_nvidia_sources_before.txt").read_text()
+        self.assertIn("cuda-old.list", before)
+
+    def test_toolkit_fails_closed_when_the_pins_are_not_offered_after_reconciliation(self):
+        rc, s, _, tmp = self.run_vm(extra={"APT_SCENARIO": "unoffered"}, with_tmp=True)
+        self.assertEqual((rc, s["gates"]["toolkit"]), (1, 98))
+        self.assertNotIn("packages", s["gates"])
+        self.assertNotIn("--no-install-recommends", (tmp / "apt.calls").read_text())
 
     def test_a_toolkit_other_than_12_6_fails_the_build(self):
         rc, s, _, _ = self.run_vm(extra={"STUB_NVCC_RELEASE": "13.0"})

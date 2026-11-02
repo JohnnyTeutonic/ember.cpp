@@ -67,7 +67,10 @@ live() {   # a failed or empty process listing counts as live: absence is never 
     [ -n "$CPID" ] || return 1
     local t
     t=$(ps -eo pid=,pgid=,stat=) && [ -n "$t" ] || return 0
-    awk -v c="$CPID" '($1 == c || $2 == c) && $3 !~ /^Z/ {f = 1} END {exit !f}' <<< "$t"
+    # exit 1 only for a well-formed listing with no live match; a malformed row or an awk failure counts as live
+    awk -v c="$CPID" 'NF != 3 || $1 !~ /^[0-9]+$/ || $2 !~ /^[0-9]+$/ {bad = 1}
+        ($1 == c || $2 == c) && $3 !~ /^Z/ {f = 1} END {exit (f || bad) ? 0 : 1}' <<< "$t"
+    [ $? -ne 1 ]
 }
 on_stop() {
     trap '' TERM INT
@@ -129,6 +132,53 @@ print(json.dumps({k: v for k, v in p.items() if k != "nvidia_smi"}))
 PY
 G[provenance]=0
 
+# CUDA toolkit 12.6 from NVIDIA's ubuntu2404 repository, exact versions (the image had only CUDA 13.0 on 3 Nov; ember
+# 5bfda893 was verified to compile under 12.6). It runs before the interpreter and packages, so an APT problem costs
+# minutes, not the torch download. The image may already configure NVIDIA's repository, possibly with another
+# Signed-By, which APT refuses to combine with a second entry. So every NVIDIA source entry is recorded first; if
+# the image's own configuration already offers both pinned versions, it is used unchanged. Otherwise only the entries
+# for this exact repository are set aside (lines in .list files commented out, .sources files moved; copies kept in
+# $W/apt_disabled), the keyring package (checked by hash) installs NVIDIA's canonical entry, and apt-get update and
+# both pinned candidates must succeed before anything is installed.
+CUDA_KEYRING_SHA=d2a6b11c096396d868758b86dab1823b25e14d70333f1dfa74da5ddaf6a06dba
+CUDA_REPO=https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64
+APT_ETC=/etc/apt
+[ "${VM_TEST_HARNESS:-}" = 1 ] && APT_ETC=${VM_APT_ETC:-$APT_ETC}   # test harness only
+pinned_available() {
+    apt-cache policy cuda-minimal-build-12-6 | grep -q '12\.6\.3-1' \
+        && apt-cache policy libcublas-dev-12-6 | grep -q '12\.6\.4\.1-1'
+}
+toolkit_gate() {
+    local f
+    grep -rn -F developer.download.nvidia.com "$APT_ETC/sources.list" "$APT_ETC/sources.list.d" \
+        > "$O/apt_nvidia_sources_before.txt" 2>&1
+    if apt-get update -q && pinned_available; then
+        echo "toolkit source: the image's own APT configuration, unchanged"
+    else
+        echo "toolkit source: NVIDIA's keyring entry; existing entries for $CUDA_REPO set aside"
+        mkdir -p "$W/apt_disabled" || return $?
+        for f in $(grep -rl -F "$CUDA_REPO" "$APT_ETC/sources.list" "$APT_ETC/sources.list.d" 2>/dev/null); do
+            cat "$f" > "$W/apt_disabled/$(basename "$f")" || return $?
+            case "$f" in
+                *.sources) rm -f "$f" || return $?;;
+                *) sed -i "\#$CUDA_REPO#s/^[^#]/# set aside by vm_gemma.sh: &/" "$f" || return $?;;
+            esac
+        done
+        curl -sSfL -o "$W/cuda-keyring.deb" "$CUDA_REPO/cuda-keyring_1.1-1_all.deb" || return $?
+        echo "$CUDA_KEYRING_SHA  $W/cuda-keyring.deb" | sha256sum -c - || return $?
+        DEBIAN_FRONTEND=noninteractive dpkg -i --force-confnew "$W/cuda-keyring.deb" || return $?
+        apt-get update -q || return $?
+        pinned_available || { echo "the pinned CUDA 12.6 versions are not offered after reconciliation"; return 98; }
+    fi
+    grep -rn -F developer.download.nvidia.com "$APT_ETC/sources.list" "$APT_ETC/sources.list.d" \
+        > "$O/apt_nvidia_sources_after.txt" 2>&1
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
+        cuda-minimal-build-12-6=12.6.3-1 libcublas-dev-12-6=12.6.4.1-1 || return $?
+    dpkg -l | grep -E 'cuda|cublas' > "$O/cuda_packages.txt"
+}
+toolkit_gate > "$O/toolkit.log" 2>&1 || fail toolkit $?
+G[toolkit]=0
+
 # Pinned interpreter and packages (AMENDMENT.md, v2). The frozen pod ran CPython 3.11; the Colab image's own Python
 # (3.13 on 3 Nov, for which torch 2.4.1 has no wheel) is used only for provenance and to install uv. uv 0.11.29
 # (wheel pinned by hash) installs its CPython 3.11.15 build into a seeded venv, first on PATH from here on, so every
@@ -152,20 +202,6 @@ UV_WHEEL_SHA=eec03a8b63d55915694db3af4e91324b39ced49e2aeac7af37851c7eb3f470ea
 } > "$O/packages.log" 2>&1 || fail packages $?
 G[packages]=0
 
-# CUDA toolkit 12.6 from NVIDIA's ubuntu2404 repository, exact versions (the image had only CUDA 13.0 on 3 Nov; ember
-# 5bfda893 was verified to compile under 12.6). The repository keyring is checked by hash before it is trusted.
-CUDA_KEYRING_SHA=d2a6b11c096396d868758b86dab1823b25e14d70333f1dfa74da5ddaf6a06dba
-CUDA_REPO=https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64
-{
-    curl -sSfL -o "$W/cuda-keyring.deb" "$CUDA_REPO/cuda-keyring_1.1-1_all.deb" \
-    && echo "$CUDA_KEYRING_SHA  $W/cuda-keyring.deb" | sha256sum -c - \
-    && dpkg -i "$W/cuda-keyring.deb" \
-    && apt-get update -q \
-    && apt-get install -y -q --no-install-recommends cuda-minimal-build-12-6=12.6.3-1 libcublas-dev-12-6=12.6.4.1-1 \
-    && dpkg -l | grep -E 'cuda|cublas' > "$O/cuda_packages.txt"
-} > "$O/toolkit.log" 2>&1 || fail toolkit $?
-G[toolkit]=0
-
 # the frozen launch environment (set where the frozen wrapper set it: after packages, before download/conversion)
 unset EMBER_IR EMBER_KV EMBER_DETERMINISTIC EMBER_DECODE_LINEAR EMBER_DECODE_OPT EMBER_DECODE_PICK
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 EMBER_IR_BUILD=1 EMBER_IR_CTX=1024 \
@@ -183,9 +219,10 @@ CUDA_HOME=/usr/local/cuda-12.6
     && "$CUDA_HOME/bin/nvcc" --version > "$O/nvcc.txt" \
     && grep -q 'release 12\.6' "$O/nvcc.txt" \
     && cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=89 \
-        -DCMAKE_CUDA_COMPILER="$CUDA_HOME/bin/nvcc" > "$O/cmake.log" \
+        -DCMAKE_CUDA_COMPILER="$CUDA_HOME/bin/nvcc" -DCUDAToolkit_ROOT="$CUDA_HOME" > "$O/cmake.log" \
     && grep -q 'CUDA toolkit and cuBLAS found' "$O/cmake.log" \
     && make -C build -j"$(nproc)" ir_hf_cuda_bench > "$O/make.log" \
+    && { echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}"; ldd build/ir_hf_cuda_bench; } > "$O/ldd.txt" \
     && cp build/ir_hf_cuda_bench "$O/binaries/ir_hf_cuda_bench" \
     && [ "$(sha256sum build/ir_hf_cuda_bench | cut -c1-64)" = "$(sha256sum "$O/binaries/ir_hf_cuda_bench" | cut -c1-64)" ] \
     && sha256sum "$O/binaries/ir_hf_cuda_bench" > "$O/binary.sha256"
