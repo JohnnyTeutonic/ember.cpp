@@ -121,7 +121,7 @@ All are resolved:
 
 The seed is not traced, because the session does not store it; the matrix's recorded request bodies carry it.
 
-Round 4 (`f2a77e6`) confirmed those fixes. One case remained: a complete warm request whose recorded partner was truncated went unchecked. Every complete request is now checked on its own, with request `j` belonging to record `j // 2`. A first round-4 run had reviewed a stale bundle (`b35319f`); it is kept, marked as such, and was not used.
+Round 4 (`f2a77e6`) confirmed those fixes. One case remained: a complete warm request whose recorded partner was truncated went unchecked. Every complete request is now checked on its own, with request `j` belonging to record `j // 2`. A first round-4 run had reviewed a stale bundle (`b35319f`); it is kept, marked as such, and was not used. Round 5 (`dd6dade`) found it resolved and no new blocking or should-fix problem, and its verdict was ADMIT.
 
 The raw reviews are kept outside the stack repositories, in the workspace's `AI_ML/e10_parts4_claude/`.
 
