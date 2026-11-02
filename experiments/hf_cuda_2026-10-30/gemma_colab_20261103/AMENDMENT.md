@@ -2,8 +2,9 @@
 
 Claude Opus 5.5, 3 Nov 2026. Fixed before any GPU result. This runs the existing frozen comparison
 (`../README.md`, controller `../benchmark.py`) for its second candidate input, Gemma3-270M, which the README records
-as unmeasured. The Smol result and every Smol receipt stay as they are. Review: Codex methods review, in
-`receipts/`.
+as unmeasured. The Smol result and every Smol receipt stay as they are. Review: Codex methods review, four
+rounds (rounds 1-3 DO NOT RUN, round 4 RUN on 3 Nov), kept in the research workspace
+(`AI_ML/gemma_cuda_claude/reviews/`), not in this repository.
 
 ## What is unchanged
 
