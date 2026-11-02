@@ -1,0 +1,11 @@
+{
+  "provider": "colab",
+  "gpu": "NVIDIA L4",
+  "driver": "580.82.07",
+  "cuda_toolkit": "/usr/local/cuda-13 /usr/local/cuda-13.0",
+  "python": "3.13.16",
+  "os": "PRETTY_NAME=\"Ubuntu 24.04.4 LTS\"",
+  "cpu": "model name\t: Intel(R) Xeon(R) CPU @ 2.20GHz",
+  "nproc": "12",
+  "nvidia_smi": "Mon Nov  2 15:23:26 2026       \n+-----------------------------------------------------------------------------------------+\n| NVIDIA-SMI 580.82.07              Driver Version: 580.82.07      CUDA Version: 13.0     |\n+-----------------------------------------+------------------------+----------------------+\n| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n|                                         |                        |               MIG M. |\n|=========================================+========================+======================|\n|   0  NVIDIA L4                      Off |   00000000:00:03.0 Off |                    0 |\n| N/A   33C    P8             12W /   72W |       0MiB /  23034MiB |      0%      Default |\n|                                         |                        |                  N/A |\n+-----------------------------------------+------------------------+----------------------+\n\n+-----------------------------------------------------------------------------------------+\n| Processes:                                                                              |\n|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n|        ID   ID                                                               Usage      |\n|=========================================================================================|\n|  No running processes found                                                             |\n+-----------------------------------------------------------------------------------------+"
+}
