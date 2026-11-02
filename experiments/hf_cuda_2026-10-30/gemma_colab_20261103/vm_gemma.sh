@@ -18,6 +18,7 @@ MIRROR_REV=23cf460f6bb16954176b3ddcc8d4f250501458a9
 [[ "$RUN" =~ ^[A-Za-z0-9_-]{1,32}$ ]] || { echo "RUN_ID: 1-32 letters, digits, - or _" >&2; exit 2; }
 ROOT=/content
 [ "${VM_TEST_HARNESS:-}" = 1 ] && ROOT=${VM_ROOT:-/content}   # test harness only
+echo $$ > "$ROOT/vm_$RUN.pid"   # the driver stops this run through this PID (SIGTERM; see on_stop)
 W=$ROOT/run_$RUN
 O=$W/out
 U=$ROOT/upload_$RUN
@@ -49,6 +50,27 @@ finish() {
 }
 trap finish EXIT
 fail() { G[$1]=$2; exit 1; }
+# Stop on SIGTERM/SIGINT: the controller runs in its own process group (setsid, so its native child is in it too);
+# stop the whole group, wait until no member is left (TERM, then KILL after 60 s), record whether it is gone, then
+# exit through finish, which publishes status.json and DONE. Other children of this shell (pip, make) are stopped too.
+CPID=""
+on_stop() {
+    trap '' TERM INT
+    local gone=true
+    if [ -n "$CPID" ]; then
+        kill -TERM -- -"$CPID" 2>/dev/null
+        for _ in $(seq 60); do kill -0 -- -"$CPID" 2>/dev/null || break; sleep 1; done
+        kill -0 -- -"$CPID" 2>/dev/null && { kill -KILL -- -"$CPID" 2>/dev/null; sleep 2; }
+        kill -0 -- -"$CPID" 2>/dev/null && gone=false
+        wait "$CPID" 2>/dev/null
+        G[benchmark]=143
+    fi
+    pkill -TERM -P $$ 2>/dev/null
+    printf '{"stopped_at": "%s", "controller_started": %s, "controller_group_gone": %s}\n' \
+        "$(date -u +%FT%TZ)" "$([ -n "$CPID" ] && echo true || echo false)" "$gone" > "$O/stop.json"
+    exit 1
+}
+trap on_stop TERM INT
 cd "$W"
 E=experiments/hf_cuda_2026-10-30
 A=$E/gemma_colab_20261103
@@ -161,11 +183,16 @@ python3 "branch/$A/launch_contract_gemma.py" --out "$O/launch_contract.json" --p
     --binary build/ir_hf_cuda_bench --gguf "$W/gemma-3-270m-it-f32.gguf" > "$O/contract.log" 2>&1 || fail contract $?
 G[contract]=0
 
-# the frozen controller, unchanged arguments; scientific work starts here
-date -u +%FT%TZ > "$O/SCIENCE_STARTED"
-python3 "src/$E/benchmark.py" --gguf "$W/gemma-3-270m-it-f32.gguf" --binary build/ir_hf_cuda_bench \
-    --out "$O/gemma3-270m" --lengths 16 128 512 --steps 32 --cycles 2 > "$O/benchmark.log" 2>&1
+# the frozen controller, unchanged arguments; scientific work starts here. It runs in its own process group and this
+# shell waits on it, so a stop signal is handled at once (bash defers traps while a foreground command runs).
+date -u +%FT%TZ > "$O/SCIENCE_STARTED" || fail benchmark 94
+setsid python3 "src/$E/benchmark.py" --gguf "$W/gemma-3-270m-it-f32.gguf" --binary build/ir_hf_cuda_bench \
+    --out "$O/gemma3-270m" --lengths 16 128 512 --steps 32 --cycles 2 > "$O/benchmark.log" 2>&1 &
+CPID=$!
+echo "$CPID" > "$O/controller.pid"
+wait "$CPID"
 G[benchmark]=$?
+CPID=""
 python3 "src/$E/benchmark.py" --out "$O/gemma3-270m" --analyze > "$O/gate_summary.json" 2> "$O/analyze.log"
 G[analyze]=$?
 # what stopped the controller, if anything: HALTED's own content and the logs' tails (AMENDMENT.md, outcomes)

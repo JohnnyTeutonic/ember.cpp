@@ -45,7 +45,9 @@ if cmd == "exec":
     if label == "mkdir":
         print("MADE"); sys.exit(0)
     if label == "stop_workload":
-        st["stopped"] = True; save(); print("STOPPED"); sys.exit(0)
+        st["stopped"] = True; save()
+        if mode == "stop_unconfirmed": print("UNCONFIRMED {}"); sys.exit(0)
+        (content / f"run_{run}" / "out" / "DONE").write_text(run); print("CONFIRMED {}"); sys.exit(0)
     if label.startswith("pack"): label = "pack"
     out = content / f"run_{run}" / "out"
     if label == "launch":
@@ -53,11 +55,11 @@ if cmd == "exec":
         gates = {g: 0 for g in os.environ["MOCK_GATES"].split()}
         if mode == "gate_fail": gates["strict_2"] = 1
         commit = os.environ["MOCK_COMMIT"] if mode != "wrong_commit" else "f" * 40
-        s = {"run_id": run, "commit": commit, "head": commit, "exit_status": 0,
+        s = {"run_id": run, "commit": commit, "head": commit, "exit_status": 0, "science_started": True,
              "pass": mode != "gate_fail", "gates": gates}
         (out / "status.json").write_text(json.dumps(s))
-        if mode != "never_done": (out / "DONE").write_text(run)
-        print("LAUNCHED")
+        if mode not in ("never_done", "stop_unconfirmed", "launch_ack_lost"): (out / "DONE").write_text(run)
+        if mode != "launch_ack_lost": print("LAUNCHED")
     elif label == "poll":
         print("DONE" if (out / "DONE").exists() else "RUNNING")
     else:
@@ -179,10 +181,25 @@ class DriveTests(unittest.TestCase):
     def test_deadline_without_done_stops_the_workload_then_retrieves(self):
         rc, state, log, tmp, _ = self.run_drive("never_done")
         self.assertTrue(state.get("stopped"), log)
-        self.assertIn("workload stop: ok", log)
+        self.assertIn("workload stop: confirmed", log)
+        manifest = (tmp / "receipts" / "t1" / "archive.sha256").read_text()
+        self.assertIn("  status.json", manifest)
         self.assertTrue((tmp / "receipts" / "t1" / "status.json").is_file())  # evidence came home
         self.assertEqual(state["sessions"], {})
         self.assertEqual(rc, 2, log)  # no DONE seen: never a validated success
+
+    def test_unconfirmed_stop_is_never_a_success(self):
+        rc, state, log, _, _ = self.run_drive("stop_unconfirmed")
+        self.assertIn("NOT CONFIRMED", log)
+        self.assertEqual(rc, 2, log)
+        self.assertEqual(state["sessions"], {})
+
+    def test_lost_launch_acknowledgement_still_stops_the_script(self):
+        rc, state, log, _, _ = self.run_drive("launch_ack_lost")
+        self.assertTrue(state.get("stopped"), log)
+        self.assertIn("launched False", log)
+        self.assertEqual(rc, 2, log)
+        self.assertEqual(state["sessions"], {})
 
     def test_bad_arguments_are_refused(self):
         r = subprocess.run([sys.executable, str(HERE / "drive.py"), "main", "x"], capture_output=True, text=True)

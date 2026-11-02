@@ -7,7 +7,8 @@ Run in a foreground WSL process from this ember checkout's root:
     python3 experiments/hf_cuda_2026-10-30/gemma_colab_20261103/drive.py FULL_COMMIT_SHA RUN_ID
 
 Session name claude-gemma-RUN_ID. Outputs: /mnt/c/ml_artifacts/benchmarks/hf_cuda_gemma_colab_20261103/RUN_ID/
-(driver.log, scan_out.tgz, run_RUN_ID/out/); receipts copied to this folder's receipts/RUN_ID/.
+(driver.log, scan_out.tgz, run_RUN_ID/out/); the top-level files of out/ are copied to this folder's
+receipts/RUN_ID/, with archive.sha256 hashing every retrieved file (out/binaries/, out/inputs/ included).
 
 Deadlines from the driver's start: polling ends at 60 minutes, retrieval at 75, shutdown attempts at 85, the
 final inventory at 90. Every external call has a timeout capped by the deadline that governs it; a call past its
@@ -23,6 +24,7 @@ Exit status:
   3  cleanup unresolved: a VM may still be running (the log names it and how to stop it)
 Test hooks (DRIVE_TEST_*) are honoured only with DRIVE_TEST_HARNESS=1, and refused otherwise.
 """
+import hashlib
 import json
 import os
 import re
@@ -83,6 +85,7 @@ class Driver:
         self.raised = False
         self.log_failed = False
         self.done = False
+        self.stop_confirmed = None  # None: no stop was needed or the script never started
 
     # ---- logging never raises: the file is the record, the terminal and stderr best effort
     def log(self, *parts):
@@ -252,16 +255,38 @@ class Driver:
         return False
 
     def stop_workload(self):
-        """Polling ended without DONE: stop the controller and the VM script in a controlled way, so the archive is
-        taken from outputs no longer being written. The VM script's trap still writes status.json and DONE."""
-        code = ("import subprocess, time\n"
-                "subprocess.run('pkill -INT -f [b]enchmark.py', shell=True)\n"
-                "time.sleep(20)\n"
-                f"subprocess.run('pkill -TERM -f [v]m_run_{self.run}.sh', shell=True)\n"
-                "time.sleep(10)\n"
-                "print('STOPPED')\n")
-        rc, out = self.exec_py(code, 120, self.retrieve_end, "stop_workload")
-        self.log("workload stop:", "ok" if rc == 0 and "STOPPED" in out else "not confirmed")
+        """Polling ended without DONE (or the launch acknowledgement was lost): send SIGTERM to the VM script's
+        recorded PID. Its handler stops the controller's process group, waits until it is gone, writes stop.json and
+        exits through the trap that writes status.json and DONE. The stop counts as confirmed only when DONE exists
+        and stop.json says the controller group is gone (or never started); then nothing is still writing.
+        Returns True, False (not confirmed) or None (the script never started)."""
+        code = (
+            "import json, os, signal, time\n"
+            f"pid_file, done, stop = '/content/vm_{self.run}.pid', '/content/run_{self.run}/out/DONE', "
+            f"'/content/run_{self.run}/out/stop.json'\n"
+            "if not os.path.exists(pid_file):\n"
+            "    print('NOT_STARTED'); raise SystemExit\n"
+            "pid = int(open(pid_file).read())\n"
+            "try:\n"
+            "    os.kill(pid, signal.SIGTERM)\n"
+            "except ProcessLookupError:\n"
+            "    pass\n"
+            "for _ in range(120):\n"
+            "    if os.path.exists(done):\n"
+            "        break\n"
+            "    time.sleep(1)\n"
+            "s = json.load(open(stop)) if os.path.exists(stop) else {}\n"
+            "gone = s.get('controller_group_gone') is True or s.get('controller_started') is False\n"
+            "print('CONFIRMED' if os.path.exists(done) and (gone or not os.path.exists(stop)) else 'UNCONFIRMED', "
+            "json.dumps(s))\n")
+        rc, out = self.exec_py(code, 200, self.retrieve_end, "stop_workload")
+        if rc == 0 and "NOT_STARTED" in out:
+            self.log("workload stop: the VM script never started")
+            return None
+        confirmed = rc == 0 and "CONFIRMED" in out.split()
+        self.log("workload stop:", "confirmed" if confirmed else "NOT CONFIRMED: the archive may hold outputs still "
+                 "being written", out.strip()[-300:])
+        return confirmed
 
     def retrieve(self):
         # GNU tar exits 1 when a file changed while it was read; the archive is still written and is evidence
@@ -271,31 +296,30 @@ class Driver:
                 f"run_{self.run}/out', shell=True)\n"
                 "print('PACKED' if r.returncode in (0, 1) else 'PACK_FAILED %d' % r.returncode)\n")
         archive = self.out / "scan_out.tgz"
+        prefix = f"run_{self.run}/out"
         for attempt in (1, 2):
+            archive.unlink(missing_ok=True)  # never validate a partial archive from an earlier attempt
             rc, out = self.exec_py(code, 300, self.retrieve_end, f"pack{attempt}")
             if rc != 0 or "PACKED" not in out:
                 continue
             rc, _ = self.call([COL, "download", "-s", self.name, f"/content/scan_{self.run}.tgz", str(archive)],
                               600, self.retrieve_end, f"download {attempt}")
-            if rc == 0 and archive.is_file():
-                break
-        else:
-            self.log("EVIDENCE NOT RETRIEVED: the VM holds the only copy, and cleanup will stop it")
-            return False
-        prefix = f"run_{self.run}/out"
-        try:
-            with tarfile.open(archive) as t:
-                members = t.getmembers()
-                for m in members:
-                    inside = m.name == prefix or m.name.startswith(prefix + "/")
-                    if not (m.isfile() or m.isdir()) or not inside or ".." in Path(m.name).parts:
-                        self.log("refusing archive member", m.name)
-                        return False
-                t.extractall(self.out, members=members)
-        except (tarfile.TarError, OSError) as e:
-            self.log("extract failed:", e)
-            return False
-        return True
+            if rc != 0 or not archive.is_file():
+                continue
+            try:
+                with tarfile.open(archive) as t:
+                    members = t.getmembers()
+                    bad = [m.name for m in members if not (m.isfile() or m.isdir())
+                           or not (m.name == prefix or m.name.startswith(prefix + "/")) or ".." in Path(m.name).parts]
+                    if bad:
+                        self.log("refusing archive members", bad[:5])
+                        continue
+                    t.extractall(self.out, members=members)
+                return True
+            except (tarfile.TarError, OSError) as e:
+                self.log(f"archive attempt {attempt} unreadable:", e)
+        self.log("EVIDENCE NOT RETRIEVED: the VM holds the only copy, and cleanup will stop it")
+        return False
 
     def copy_receipts(self):
         src = self.out / f"run_{self.run}" / "out"
@@ -304,6 +328,11 @@ class Driver:
             for f in src.iterdir():
                 if f.is_file():
                     shutil.copy2(f, self.receipts / f.name)
+            # Everything retrieved, including out/binaries/ and out/inputs/, hashed into the receipts.
+            lines = []
+            for f in sorted(p for p in src.rglob("*") if p.is_file()):
+                lines.append(f"{hashlib.sha256(f.read_bytes()).hexdigest()}  {f.relative_to(src).as_posix()}\n")
+            (self.receipts / "archive.sha256").write_text("".join(lines))
             return True
         except OSError as e:
             self.log("receipt copy failed:", e)
@@ -318,7 +347,8 @@ class Driver:
             return None
         gates = s.get("gates") if isinstance(s, dict) else None
         if not isinstance(gates, dict) or not all(type(v) is int for v in gates.values()) \
-                or type(s.get("exit_status")) is not int or not isinstance(s.get("pass"), bool):
+                or type(s.get("exit_status")) is not int or not isinstance(s.get("pass"), bool) \
+                or not isinstance(s.get("science_started"), bool):
             self.log("status.json malformed:", json.dumps(s)[:500])
             return None
         if s.get("run_id") != self.run or s.get("commit") != self.commit or s.get("head") != self.commit:
@@ -335,6 +365,8 @@ class Driver:
             problems.append(f"VM exit status {s['exit_status']}")
         if s["pass"] is not True:
             problems.append("pass is not true")
+        if s["science_started"] is not True:
+            problems.append("the controller never started")
         self.log("status.json:", json.dumps(s))
         self.log("validation:", "PASS" if not problems else "; ".join(problems))
         # AMENDMENT.md, outcomes: a run that reached the controller may not be repeated, whatever happened next
@@ -393,8 +425,8 @@ class Driver:
             done = self.poll() if launched else False
             self.done = done
             self.log("launched", launched, "done", done, "cancelled", self.cancel)
-            if launched and not done:
-                self.stop_workload()
+            if not done:  # also when the launch acknowledgement was lost: the script may be running
+                self.stop_confirmed = self.stop_workload()
             transport = self.retrieve()  # also after a launch failure, deadline or signal: diagnostics are evidence
             receipts = transport and self.copy_receipts()
             valid = self.validate() if transport else None
@@ -416,6 +448,9 @@ class Driver:
                 self.log("validated status but no matching DONE marker was seen: exit 2")
                 code = 2
             if self.log_failed:
+                code = max(code, 2)
+            if self.stop_confirmed is False:  # the archive may not be a final snapshot
+                self.log("the workload stop was not confirmed: exit at least 2")
                 code = max(code, 2)
             self.log(f"exit {code} (transport {transport}, receipts {receipts}, valid {valid}, cleanup {clean})")
             try:

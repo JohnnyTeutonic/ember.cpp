@@ -52,7 +52,9 @@ case "$*" in
   *launch_contract_gemma.py*) [ "$FAIL_AT" = environment ] && exit 1; exit 0;;
   "-c "*) [ "$FAIL_AT" = imports ] && exit 1; exit 0;;
   *benchmark.py*--analyze*) echo '{"pass": true}'; exit 0;;
-  *benchmark.py*) [ "$FAIL_AT" = benchmark ] && exit 1; exit 0;;
+  *benchmark.py*) [ "$FAIL_AT" = benchmark ] && exit 1
+    if [ "$FAIL_AT" = slow_controller ]; then trap "" INT; sleep 300 & echo $! > "$VM_ROOT/native_child.pid"; wait; fi
+    exit 0;;
   "- "*) cat > /dev/null; [ "$FAIL_AT" = weights ] && [ "$2" != *provenance* ] && grep -q . /dev/null; exit 0;;
 esac
 exit 0''',
@@ -116,6 +118,40 @@ class VmGemmaTests(unittest.TestCase):
         self.assertFalse(s["science_started"])
         rc, s, _, _ = self.run_vm("benchmark")
         self.assertTrue(s["science_started"])
+
+    def test_stop_signal_takes_down_the_controller_group_before_status(self):
+        import signal
+        import time
+        tmp = Path(tempfile.mkdtemp())
+        b = tmp / "bin"
+        b.mkdir()
+        for name, body in STUBS.items():
+            (b / name).write_text(body + "\n")
+            (b / name).chmod(0o755)
+        (tmp / "upload_s1").mkdir()
+        env = dict(os.environ, PATH=f"{b}:/usr/bin:/bin", VM_TEST_HARNESS="1", VM_ROOT=str(tmp),
+                   FAIL_AT="slow_controller")
+        p = subprocess.Popen(["bash", str(HERE / "vm_gemma.sh"), COMMIT, "s1"], env=env,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        out = tmp / "run_s1" / "out"
+        for _ in range(100):  # wait until the controller (and its child) are running
+            if (out / "controller.pid").exists() and (tmp / "native_child.pid").exists():
+                break
+            time.sleep(0.1)
+        child = int((tmp / "native_child.pid").read_text())
+        os.kill(int((tmp / "vm_s1.pid").read_text()), signal.SIGTERM)
+        p.wait(timeout=90)
+        stop = json.loads((out / "stop.json").read_text())
+        self.assertTrue(stop["controller_started"])
+        self.assertTrue(stop["controller_group_gone"])
+        with self.assertRaises(ProcessLookupError):  # the native-like child is gone too
+            os.kill(child, 0)
+        s = json.loads((out / "status.json").read_text())
+        self.assertEqual(s["gates"]["benchmark"], 143)
+        self.assertTrue(s["science_started"])
+        self.assertFalse(s["pass"])
+        self.assertEqual((out / "DONE").read_text().strip(), "s1")
+        self.assertEqual(p.returncode, 1)
 
     def test_wrong_head_fails_checkout(self):
         rc, s, _, _ = self.run_vm(head="f" * 40)

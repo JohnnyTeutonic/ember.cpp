@@ -93,12 +93,22 @@ as unmeasured. The Smol result and every Smol receipt stay as they are. Review: 
 - The run goes through `drive.py`, generalised from the reviewed selective-scan driver.
   - Deadlines from the driver's start: polling ends at 60 minutes, retrieval at 75, shutdown attempts at 85, the
     final inventory at 90.
-  - If polling ends without `DONE`, the driver stops the controller (SIGINT) and then the VM script (SIGTERM, whose
-    trap still writes `status.json` and `DONE`), so it archives outputs that are no longer being written.
+  - If polling ends without `DONE` (or the launch was never acknowledged), the driver sends SIGTERM to the VM
+    script by its recorded PID. The script starts the controller in its own process group (`setsid`), so its trap
+    signals that whole group (the controller and the native engine it runs), waits up to 60 seconds, escalates to
+    SIGKILL, and records in `stop.json` whether the group is gone. Only then does the EXIT trap write
+    `status.json` and `DONE`; an interrupted controller is recorded as benchmark gate 143.
+  - The driver waits up to two minutes for `DONE` and logs the stop as confirmed, unconfirmed or not started. An
+    unconfirmed stop means the archive may hold outputs still being written, so the run can exit no better than 2
+    (transport or receipt failure). A local test sends SIGTERM to the script while a stub controller that ignores
+    SIGINT has a child running, and checks that both are gone before `status.json` and `DONE` appear.
   - Packing tolerates files changing while they are read, and pack and download are tried twice within the
     retrieval budget. A failed retrieval is logged as evidence lost before cleanup.
   - Cleanup, receipt and exit-code rules are the reviewed driver's. A validated success also needs the `DONE`
     marker.
   - Its local tests: `test_drive.py` (mock CLI) and `test_vm_gemma.py` (stub tools).
-- Receipts go to `receipts/RUN_ID/` (including the executable, controller, contract and manifests). The archive goes
-  to `/mnt/c/ml_artifacts/benchmarks/hf_cuda_gemma_colab_20261103/RUN_ID/`.
+- The whole retrieved output tree, with the executable (`out/binaries/`), the controller, contract and inputs
+  (`out/inputs/`), goes to `/mnt/c/ml_artifacts/benchmarks/hf_cuda_gemma_colab_20261103/RUN_ID/`. The top-level
+  files of `out/` (status, gates, provenance, packages, logs, raw rows, trials, analysis, `stop.json` if any) are
+  copied to `receipts/RUN_ID/` in the repository, with `archive.sha256` hashing every retrieved file, so the
+  archived executable and inputs are pinned from the receipts.
