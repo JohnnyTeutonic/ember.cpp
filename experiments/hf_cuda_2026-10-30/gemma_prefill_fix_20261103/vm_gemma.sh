@@ -11,8 +11,8 @@ set -u
 COMMIT=${1:-}
 RUN=${2:-}
 # ember compiled source: the prefill fix (branch claude/gemma-prefill-flash), commit and tree both checked
-SOURCE=d8843b1a65d1f83a9e5b5090ec6bb8b626b363c5
-SOURCE_TREE=24e2f5398cb4c876636d29f11070be5d0fccb921
+SOURCE=5794343c7fb37335ff6c9d8067f7b3c188a53f28
+SOURCE_TREE=c49265539306b7c593fafa5ca73bc1dedc5c4b76
 CANONICAL=0a174d42ccd7de15688e50dc044ea8006db31ee3bc6dc7e838f8a360ca46cdaa
 CONTROLLER=ddd3104489dd2935187271d48dfabe77501a2b3c5fa02350aad1ca5e54a2f04c
 MIRROR=unsloth/gemma-3-270m-it
@@ -261,7 +261,8 @@ G[build]=0
         src/cuda_kernels.cu src/graph_ir_cuda.cu src/logger.cpp -lcublas -Xlinker -rpath -Xlinker "$CUDA_HOME/lib64" \
         -o "$W/flash_window_attention_test" \
     && "$W/flash_window_attention_test" > "$O/kernel_test.txt" \
-    && grep -q '"test": "flash_window_attention", "pass": true' "$O/kernel_test.txt"
+    && grep -q '"test": "flash_window_attention", "pass": true' "$O/kernel_test.txt" \
+    && sha256sum "$W/flash_window_attention_test" > "$O/kernel_test.sha256"
 } > "$O/kernel_test.log" 2>&1 || fail kernel_test $?
 G[kernel_test]=0
 

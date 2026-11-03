@@ -8,13 +8,14 @@ research workspace (`AI_ML/gemma_cuda_claude/reviews/`).
 ## Why
 
 `g6-20261103` passed every parity gate. Ember's prefill was about 5x slower than HF's at 512 tokens (174.0 ms against
-34.3 ms) while its decode was 4.5-5.5x faster, and the gap was left undiagnosed. The cause is in the source:
+34.3 ms) while its decode was 4.5-5.5x faster, and the gap was left undiagnosed. The suspected cause, from the
+source (a plausible bottleneck, not yet a measured contribution):
 - Gemma 3's head_dim is 256. The tiled prefill kernels took only head_dim up to 128 (flash2 only 32 and 64), so
   Gemma's global layers ran the baseline kernel.
 - Its sliding-window layers, five in six, ran the IR's `window_attention_kernel`. That kernel uses one block per
   (token, head), walks every visible key and accumulates values serially.
 
-The fix, ember branch `claude/gemma-prefill-flash` at `d8843b1a` (tree `24e2f539`), extends the tiled kernel to
+The fix, ember branch `claude/gemma-prefill-flash` at `5794343c` (tree `c4926553`), extends the tiled kernel to
 head_dim 256, with 16 keys per tile so that its two shared tiles fit in 32.8 KB, and adds a window lower bound to it.
 The IR now runs multi-token window attention with no sinks and no soft cap on it; decode and every other case keep
 their kernels. This run measures what that does to the frozen comparison.
@@ -40,8 +41,10 @@ The VM script and driver are that packet's copies, with only these differences:
 
 ## What differs
 
-- **Engine source:** ember `d8843b1a`, tree `24e2f539`, checked by commit and tree as before. It is main `c214802`
-  plus the fix.
+- **Engine source:** ember `5794343c`, tree `c4926553`, checked by commit and tree as before. It is main `c214802`
+  plus the fix (two commits: the kernel change and its test). g6 ran the older frozen tree `ee183b61`, and the
+  ember changes between that tree and main `c214802` are not shown here to be irrelevant to these timings. So this
+  run is a re-measure on a new engine source: a change from g6 is that source's, not attributed to the patch alone.
 - **`kernel_test` gate**, after the build and before every download and forward. It runs
   `tools/flash_window_attention_test.cu` at the engine source, compiled with the same toolkit for sm_89:
   - both new entry points and the existing window kernel, against an FP64 CPU reference;
@@ -50,8 +53,12 @@ The VM script and driver are that packet's copies, with only these differences:
   - pass: `max |out - ref| / max(1, max |ref|) < 1e-5` everywhere, and the window entry point takes every shape.
 
   It also times Gemma 3 270M's attention shape (4 q heads over 1 kv head, head_dim 256, 512 tokens, window 512):
-  the window kernel against the tiled window and causal kernels, median of 20 each. Its output is
-  `kernel_test.txt`, retrieved with the receipts.
+  the window kernel against the tiled window and causal kernels, median of 20 each. The three kernels' outputs at
+  that shape are scored against the reference before they are timed.
+  - A host self-check first confirms that a NaN output fails the score: any non-finite output or reference scores
+    infinity (Codex round 1's blocking finding).
+  - Every CUDA call is checked, and outputs are NaN-filled before each launch.
+  - Its output (`kernel_test.txt`) and the test binary's hash (`kernel_test.sha256`) are retrieved with the receipts.
 
 ## Outcomes, stated before the run
 
@@ -62,6 +69,8 @@ The parity gate decides validity exactly as before. Timings are reported as the 
 - HF/ember decode 5.52x, 5.26x and 4.48x at 16, 128 and 512 tokens.
 
 - **Gap closed:** every gate passes, and ember's median prefill at 512 tokens is no slower than HF's in this run.
+  As for the other outcomes, the change is the new source's (see Engine source), with the kernel timing as
+  supporting evidence for where it comes from.
 - **Gap narrowed:** every gate passes, and ember's 512-token prefill is faster than g6's but still slower than HF's.
   The remaining factor is reported, not explained.
 - **No improvement:** every gate passes, and ember's 512-token prefill is not faster than g6's. The diagnosis above
