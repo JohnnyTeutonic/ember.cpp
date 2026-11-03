@@ -1,5 +1,18 @@
 # Gemma3-270M prefill after the attention fix: a re-measure on the frozen CUDA comparison
 
+**Revision 2 (after run f2, 3 Nov 2026), fixed before its own run.** f2 (revision 1, engine `5794343c`) measured
+the tiled kernel slower than the IR window kernel on Gemma's window layers: 1.79 ms per call against 0.59
+(`RESULT.md`). Revision 2's engine is `9a0e0998` (tree `067a9108`). There `graph_ir.cpp` is main's again, so window
+layers run the IR window kernel, and the tiled kernel keeps only head_dim 256 for causal attention, Gemma's global
+layers. The window-capable entry point stays, tested but unrouted. The packet is otherwise unchanged: controller,
+gates, kernel test, toolkit, interpreter, packages and inputs. Its run is `f3-20261103`, the revision's first run.
+Revision 2's outcomes are those below, on its own medians. In addition:
+- the arithmetic estimate from f2's component timings, about 29 ms at 512 tokens, is a prediction, not a
+  criterion;
+- the comparison with f2 is again across runs, and the within-run HF figures are the reference.
+Everything below describes revision 1 except where it says otherwise; the source pins in this packet are
+revision 2's.
+
 Claude Opus 5.5, 3 Nov 2026. Fixed before any GPU result for this engine source. It runs the frozen comparison
 (`../README.md`, controller `../benchmark.py`) for Gemma3-270M again, exactly as `../gemma_colab_20261103/` ran it
 (run `g6-20261103`), with one change: the engine is the prefill fix. Review: Codex methods review, kept in the

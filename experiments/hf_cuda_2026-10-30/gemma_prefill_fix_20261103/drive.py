@@ -62,7 +62,7 @@ RAISE_ON = hook("DRIVE_TEST_RAISE_ON", "")                      # test: first ca
 REQUIRED_GATES = {"analyze", "benchmark", "build", "checkout", "contract", "environment", "inputs", "kernel_test", "packages",
                   "provenance", "regenerate", "toolkit", "weights"}
 # vm_gemma.sh's engine source (the prefill fix); status.json must report it as source
-SOURCE = "5794343c7fb37335ff6c9d8067f7b3c188a53f28"
+SOURCE = "9a0e0998d3044ea20b6ff19bddf361707113e7b6"
 
 
 def launch_code(url, commit, run, root="/content"):

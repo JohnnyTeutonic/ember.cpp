@@ -9,7 +9,7 @@ import unittest
 
 HERE = Path(__file__).resolve().parent
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
-SOURCE = "5794343c7fb37335ff6c9d8067f7b3c188a53f28"
+SOURCE = "9a0e0998d3044ea20b6ff19bddf361707113e7b6"
 CANONICAL = "0a174d42ccd7de15688e50dc044ea8006db31ee3bc6dc7e838f8a360ca46cdaa"
 CONTROLLER = "ddd3104489dd2935187271d48dfabe77501a2b3c5fa02350aad1ca5e54a2f04c"
 REQUIRED = {"analyze", "benchmark", "build", "checkout", "contract", "environment", "inputs", "kernel_test", "packages",
@@ -27,7 +27,7 @@ if [ "$1" = clone ]; then d="${@: -1}/experiments/hf_cuda_2026-10-30/gemma_prefi
 dir=.; if [ "$1" = -C ]; then dir=$2; shift 2; fi
 case "$1" in
   worktree) mkdir -p "${@: -2:1}/experiments/hf_cuda_2026-10-30"; echo x > "${@: -2:1}/experiments/hf_cuda_2026-10-30/benchmark.py";;
-  rev-parse) case "$dir" in *src) case "$2" in *tree*) echo "${STUB_SOURCE_TREE:-c49265539306b7c593fafa5ca73bc1dedc5c4b76}";; *) echo 5794343c7fb37335ff6c9d8067f7b3c188a53f28;; esac;; *) echo "${STUB_HEAD:-0123456789abcdef0123456789abcdef01234567}";; esac;;
+  rev-parse) case "$dir" in *src) case "$2" in *tree*) echo "${STUB_SOURCE_TREE:-067a91082c8e6210bf5d38c851eafba8a77660fa}";; *) echo 9a0e0998d3044ea20b6ff19bddf361707113e7b6;; esac;; *) echo "${STUB_HEAD:-0123456789abcdef0123456789abcdef01234567}";; esac;;
   status) true;;
   *) [ "$FAIL_AT" = checkout ] && exit 5; true;;
 esac''',

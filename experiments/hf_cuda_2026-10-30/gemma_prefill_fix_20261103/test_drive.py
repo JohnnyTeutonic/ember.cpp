@@ -72,7 +72,7 @@ if cmd == "exec":
         gates = {g: 0 for g in os.environ["MOCK_GATES"].split()}
         if mode == "gate_fail": gates["strict_2"] = 1
         commit = os.environ["MOCK_COMMIT"] if mode != "wrong_commit" else "f" * 40
-        source = "5794343c7fb37335ff6c9d8067f7b3c188a53f28" if mode != "wrong_source" else "e" * 40
+        source = "9a0e0998d3044ea20b6ff19bddf361707113e7b6" if mode != "wrong_source" else "e" * 40
         s = {"run_id": run, "commit": commit, "head": commit, "source": source, "exit_status": 0,
              "science_started": True, "pass": mode != "gate_fail", "gates": gates}
         (out / "status.json").write_text(json.dumps(s))
