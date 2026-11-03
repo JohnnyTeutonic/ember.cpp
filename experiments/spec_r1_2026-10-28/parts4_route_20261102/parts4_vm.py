@@ -204,7 +204,10 @@ def main():
             raise RuntimeError("build dependency index")
         if run(["apt-get", "install", "-y", "-q", "libboost-regex-dev", "python3-dev"], science / "apt_install.log", 300):
             raise RuntimeError("build dependencies")
-        if run(["bash", "-lc", "nvcc --version; cmake --version; g++ --version; python3 --version; "
+        if run([sys.executable, "-c", "import numpy, pytest; print(numpy.__version__, pytest.__version__)"],
+               science / "payload_python.log", 60):
+            raise RuntimeError("payload interpreter prerequisites unavailable")
+        if run(["bash", "-lc", "set -e; nvcc --version; cmake --version; g++ --version; python3 --version; "
                 "python3 -c 'import numpy, pytest; print(numpy.__version__, pytest.__version__)'; "
                 "dpkg-query -W libboost-regex-dev python3-dev"], science / "toolchain.log", 60):
             raise RuntimeError("toolchain inventory (numpy and pytest are required)")
