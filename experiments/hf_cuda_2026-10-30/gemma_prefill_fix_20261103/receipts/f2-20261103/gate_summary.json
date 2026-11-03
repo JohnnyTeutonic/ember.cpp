@@ -1,0 +1,122 @@
+{
+  "status": "COMPLETE_PARITY_GATED_CUDA_MEASUREMENT",
+  "protocol_sha256": "3b54a0818431125e776a348fb6faa677a6b920c4704f1b11b17b05940a1178ed",
+  "journal_sha256": "a862ea1d80c6a9d51cfa981e8fb89ab261b1ecf398a0fe254bdd470c37fd612e",
+  "scope": "Paired FP32 CUDA runtime forward timings, gated on complete logit/ID parity.\n\nOne GPU, one host thread; same GGUF weights, raw tokens, last-row-only heads, cache and fixed-length\nteacher-forced continuations. No tokenizer, sampler, HTTP, startup or model\nquality claim. Input-ID H2D and full final-row D2H are inside both forward timers.\nThe initial CUDA HF greedy continuation is frozen, including EOS.\nCompleted trials are journaled and never re-timed on resume.\n",
+  "results": {
+    "16": {
+      "ember": {
+        "trials": 4,
+        "prefill_ms_median": 7.5163285,
+        "decode_ms_per_token_median": 5.631342080645161,
+        "prefill_ms_all": [
+          7.517349,
+          7.515308,
+          7.506175,
+          7.919924
+        ],
+        "decode_ms_per_token_all": [
+          5.632031580645161,
+          5.6330464838709675,
+          5.630652580645161,
+          5.6305721290322595
+        ]
+      },
+      "hf": {
+        "trials": 4,
+        "prefill_ms_median": 34.0678255,
+        "decode_ms_per_token_median": 30.701831645161292,
+        "prefill_ms_all": [
+          34.322906,
+          33.812745,
+          35.130608,
+          33.778844
+        ],
+        "decode_ms_per_token_all": [
+          30.46908780645162,
+          30.6968025483871,
+          30.719842741935484,
+          30.706860741935483
+        ]
+      },
+      "hf_over_ember_prefill": 4.532508857216658,
+      "hf_over_ember_decode": 5.451956426281229
+    },
+    "128": {
+      "ember": {
+        "trials": 4,
+        "prefill_ms_median": 15.9614625,
+        "decode_ms_per_token_median": 5.9548244354838715,
+        "prefill_ms_all": [
+          15.955487,
+          15.950176,
+          16.299221,
+          15.967438
+        ],
+        "decode_ms_per_token_all": [
+          5.954249903225808,
+          5.95165629032258,
+          5.955398967741934,
+          5.972781225806451
+        ]
+      },
+      "hf": {
+        "trials": 4,
+        "prefill_ms_median": 34.387440999999995,
+        "decode_ms_per_token_median": 30.65436553225807,
+        "prefill_ms_all": [
+          34.527432,
+          33.831416,
+          35.272308,
+          34.24745
+        ],
+        "decode_ms_per_token_all": [
+          31.175781258064514,
+          30.661105193548387,
+          30.618041419354835,
+          30.64762587096775
+        ]
+      },
+      "hf_over_ember_prefill": 2.1544041468631083,
+      "hf_over_ember_decode": 5.14782020265677
+    },
+    "512": {
+      "ember": {
+        "trials": 4,
+        "prefill_ms_median": 47.230282,
+        "decode_ms_per_token_median": 6.991144483870968,
+        "prefill_ms_all": [
+          47.192329,
+          47.600977,
+          47.220682,
+          47.239882
+        ],
+        "decode_ms_per_token_all": [
+          6.989297806451614,
+          7.001465774193549,
+          6.992991161290322,
+          6.9788182903225815
+        ]
+      },
+      "hf": {
+        "trials": 4,
+        "prefill_ms_median": 34.031886,
+        "decode_ms_per_token_median": 31.211157693548387,
+        "prefill_ms_all": [
+          34.296009,
+          33.739948,
+          35.476608,
+          33.767763
+        ],
+        "decode_ms_per_token_all": [
+          31.134755419354832,
+          31.28755996774194,
+          32.126972419354836,
+          30.9647434516129
+        ]
+      },
+      "hf_over_ember_prefill": 0.7205522507784307,
+      "hf_over_ember_decode": 4.464384589040405
+    }
+  }
+}
