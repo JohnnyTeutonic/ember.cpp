@@ -17,7 +17,7 @@ PACKET = HERE.relative_to(ROOT).as_posix()
 SOURCE = ["api.cpp", "model.cpp", "model.h", "verify_kernels.cu", "verify_kernels.h", "decode_route_trace.h",
           "decode_pick_policy.h", "row_pick_partitioned.cuh", "determinism.h", "speculative_verify.cpp", "server.cpp",
           "CMakeLists.txt"]
-COLLECTOR = [PACKET + "/" + n for n in ("parts4_vm.py", "parts4_gate.py", "parts4_route_matrix.py",
+COLLECTOR = [PACKET + "/" + n for n in ("parts4_vm.py", "timing_gate.py", "parts4_gate.py", "parts4_route_matrix.py",
                                          "test_parts4_gate.py", "test_source_reduction.py", "test_route_trace.cpp")] + [
     "experiments/spec_r1_2026-10-28/decode_pick_gate.py", "experiments/spec_r1_2026-10-28/decode_pick_fallback.py",
     "experiments/spec_r1_2026-10-28/decode_pick_rows.cpp", "experiments/draft_2026-10-27/dr_e2e.py",

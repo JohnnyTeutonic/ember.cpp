@@ -27,6 +27,7 @@ import threading
 import time
 import traceback
 import zipfile
+from timing_gate import Gate
 
 PACKET = "experiments/spec_r1_2026-10-28/parts4_route_20261102"
 
@@ -95,6 +96,7 @@ def main():
     lock, stop = threading.Lock(), threading.Event()
     # Set while a timing leg runs: no checkpoint compression competes with any timing arm.
     quiet = threading.Event()
+    timing_exclusion = Gate(out / "TRANSFER_TIMING_LOCK", "timing")
     deadline = time.monotonic() + 9600
     current = {"process": None}
 
@@ -288,6 +290,8 @@ def main():
             if leg["kind"] == "timing" and not quiet.is_set():
                 quiet.set()  # first, so no periodic pack can start once this one is done
                 pack("before timing legs")
+                if not timing_exclusion.acquire(wait_seconds=max(0, deadline - time.monotonic())):
+                    raise TimeoutError("relay exclusion did not clear before scientific deadline")
             started = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             rc = run(leg["command"], log, 1800)
             summary["steps"][-1].update(leg=leg["name"], started_utc=started,
@@ -298,6 +302,7 @@ def main():
             registered.load_run(science / "gate", leg, plan)
             summary["legs"].append({"name": leg["name"], "returncode": rc, "log_sha256": sha(log)})
             atomic_json(science / "completed_legs.json", summary["legs"])
+        timing_exclusion.release()
         quiet.clear()
         result = gate.analyze(science / "gate", science / "matrix")
         atomic_json(science / "gate_summary.json", result)

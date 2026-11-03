@@ -57,11 +57,11 @@ def stage(repo, commit, model, prompts, out):
             if member.issym() or member.islnk():
                 continue  # the payload refuses links; record what was left out
             tgz.addfile(member, tar.extractfile(member) if member.isfile() else None)
-    for name in ("packet.json", "parts4_vm.py"):
+    for name in ("packet.json", "parts4_vm.py", "timing_gate.py"):
         (out / name).write_bytes(git(repo, "show", f"{commit}:{PACKET}/{name}"))
     placed = {"model.gguf": place(model, out / "model.gguf"), "eval100.jsonl": place(prompts, out / "eval100.jsonl")}
     files = {n: {"bytes": (out / n).stat().st_size, "sha256": sha(out / n)}
-             for n in ("candidate.tgz", "model.gguf", "eval100.jsonl", "packet.json", "parts4_vm.py")}
+             for n in ("candidate.tgz", "model.gguf", "eval100.jsonl", "packet.json", "parts4_vm.py", "timing_gate.py")}
     manifest = {"schema": "ember.e10.parts4-upload.v1", "source_commit": commit, "files": files, "placed": placed}
     (out / "inputs.json").write_text(json.dumps(manifest, indent=2) + "\n")
     return commit, sha(out / "inputs.json")
