@@ -2097,9 +2097,17 @@ void rmsnorm_batch_cuda(float* d_out, float* d_in, const float* d_weight,
 // (absolute position start + t) attends to cache positions 0..start + t, with
 // K/V read from the cache the batch was just written into.
 //
-// Assumptions: head_dim is a multiple of 32 and at most 128 (each lane of a
-// warp owns head_dim / 32 output dimensions); num_q_heads % num_kv_heads == 0.
-// The wrapper falls back to the baseline kernel otherwise.
+// Assumptions: head_dim is a multiple of 32 and at most 128, or exactly 256 (each
+// lane of a warp owns head_dim / 32 output dimensions); num_q_heads %
+// num_kv_heads == 0. The wrapper falls back to the baseline kernel otherwise.
+// At head_dim 256 the K/V tile is BN = 16 keys (lanes 16-31 score nothing), so
+// its two shared tiles stay within the 48 KB static limit (32 x 513 floats would
+// not); Gemma 3's head_dim is 256.
+//
+// Sliding window (window > 0; attention_window_prefill_cuda): query position p
+// sees keys [p - window + 1, p] only, the window_attention_kernel's span with no
+// sinks (graph_ir_cuda.cu). Tiles wholly before a row's window are skipped, as
+// tiles after it are; window 0 is the plain causal attention above.
 //
 // Shape: one block per (tile of FA_BM = 32 queries, query head), 4 warps,
 // each warp owning FA_BM / 4 = 8 query rows. K/V move through shared memory
@@ -2127,16 +2135,17 @@ constexpr int FA_BN = 32;      // keys per K/V tile (= warp size: lane j scores 
 constexpr int FA_WARPS = 4;
 constexpr int FA_ROWS = FA_BM / FA_WARPS;
 
-template <int DPL>  // output dims per lane = head_dim / 32
+template <int DPL, int BN = FA_BN>  // DPL: output dims per lane = head_dim / 32; BN: keys per tile (<= 32)
 __global__ void attention_prefill_flash_kernel(
     float* __restrict__ out,            // [B, H_q, D]
     const float* __restrict__ q,        // [B, H_q, D]
     const float* __restrict__ k_cache,  // [S_max, H_kv, D]
     const float* __restrict__ v_cache,  // [S_max, H_kv, D]
-    int num_tokens, int num_q_heads, int num_kv_heads, int start_pos, float scale) {
+    int num_tokens, int num_q_heads, int num_kv_heads, int start_pos, float scale, int window) {
     constexpr int D = DPL * 32;
-    __shared__ float sK[FA_BN][D + 1];
-    __shared__ float sV[FA_BN][D];
+    static_assert(BN >= 1 && BN <= 32, "a tile's keys are scored one per lane");
+    __shared__ float sK[BN][D + 1];
+    __shared__ float sV[BN][D];
 
     const int lane = threadIdx.x & 31;
     const int warp = threadIdx.x >> 5;
@@ -2156,10 +2165,17 @@ __global__ void attention_prefill_flash_kernel(
         for (int k = 0; k < DPL; ++k) acc[i][k] = 0.0f;
     }
 
-    for (int kv0 = 0; kv0 < kv_end; kv0 += FA_BN) {
+    // With a window, the block's first query sees nothing before
+    // start + tile_first - window + 1: start at that key's tile.
+    int kv_begin = 0;
+    if (window > 0) {
+        const int lo = start_pos + tile_first - window + 1;
+        if (lo > 0) kv_begin = (lo / BN) * BN;
+    }
+    for (int kv0 = kv_begin; kv0 < kv_end; kv0 += BN) {
         // Cooperative tile load; positions past kv_end are zero-filled and
         // masked below.
-        for (int idx = threadIdx.x; idx < FA_BN * D; idx += blockDim.x) {
+        for (int idx = threadIdx.x; idx < BN * D; idx += blockDim.x) {
             const int j = idx / D, d = idx % D;
             const int pos = kv0 + j;
             const bool in = pos < kv_end;
@@ -2175,10 +2191,14 @@ __global__ void attention_prefill_flash_kernel(
             if (t >= num_tokens) continue;               // warp-uniform
             const int q_pos = start_pos + t;
             if (kv0 > q_pos) continue;                   // whole tile is in this row's future
+            const int lo_row = window > 0 ? q_pos - window + 1 : 0;
+            if (kv0 + BN - 1 < lo_row) continue;         // whole tile is before this row's window
             const int key = kv0 + lane;
+            // a lane scores a key when it has one (lane < BN) and the row can see it
+            const bool visible = lane < BN && key <= q_pos && key >= lo_row;
             const float* q_row = q + ((size_t)t * num_q_heads + q_head) * D;
             float s = -FLT_MAX;
-            if (key <= q_pos) {
+            if (visible) {
                 float dot = 0.0f;
 #pragma unroll 8
                 for (int d = 0; d < D; ++d) dot += __ldg(q_row + d) * sK[lane][d];
@@ -2188,7 +2208,7 @@ __global__ void attention_prefill_flash_kernel(
 #pragma unroll
             for (int o = 16; o > 0; o >>= 1) tile_max = fmaxf(tile_max, __shfl_xor_sync(0xffffffff, tile_max, o));
             const float m_new = fmaxf(m[i], tile_max);
-            const float p = (key <= q_pos) ? expf(s - m_new) : 0.0f;
+            const float p = visible ? expf(s - m_new) : 0.0f;
             const float corr = expf(m[i] - m_new);       // 0 on the first visited tile
             float p_sum = p;
 #pragma unroll
@@ -2197,7 +2217,7 @@ __global__ void attention_prefill_flash_kernel(
 #pragma unroll
             for (int k = 0; k < DPL; ++k) acc[i][k] *= corr;
 #pragma unroll 4
-            for (int jj = 0; jj < FA_BN; ++jj) {
+            for (int jj = 0; jj < BN; ++jj) {
                 const float pj = __shfl_sync(0xffffffff, p, jj);
 #pragma unroll
                 for (int k = 0; k < DPL; ++k) acc[i][k] += pj * sV[jj][lane + 32 * k];
@@ -2212,7 +2232,7 @@ __global__ void attention_prefill_flash_kernel(
         const int t = tile_first + warp * FA_ROWS + i;
         if (t >= num_tokens) continue;
         float* o_row = out + ((size_t)t * num_q_heads + q_head) * D;
-        const float inv_l = 1.0f / l[i];                 // l >= 1: key 0 is always visible
+        const float inv_l = 1.0f / l[i];                 // l >= 1: the row's own key is always visible
 #pragma unroll
         for (int k = 0; k < DPL; ++k) o_row[lane + 32 * k] = acc[i][k] * inv_l;
     }
@@ -2449,17 +2469,30 @@ static bool use_flash_prefill_attention() { return prefill_attention_mode() >= 1
 static bool launch_flash_prefill_attention(float* out, const float* q, const float* k_cache,
                                            const float* v_cache, int num_tokens, int num_q_heads,
                                            int num_kv_heads, int head_dim, int start_pos,
-                                           float scale, cudaStream_t stream) {
-    if (head_dim % 32 != 0 || head_dim > 128 || num_q_heads % num_kv_heads != 0) return false;
+                                           float scale, cudaStream_t stream, int window = 0) {
+    if (num_kv_heads <= 0 || num_q_heads % num_kv_heads != 0 || window < 0) return false;
     dim3 grid((num_tokens + FA_BM - 1) / FA_BM, num_q_heads);
     dim3 block(FA_WARPS * 32);
-    switch (head_dim / 32) {
-        case 1: attention_prefill_flash_kernel<1><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale); break;
-        case 2: attention_prefill_flash_kernel<2><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale); break;
-        case 3: attention_prefill_flash_kernel<3><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale); break;
-        case 4: attention_prefill_flash_kernel<4><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale); break;
+    switch (head_dim) {
+        case 32: attention_prefill_flash_kernel<1><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale, window); break;
+        case 64: attention_prefill_flash_kernel<2><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale, window); break;
+        case 96: attention_prefill_flash_kernel<3><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale, window); break;
+        case 128: attention_prefill_flash_kernel<4><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale, window); break;
+        // Gemma 3: 16 keys per tile keeps the two shared tiles at 32.8 KB (32 keys would need 65.7 KB)
+        case 256: attention_prefill_flash_kernel<8, 16><<<grid, block, 0, stream>>>(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, start_pos, scale, window); break;
         default: return false;
     }
+    return true;
+}
+
+bool attention_window_prefill_cuda(const float* q, const float* k_cache, const float* v_cache, float* out,
+                                   int num_tokens, int start_pos, int num_q_heads, int num_kv_heads, int head_dim,
+                                   float scale, int window, cudaStream_t stream) {
+    if (window <= 0 || num_tokens <= 1 || !use_flash_prefill_attention()) return false;
+    if (!launch_flash_prefill_attention(out, q, k_cache, v_cache, num_tokens, num_q_heads, num_kv_heads, head_dim,
+                                        start_pos, scale, stream, window))
+        return false;
+    gpuErrchk(cudaGetLastError());
     return true;
 }
 

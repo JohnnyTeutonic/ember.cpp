@@ -504,6 +504,19 @@ void attention_batch_prefill_cuda(
     const int* attention_mask_cu = nullptr // Optional attention mask, changed name
 );
 
+// Sliding-window prefill attention on the tiled kernel: query position start + t sees cache keys
+// [start + t - window + 1, start + t] (no sinks, no soft cap; the IR's window_attention_kernel span).
+// K/V caches are [S_max, H_kv, D_h]. Returns false, launching nothing, when the tiled kernel does not
+// take the shape (head_dim other than 32, 64, 96, 128 or 256; window <= 0; one token; EMBER_PREFILL_ATTN
+// =baseline): the caller then runs its own kernel.
+// Not routed by the IR: on an L4 at Gemma 3 270M's window-layer shape (4 q heads, 1 kv head, head_dim 256,
+// 512 tokens, window 512) it took 1.79 ms per call against the IR window kernel's 0.59 (run f2-20261103,
+// experiments/hf_cuda_2026-10-30/gemma_prefill_fix_20261103/RESULT.md), so window layers keep that kernel.
+// Kept, with its test (tools/flash_window_attention_test.cu), for a shape where it wins.
+bool attention_window_prefill_cuda(const float* q, const float* k_cache, const float* v_cache, float* out,
+                                   int num_tokens, int start_pos, int num_q_heads, int num_kv_heads, int head_dim,
+                                   float scale, int window, cudaStream_t stream);
+
 // New Batched Add Residual
 void add_residual_batch_cuda(float* d_output_batch, // Output: [num_tokens, hidden_size]
                              const float* d_input_a_batch,   // Input A: [num_tokens, hidden_size]

@@ -1,0 +1,7 @@
+head_dim  32 done (worst so far: causal 9.367e-07, tiled window 9.367e-07, window kernel 5.372e-07)
+head_dim  64 done (worst so far: causal 9.367e-07, tiled window 9.378e-07, window kernel 5.372e-07)
+head_dim  96 done (worst so far: causal 9.367e-07, tiled window 9.378e-07, window kernel 5.856e-07)
+head_dim 128 done (worst so far: causal 9.367e-07, tiled window 1.178e-06, window kernel 5.856e-07)
+head_dim 256 done (worst so far: causal 1.173e-06, tiled window 1.343e-06, window kernel 5.946e-07)
+{"timing": "gemma3_270m_attention", "hq": 4, "hkv": 1, "head_dim": 256, "tokens": 512, "window": 512, "err_window_kernel": 1.972e-07, "err_tiled_window": 4.759e-07, "err_tiled_causal": 4.759e-07, "window_kernel_ms": 0.5898, "tiled_window_ms": 1.7859, "tiled_causal_ms": 1.7869}
+{"test": "flash_window_attention", "pass": true, "cases": 2928, "failures": 0, "worst_causal": 1.173e-06, "worst_tiled_window": 1.343e-06, "worst_window_kernel": 5.946e-07}
