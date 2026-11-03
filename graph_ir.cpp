@@ -3936,18 +3936,10 @@ void Interpreter::run_nodes_device(const std::vector<DStep>& steps, int layer, i
         }
         ir_kv_write_cuda(K, V, k.p, v.p, T, static_cast<int>(row), start_pos, st, dpos_);
         DBuf& out = dout(s.out[0], T, hq * hd, {&q, &k, &v});
-        if (s.window > 0 || s.softcap > 0.0f) {  // the cache keeps every position, so the window reads it in place
-          // A multi-token prefill window with no sinks and no soft cap (Gemma 3's local layers) runs on the tiled
-          // kernel (cuda_kernels.h attention_window_prefill_cuda), which takes it when it takes the shape; the
-          // window kernel below runs everything else, decode included.
-          const bool tiled = s.window > 0 && s.sinks == 0 && s.softcap == 0.0f && T > 1 && !dpos_ &&
-                             attention_window_prefill_cuda(q.p, K, V, out.p, T, start_pos, hq, hkv, hd, s.scale,
-                                                           s.window, st);
+        if (s.window > 0 || s.softcap > 0.0f)  // the cache keeps every position, so the window reads it in place
           // Gemma 2's soft cap (IR_SPEC 5.15, revision 1.5) is this kernel's: unwindowed, its window is max_len
-          if (!tiled)
-            ir_window_attention_cuda(q.p, K, V, out.p, T, start_pos, hq, hkv, hd, s.scale,
-                                     s.window > 0 ? s.window : max_len_, s.sinks, st, dpos_, s.softcap);
-        }
+          ir_window_attention_cuda(q.p, K, V, out.p, T, start_pos, hq, hkv, hd, s.scale, s.window > 0 ? s.window : max_len_,
+                                   s.sinks, st, dpos_, s.softcap);
         else if (T == 1 && dpos_)  // the same split kernel as below, its length read from dstep_[1]
           attention_devpos_cuda(q.p, K, V, out.p, hq, hd, s.scale, max_len_, hkv, dstep_, st);
         else if (T == 1)
