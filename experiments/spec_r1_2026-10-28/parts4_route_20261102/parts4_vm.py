@@ -202,12 +202,12 @@ def main():
             raise ValueError("exactly one L4 required")
         if run(["apt-get", "update", "-qq"], science / "apt_update.log", 300):
             raise RuntimeError("build dependency index")
-        if run(["apt-get", "install", "-y", "-q", "libboost-regex-dev", "python3-dev", "python3-pytest", "python3-numpy"], science / "apt_install.log", 300):
+        if run(["apt-get", "install", "-y", "-q", "libboost-regex-dev", "python3-dev"], science / "apt_install.log", 300):
             raise RuntimeError("build dependencies")
         if run([sys.executable, "-c", "import numpy, pytest; print(numpy.__version__, pytest.__version__)"],
                science / "payload_python.log", 60):
             raise RuntimeError("payload interpreter prerequisites unavailable")
-        if run(["bash", "-lc", "nvcc --version; cmake --version; g++ --version; python3 --version; "
+        if run(["bash", "-lc", "set -e; nvcc --version; cmake --version; g++ --version; python3 --version; "
                 "python3 -c 'import numpy, pytest; print(numpy.__version__, pytest.__version__)'; "
                 "dpkg-query -W libboost-regex-dev python3-dev"], science / "toolchain.log", 60):
             raise RuntimeError("toolchain inventory (numpy and pytest are required)")
