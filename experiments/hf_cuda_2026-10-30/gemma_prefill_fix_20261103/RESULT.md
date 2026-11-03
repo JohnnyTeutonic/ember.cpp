@@ -1,4 +1,35 @@
-# Gemma3-270M prefill re-measure: result (run `f2-20261103`)
+# Gemma3-270M prefill re-measure: results
+
+## Revision 2, run `f3-20261103`: gap closed
+
+Packet commit `cef91281` (Codex round 3 RUN), engine `9a0e0998` (tree `067a9108`). Window layers keep the IR window
+kernel, and the tiled kernel takes head_dim 256 for the causal (global) layers. One Colab L4. The driver ran from
+18:24:44 to 18:51:07 UTC+11, about 26 L4-minutes, and exited 0. All 13 gates were 0, and cleanup was certified.
+Receipts are in `receipts/f3-20261103/`. Revision 2 was designed from f2's component timings (below); f3 is its first
+run.
+
+| prompt tokens | ember prefill, g6 | ember, f2 | ember, f3 | HF, f3 | HF/ember prefill, f3 | HF/ember decode, f3 |
+|---:|---:|---:|---:|---:|---:|---:|
+| 16 | 7.0 ms | 7.52 ms | 6.73 ms | 34.66 ms | 5.15x | 5.53x |
+| 128 | 20.1 ms | 15.96 ms | 9.98 ms | 35.13 ms | 3.52x | 5.38x |
+| 512 | 174.0 ms | 47.23 ms | 30.44 ms | 34.40 ms | 1.13x | 4.47x |
+
+- **Parity:** every gate passed (`COMPLETE_PARITY_GATED_CUDA_MEASUREMENT`), and the kernel test passed again (2,928
+  cases).
+- **At 512 tokens:** ember's prefill is 1.13x faster than HF's in the same run. That is 1.55x faster than f2
+  (revision 1) and 5.7x faster than g6. The arithmetic estimate from f2's component timings, about 29 ms, was close;
+  it was a prediction, not a criterion.
+- **Decode:** unchanged: 5.6-7.1 ms per token against HF's 31.2-32.1.
+- **Comparisons:** those with f2 and g6 are across runs on different VMs. The within-run HF figures (34.4-35.1 ms)
+  are the reference, and they match f2's and g6's. g6 also ran an older engine tree, so the change from g6 belongs
+  to the new source as a whole.
+- **What f2 and f3 together show:**
+  - the window layers' routing back to the IR kernel is worth about 17 ms at 512 tokens (f2 to f3, the only engine
+    difference);
+  - the head_dim-256 tiled path for the global layers is consistent with the rest of the gain from g6, but its share
+    is not isolated from the other engine changes since g6's tree.
+
+# Revision 1, run `f2-20261103`
 
 Claude Opus 5.5, 3 Nov 2026. Packet commit `0feeff1d` (Codex round 2 RUN), engine source `5794343c` (tree
 `c4926553`). One Colab L4. The driver ran from 17:52:17 to 18:15:12 UTC+11, about 23 L4-minutes, and exited 0.

@@ -118,3 +118,6 @@ The parity gate decides validity exactly as before. Timings are reported as the 
   is gap narrowed: ember's prefill at 512 tokens was 47.23 ms against HF's 34.03 (g6: 174.0). The kernel test shows
   that on Gemma's window layers the tiled kernel is slower than the window kernel it replaced (1.79 against 0.59 ms
   per call). `RESULT.md` has the details and the implied next step.
+- **`f3-20261103`** (revision 2: packet `cef91281`, engine `9a0e0998`): all 13 gates passed, about 26 L4-minutes. The
+  outcome is gap closed: ember's prefill at 512 tokens was 30.44 ms against HF's 34.40 in the same run (f2: 47.23;
+  g6: 174.0). `RESULT.md`.
