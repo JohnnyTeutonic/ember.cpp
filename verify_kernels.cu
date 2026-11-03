@@ -588,6 +588,11 @@ void select_rows_partitioned(const float* logits, int n, int vocab, RowPick* pic
   check_launch("merge_parts");
 }
 
+SelectorKernels selector_kernels() {
+  return {reinterpret_cast<const void*>(select_rows_kernel), reinterpret_cast<const void*>(partition_rows_kernel),
+          reinterpret_cast<const void*>(merge_parts)};
+}
+
 
 }  // namespace ember_verify
 #endif  // HAS_CUDA

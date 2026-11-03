@@ -1,0 +1,11 @@
+{
+  "kind": "PROSPECTIVE_OPERATIONAL_AMENDMENT",
+  "date": "2026-11-03",
+  "reason": "Exclude checkpoint transfer from timed legs while retaining live home evidence",
+  "scientific_recipe_changed": false,
+  "original_payload_sha256": "d9e31c1876676c0b665c12a1690b9fd2a8a997929ffb929699f486812c29e83c",
+  "original_payload_restored_by_exact_inverse": true,
+  "timing_gate_path": "payload/TRANSFER_TIMING_LOCK",
+  "error_policy": "Never steal stale gate; internal scientific deadline remains9600seconds; retain gate after exceptional timing exit; pod deadline cleanup remains external",
+  "requires_independent_review": true
+}
