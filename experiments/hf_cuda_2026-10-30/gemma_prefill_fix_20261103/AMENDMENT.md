@@ -99,4 +99,9 @@ The parity gate decides validity exactly as before. Timings are reported as the 
 
 ## Runs
 
-None yet.
+- **`f1-20261103`:** stopped at the driver's local preflight, before any session existed. It had been started from an
+  ember checkout, and the driver calls paperkiln's `tools/` helpers. No VM, nothing spent.
+- **`f2-20261103`** (packet `0feeff1d`, engine `5794343c`): all 13 gates passed, about 23 L4-minutes. The outcome
+  is gap narrowed: ember's prefill at 512 tokens was 47.23 ms against HF's 34.03 (g6: 174.0). The kernel test shows
+  that on Gemma's window layers the tiled kernel is slower than the window kernel it replaced (1.79 against 0.59 ms
+  per call). `RESULT.md` has the details and the implied next step.
