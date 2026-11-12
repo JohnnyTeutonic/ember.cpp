@@ -466,6 +466,42 @@ std::string sha256_hex_bytes(const std::string& bytes) {
   return out;
 }
 
+Sha256::Sha256() : h_{0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19} {}
+
+void Sha256::update(const void* data, size_t n) {
+  const unsigned char* p = static_cast<const unsigned char*>(data);
+  total_ += n;
+  if (buf_len_ > 0) {
+    const size_t take = std::min(n, sizeof(buf_) - buf_len_);
+    std::memcpy(buf_ + buf_len_, p, take);
+    buf_len_ += take;
+    p += take;
+    n -= take;
+    if (buf_len_ < sizeof(buf_)) return;
+    sha256_block(h_, buf_);
+    buf_len_ = 0;
+  }
+  for (; n >= 64; p += 64, n -= 64) sha256_block(h_, p);
+  if (n > 0) {
+    std::memcpy(buf_, p, n);
+    buf_len_ = n;
+  }
+}
+
+std::string Sha256::hex() {
+  const uint64_t bits = total_ * 8;
+  unsigned char pad[64] = {0x80};
+  update(pad, buf_len_ < 56 ? 56 - buf_len_ : 120 - buf_len_);
+  unsigned char len[8];
+  for (int k = 0; k < 8; ++k) len[k] = static_cast<unsigned char>((bits >> (56 - 8 * k)) & 0xFF);
+  update(len, 8);
+  static const char* digits = "0123456789abcdef";
+  std::string out;
+  for (uint32_t x : h_)
+    for (int k = 7; k >= 0; --k) out += digits[(x >> (4 * k)) & 15];
+  return out;
+}
+
 // ECMAScript Number::toString(x) (ECMA-262 Number::toString, radix 10) for a finite x: the shortest digits
 // s (k of them) with s * 10^(n - k) round-tripping to x, closest to x on a tie (std::to_chars's shortest
 // scientific form), then laid out by n.

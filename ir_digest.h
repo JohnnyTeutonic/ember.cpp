@@ -14,6 +14,8 @@
 // A document that holds a negative zero has no digest (RFC 8785 writes -0 as 0). An integer token "-0" is the
 // integer zero, not a negative zero (the suite's vector minus_zero_integer_form). The I-JSON conditions and
 // the negative zero are checked on the whole parsed text, "_" members included (step 1 precedes step 2).
+#include <cstddef>
+#include <cstdint>
 #include <string>
 
 namespace ember_ir {
@@ -29,6 +31,21 @@ DigestResult ir_digest(const std::string& text, bool prose = false);
 
 // SHA-256 of bytes, 64 lowercase hex digits.
 std::string sha256_hex_bytes(const std::string& bytes);
+
+// Streaming SHA-256 (FIPS 180-4), for data too large to hold (a weights file, model_provenance.h): update()
+// any number of times, then hex() once; the object is spent after hex().
+class Sha256 {
+ public:
+  Sha256();
+  void update(const void* data, size_t n);
+  std::string hex();  // 64 lowercase hex digits
+
+ private:
+  uint32_t h_[8];
+  unsigned char buf_[64];
+  size_t buf_len_ = 0;
+  uint64_t total_ = 0;
+};
 
 // ECMAScript Number::toString of a finite binary64 (exposed for the self-test).
 std::string es_number_string(double v);

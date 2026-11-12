@@ -60,6 +60,7 @@
 #include "chat_request.h"
 #include "determinism.h"
 #include "logger.h"
+#include "model_provenance.h"
 #include "score.h"
 #include "tokenizer.h"
 #include "model_macros.h"
@@ -236,6 +237,56 @@ int main(int argc, char** argv) {
     Logger::info("EMBER_DETERMINISTIC set: deterministic CUDA mode (run-to-run bit-identical logits; /health "
                  "reports \"deterministic\": true).");
 
+  // Provenance (model_provenance.h; /health's "provenance"): the weights file is hashed once, here, before
+  // the load, and the server refuses to start when the file's stamp differs after the load, so the digest
+  // names the bytes the load read. EMBER_WEIGHTS_DIGEST=0 skips the hash (status "disabled"); a SafeTensors
+  // model is "unsupported_format". Either way /health then carries no weights digest to match.
+  json provenance;
+  ember::FileStamp weights_stamp;  // ok only when the weights were hashed
+  {
+    const char* dg = std::getenv("EMBER_WEIGHTS_DIGEST");
+    const bool digest_off = dg && std::string(dg) == "0";
+    json weights = {{"path", model_dir}, {"sha256", nullptr}, {"bytes", nullptr}};
+    if (digest_off) {
+      weights["status"] = "disabled";
+    } else if (!ember::digestible_weights(model_dir)) {
+      weights["status"] = "unsupported_format";
+    } else {
+      weights_stamp = ember::file_stamp(model_dir);
+      if (!weights_stamp.ok) {
+        Logger::error("Failed to stat the model file: " + model_dir);
+        return 1;
+      }
+      const auto t0 = std::chrono::steady_clock::now();
+      const ember::FileDigest d = ember::sha256_file(model_dir);
+      if (!d.ok) {
+        Logger::error("Failed to hash the model file: " + d.error);
+        return 1;
+      }
+      weights["status"] = "sha256";
+      weights["sha256"] = d.sha256;
+      weights["bytes"] = d.bytes;
+      Logger::info("Weights sha256 " + d.sha256 + " (" + std::to_string(d.bytes) + " bytes, " +
+                   std::to_string(std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count()) +
+                   " s)");
+    }
+    const ember::BuildInfo b = ember::build_info();
+    const std::string exe = ember::executable_path();
+    const ember::FileDigest exe_digest = exe.empty() ? ember::FileDigest{} : ember::sha256_file(exe);
+    provenance = {
+        {"schema", "ember.provenance/1"},
+        {"instance_id", ember::new_instance_id()},
+        {"weights", weights},
+        {"build",
+         {{"git_commit", b.git_commit},
+          {"git_dirty", b.git_dirty == "unknown" ? json(nullptr) : json(b.git_dirty == "true")},
+          {"backend", b.backend},
+          {"config", b.config},
+          {"compiler", b.compiler}}},
+        {"executable", {{"path", exe}, {"sha256", exe_digest.ok ? json(exe_digest.sha256) : json(nullptr)}}},
+        {"runtime", {{"gpu_layers_requested", n_gpu_layers}, {"ember_env", ember::ember_env_names()}}}};
+  }
+
   std::shared_ptr<tinyllama::TinyLlamaSession> session;
   try {
     Logger::info("Loading model from: " + model_dir);
@@ -243,6 +294,11 @@ int main(int argc, char** argv) {
     Logger::info("Model loaded successfully.");
   } catch (const std::exception& e) {
     Logger::error(std::string("Failed to load model: ") + e.what());
+    return 1;
+  }
+  if (weights_stamp.ok && !ember::same_stamp(weights_stamp, ember::file_stamp(model_dir))) {
+    Logger::error("The model file changed while it was hashed and loaded (size, modification time or inode "
+                  "differ): the weights digest would not name the loaded bytes. Refusing to start.");
     return 1;
   }
   
@@ -611,7 +667,7 @@ int main(int argc, char** argv) {
       });
   
   // Liveness and what is being served (same path as mtstudio chat).
-  svr.Get("/health", [&session, &model_dir](const httplib::Request&, httplib::Response& res) {
+  svr.Get("/health", [&session, &model_dir, provenance](const httplib::Request&, httplib::Response& res) {
     const ModelConfig& c = session->get_config();
     json h;
     h["status"] = "ok";
@@ -630,6 +686,10 @@ int main(int argc, char** argv) {
     h["layers"] = c.num_hidden_layers;
     // EMBER_DETERMINISTIC=1 (determinism.h): reported only when on, so the default /health is unchanged.
     if (ember::deterministic()) h["deterministic"] = true;
+    // What is served, for evaluation receipts (model_provenance.h): the weights digest taken at load, the
+    // build (git commit, dirty state, backend, configuration, compiler), the executable's digest, the
+    // requested GPU layers, the EMBER_* variables set (names only) and an id new to this process.
+    h["provenance"] = provenance;
     res.set_header("Access-Control-Allow-Origin", "*");
     res.set_content(json_out(h), "application/json");
   });
