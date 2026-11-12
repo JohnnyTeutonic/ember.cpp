@@ -596,6 +596,20 @@ if(TARGET model_provenance_test)
     add_test(NAME model_provenance COMMAND model_provenance_test)
 endif()
 
+# CPU parity gate: the tuned llama path against the IR interpreter on first-token logits of a tiny llama
+# GGUF the test writes itself (tools/llama_ir_parity_test.cpp; tolerance 1e-4 and the same argmax).
+add_executable(llama_ir_parity_test tools/llama_ir_parity_test.cpp)
+target_link_libraries(llama_ir_parity_test PRIVATE tinyllama_core)
+add_test(NAME llama_ir_parity_cpu COMMAND llama_ir_parity_test)
+# ember's chat templates against paperkiln's conformance file at the vendored commit, with the documented
+# request-path differences pinned (tools/chat_template_conformance.cmake).
+if(TARGET chat_template_check)
+    add_test(NAME chat_template_conformance
+             COMMAND ${CMAKE_COMMAND} -DCHECK=$<TARGET_FILE:chat_template_check>
+                     -DCASES=${CMAKE_CURRENT_SOURCE_DIR}/tools/fixtures/chat_template_cases_877fb0d0.json
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/chat_template_conformance.cmake)
+endif()
+
 # Opt-in E9 numerical diagnostics; ordinary builds contain no hooks or extra definitions.
 option(EMBER_KV_DIAGNOSTICS "Compile KV cache numerical trace diagnostics" OFF)
 if(EMBER_KV_DIAGNOSTICS)
