@@ -455,10 +455,30 @@ if(NOT SKBUILD)
         target_link_libraries(kv_quant_eval PRIVATE tinyllama_core)
     endif()
 
+    # The git commit and dirty state compiled into /health's "provenance" (model_provenance.h), refreshed
+    # at every build (tools/ember_build_info.cmake).
+    set(EMBER_BUILD_INFO_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
+    add_custom_target(ember_build_info
+        COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_CURRENT_SOURCE_DIR} -DOUT=${EMBER_BUILD_INFO_DIR}/ember_build_info.h
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/ember_build_info.cmake
+        BYPRODUCTS ${EMBER_BUILD_INFO_DIR}/ember_build_info.h
+        COMMENT "Recording the git commit for /health provenance")
+    add_library(ember_provenance STATIC model_provenance.cpp)
+    add_dependencies(ember_provenance ember_build_info)
+    target_include_directories(ember_provenance PRIVATE ${EMBER_BUILD_INFO_DIR})
+    target_link_libraries(ember_provenance PUBLIC tinyllama_core)
+    target_compile_definitions(ember_provenance PRIVATE
+        EMBER_BUILD_CONFIG="$<CONFIG>"
+        EMBER_COMPILER="${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+    # Streaming SHA-256, file stamps and the build record (tools/model_provenance_test.cpp).
+    add_executable(model_provenance_test tools/model_provenance_test.cpp)
+    target_include_directories(model_provenance_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(model_provenance_test PRIVATE ember_provenance)
+
     add_executable(tinyllama_server
         server.cpp
     )
-    target_link_libraries(tinyllama_server PRIVATE tinyllama_core httplib)
+    target_link_libraries(tinyllama_server PRIVATE tinyllama_core ember_provenance httplib)
 
     target_compile_definitions(tinyllama_server PRIVATE CPPHTTPLIB_BROTLI_SUPPORT=0)
 
@@ -572,6 +592,9 @@ add_test(NAME cpu_dot_portable_fixed_order COMMAND cpu_dot_portable_test)
 add_executable(ir_expr_header_portability_test tools/ir_expr_header_portability_test.cpp)
 target_link_libraries(ir_expr_header_portability_test PRIVATE tinyllama_core)
 add_test(NAME ir_expr_windows_const_macro COMMAND ir_expr_header_portability_test)
+if(TARGET model_provenance_test)
+    add_test(NAME model_provenance COMMAND model_provenance_test)
+endif()
 
 # Opt-in E9 numerical diagnostics; ordinary builds contain no hooks or extra definitions.
 option(EMBER_KV_DIAGNOSTICS "Compile KV cache numerical trace diagnostics" OFF)

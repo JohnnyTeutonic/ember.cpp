@@ -60,6 +60,7 @@
 #include "chat_request.h"
 #include "determinism.h"
 #include "logger.h"
+#include "model_provenance.h"
 #include "score.h"
 #include "tokenizer.h"
 #include "model_macros.h"
@@ -236,6 +237,65 @@ int main(int argc, char** argv) {
     Logger::info("EMBER_DETERMINISTIC set: deterministic CUDA mode (run-to-run bit-identical logits; /health "
                  "reports \"deterministic\": true).");
 
+  // Provenance (model_provenance.h; /health's "provenance"). The executable is hashed first, then the
+  // weights file once, before the load. After the load the loader's descriptor (POSIX) and the path must
+  // both carry the stamp the hash saw, or the server refuses to start; each /health then fstat()s the
+  // loader's descriptor and reports "modified_since_load" once the mapped file changes. The digest is of
+  // the file as hashed at start. EMBER_WEIGHTS_DIGEST=0 skips the hash (status "disabled"); a SafeTensors
+  // model is "unsupported_format". Either way /health then carries no weights digest to match.
+  json provenance;
+  ember::FileStamp weights_stamp;  // ok only when the weights were hashed
+  {
+    const ember::ExecutableDigest exe = ember::executable_digest();
+    const char* dg = std::getenv("EMBER_WEIGHTS_DIGEST");
+    const bool digest_off = dg && std::string(dg) == "0";
+    json weights = {{"path", model_dir}, {"sha256", nullptr}, {"bytes", nullptr}};
+    if (digest_off) {
+      weights["status"] = "disabled";
+    } else if (!ember::digestible_weights(model_dir)) {
+      weights["status"] = "unsupported_format";
+    } else {
+      const auto t0 = std::chrono::steady_clock::now();
+      const ember::FileDigest d = ember::sha256_file(model_dir);
+      if (!d.ok) {
+        Logger::error("Failed to hash the model file: " + d.error);
+        return 1;
+      }
+      weights_stamp = d.stamp;
+      weights["status"] = "sha256";
+      weights["sha256"] = d.sha256;
+      weights["bytes"] = d.bytes;
+      Logger::info("Weights sha256 " + d.sha256 + " (" + std::to_string(d.bytes) + " bytes, " +
+                   std::to_string(std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count()) +
+                   " s)");
+    }
+    const ember::BuildInfo b = ember::build_info();
+    json executable = {{"path", exe.path}, {"sha256", exe.digest.ok ? json(exe.digest.sha256) : json(nullptr)}};
+    if (!exe.digest.ok) executable["error"] = exe.digest.error;
+    const ember::EnvRecord env = ember::ember_env_record();
+    json settings = json::object(), side_files = json::object();
+    for (const auto& [name, value] : env.values) settings[name] = value;
+    for (const auto& [name, fd] : env.files)
+      side_files[name] = fd.ok ? json{{"sha256", fd.sha256}, {"bytes", fd.bytes}}
+                               : json{{"sha256", nullptr}, {"error", fd.error}};
+    provenance = {
+        {"schema", "ember.provenance/1"},
+        {"instance_id", ember::new_instance_id()},
+        {"weights", weights},
+        {"build",
+         {{"git_commit", b.git_commit},
+          {"git_dirty", b.git_dirty == "unknown" ? json(nullptr) : json(b.git_dirty == "true")},
+          {"backend", b.backend},
+          {"config", b.config},
+          {"compiler", b.compiler}}},
+        {"executable", executable},
+        {"runtime",
+         {{"gpu_layers_requested", n_gpu_layers},
+          {"ember_env", env.names},
+          {"ember_settings", settings},
+          {"ember_side_files", side_files}}}};
+  }
+
   std::shared_ptr<tinyllama::TinyLlamaSession> session;
   try {
     Logger::info("Loading model from: " + model_dir);
@@ -244,6 +304,23 @@ int main(int argc, char** argv) {
   } catch (const std::exception& e) {
     Logger::error(std::string("Failed to load model: ") + e.what());
     return 1;
+  }
+  // The loader's own descriptor (POSIX mmap; -1 otherwise): the file the tensors are mapped from.
+  int loader_fd = -1;
+#ifndef _WIN32
+  if (const GGUFData* gd = session->gguf_data()) loader_fd = gd->file_descriptor;
+#endif
+  if (weights_stamp.ok) {
+    const bool path_same = ember::same_stamp(weights_stamp, ember::file_stamp(model_dir));
+    const bool loader_same = loader_fd < 0 || ember::same_stamp(weights_stamp, ember::file_stamp_fd(loader_fd));
+    if (!path_same || !loader_same) {
+      Logger::error(std::string("The model file changed between hashing and loading (") +
+                    (loader_same ? "the path" : "the loader's descriptor") +
+                    " shows another size, modification time or inode): the weights digest would not name the "
+                    "loaded file. Refusing to start.");
+      return 1;
+    }
+    provenance["weights"]["monitored"] = loader_fd >= 0;  // true: each /health re-checks the mapped file
   }
   
   httplib::Server svr;
@@ -611,7 +688,8 @@ int main(int argc, char** argv) {
       });
   
   // Liveness and what is being served (same path as mtstudio chat).
-  svr.Get("/health", [&session, &model_dir](const httplib::Request&, httplib::Response& res) {
+  svr.Get("/health", [&session, &model_dir, provenance, weights_stamp, loader_fd](const httplib::Request&,
+                                                                                   httplib::Response& res) {
     const ModelConfig& c = session->get_config();
     json h;
     h["status"] = "ok";
@@ -630,6 +708,32 @@ int main(int argc, char** argv) {
     h["layers"] = c.num_hidden_layers;
     // EMBER_DETERMINISTIC=1 (determinism.h): reported only when on, so the default /health is unchanged.
     if (ember::deterministic()) h["deterministic"] = true;
+    // What is served, for evaluation receipts (model_provenance.h): the weights file's digest as hashed at
+    // start, the build (git commit, dirty state, backend, configuration, compiler), the executable's digest,
+    // the requested GPU layers, the EMBER_* settings (values, side-file digests or names) and an id new to
+    // this process. A mapped weights file whose stamp has changed since the load (fstat of the loader's
+    // descriptor) is "modified_since_load", with no current digest.
+    h["provenance"] = provenance;
+    if (weights_stamp.ok && loader_fd >= 0 && !ember::same_stamp(weights_stamp, ember::file_stamp_fd(loader_fd))) {
+      json& w = h["provenance"]["weights"];
+      w["status"] = "modified_since_load";
+      w["sha256_at_load"] = w["sha256"];
+      w["sha256"] = nullptr;
+    }
+    // EMBER_PUBLIC=1 (Jonathan, 13 Nov 2026): keep what provenance needs (the weights status, digest and
+    // size, the git commit, the executable's digest, the instance id) and drop the detail a stranger has no
+    // use for: the absolute paths, the compiler, and the EMBER_* names, values and side files.
+    if (public_mode) {
+      json& p = h["provenance"];
+      p["public"] = true;
+      p["weights"].erase("path");
+      p["executable"].erase("path");
+      p["executable"].erase("error");
+      p["build"].erase("compiler");
+      p["runtime"].erase("ember_env");
+      p["runtime"].erase("ember_settings");
+      p["runtime"].erase("ember_side_files");
+    }
     res.set_header("Access-Control-Allow-Origin", "*");
     res.set_content(json_out(h), "application/json");
   });

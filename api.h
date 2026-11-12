@@ -199,6 +199,9 @@ class TinyLlamaSession {
     return bpe_ ? &bpe_->format().tmpl : word_template_ ? word_template_.get() : nullptr;
   }
   const std::string& chat_template_why() const { return chat_template_why_; }
+  // The GGUF the model was loaded from, or nullptr (SafeTensors). On POSIX with mmap its file_descriptor
+  // stays open while the tensors are mapped (the server's provenance check fstat()s it; model_provenance.h).
+  const GGUFData* gguf_data() const { return model_ ? model_->get_gguf_data() : nullptr; }
   // The IR document the interpreter runs, or "" when the tuned llama path serves the file: for a
   // front end that runs the same graph on another device (the browser's WebGPU path, deploy/wasm/web).
   const std::string& ir_document() const { return ir_doc_; }
