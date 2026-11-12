@@ -24,6 +24,6 @@ jobs:
       - name: Build the test targets
         run: >
           cmake --build build --target cpu_dot_test cpu_dot_portable_test ir_expr_header_portability_test
-          llama_ir_parity_test chat_template_check
+          llama_ir_parity_test chat_template_check model_provenance_test
       - name: CTest
         run: ctest --test-dir build --output-on-failure --timeout 120
