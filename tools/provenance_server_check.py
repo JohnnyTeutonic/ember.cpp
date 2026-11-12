@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """/health's "provenance" (model_provenance.h) on a running server, against hashlib.
 
-    python3 tools/provenance_server_check.py SERVER_BIN MODEL.gguf PORT OUT.json [ALT.gguf]
+    python3 tools/provenance_server_check.py SERVER_BIN MODEL.gguf PORT OUT.json [ALT.gguf [MUTABLE.gguf]]
 
 Starts SERVER_BIN on MODEL (CPU, gpu_layers 0) and checks: weights.status "sha256" with sha256 and bytes equal
 to hashlib's over the file; the executable's sha256 equal to SERVER_BIN's; build.git_commit 40 hex digits or
 "unknown", git_dirty a boolean or null, backend "cpu" or "cuda"; instance_id 32 hex digits; gpu_layers_requested
-0. A second start on the same file: the same weights and build, a new instance_id. EMBER_WEIGHTS_DIGEST=0:
-status "disabled", sha256 null, and EMBER_WEIGHTS_DIGEST named (without its value) in runtime.ember_env.
-ALT.gguf (another file that loads, e.g. MODEL with bytes appended): its own digest, not MODEL's. Writes
-OUT.json; exit 1 when a check fails."""
+0. A second start on the same file: the same weights and build, a new instance_id. With EMBER_WEIGHTS_DIGEST=0,
+EMBER_DEQUANT_AT_LOAD=0, EMBER_TEST_SCRIPTED_REPLIES (a side file) and an unknown EMBER_AUDIT_UNKNOWN: status
+"disabled" with sha256 null; the two settings with their values; the side file by its SHA-256 (no path); the
+unknown variable by name only. ALT.gguf (another file that loads, e.g. MODEL with bytes appended): its own
+digest, not MODEL's. MUTABLE.gguf (a scratch copy; this check appends to it): hashed and monitored, then
+"modified_since_load" with no digest after an in-place append. Writes OUT.json; exit 1 when a check fails."""
 import hashlib
 import json
 import os
@@ -20,7 +22,8 @@ import time
 import urllib.request
 
 SERVER, MODEL, PORT, OUT = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4]
-ALT = sys.argv[5] if len(sys.argv) > 5 else None
+ALT = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] else None
+MUTABLE = sys.argv[6] if len(sys.argv) > 6 else None
 HEX = re.compile(r"^[0-9a-f]+$")
 
 
@@ -82,13 +85,24 @@ p2 = h2.get("provenance", {})
 checks["restart: same weights and build"] = p2.get("weights") == p1.get("weights") and p2.get("build") == p1.get("build")
 checks["restart: new instance_id"] = p2.get("instance_id") != p1.get("instance_id")
 
-proc, h3 = start(MODEL, {"EMBER_WEIGHTS_DIGEST": "0"})
+scripted = OUT + ".scripted.json"
+with open(scripted, "w") as f:
+    json.dump([[5, 6, 7]], f)
+proc, h3 = start(MODEL, {"EMBER_WEIGHTS_DIGEST": "0", "EMBER_DEQUANT_AT_LOAD": "0",
+                         "EMBER_TEST_SCRIPTED_REPLIES": scripted, "EMBER_AUDIT_UNKNOWN": "secret-value"})
 stop(proc)
 p3 = h3.get("provenance", {})
 report["disabled"] = p3
 checks["disabled: no digest"] = p3.get("weights", {}).get("status") == "disabled" and p3["weights"].get("sha256") is None
-env_names = p3.get("runtime", {}).get("ember_env", [])
-checks["disabled: env named without value"] = "EMBER_WEIGHTS_DIGEST" in env_names and all("=" not in n for n in env_names)
+rt = p3.get("runtime", {})
+env_names = rt.get("ember_env", [])
+checks["env: names listed"] = {"EMBER_WEIGHTS_DIGEST", "EMBER_AUDIT_UNKNOWN", "EMBER_TEST_SCRIPTED_REPLIES"} <= set(env_names)
+checks["env: settings with values"] = rt.get("ember_settings", {}).get("EMBER_DEQUANT_AT_LOAD") == "0" and \
+    rt.get("ember_settings", {}).get("EMBER_WEIGHTS_DIGEST") == "0"
+checks["env: unknown variable without value"] = "secret-value" not in json.dumps(h3) and \
+    "EMBER_AUDIT_UNKNOWN" not in rt.get("ember_settings", {})
+checks["env: side file by digest"] = rt.get("ember_side_files", {}).get("EMBER_TEST_SCRIPTED_REPLIES", {}).get(
+    "sha256") == sha256(scripted) and scripted not in json.dumps(rt)
 
 if ALT:
     proc, h4 = start(ALT)
@@ -96,6 +110,22 @@ if ALT:
     p4 = h4.get("provenance", {})
     report["alt"] = p4
     checks["other file: its own digest"] = p4.get("weights", {}).get("sha256") == sha256(ALT) != model_sha
+
+if MUTABLE:
+    # A served file rewritten in place after the load: the next /health has no digest.
+    proc, h5 = start(MUTABLE)
+    try:
+        w5 = h5.get("provenance", {}).get("weights", {})
+        checks["mutable: hashed and monitored"] = w5.get("status") == "sha256" and w5.get("monitored") is True
+        with open(MUTABLE, "ab") as f:
+            f.write(b"in-place-append")
+        with urllib.request.urlopen(f"http://127.0.0.1:{PORT}/health", timeout=10) as r:
+            w6 = json.load(r).get("provenance", {}).get("weights", {})
+        report["modified"] = w6
+        checks["mutable: modified_since_load"] = w6.get("status") == "modified_since_load" and \
+            w6.get("sha256") is None and w6.get("sha256_at_load") == w5.get("sha256")
+    finally:
+        stop(proc)
 
 report["checks"] = checks
 report["model_sha256"] = model_sha

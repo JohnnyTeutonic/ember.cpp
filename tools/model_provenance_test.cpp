@@ -1,7 +1,8 @@
 // model_provenance.h and the streaming SHA-256 behind it (ir_digest.h): FIPS 180-4 vectors fed in awkward
 // pieces, agreement with sha256_hex_bytes at every length across the padding boundaries, file digests, file
-// stamps that change when a file is rewritten or replaced, which model paths get a digest, the compiled-in
-// build record, and the EMBER_* names without their values. Exit 1 on the first failure.
+// stamps that change when a file is rewritten or replaced (by path and through a held descriptor), which
+// model paths get a digest, the compiled-in build record, the executable digest, and the EMBER_* record
+// (values, side-file digests, other names without values). Exit 1 when any check fails.
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -12,6 +13,11 @@
 
 #include "ir_digest.h"
 #include "model_provenance.h"
+
+#ifndef _WIN32
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
 namespace fs = std::filesystem;
 static int failures = 0;
@@ -98,30 +104,83 @@ int main() {
   check(!ember::digestible_weights(dir.string()), "a model directory is not reported as a full digest");
   check(!ember::digestible_weights((dir / "absent.gguf").string()), "a missing file gets no digest");
 
+#ifndef _WIN32
+  {
+    // The digest carries the stamp of the descriptor it read; a held descriptor sees an in-place rewrite
+    // (the server's per-/health check), while a rename replacement shows only by path (its load-time check).
+    write_file(a, bytes);
+    const ember::FileDigest dd = ember::sha256_file(a.string());
+    check(dd.ok && ember::same_stamp(dd.stamp, ember::file_stamp(a.string())), "the digest's stamp is the file's");
+    const int fd = ::open(a.string().c_str(), O_RDONLY);
+    check(ember::same_stamp(dd.stamp, ember::file_stamp_fd(fd)), "a held descriptor starts with the hashed stamp");
+    {
+      std::ofstream app(a, std::ios::binary | std::ios::app);
+      app << "tail";
+    }
+    check(!ember::same_stamp(dd.stamp, ember::file_stamp_fd(fd)), "an in-place append shows on the held descriptor");
+    const ember::FileStamp held = ember::file_stamp_fd(fd);
+    const fs::path c = dir / "c.gguf";
+    write_file(c, bytes);
+    fs::rename(c, a);
+    check(ember::same_stamp(held, ember::file_stamp_fd(fd)), "a rename replacement leaves the held descriptor alone");
+    check(!ember::same_stamp(held, ember::file_stamp(a.string())), "and shows by path");
+    ::close(fd);
+    check(!ember::file_stamp_fd(-1).ok, "no descriptor, no stamp");
+  }
+#endif
+
   const ember::BuildInfo bi = ember::build_info();
-  check(bi.git_commit == "unknown" || is_hex(bi.git_commit, 40), "git_commit is 40 hex digits or unknown: " + bi.git_commit);
+  check(bi.git_commit == "unknown" || is_hex(bi.git_commit, 40) || is_hex(bi.git_commit, 64),
+        "git_commit is a hex object id (SHA-1 or SHA-256) or unknown: " + bi.git_commit);
   check(bi.git_dirty == "true" || bi.git_dirty == "false" || bi.git_dirty == "unknown", "git_dirty: " + bi.git_dirty);
   check(bi.backend == "cpu" || bi.backend == "cuda", "backend: " + bi.backend);
   check(!bi.compiler.empty(), "compiler recorded");
   std::cout << "build: commit " << bi.git_commit << " dirty " << bi.git_dirty << " backend " << bi.backend
             << " config '" << bi.config << "' compiler " << bi.compiler << "\n";
 
-  const std::string exe = ember::executable_path();
+  const ember::ExecutableDigest exe = ember::executable_digest();
 #ifdef __linux__
-  check(!exe.empty() && ember::sha256_file(exe).ok, "the running executable is found and hashed");
+  check(!exe.path.empty() && exe.digest.ok && exe.digest.sha256 == ember::sha256_file(exe.path).sha256,
+        "the running executable is found and hashed (/proc/self/exe = its path)");
 #endif
 
+  // Settings: values for those ember reads, side files by digest, anything else by name only.
+  const fs::path side = dir / "side.ir.json";
+  write_file(side, "{\"ir\": 1}");
+  auto set = [](const char* k, const std::string& v) {
 #ifdef _WIN32
-  _putenv_s("EMBER_PROVENANCE_TEST", "secret-value");
+    _putenv_s(k, v.c_str());
 #else
-  setenv("EMBER_PROVENANCE_TEST", "secret-value", 1);
+    setenv(k, v.c_str(), 1);
 #endif
+  };
+  set("EMBER_PROVENANCE_TEST", "secret-value");
+  set("EMBER_KV", "q8_0");
+  set("EMBER_DEQUANT_AT_LOAD", "0");
+  set("EMBER_IR", side.string());
+  set("EMBER_TEST_SCRIPTED_REPLIES", (dir / "absent.json").string());
+  const ember::EnvRecord env = ember::ember_env_record();
   bool named = false, leaked = false;
-  for (const auto& n : ember::ember_env_names()) {
+  for (const auto& n : env.names) {
     named = named || n == "EMBER_PROVENANCE_TEST";
     leaked = leaked || n.find("secret") != std::string::npos || n.find('=') != std::string::npos;
   }
-  check(named && !leaked, "EMBER_* variables are listed by name, without values");
+  for (const auto& [k, v] : env.values) leaked = leaked || k == "EMBER_PROVENANCE_TEST" || v.find("secret") != std::string::npos;
+  check(named && !leaked, "an unknown EMBER_* variable is listed by name, without its value");
+  auto value = [&](const std::string& k) {
+    for (const auto& [n, v] : env.values)
+      if (n == k) return v;
+    return std::string("<absent>");
+  };
+  check(value("EMBER_KV") == "q8_0" && value("EMBER_DEQUANT_AT_LOAD") == "0", "computation settings carry values");
+  check(value("EMBER_IR") == "<absent>", "a side-file setting's path is not reported as a value");
+  bool ir_ok = false, scripted_err = false;
+  for (const auto& [n, fd] : env.files) {
+    ir_ok = ir_ok || (n == "EMBER_IR" && fd.ok && fd.sha256 == ember_ir::sha256_hex_bytes("{\"ir\": 1}"));
+    scripted_err = scripted_err || (n == "EMBER_TEST_SCRIPTED_REPLIES" && !fd.ok && !fd.error.empty());
+  }
+  check(ir_ok, "EMBER_IR's side file is reported by its SHA-256");
+  check(scripted_err, "an unreadable side file is reported with an error, not skipped");
 
   const std::string i1 = ember::new_instance_id(), i2 = ember::new_instance_id();
   check(is_hex(i1, 32) && i1 != i2, "instance ids are 32 hex digits and differ");

@@ -61,18 +61,28 @@ GPU, 0 for CPU only. Endpoints:
 | `POST /score` | log-probabilities of continuations, paperkiln's `mtstudio score` on token ids (below): `{requests: [{key, prompt_ids, continuation_ids}]}` -> `{results: [{i, key, prompt_tokens, continuation_ids, over_ctx, logprobs, argmax, sum}], stats}` |
 
 Provenance (`model_provenance.h`), for evaluation receipts: `/health`'s `provenance` is
-`{schema: "ember.provenance/1", instance_id, weights: {status, sha256, bytes, path}, build: {git_commit,
-git_dirty, backend, config, compiler}, executable: {path, sha256}, runtime: {gpu_layers_requested,
-ember_env}}`. The server hashes a `.gguf` once at start, before loading it, and refuses to start when
-the file's size, modification time or inode differ after the load, so `weights.sha256` names the
-bytes it loaded (`status` `"sha256"`). `EMBER_WEIGHTS_DIGEST=0` skips the hash (`"disabled"`; about
-2.3 s per 342 MB on one CPU core otherwise); SafeTensors models, which also read `config.json` and a
-tokenizer from elsewhere, are `"unsupported_format"`; both have `sha256` null. `git_commit` and
-`git_dirty` are recorded at build time (`tools/ember_build_info.cmake`; `"unknown"` and null without
-git), `executable.sha256` identifies a dirty build too, `ember_env` lists the `EMBER_*` variables set
-(names only), and `instance_id` is new for each process, so a restart changes `/health`. This is the
-server's own report: it catches the wrong file, a stale server and a mid-run restart, not a server
-that misreports. `tools/provenance_server_check.py` checks it against `hashlib`.
+`{schema: "ember.provenance/1", instance_id, weights: {status, sha256, bytes, path, monitored},
+build: {git_commit, git_dirty, backend, config, compiler}, executable: {path, sha256}, runtime:
+{gpu_layers_requested, ember_env, ember_settings, ember_side_files}}`. `weights.sha256` is the
+SHA-256 of the `.gguf` file as hashed once at start, before the load (`status` `"sha256"`). The
+server refuses to start when the file's stamp (size, modification time and, on POSIX, inode) differs
+between the hash and the end of the load, by path or on the loader's descriptor. On POSIX each
+`/health` then `fstat()`s the loader's descriptor (`monitored: true`) and reports
+`"modified_since_load"`, with `sha256` null and `sha256_at_load`, once the mapped file has changed:
+under mmap most weights are read during inference, not at load. A rewrite that keeps size,
+modification time and inode is not seen, and Windows has no inode or per-request check (its share
+mode blocks writers while the file is mapped). `EMBER_WEIGHTS_DIGEST=0` skips the hash
+(`"disabled"`; about 2.3 s per 342 MB on one CPU core otherwise); SafeTensors models, which also
+read `config.json` and a tokenizer from elsewhere, are `"unsupported_format"`; both have `sha256`
+null. `git_commit` and `git_dirty` (tracked files) are recorded at build time
+(`tools/ember_build_info.cmake`; `"unknown"` and null without git); `executable.sha256` is the running
+image's (Linux `/proc/self/exe`, hashed before the weights), so a dirty build is identified too.
+`ember_env` lists every `EMBER_*` name set; `ember_settings` gives the values of the settings ember
+reads, `ember_side_files` the SHA-256 of the files named by `EMBER_IR`, `EMBER_DRAFT_TABLE` and
+`EMBER_TEST_SCRIPTED_REPLIES`; other names carry no value. `instance_id` is new for each process, so
+a restart changes `/health`. This is the server's own report: it catches the wrong file, a stale
+server, a mid-run restart and changed settings, not a server that misreports.
+`tools/provenance_server_check.py` checks it against `hashlib`.
 
 Chat template (LOCAL_LLM_STACK.md section 3, point 3; shared with paperkiln's `mtstudio chat`):
 the prompt is the conversation rendered by a template record, never a format built into the

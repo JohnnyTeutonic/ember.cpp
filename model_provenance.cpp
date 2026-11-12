@@ -16,9 +16,12 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <process.h>
 #include <stdlib.h>
 #else
+#include <fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 extern char** environ;
 #endif
 
@@ -30,24 +33,31 @@ extern char** environ;
 #endif
 
 namespace ember {
+namespace {
+
+// EMBER_* settings ember reads that change what it computes or serves: reported with their values. The
+// diagnostics (EMBER_*_TIMING, EMBER_*_DEBUG, EMBER_ROUTE_TRACE*) and unknown names are reported by name.
+const char* const kValueSettings[] = {
+    "EMBER_DECODE_ATTN", "EMBER_DECODE_ATTN_TILE", "EMBER_DECODE_GRAPH", "EMBER_DECODE_LINEAR",
+    "EMBER_DECODE_LMHEAD", "EMBER_DECODE_OPT", "EMBER_DECODE_PICK", "EMBER_DECODE_PICK_PARTS",
+    "EMBER_DEQUANT_AT_LOAD", "EMBER_DETERMINISTIC", "EMBER_DISABLE_BF16", "EMBER_DRAFT", "EMBER_DRAFT_THETA",
+    "EMBER_EVICT", "EMBER_GEMM_TF32", "EMBER_INTERPRETER", "EMBER_IR_BUILD", "EMBER_IR_CTX", "EMBER_IR_DEQUANT",
+    "EMBER_IR_DEVICE", "EMBER_IR_GRAPH", "EMBER_IR_ONLY", "EMBER_IR_QUANT", "EMBER_KV", "EMBER_MOE_DENSE",
+    "EMBER_PREFILL_ATTN", "EMBER_PREFILL_MIN", "EMBER_PREFIX_REUSE", "EMBER_PUBLIC", "EMBER_SCORE_FULL",
+    "EMBER_SCORE_REUSE", "EMBER_SPEC", "EMBER_VERIFY", "EMBER_VERIFY_ATTN", "EMBER_VERIFY_GRAPH",
+    "EMBER_VERIFY_LINEAR", "EMBER_WEIGHTS_DIGEST"};
+// Settings that name a file ember reads: reported by the file's SHA-256 (not its path).
+const char* const kFileSettings[] = {"EMBER_IR", "EMBER_DRAFT_TABLE", "EMBER_TEST_SCRIPTED_REPLIES"};
+
+}  // namespace
 
 bool same_stamp(const FileStamp& a, const FileStamp& b) {
   return a.ok && b.ok && a.size == b.size && a.mtime_ns == b.mtime_ns && a.dev == b.dev && a.ino == b.ino;
 }
 
-FileStamp file_stamp(const std::string& path) {
+#ifndef _WIN32
+static FileStamp stamp_of(const struct stat& st) {
   FileStamp s;
-#ifdef _WIN32
-  std::error_code ec;
-  const auto size = std::filesystem::file_size(path, ec);
-  if (ec) return s;
-  const auto t = std::filesystem::last_write_time(path, ec);
-  if (ec) return s;
-  s.size = static_cast<uint64_t>(size);
-  s.mtime_ns = static_cast<int64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(t.time_since_epoch()).count());
-#else
-  struct stat st;
-  if (::stat(path.c_str(), &st) != 0) return s;
   s.size = static_cast<uint64_t>(st.st_size);
 #ifdef __APPLE__
   s.mtime_ns = static_cast<int64_t>(st.st_mtimespec.tv_sec) * 1000000000LL + st.st_mtimespec.tv_nsec;
@@ -56,20 +66,52 @@ FileStamp file_stamp(const std::string& path) {
 #endif
   s.dev = static_cast<uint64_t>(st.st_dev);
   s.ino = static_cast<uint64_t>(st.st_ino);
-#endif
   s.ok = true;
   return s;
+}
+#endif
+
+FileStamp file_stamp(const std::string& path) {
+#ifdef _WIN32
+  FileStamp s;
+  std::error_code ec;
+  const auto size = std::filesystem::file_size(path, ec);
+  if (ec) return s;
+  const auto t = std::filesystem::last_write_time(path, ec);
+  if (ec) return s;
+  s.size = static_cast<uint64_t>(size);
+  s.mtime_ns = static_cast<int64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(t.time_since_epoch()).count());
+  s.ok = true;
+  return s;
+#else
+  struct stat st;
+  if (::stat(path.c_str(), &st) != 0) return FileStamp{};
+  return stamp_of(st);
+#endif
+}
+
+FileStamp file_stamp_fd(int fd) {
+#ifdef _WIN32
+  (void)fd;
+  return FileStamp{};
+#else
+  struct stat st;
+  if (fd < 0 || ::fstat(fd, &st) != 0) return FileStamp{};
+  return stamp_of(st);
+#endif
 }
 
 FileDigest sha256_file(const std::string& path) {
   FileDigest d;
-  std::ifstream f(path, std::ios::binary);
-  if (!f) {
-    d.error = "cannot open " + path + ": " + std::strerror(errno);
-    return d;
-  }
   ember_ir::Sha256 h;
   std::vector<char> buf(4u << 20);
+#ifdef _WIN32
+  std::ifstream f(path, std::ios::binary);
+  if (!f) {
+    d.error = "cannot open " + path;
+    return d;
+  }
+  d.stamp = file_stamp(path);
   while (f) {
     f.read(buf.data(), static_cast<std::streamsize>(buf.size()));
     const std::streamsize n = f.gcount();
@@ -82,6 +124,33 @@ FileDigest sha256_file(const std::string& path) {
     d.error = "read error in " + path;
     return d;
   }
+#else
+  const int fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
+  if (fd < 0) {
+    d.error = "cannot open " + path + ": " + std::strerror(errno);
+    return d;
+  }
+  const FileStamp before = file_stamp_fd(fd);
+  for (;;) {
+    const ssize_t n = ::read(fd, buf.data(), buf.size());
+    if (n == 0) break;
+    if (n < 0) {
+      if (errno == EINTR) continue;
+      d.error = "read error in " + path + ": " + std::strerror(errno);
+      ::close(fd);
+      return d;
+    }
+    h.update(buf.data(), static_cast<size_t>(n));
+    d.bytes += static_cast<uint64_t>(n);
+  }
+  const FileStamp after = file_stamp_fd(fd);
+  ::close(fd);
+  if (!same_stamp(before, after) || after.size != d.bytes) {
+    d.error = path + " changed while it was hashed";
+    return d;
+  }
+  d.stamp = after;
+#endif
   d.sha256 = h.hex();
   d.ok = true;
   return d;
@@ -101,23 +170,27 @@ BuildInfo build_info() {
   return b;
 }
 
-std::string executable_path() {
+ExecutableDigest executable_digest() {
+  ExecutableDigest e;
 #ifdef _WIN32
   char buf[MAX_PATH + 1];
   const DWORD n = GetModuleFileNameA(nullptr, buf, MAX_PATH);
-  if (n == 0 || n >= MAX_PATH) return "";
-  return std::string(buf, n);
+  if (n > 0 && n < MAX_PATH) e.path = std::string(buf, n);
+  if (!e.path.empty()) e.digest = sha256_file(e.path);
+  else e.digest.error = "the executable path is unknown";
 #elif defined(__linux__)
   std::error_code ec;
   const auto p = std::filesystem::read_symlink("/proc/self/exe", ec);
-  return ec ? std::string() : p.string();
+  if (!ec) e.path = p.string();
+  e.digest = sha256_file("/proc/self/exe");  // the running image, even when its path was replaced
 #else
-  return "";
+  e.digest.error = "the executable path is unknown on this platform";
 #endif
+  return e;
 }
 
-std::vector<std::string> ember_env_names() {
-  std::vector<std::string> out;
+EnvRecord ember_env_record() {
+  EnvRecord r;
 #ifdef _WIN32
   char** env = _environ;
 #else
@@ -126,10 +199,14 @@ std::vector<std::string> ember_env_names() {
   for (char** e = env; e && *e; ++e) {
     const std::string kv(*e);
     if (kv.rfind("EMBER_", 0) != 0) continue;
-    out.push_back(kv.substr(0, kv.find('=')));
+    r.names.push_back(kv.substr(0, kv.find('=')));
   }
-  std::sort(out.begin(), out.end());
-  return out;
+  std::sort(r.names.begin(), r.names.end());
+  for (const char* name : kValueSettings)
+    if (const char* v = std::getenv(name)) r.values.emplace_back(name, std::string(v).substr(0, 256));
+  for (const char* name : kFileSettings)
+    if (const char* v = std::getenv(name)) r.files.emplace_back(name, sha256_file(v));
+  return r;
 }
 
 bool digestible_weights(const std::string& model_path) {
@@ -142,13 +219,23 @@ bool digestible_weights(const std::string& model_path) {
 
 std::string new_instance_id() {
   std::random_device rd;
-  static const char* digits = "0123456789abcdef";
-  std::string out;
-  for (int i = 0; i < 4; ++i) {
-    const uint32_t x = rd();
-    for (int k = 7; k >= 0; --k) out += digits[(x >> (4 * k)) & 15];
-  }
-  return out;
+  ember_ir::Sha256 h;
+  uint32_t r[4] = {rd(), rd(), rd(), rd()};
+  const int64_t t1 = std::chrono::system_clock::now().time_since_epoch().count();
+  const int64_t t2 = std::chrono::steady_clock::now().time_since_epoch().count();
+#ifdef _WIN32
+  const int64_t pid = _getpid();
+#else
+  const int64_t pid = ::getpid();
+#endif
+  static int64_t counter = 0;
+  const int64_t c = ++counter;
+  h.update(r, sizeof(r));
+  h.update(&t1, sizeof(t1));
+  h.update(&t2, sizeof(t2));
+  h.update(&pid, sizeof(pid));
+  h.update(&c, sizeof(c));
+  return h.hex().substr(0, 32);
 }
 
 }  // namespace ember
