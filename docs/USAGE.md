@@ -37,7 +37,9 @@ names predate the ember.cpp rename and are kept for compatibility.
 - **SafeTensors**: a directory with `config.json`, `tokenizer.json` and `model.safetensors`
   (F32, BF16, F16; computed in F32).
 
-Tested sources: [TinyLlama 1.1B Chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0)
+Tested sources in the pre-rename `tinyllama.cpp` project (no receipt for them is in
+`experiments/`; the gated families and their evidence are in
+[CAPABILITY_EVIDENCE.md](CAPABILITY_EVIDENCE.md)): [TinyLlama 1.1B Chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0)
 (SafeTensors) and [its GGUFs](https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF),
 [Llama-2 7B GGUF](https://huggingface.co/TheBloke/Llama-2-7B-GGUF),
 [Llama-3 8B GGUF](https://huggingface.co/QuantFactory/Meta-Llama-3-8B-GGUF).
@@ -57,8 +59,37 @@ GPU, 0 for CPU only. Endpoints:
 | `POST /chat` | `{user_input, system, history, thinking, temperature, top_k, top_p, seed, max_new_tokens, repeat_penalty, repeat_last_n, stream, return_ids}` -> `{reply, stop_reason, tokens, ttft}`; `"stream": true` sends server-sent events; under `paperkiln/2` also `tools` in, `tool_calls` out (below) |
 | `POST /v1/chat/completions` | OpenAI-compatible chat completions, with `stream` and `stream_options.include_usage`; `repeat_penalty` / `repeat_last_n`, `top_k`, `thinking` and `chat_template_kwargs.enable_thinking` as extension fields; `frequency_penalty` and `presence_penalty` accept only 0; under `paperkiln/2` also `tools`, tool messages and `message.tool_calls` (below) |
 | `GET /v1/models` | OpenAI-compatible model list |
-| `GET /health` | model, tokenizer, context length and `chat_template` (`{name, version}`, null for raw completion; `chat_template_why` says how it was resolved) |
+| `GET /health` | model, tokenizer, context length and `chat_template` (`{name, version}`, null for raw completion; `chat_template_why` says how it was resolved); `provenance` (below) |
 | `POST /score` | log-probabilities of continuations, paperkiln's `mtstudio score` on token ids (below): `{requests: [{key, prompt_ids, continuation_ids}]}` -> `{results: [{i, key, prompt_tokens, continuation_ids, over_ctx, logprobs, argmax, sum}], stats}` |
+
+Provenance (`model_provenance.h`), for evaluation receipts: `/health`'s `provenance` is
+`{schema: "ember.provenance/1", instance_id, weights: {status, sha256, bytes, path, monitored},
+build: {git_commit, git_dirty, backend, config, compiler}, executable: {path, sha256}, runtime:
+{gpu_layers_requested, ember_env, ember_settings, ember_side_files}}`. `weights.sha256` is the
+SHA-256 of the `.gguf` file as hashed once at start, before the load (`status` `"sha256"`). The
+server refuses to start when the file's stamp (size, modification time and, on POSIX, inode) differs
+between the hash and the end of the load, by path or on the loader's descriptor. On POSIX each
+`/health` then `fstat()`s the loader's descriptor (`monitored: true`) and reports
+`"modified_since_load"`, with `sha256` null and `sha256_at_load`, once the mapped file has changed:
+under mmap most weights are read during inference, not at load. A rewrite that keeps size,
+modification time and inode is not seen, and Windows has no inode or per-request check (its share
+mode blocks writers while the file is mapped). `EMBER_WEIGHTS_DIGEST=0` skips the hash
+(`"disabled"`; about 2.3 s per 342 MB on one CPU core otherwise); SafeTensors models, which also
+read `config.json` and a tokenizer from elsewhere, are `"unsupported_format"`; both have `sha256`
+null. `git_commit` and `git_dirty` (tracked files) are recorded at build time
+(`tools/ember_build_info.cmake`; `"unknown"` and null without git); `executable.sha256` is the running
+image's (Linux `/proc/self/exe`, hashed before the weights), so a dirty build is identified too.
+`ember_env` lists every `EMBER_*` name set; `ember_settings` gives the values of the settings ember
+reads, `ember_side_files` the SHA-256 of the files named by `EMBER_IR`, `EMBER_DRAFT_TABLE` and
+`EMBER_TEST_SCRIPTED_REPLIES`; other names carry no value. `instance_id` is new for each process, so
+a restart changes `/health`. Under `EMBER_PUBLIC=1` the object carries `"public": true` and keeps
+only what provenance needs (weights `status`, `sha256`, `bytes`, `monitored`; `build` without
+`compiler`; `executable.sha256`; `instance_id`; `runtime.gpu_layers_requested`): the weights and
+executable paths, the compiler and `ember_env`, `ember_settings` and `ember_side_files` are left out,
+so a client can still match the weights but cannot compare runtime settings against a public server.
+(The top-level `model` field keeps the path it always had.) This is the server's own report: it catches the wrong file, a stale
+server, a mid-run restart and changed settings, not a server that misreports.
+`tools/provenance_server_check.py` checks it against `hashlib`.
 
 Chat template (LOCAL_LLM_STACK.md section 3, point 3; shared with paperkiln's `mtstudio chat`):
 the prompt is the conversation rendered by a template record, never a format built into the
@@ -224,6 +255,7 @@ Operational logs go to `debugging.log` in the working directory.
 | `EMBER_DECODE_ATTN_TILE=m,x` | the tiled kernel's chunking: at least m keys per chunk, at most x chunks per head (x <= 64; default 32,64) |
 | `EMBER_GEMM_TF32=0` | FP32 instead of TF32 GEMMs in the CUDA prefill |
 | `EMBER_DETERMINISTIC=1` | deterministic CUDA mode: prefill and decode logits bit-identical run to run on the same GPU and build (below); `/health` then reports `"deterministic": true`. Off by default |
+| `EMBER_WEIGHTS_DIGEST=0` | skip the load-time weights SHA-256 in `/health`'s `provenance` (above); evaluations then record the run as unverified |
 | `EMBER_DEQUANT_AT_LOAD=0` | keep small quantised models in their blocks (default: dequantise under 64M parameters) |
 | `EMBER_MOE_DENSE=1` | run every MoE expert densely instead of the routed path |
 | `EMBER_INTERPRETER=1/0` | force the IR interpreter on, or off, for a GGUF with `paperkiln.ir` |

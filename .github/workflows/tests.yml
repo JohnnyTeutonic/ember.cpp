@@ -1,0 +1,29 @@
+name: Tests
+
+# CPU-only CTest suite: the fixed-order CPU dot products, the Windows macro portability check, the
+# llama-path vs IR-interpreter parity gate on a tiny llama GGUF the test writes itself, and the chat
+# template conformance check. The tests run in about a second; the time is the build of the core.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ctest-cpu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build libboost-regex-dev python3-dev
+      - name: Configure (CPU only)
+        run: cmake -S . -B build -G Ninja -DHAS_CUDA=OFF -DCMAKE_BUILD_TYPE=Release
+      - name: Build the test targets
+        run: >
+          cmake --build build --target cpu_dot_test cpu_dot_portable_test ir_expr_header_portability_test
+          llama_ir_parity_test chat_template_check model_provenance_test
+      - name: CTest
+        run: ctest --test-dir build --output-on-failure --timeout 120
