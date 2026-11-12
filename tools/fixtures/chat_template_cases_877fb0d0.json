@@ -1,0 +1,2643 @@
+{
+ "cases": [
+  {
+   "name": "one user prompt",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>Hi<|assistant|>"
+  },
+  {
+   "name": "system folds into the first user turn",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Be brief."
+    },
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>Be brief.\n\nHi<|assistant|>"
+  },
+  {
+   "name": "a lone system message",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Be brief."
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "a system message with no user message",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Be brief."
+    },
+    {
+     "role": "assistant",
+     "content": "Ok"
+    }
+   ],
+   "generation_prompt": false,
+   "expect": null
+  },
+  {
+   "name": "two system messages",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "system",
+     "content": "a"
+    },
+    {
+     "role": "system",
+     "content": "b"
+    },
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "a system message mid-conversation",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi"
+    },
+    {
+     "role": "assistant",
+     "content": "Hello"
+    },
+    {
+     "role": "system",
+     "content": "Now be rude."
+    },
+    {
+     "role": "user",
+     "content": "Bye"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "the assistant first",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "assistant",
+     "content": "Hello"
+    },
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "two user messages in a row",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "a"
+    },
+    {
+     "role": "user",
+     "content": "b"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "a training conversation ending on a user message",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": false,
+   "expect": null
+  },
+  {
+   "name": "a prompt ending on an assistant message",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi"
+    },
+    {
+     "role": "assistant",
+     "content": "Hello"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "user content holding a role marker",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "say <|user|> now"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "system content holding end-of-text",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "system",
+     "content": "stop at <|endoftext|>"
+    },
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "assistant content holding a marker",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi"
+    },
+    {
+     "role": "assistant",
+     "content": "<|assistant|>x"
+    },
+    {
+     "role": "user",
+     "content": "y"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "<unk> text is ordinary content",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "the <unk> token"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>the <unk> token<|assistant|>"
+  },
+  {
+   "name": "newline-only user content",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "\n"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>\n<|assistant|>"
+  },
+  {
+   "name": "newline-only and empty replies in the history",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "a"
+    },
+    {
+     "role": "assistant",
+     "content": "\n"
+    },
+    {
+     "role": "user",
+     "content": "b"
+    },
+    {
+     "role": "assistant",
+     "content": ""
+    },
+    {
+     "role": "user",
+     "content": "c"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>a<|assistant|>\n<|endoftext|><|user|>b<|assistant|><|endoftext|><|user|>c<|assistant|>"
+  },
+  {
+   "name": "the tool role is reserved",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi"
+    },
+    {
+     "role": "tool",
+     "content": "42"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "an unknown role",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "narrator",
+     "content": "Once"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "three exchanges with a system message",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Be kind."
+    },
+    {
+     "role": "user",
+     "content": "a"
+    },
+    {
+     "role": "assistant",
+     "content": "b"
+    },
+    {
+     "role": "user",
+     "content": "c"
+    },
+    {
+     "role": "assistant",
+     "content": "d"
+    },
+    {
+     "role": "user",
+     "content": "e"
+    },
+    {
+     "role": "assistant",
+     "content": "f"
+    },
+    {
+     "role": "user",
+     "content": "g"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>Be kind.\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>f<|endoftext|><|user|>g<|assistant|>"
+  },
+  {
+   "name": "a training conversation with a system message",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "system",
+     "content": "S"
+    },
+    {
+     "role": "user",
+     "content": "a"
+    },
+    {
+     "role": "assistant",
+     "content": "b"
+    },
+    {
+     "role": "user",
+     "content": "c"
+    },
+    {
+     "role": "assistant",
+     "content": "d"
+    }
+   ],
+   "generation_prompt": false,
+   "expect": "<|user|>S\n\na<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|>"
+  },
+  {
+   "name": "loss on a user message",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi",
+     "loss": true
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "unicode content",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Grüße, 東京, 🙂"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>Grüße, 東京, 🙂<|assistant|>"
+  },
+  {
+   "name": "system mode none refuses a system message",
+   "template": {
+    "name": "paperkiln",
+    "version": 1,
+    "bos": "",
+    "content": "raw",
+    "system": {
+     "mode": "none"
+    },
+    "user": {
+     "open": "<|user|>",
+     "close": ""
+    },
+    "assistant": {
+     "open": "<|assistant|>",
+     "close": "<|endoftext|>"
+    },
+    "generation_prompt": "<|assistant|>",
+    "stop": {
+     "eos": [
+      "<|endoftext|>"
+     ],
+     "turn": [
+      "<|user|>",
+      "<|assistant|>"
+     ]
+    },
+    "past_assistant": "keep",
+    "reserved": [
+     "<|endoftext|>",
+     "<|user|>",
+     "<|assistant|>"
+    ]
+   },
+   "messages": [
+    {
+     "role": "system",
+     "content": "S"
+    },
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "system mode none without one",
+   "template": {
+    "name": "paperkiln",
+    "version": 1,
+    "bos": "",
+    "content": "raw",
+    "system": {
+     "mode": "none"
+    },
+    "user": {
+     "open": "<|user|>",
+     "close": ""
+    },
+    "assistant": {
+     "open": "<|assistant|>",
+     "close": "<|endoftext|>"
+    },
+    "generation_prompt": "<|assistant|>",
+    "stop": {
+     "eos": [
+      "<|endoftext|>"
+     ],
+     "turn": [
+      "<|user|>",
+      "<|assistant|>"
+     ]
+    },
+    "past_assistant": "keep",
+    "reserved": [
+     "<|endoftext|>",
+     "<|user|>",
+     "<|assistant|>"
+    ]
+   },
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>Hi<|assistant|>"
+  },
+  {
+   "name": "legacy word-level prompt",
+   "template": "paperkiln/legacy-word",
+   "messages": [
+    {
+     "role": "user",
+     "content": "hi"
+    },
+    {
+     "role": "assistant",
+     "content": "hello"
+    },
+    {
+     "role": "user",
+     "content": "how are you"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "user: hi assistant: hello user: how are you assistant:"
+  },
+  {
+   "name": "gemma3 trims and folds",
+   "template": "gemma3/1",
+   "messages": [
+    {
+     "role": "system",
+     "content": " Be brief. "
+    },
+    {
+     "role": "user",
+     "content": "  Hi \n"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<bos><start_of_turn>user\n Be brief. \n\nHi<end_of_turn>\n<start_of_turn>model\n"
+  },
+  {
+   "name": "gemma3 trims unicode edge whitespace",
+   "template": "gemma3/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": " 　Hi there \n"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<bos><start_of_turn>user\nHi there<end_of_turn>\n<start_of_turn>model\n"
+  },
+  {
+   "name": "gemma3 trims unicode whitespace in system and history",
+   "template": "gemma3/1",
+   "messages": [
+    {
+     "role": "system",
+     "content": " Be brief. "
+    },
+    {
+     "role": "user",
+     "content": " Q1"
+    },
+    {
+     "role": "assistant",
+     "content": " A1 "
+    },
+    {
+     "role": "user",
+     "content": "\u001cQ2\u001f"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<bos><start_of_turn>user\n Be brief. \n\nQ1<end_of_turn>\n<start_of_turn>model\nA1<end_of_turn>\n<start_of_turn>user\nQ2<end_of_turn>\n<start_of_turn>model\n"
+  },
+  {
+   "name": "gemma3 keeps inner unicode whitespace and zero-width space",
+   "template": "gemma3/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "​A B​"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<bos><start_of_turn>user\n​A B​<end_of_turn>\n<start_of_turn>model\n"
+  },
+  {
+   "name": "qwen3 strips past reasoning",
+   "template": "chatml-qwen3/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "a"
+    },
+    {
+     "role": "assistant",
+     "content": "<think>\nr\n</think>\n\nb"
+    },
+    {
+     "role": "user",
+     "content": "c"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|im_start|>user\na<|im_end|>\n<|im_start|>assistant\nb<|im_end|>\n<|im_start|>user\nc<|im_end|>\n<|im_start|>assistant\n"
+  },
+  {
+   "name": "qwen2.5 writes its default system turn",
+   "template": "chatml-qwen2.5/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n"
+  },
+  {
+   "name": "qwen3 thinking off",
+   "template": "chatml-qwen3/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "thinking": false,
+   "expect": "<|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+  },
+  {
+   "name": "v2 one user prompt (v1's text)",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>Hi<|assistant|>"
+  },
+  {
+   "name": "v2 user and assistant only (v1's text)",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "a"
+    },
+    {
+     "role": "assistant",
+     "content": "b"
+    },
+    {
+     "role": "user",
+     "content": "c"
+    },
+    {
+     "role": "assistant",
+     "content": "d"
+    },
+    {
+     "role": "user",
+     "content": "e"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>a<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|><|user|>e<|assistant|>"
+  },
+  {
+   "name": "v2 system turn",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Be brief."
+    },
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|system|>Be brief.<|user|>Hi<|assistant|>"
+  },
+  {
+   "name": "v2 empty system message",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "system",
+     "content": ""
+    },
+    {
+     "role": "user",
+     "content": "Hi"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|system|><|user|>Hi<|assistant|>"
+  },
+  {
+   "name": "v2 system turn and history",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Be brief."
+    },
+    {
+     "role": "user",
+     "content": "a"
+    },
+    {
+     "role": "assistant",
+     "content": "b"
+    },
+    {
+     "role": "user",
+     "content": "c"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|system|>Be brief.<|user|>a<|assistant|>b<|endoftext|><|user|>c<|assistant|>"
+  },
+  {
+   "name": "v2 training conversation with a system turn",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Be brief."
+    },
+    {
+     "role": "user",
+     "content": "a"
+    },
+    {
+     "role": "assistant",
+     "content": "b"
+    },
+    {
+     "role": "user",
+     "content": "c"
+    },
+    {
+     "role": "assistant",
+     "content": "d"
+    }
+   ],
+   "generation_prompt": false,
+   "expect": "<|system|>Be brief.<|user|>a<|assistant|>b<|endoftext|><|user|>c<|assistant|>d<|endoftext|>"
+  },
+  {
+   "name": "v2 system and tool definitions",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Be brief."
+    },
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    }
+   ],
+   "generation_prompt": true,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Current weather in a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    },
+    {
+     "type": "function",
+     "function": {
+      "name": "get_time",
+      "parameters": {
+       "type": "object",
+       "properties": {}
+      }
+     }
+    }
+   ],
+   "expect": "<|system|>Be brief.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"get_time\", \"parameters\": {\"type\": \"object\", \"properties\": {}}}}<|user|>What is the weather in Paris?<|assistant|>"
+  },
+  {
+   "name": "v2 tool definitions without a system message",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    }
+   ],
+   "generation_prompt": true,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Current weather in a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|>"
+  },
+  {
+   "name": "v2 tool definitions with an empty system message",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "system",
+     "content": ""
+    },
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    }
+   ],
+   "generation_prompt": true,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Current weather in a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|>"
+  },
+  {
+   "name": "v2 unicode tool definition",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    }
+   ],
+   "generation_prompt": true,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "météo",
+      "description": "東京 \"q\" a\\b\n\t\u0001"
+     }
+    }
+   ],
+   "expect": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"météo\", \"description\": \"東京 \\\"q\\\" a\\\\b\\n\\t\\u0001\"}}<|user|>What is the weather in Paris?<|assistant|>"
+  },
+  {
+   "name": "v2 a call answered: the prompt ends on the tool message",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Be brief."
+    },
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Current weather in a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": "<|system|>Be brief.\n\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+  },
+  {
+   "name": "v2 a call, its result and the reply",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    },
+    {
+     "role": "assistant",
+     "content": "It is 18 C in Paris."
+    }
+   ],
+   "generation_prompt": false,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Current weather in a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>It is 18 C in Paris.<|endoftext|>"
+  },
+  {
+   "name": "v2 content before a call",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "Let me check.",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>What is the weather in Paris?<|assistant|>Let me check.<|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+  },
+  {
+   "name": "v2 two calls, two results, a reply, then a user message",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      },
+      {
+       "type": "function",
+       "function": {
+        "name": "get_time",
+        "arguments": "{}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    },
+    {
+     "role": "tool",
+     "content": "\"09:00\""
+    },
+    {
+     "role": "assistant",
+     "content": "18 C at 09:00."
+    },
+    {
+     "role": "user",
+     "content": "Thanks"
+    }
+   ],
+   "generation_prompt": true,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Current weather in a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    },
+    {
+     "type": "function",
+     "function": {
+      "name": "get_time",
+      "parameters": {
+       "type": "object",
+       "properties": {}
+      }
+     }
+    }
+   ],
+   "expect": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"get_time\", \"parameters\": {\"type\": \"object\", \"properties\": {}}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|tool_call|>get_time\n{}<|endoftext|><|tool|>{\"temp_c\": 18}<|tool|>\"09:00\"<|assistant|>18 C at 09:00.<|endoftext|><|user|>Thanks<|assistant|>"
+  },
+  {
+   "name": "v2 tool_call_id matching the call's id",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       },
+       "id": "c1"
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}",
+     "tool_call_id": "c1"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+  },
+  {
+   "name": "v2 a training conversation ending on a call",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    }
+   ],
+   "generation_prompt": false,
+   "expect": "<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|>"
+  },
+  {
+   "name": "v2 empty arguments",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_time",
+        "arguments": ""
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_time\n<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+  },
+  {
+   "name": "v2 tool_call_id null answering a call without an id",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}",
+     "tool_call_id": null
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|>{\"temp_c\": 18}<|assistant|>"
+  },
+  {
+   "name": "v2 tool_call_id null and a string, calls without and with an id",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      },
+      {
+       "type": "function",
+       "function": {
+        "name": "get_time",
+        "arguments": "{}"
+       },
+       "id": "c2"
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}",
+     "tool_call_id": null
+    },
+    {
+     "role": "tool",
+     "content": "\"09:00\"",
+     "tool_call_id": "c2"
+    },
+    {
+     "role": "assistant",
+     "content": "18 C at 09:00."
+    }
+   ],
+   "generation_prompt": false,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Current weather in a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    },
+    {
+     "type": "function",
+     "function": {
+      "name": "get_time",
+      "parameters": {
+       "type": "object",
+       "properties": {}
+      }
+     }
+    }
+   ],
+   "expect": "<|system|>{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Current weather in a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"get_time\", \"parameters\": {\"type\": \"object\", \"properties\": {}}}}<|user|>What is the weather in Paris?<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|tool_call|>get_time\n{}<|endoftext|><|tool|>{\"temp_c\": 18}<|tool|>\"09:00\"<|assistant|>18 C at 09:00.<|endoftext|>"
+  },
+  {
+   "name": "v2 newline-only and empty contents",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "\n"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": ""
+    },
+    {
+     "role": "assistant",
+     "content": "\n"
+    },
+    {
+     "role": "user",
+     "content": ""
+    }
+   ],
+   "generation_prompt": true,
+   "expect": "<|user|>\n<|assistant|><|tool_call|>get_weather\n{\"city\": \"Paris\"}<|endoftext|><|tool|><|assistant|>\n<|endoftext|><|user|><|assistant|>"
+  },
+  {
+   "name": "v2 a tool message without a call",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "Hello"
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 a tool message first",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    },
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 fewer results than calls",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      },
+      {
+       "type": "function",
+       "function": {
+        "name": "get_time",
+        "arguments": "{}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    },
+    {
+     "role": "assistant",
+     "content": "x"
+    },
+    {
+     "role": "user",
+     "content": "y"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 a prompt ending while a call has no result",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      },
+      {
+       "type": "function",
+       "function": {
+        "name": "get_time",
+        "arguments": "{}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 a reply without its results",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "assistant",
+     "content": "x"
+    },
+    {
+     "role": "user",
+     "content": "y"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 tool_call_id not the call's id",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       },
+       "id": "c1"
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}",
+     "tool_call_id": "c2"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 tool_call_id when the call has no id",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}",
+     "tool_call_id": "c1"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 tool_call_id null against a call with an id",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       },
+       "id": "c1"
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}",
+     "tool_call_id": null
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 tool_call_id null against the second call's id",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      },
+      {
+       "type": "function",
+       "function": {
+        "name": "get_time",
+        "arguments": "{}"
+       },
+       "id": "c2"
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}",
+     "tool_call_id": null
+    },
+    {
+     "role": "tool",
+     "content": "\"09:00\"",
+     "tool_call_id": null
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 tool_call_id neither a string nor null",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}",
+     "tool_call_id": 7
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 a tool call's id null",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       },
+       "id": null
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 a call name with a newline",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get\nweather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 an empty call name",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 arguments holding a control token",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "<|tool_call|>x"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 arguments that are not a string",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "f",
+        "arguments": {
+         "a": 1
+        }
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 a call type other than function",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "code",
+       "function": {
+        "name": "f",
+        "arguments": "{}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 an empty tool_calls list",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "x",
+     "tool_calls": []
+    },
+    {
+     "role": "user",
+     "content": "y"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 tool_calls on a user message",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "x",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 user content holding <|system|>",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "a <|system|> b"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 tool content holding a spare token",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "x<|spare_5|>"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 system content holding <|tool|>",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "system",
+     "content": "<|tool|>"
+    },
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 a tool definition holding a control token",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    }
+   ],
+   "generation_prompt": true,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "f",
+      "description": "<|user|>"
+     }
+    }
+   ],
+   "expect": null
+  },
+  {
+   "name": "v2 a tool definition with a non-integer number",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    }
+   ],
+   "generation_prompt": true,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "f",
+      "parameters": {
+       "maximum": 1.5
+      }
+     }
+    }
+   ],
+   "expect": null
+  },
+  {
+   "name": "v2 a tool definition that is not an object",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    }
+   ],
+   "generation_prompt": true,
+   "tools": [
+    "get_weather"
+   ],
+   "expect": null
+  },
+  {
+   "name": "v2 a system message mid-conversation",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "x"
+    },
+    {
+     "role": "system",
+     "content": "Be brief."
+    },
+    {
+     "role": "user",
+     "content": "y"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v2 loss on a tool message",
+   "template": "paperkiln/2",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}",
+     "loss": false
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  },
+  {
+   "name": "v1 refuses tool definitions",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    }
+   ],
+   "generation_prompt": true,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Current weather in a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": null
+  },
+  {
+   "name": "v1 refuses tool_calls",
+   "template": "paperkiln/1",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Paris?"
+    },
+    {
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18}"
+    }
+   ],
+   "generation_prompt": true,
+   "expect": null
+  }
+ ],
+ "records": {
+  "paperkiln/1": {
+   "name": "paperkiln",
+   "version": 1,
+   "bos": "",
+   "content": "raw",
+   "system": {
+    "mode": "fold",
+    "join": "\n\n"
+   },
+   "user": {
+    "open": "<|user|>",
+    "close": ""
+   },
+   "assistant": {
+    "open": "<|assistant|>",
+    "close": "<|endoftext|>"
+   },
+   "generation_prompt": "<|assistant|>",
+   "stop": {
+    "eos": [
+     "<|endoftext|>"
+    ],
+    "turn": [
+     "<|user|>",
+     "<|assistant|>"
+    ]
+   },
+   "past_assistant": "keep",
+   "reserved": [
+    "<|endoftext|>",
+    "<|user|>",
+    "<|assistant|>"
+   ]
+  },
+  "paperkiln/2": {
+   "name": "paperkiln",
+   "version": 2,
+   "bos": "",
+   "content": "raw",
+   "system": {
+    "mode": "turn",
+    "open": "<|system|>",
+    "close": ""
+   },
+   "user": {
+    "open": "<|user|>",
+    "close": ""
+   },
+   "assistant": {
+    "open": "<|assistant|>",
+    "close": "<|endoftext|>"
+   },
+   "tool": {
+    "open": "<|tool|>",
+    "close": ""
+   },
+   "tool_call": {
+    "open": "<|tool_call|>",
+    "join": "\n"
+   },
+   "tools": {
+    "join": "\n\n",
+    "sep": "\n"
+   },
+   "generation_prompt": "<|assistant|>",
+   "stop": {
+    "eos": [
+     "<|endoftext|>"
+    ],
+    "turn": [
+     "<|user|>",
+     "<|assistant|>",
+     "<|system|>",
+     "<|tool|>"
+    ]
+   },
+   "past_assistant": "keep",
+   "reserved": [
+    "<|endoftext|>",
+    "<|user|>",
+    "<|assistant|>",
+    "<|system|>",
+    "<|tool_call|>",
+    "<|tool|>",
+    "<|spare_3|>",
+    "<|spare_4|>",
+    "<|spare_5|>",
+    "<|spare_6|>",
+    "<|spare_7|>"
+   ]
+  },
+  "paperkiln/legacy-word": {
+   "name": "paperkiln",
+   "version": "legacy-word",
+   "bos": "",
+   "content": "raw",
+   "system": {
+    "mode": "fold",
+    "join": "\n\n"
+   },
+   "user": {
+    "open": "user: ",
+    "close": " "
+   },
+   "assistant": {
+    "open": "assistant: ",
+    "close": " "
+   },
+   "generation_prompt": "assistant:",
+   "stop": {
+    "eos": [],
+    "turn": [
+     "user:",
+     "assistant:"
+    ]
+   },
+   "past_assistant": "keep",
+   "reserved": []
+  },
+  "chatml-qwen2.5/1": {
+   "name": "chatml-qwen2.5",
+   "version": 1,
+   "bos": "",
+   "content": "raw",
+   "system": {
+    "mode": "turn",
+    "open": "<|im_start|>system\n",
+    "close": "<|im_end|>\n"
+   },
+   "user": {
+    "open": "<|im_start|>user\n",
+    "close": "<|im_end|>\n"
+   },
+   "assistant": {
+    "open": "<|im_start|>assistant\n",
+    "close": "<|im_end|>\n"
+   },
+   "generation_prompt": "<|im_start|>assistant\n",
+   "stop": {
+    "eos": [
+     "<|im_end|>",
+     "<|endoftext|>"
+    ],
+    "turn": []
+   },
+   "past_assistant": "keep",
+   "reserved": [
+    "<|im_start|>",
+    "<|im_end|>",
+    "<|endoftext|>"
+   ],
+   "markers": [
+    "<|im_start|>",
+    "<|im_end|>"
+   ],
+   "default_system": "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.",
+   "match": [
+    "d5495a1e5db0611132a97e46a65dbb64a642a499421228b9c8b93229097fa9a4"
+   ],
+   "architectures": [
+    "qwen2"
+   ]
+  },
+  "chatml-qwen3/1": {
+   "name": "chatml-qwen3",
+   "version": 1,
+   "bos": "",
+   "content": "raw",
+   "system": {
+    "mode": "turn",
+    "open": "<|im_start|>system\n",
+    "close": "<|im_end|>\n"
+   },
+   "user": {
+    "open": "<|im_start|>user\n",
+    "close": "<|im_end|>\n"
+   },
+   "assistant": {
+    "open": "<|im_start|>assistant\n",
+    "close": "<|im_end|>\n"
+   },
+   "generation_prompt": "<|im_start|>assistant\n",
+   "stop": {
+    "eos": [
+     "<|im_end|>",
+     "<|endoftext|>"
+    ],
+    "turn": []
+   },
+   "past_assistant": "strip_think",
+   "reserved": [
+    "<|im_start|>",
+    "<|im_end|>",
+    "<|endoftext|>"
+   ],
+   "markers": [
+    "<|im_start|>",
+    "<|im_end|>"
+   ],
+   "generation_prompt_nothink": "<|im_start|>assistant\n<think>\n\n</think>\n\n",
+   "match": [
+    "57f1fd00f0013a2be96aa79b857391f27e23df5b5f847072b524c897e24d0361"
+   ],
+   "architectures": [
+    "qwen3"
+   ]
+  },
+  "gemma3/1": {
+   "name": "gemma3",
+   "version": 1,
+   "bos": "<bos>",
+   "content": "trim",
+   "system": {
+    "mode": "fold",
+    "join": "\n\n"
+   },
+   "user": {
+    "open": "<start_of_turn>user\n",
+    "close": "<end_of_turn>\n"
+   },
+   "assistant": {
+    "open": "<start_of_turn>model\n",
+    "close": "<end_of_turn>\n"
+   },
+   "generation_prompt": "<start_of_turn>model\n",
+   "stop": {
+    "eos": [
+     "<end_of_turn>",
+     "<eos>"
+    ],
+    "turn": []
+   },
+   "past_assistant": "keep",
+   "reserved": [
+    "<start_of_turn>",
+    "<end_of_turn>",
+    "<bos>",
+    "<eos>"
+   ],
+   "markers": [
+    "<start_of_turn>",
+    "<end_of_turn>"
+   ],
+   "match": [
+    "7de1c58e208eda46e9c7f86397df37ec49883aeece39fb961e0a6b24088dd3c4"
+   ],
+   "architectures": [
+    "gemma3"
+   ]
+  }
+ },
+ "jinja": {
+  "paperkiln/1": "{%- if messages and messages[0]['role'] == 'system' -%}{%- set sys = messages[0]['content'] -%}{%- set msgs = messages[1:] -%}{%- else -%}{%- set sys = none -%}{%- set msgs = messages -%}{%- endif -%}{%- for m in msgs -%}{%- if (m['role'] == 'user') != (loop.index0 % 2 == 0) -%}{{ raise_exception('user and assistant messages alternate from the user') }}{%- endif -%}{%- if m['role'] == 'user' -%}{{- '<|user|>' -}}{%- if loop.first and sys is not none -%}{{- sys + '\\n\\n' -}}{%- endif -%}{{- m['content'] + '' -}}{%- else -%}{{- '<|assistant|>' + m['content'] + '<|endoftext|>' -}}{%- endif -%}{%- endfor -%}{%- if add_generation_prompt -%}{{- '<|assistant|>' -}}{%- endif -%}",
+  "paperkiln/1 none": "{%- if messages and messages[0]['role'] == 'system' -%}{%- set sys = messages[0]['content'] -%}{%- set msgs = messages[1:] -%}{%- else -%}{%- set sys = none -%}{%- set msgs = messages -%}{%- endif -%}{%- if sys is not none -%}{{ raise_exception('this model\\'s template has no system role') }}{%- endif -%}{%- for m in msgs -%}{%- if (m['role'] == 'user') != (loop.index0 % 2 == 0) -%}{{ raise_exception('user and assistant messages alternate from the user') }}{%- endif -%}{%- if m['role'] == 'user' -%}{{- '<|user|>' -}}{{- m['content'] + '' -}}{%- else -%}{{- '<|assistant|>' + m['content'] + '<|endoftext|>' -}}{%- endif -%}{%- endfor -%}{%- if add_generation_prompt -%}{{- '<|assistant|>' -}}{%- endif -%}",
+  "paperkiln/legacy-word": "{%- if messages and messages[0]['role'] == 'system' -%}{%- set sys = messages[0]['content'] -%}{%- set msgs = messages[1:] -%}{%- else -%}{%- set sys = none -%}{%- set msgs = messages -%}{%- endif -%}{%- for m in msgs -%}{%- if (m['role'] == 'user') != (loop.index0 % 2 == 0) -%}{{ raise_exception('user and assistant messages alternate from the user') }}{%- endif -%}{%- if m['role'] == 'user' -%}{{- 'user: ' -}}{%- if loop.first and sys is not none -%}{{- sys + '\\n\\n' -}}{%- endif -%}{{- m['content'] + ' ' -}}{%- else -%}{{- 'assistant: ' + m['content'] + ' ' -}}{%- endif -%}{%- endfor -%}{%- if add_generation_prompt -%}{{- 'assistant:' -}}{%- endif -%}",
+  "paperkiln/2": "{%- if messages and messages[0]['role'] == 'system' -%}{%- set sys = messages[0]['content'] -%}{%- set msgs = messages[1:] -%}{%- else -%}{%- set sys = none -%}{%- set msgs = messages -%}{%- endif -%}{%- if tools -%}{%- set ns = namespace(d='') -%}{%- for x in tools -%}{%- if not loop.first -%}{%- set ns.d = ns.d + '\\n' -%}{%- endif -%}{%- set ns.d = ns.d + (x | tojson) -%}{%- endfor -%}{%- if sys -%}{%- set sys = sys + '\\n\\n' + ns.d -%}{%- else -%}{%- set sys = ns.d -%}{%- endif -%}{%- endif -%}{%- if sys is not none -%}{{- '<|system|>' + sys + '' -}}{%- endif -%}{%- for m in msgs -%}{%- if m['role'] == 'user' -%}{{- '<|user|>' + m['content'] + '' -}}{%- elif m['role'] == 'assistant' -%}{{- '<|assistant|>' + m['content'] -}}{%- for c in (m['tool_calls'] or []) -%}{{- '<|tool_call|>' + c['function']['name'] + '\\n' -}}{%- if c['function']['arguments'] is string -%}{{- c['function']['arguments'] -}}{%- else -%}{{- c['function']['arguments'] | tojson -}}{%- endif -%}{%- endfor -%}{{- '<|endoftext|>' -}}{%- elif m['role'] == 'tool' -%}{{- '<|tool|>' + m['content'] + '' -}}{%- else -%}{{ raise_exception('roles: one leading system message, then user, assistant and tool') }}{%- endif -%}{%- endfor -%}{%- if add_generation_prompt -%}{{- '<|assistant|>' -}}{%- endif -%}"
+ },
+ "modelfile": {
+  "paperkiln/1": "# Ollama Modelfile for model.gguf: chat template paperkiln/1 (LOCAL_LLM_STACK.md section 3, point 3).\nFROM ./model.gguf\nTEMPLATE \"\"\"{{ $first := true }}{{ range .Messages }}{{ if eq .Role \"user\" }}<|user|>{{ if and $first $.System }}{{ $.System }}\n\n{{ end }}{{ $first = false }}{{ .Content }}{{ else if eq .Role \"assistant\" }}<|assistant|>{{ .Content }}<|endoftext|>{{ end }}{{ end }}<|assistant|>\"\"\"\nPARAMETER stop \"<|endoftext|>\"\nPARAMETER stop \"<|user|>\"\nPARAMETER stop \"<|assistant|>\"\n",
+  "paperkiln/2": "# Ollama Modelfile for model.gguf: chat template paperkiln/2 (LOCAL_LLM_STACK.md section 3, point 3).\nFROM ./model.gguf\nTEMPLATE \"\"\"{{ if or .System .Tools }}<|system|>{{ if .System }}{{ .System }}{{ end }}{{ if .Tools }}{{ if .System }}\n\n{{ end }}{{ range $i, $t := .Tools }}{{ if $i }}\n{{ end }}{{ json $t }}{{ end }}{{ end }}{{ end }}{{ range .Messages }}{{ if eq .Role \"user\" }}<|user|>{{ .Content }}{{ else if eq .Role \"assistant\" }}<|assistant|>{{ .Content }}{{ range .ToolCalls }}<|tool_call|>{{ .Function.Name }}\n{{ json .Function.Arguments }}{{ end }}<|endoftext|>{{ else if eq .Role \"tool\" }}<|tool|>{{ .Content }}{{ end }}{{ end }}<|assistant|>\"\"\"\nPARAMETER stop \"<|endoftext|>\"\nPARAMETER stop \"<|user|>\"\nPARAMETER stop \"<|assistant|>\"\nPARAMETER stop \"<|system|>\"\nPARAMETER stop \"<|tool|>\"\n"
+ },
+ "resolve": [
+  {
+   "declared": "",
+   "tokens": [
+    "<unk>",
+    "<|endoftext|>",
+    "<|user|>",
+    "<|assistant|>",
+    "a"
+   ],
+   "model": "gpt2",
+   "chat_template": "",
+   "arch": "llama",
+   "expect": "paperkiln/1"
+  },
+  {
+   "declared": "{\"name\": \"paperkiln\", \"version\": 1, \"bos\": \"\", \"content\": \"raw\", \"system\": {\"mode\": \"none\"}, \"user\": {\"open\": \"<|user|>\", \"close\": \"\"}, \"assistant\": {\"open\": \"<|assistant|>\", \"close\": \"<|endoftext|>\"}, \"generation_prompt\": \"<|assistant|>\", \"stop\": {\"eos\": [\"<|endoftext|>\"], \"turn\": [\"<|user|>\", \"<|assistant|>\"]}, \"past_assistant\": \"keep\", \"reserved\": [\"<|endoftext|>\", \"<|user|>\", \"<|assistant|>\"]}",
+   "tokens": [
+    "<unk>",
+    "<|endoftext|>",
+    "<|user|>",
+    "<|assistant|>"
+   ],
+   "model": "bpe",
+   "chat_template": "",
+   "arch": "llama",
+   "expect": "paperkiln/1"
+  },
+  {
+   "declared": "",
+   "tokens": [
+    "<unk>",
+    "the"
+   ],
+   "model": "word",
+   "chat_template": "",
+   "arch": "gpt2",
+   "expect": "paperkiln/legacy-word"
+  },
+  {
+   "declared": "",
+   "tokens": [
+    "<bos>",
+    "<start_of_turn>",
+    "<end_of_turn>"
+   ],
+   "model": "llama",
+   "chat_template": "",
+   "arch": "gemma3",
+   "expect": "gemma3/1"
+  },
+  {
+   "declared": "",
+   "tokens": [
+    "<bos>",
+    "<start_of_turn>"
+   ],
+   "model": "llama",
+   "chat_template": "",
+   "arch": "gemma3",
+   "expect": null
+  },
+  {
+   "declared": "",
+   "tokens": [
+    "a",
+    "b"
+   ],
+   "model": "gpt2",
+   "chat_template": "{{ x }}",
+   "arch": "llama",
+   "expect": null
+  },
+  {
+   "declared": "",
+   "tokens": [
+    "a"
+   ],
+   "model": "gpt2",
+   "chat_template": "{%- if tools %}\n    {{- '<|im_start|>system\\n' }}\n    {%- if messages[0]['role'] == 'system' %}\n        {{- messages[0]['content'] }}\n    {%- else %}\n        {{- 'You are Qwen, created by Alibaba Cloud. You are a helpful assistant.' }}\n    {%- endif %}\n    {{- \"\\n\\n# Tools\\n\\nYou may call one or more functions to assist with the user query.\\n\\nYou are provided with function signatures within <tools></tools> XML tags:\\n<tools>\" }}\n    {%- for tool in tools %}\n        {{- \"\\n\" }}\n        {{- tool | tojson }}\n    {%- endfor %}\n    {{- \"\\n</tools>\\n\\nFor each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:\\n<tool_call>\\n{{\\\"name\\\": <function-name>, \\\"arguments\\\": <args-json-object>}}\\n</tool_call><|im_end|>\\n\" }}\n{%- else %}\n    {%- if messages[0]['role'] == 'system' %}\n        {{- '<|im_start|>system\\n' + messages[0]['content'] + '<|im_end|>\\n' }}\n    {%- else %}\n        {{- '<|im_start|>system\\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\\n' }}\n    {%- endif %}\n{%- endif %}\n{%- for message in messages %}\n    {%- if (message.role == \"user\") or (message.role == \"system\" and not loop.first) or (message.role == \"assistant\" and not message.tool_calls) %}\n        {{- '<|im_start|>' + message.role + '\\n' + message.content + '<|im_end|>' + '\\n' }}\n    {%- elif message.role == \"assistant\" %}\n        {{- '<|im_start|>' + message.role }}\n        {%- if message.content %}\n            {{- '\\n' + message.content }}\n        {%- endif %}\n        {%- for tool_call in message.tool_calls %}\n            {%- if tool_call.function is defined %}\n                {%- set tool_call = tool_call.function %}\n            {%- endif %}\n            {{- '\\n<tool_call>\\n{\"name\": \"' }}\n            {{- tool_call.name }}\n            {{- '\", \"arguments\": ' }}\n            {{- tool_call.arguments | tojson }}\n            {{- '}\\n</tool_call>' }}\n        {%- endfor %}\n        {{- '<|im_end|>\\n' }}\n    {%- elif message.role == \"tool\" %}\n        {%- if (loop.index0 == 0) or (messages[loop.index0 - 1].role != \"tool\") %}\n            {{- '<|im_start|>user' }}\n        {%- endif %}\n        {{- '\\n<tool_response>\\n' }}\n        {{- message.content }}\n        {{- '\\n</tool_response>' }}\n        {%- if loop.last or (messages[loop.index0 + 1].role != \"tool\") %}\n            {{- '<|im_end|>\\n' }}\n        {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '<|im_start|>assistant\\n' }}\n{%- endif %}\n",
+   "arch": "qwen2",
+   "expect": "chatml-qwen2.5/1"
+  }
+ ],
+ "parse_reply": {
+  "tokens": {
+   "1": "Let me ",
+   "2": "check.",
+   "3": "get_weather",
+   "4": "\n",
+   "5": "{\"city\": \"Paris\"}",
+   "6": "<|tool_call|>",
+   "7": "get_time",
+   "8": "{}",
+   "9": "<|tool_call|>",
+   "10": "x\ny"
+  },
+  "cases": [
+   {
+    "name": "no call",
+    "ids": [
+     1,
+     2
+    ],
+    "call_id": 9,
+    "expect": {
+     "content": "Let me check.",
+     "tool_calls": []
+    }
+   },
+   {
+    "name": "content then a call",
+    "ids": [
+     1,
+     2,
+     9,
+     3,
+     4,
+     5
+    ],
+    "call_id": 9,
+    "expect": {
+     "content": "Let me check.",
+     "tool_calls": [
+      {
+       "id": "call_0",
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "name": "a call alone",
+    "ids": [
+     9,
+     3,
+     4,
+     5
+    ],
+    "call_id": 9,
+    "expect": {
+     "content": "",
+     "tool_calls": [
+      {
+       "id": "call_0",
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "name": "two calls",
+    "ids": [
+     9,
+     3,
+     4,
+     5,
+     9,
+     7,
+     4,
+     8
+    ],
+    "call_id": 9,
+    "expect": {
+     "content": "",
+     "tool_calls": [
+      {
+       "id": "call_0",
+       "type": "function",
+       "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Paris\"}"
+       }
+      },
+      {
+       "id": "call_1",
+       "type": "function",
+       "function": {
+        "name": "get_time",
+        "arguments": "{}"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "name": "empty arguments",
+    "ids": [
+     9,
+     7,
+     4
+    ],
+    "call_id": 9,
+    "expect": {
+     "content": "",
+     "tool_calls": [
+      {
+       "id": "call_0",
+       "type": "function",
+       "function": {
+        "name": "get_time",
+        "arguments": ""
+       }
+      }
+     ]
+    }
+   },
+   {
+    "name": "arguments holding a newline",
+    "ids": [
+     9,
+     7,
+     4,
+     10
+    ],
+    "call_id": 9,
+    "expect": {
+     "content": "",
+     "tool_calls": [
+      {
+       "id": "call_0",
+       "type": "function",
+       "function": {
+        "name": "get_time",
+        "arguments": "x\ny"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "name": "the call's text as BPE pieces is content",
+    "ids": [
+     1,
+     6,
+     3,
+     4,
+     5
+    ],
+    "call_id": 9,
+    "expect": {
+     "content": "Let me <|tool_call|>get_weather\n{\"city\": \"Paris\"}",
+     "tool_calls": []
+    }
+   },
+   {
+    "name": "a call without a newline",
+    "ids": [
+     9,
+     3,
+     5
+    ],
+    "call_id": 9,
+    "expect": null
+   },
+   {
+    "name": "an empty name",
+    "ids": [
+     9,
+     4,
+     5
+    ],
+    "call_id": 9,
+    "expect": null
+   },
+   {
+    "name": "an empty call",
+    "ids": [
+     1,
+     9
+    ],
+    "call_id": 9,
+    "expect": null
+   },
+   {
+    "name": "one good call and one bad",
+    "ids": [
+     9,
+     3,
+     4,
+     5,
+     9,
+     7
+    ],
+    "call_id": 9,
+    "expect": null
+   },
+   {
+    "name": "no ids",
+    "ids": [],
+    "call_id": 9,
+    "expect": {
+     "content": "",
+     "tool_calls": []
+    }
+   }
+  ]
+ },
+ "sha256": {
+  "abc": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+  "": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+ }
+}
