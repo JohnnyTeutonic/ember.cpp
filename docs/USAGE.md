@@ -80,7 +80,12 @@ image's (Linux `/proc/self/exe`, hashed before the weights), so a dirty build is
 `ember_env` lists every `EMBER_*` name set; `ember_settings` gives the values of the settings ember
 reads, `ember_side_files` the SHA-256 of the files named by `EMBER_IR`, `EMBER_DRAFT_TABLE` and
 `EMBER_TEST_SCRIPTED_REPLIES`; other names carry no value. `instance_id` is new for each process, so
-a restart changes `/health`. This is the server's own report: it catches the wrong file, a stale
+a restart changes `/health`. Under `EMBER_PUBLIC=1` the object carries `"public": true` and keeps
+only what provenance needs (weights `status`, `sha256`, `bytes`, `monitored`; `build` without
+`compiler`; `executable.sha256`; `instance_id`; `runtime.gpu_layers_requested`): the weights and
+executable paths, the compiler and `ember_env`, `ember_settings` and `ember_side_files` are left out,
+so a client can still match the weights but cannot compare runtime settings against a public server.
+(The top-level `model` field keeps the path it always had.) This is the server's own report: it catches the wrong file, a stale
 server, a mid-run restart and changed settings, not a server that misreports.
 `tools/provenance_server_check.py` checks it against `hashlib`.
 

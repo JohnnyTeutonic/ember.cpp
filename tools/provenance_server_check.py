@@ -9,7 +9,8 @@ to hashlib's over the file; the executable's sha256 equal to SERVER_BIN's; build
 0. A second start on the same file: the same weights and build, a new instance_id. With EMBER_WEIGHTS_DIGEST=0,
 EMBER_DEQUANT_AT_LOAD=0, EMBER_TEST_SCRIPTED_REPLIES (a side file) and an unknown EMBER_AUDIT_UNKNOWN: status
 "disabled" with sha256 null; the two settings with their values; the side file by its SHA-256 (no path); the
-unknown variable by name only. ALT.gguf (another file that loads, e.g. MODEL with bytes appended): its own
+unknown variable by name only. EMBER_PUBLIC=1: "public" true, the weights digest, size, git commit and
+executable digest kept; no paths, compiler or EMBER_* record. ALT.gguf (another file that loads, e.g. MODEL with bytes appended): its own
 digest, not MODEL's. MUTABLE.gguf (a scratch copy; this check appends to it): hashed and monitored, then
 "modified_since_load" with no digest after an in-place append. Writes OUT.json; exit 1 when a check fails."""
 import hashlib
@@ -103,6 +104,20 @@ checks["env: unknown variable without value"] = "secret-value" not in json.dumps
     "EMBER_AUDIT_UNKNOWN" not in rt.get("ember_settings", {})
 checks["env: side file by digest"] = rt.get("ember_side_files", {}).get("EMBER_TEST_SCRIPTED_REPLIES", {}).get(
     "sha256") == sha256(scripted) and scripted not in json.dumps(rt)
+
+proc, hp = start(MODEL, {"EMBER_PUBLIC": "1", "EMBER_KV": "f32"})
+stop(proc)
+pp = hp.get("provenance", {})
+report["public"] = pp
+checks["public: marked"] = pp.get("public") is True
+checks["public: digest kept"] = pp.get("weights", {}).get("status") == "sha256" and \
+    pp["weights"].get("sha256") == model_sha and pp["weights"].get("bytes") == os.path.getsize(MODEL)
+checks["public: commit and executable digest kept"] = pp.get("build", {}).get("git_commit") == b.get("git_commit") \
+    and pp.get("executable", {}).get("sha256") == exe_sha
+checks["public: no paths, compiler or settings"] = "path" not in pp.get("weights", {}) and \
+    "path" not in pp.get("executable", {}) and "compiler" not in pp.get("build", {}) and \
+    not ({"ember_env", "ember_settings", "ember_side_files"} & set(pp.get("runtime", {}))) and \
+    os.path.realpath(SERVER) not in json.dumps(pp)
 
 if ALT:
     proc, h4 = start(ALT)

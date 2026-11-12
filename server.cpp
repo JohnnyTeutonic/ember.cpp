@@ -720,6 +720,20 @@ int main(int argc, char** argv) {
       w["sha256_at_load"] = w["sha256"];
       w["sha256"] = nullptr;
     }
+    // EMBER_PUBLIC=1 (Jonathan, 13 Nov 2026): keep what provenance needs (the weights status, digest and
+    // size, the git commit, the executable's digest, the instance id) and drop the detail a stranger has no
+    // use for: the absolute paths, the compiler, and the EMBER_* names, values and side files.
+    if (public_mode) {
+      json& p = h["provenance"];
+      p["public"] = true;
+      p["weights"].erase("path");
+      p["executable"].erase("path");
+      p["executable"].erase("error");
+      p["build"].erase("compiler");
+      p["runtime"].erase("ember_env");
+      p["runtime"].erase("ember_settings");
+      p["runtime"].erase("ember_side_files");
+    }
     res.set_header("Access-Control-Allow-Origin", "*");
     res.set_content(json_out(h), "application/json");
   });
