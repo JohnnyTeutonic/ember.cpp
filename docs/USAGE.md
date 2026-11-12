@@ -37,7 +37,9 @@ names predate the ember.cpp rename and are kept for compatibility.
 - **SafeTensors**: a directory with `config.json`, `tokenizer.json` and `model.safetensors`
   (F32, BF16, F16; computed in F32).
 
-Tested sources: [TinyLlama 1.1B Chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0)
+Tested sources in the pre-rename `tinyllama.cpp` project (no receipt for them is in
+`experiments/`; the gated families and their evidence are in
+[CAPABILITY_EVIDENCE.md](CAPABILITY_EVIDENCE.md)): [TinyLlama 1.1B Chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0)
 (SafeTensors) and [its GGUFs](https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF),
 [Llama-2 7B GGUF](https://huggingface.co/TheBloke/Llama-2-7B-GGUF),
 [Llama-3 8B GGUF](https://huggingface.co/QuantFactory/Meta-Llama-3-8B-GGUF).

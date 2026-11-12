@@ -46,9 +46,9 @@ All 96 paired full-vocabulary rows and greedy IDs passed the unchanged 1e-4 gate
 |---|---:|---:|---:|---:|---:|
 | 16 | 7.023 | 34.116 | 5.645 | 31.180 | 5.523x |
 | 128 | 20.057 | 34.157 | 5.968 | 31.380 | 5.258x |
-| 512 | 174.021 | 34.252 | 6.980 | 31.291 | 4.483x |
+| 512 | 174.019 | 34.254 | 6.980 | 31.291 | 4.483x |
 
-The same limits apply as for Smol. In addition, at 512 prompt tokens ember's prefill is about 5x slower than HF's (all four observations 173-175 ms). That is a measured result of this workload; its cause has not been diagnosed here. Unlike Smol, this ran on Colab's image (Python 3.13 and CUDA 13 on the image, replaced as the amendment records), not the RunPod image, so it is not an environment-controlled comparison with the Smol result.
+The same limits apply as for Smol. In addition, at 512 prompt tokens ember's prefill is about 5x slower than HF's (all four observations 173-175 ms). That is a measured result of this workload; its cause was not diagnosed in this run. The prefill change merged as ember PR #30 (`ebbacf09`) was re-measured on this frozen protocol in run `f3-20261103` (engine `9a0e0998`, engine sources identical to `ebbacf09`): 512-token prefill 30.44 ms against HF's 34.40 ms in the same run, every parity gate passing ([result](gemma_prefill_fix_20261103/RESULT.md), [receipts](gemma_prefill_fix_20261103/receipts/f3-20261103/)). g6 stays the record of the engine it measured. Unlike Smol, this ran on Colab's image (Python 3.13 and CUDA 13 on the image, replaced as the amendment records), not the RunPod image, so it is not an environment-controlled comparison with the Smol result.
 
 Before g6, five attempts stopped before the controller, each with its VM stopped and cleanup certified. Their causes were image changes, two build gaps and Colab CLI hangs, and the amendment's ledger records each. The local replay of g6 under CPython 3.11.15 and NumPy 1.26.4 reproduced the saved summary exactly, and every raw-row file matched the hash in its gate. The small receipts are in [`gemma_colab_20261103/receipts/g6-20261103/`](gemma_colab_20261103/receipts/g6-20261103/). The raw rows, the executable and the full output tree (about 200 MB) are in `C:/ml_artifacts/benchmarks/hf_cuda_gemma_colab_20261103/g6-20261103/`, pinned by `archive.sha256`. The replay:
 
