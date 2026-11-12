@@ -43,7 +43,7 @@ Both are GGUFs exported by paperkiln.
 * **story3k**: a trained paperkiln export (d=128, 2 layers, 4 heads, ctx 256,
   4096-word vocabulary; `/mnt/c/ml_artifacts/paperkiln_story3k.zip`). With a
   256-token context, the only grid length it can hold is 128.
-* **timing**: `microtorch/tools/make_timing_gguf` at the TinyLlama-1.1B shape
+* **timing**: paperkiln's `tools/make_timing_gguf` at the TinyLlama-1.1B shape
   (d=2048, 22 layers, 32 query heads / 4 KV heads (GQA), ff=5632, ctx 4096),
   seeded N(0, 0.02) weights, story3k's vocabulary, and an explicit LM head. It
   exists for timing only: prefill cost depends on shapes, not on weight
@@ -52,8 +52,8 @@ Both are GGUFs exported by paperkiln.
 
 ## Hardware
 
-Colab **L4**, for every record that carries a claim (microtorch/AGENTS.md:
-never mix GPU types within a comparison). Each summary row records the GPU
+Colab **L4**, for every record that carries a claim (paperkiln's `AGENTS.md`
+Colab rules at the time: never mix GPU types within a comparison). Each summary row records the GPU
 name, UUID, driver, CUDA version and the clocks read after the cell
 (SM/memory clock, max SM clock, temperature, power, P-state).
 `hardware.txt` in each result folder holds the full `nvidia-smi -q` clock and
@@ -650,8 +650,8 @@ Open levers, ranked by the op map:
 Busy L4 sessions on this account were reclaimed about 22–26 minutes after
 creation. At first this was blamed on running parallel sessions; it then
 recurred with a single session. So the baseline ran as a resumable lane on
-the repo's supervisor (`tools/ttft_supervise.py`, path B of
-`microtorch/AGENTS.md`), working as follows:
+the repo's supervisor (`tools/ttft_supervise.py`, path B of paperkiln's
+`AGENTS.md` at the time, since rewritten), working as follows:
 
 * The unit of work is one cell.
 * Each VM gets the not-yet-banked cells, packed longest first to fit about

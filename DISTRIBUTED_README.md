@@ -1,5 +1,11 @@
 # TinyLlama Distributed Inference
 
+> **Status.** Written in July 2026, before the project was renamed from `tinyllama.cpp` to ember.cpp;
+> the MPI build (`-DHAS_MPI=ON`, target `tinyllama_distributed`) keeps the old name. No receipt in
+> `experiments/` covers distributed inference, so the scaling, load-balancing and availability
+> properties below are design descriptions, not measured results, and this path is outside the
+> README's gated capability tables. The determinism study did not examine it.
+
 This document describes the distributed inference capabilities of TinyLlama using MPI (Message Passing Interface).
 
 ## Overview

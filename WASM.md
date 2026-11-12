@@ -1,5 +1,10 @@
 # ember.cpp in WebAssembly
 
+> **Historical note (12 Aug 2026).** The first WebAssembly proof, kept as a record. The current build
+> is `deploy/wasm/build.sh` and the browser page is `tools/build_wasm_space.sh`; see the README's
+> "Quick start: in the browser" and [docs/USAGE.md](docs/USAGE.md#the-browser-page-deploywasm). The
+> WebAssembly gates are in [docs/CAPABILITY_EVIDENCE.md](docs/CAPABILITY_EVIDENCE.md).
+
 *Proven 12 Aug 2026 (night build): the inference core compiles to wasm
 with ZERO source changes and runs real GGUF chat inference under node.
 `chat7a.gguf` produced coherent chat completions; a known-bad toy
